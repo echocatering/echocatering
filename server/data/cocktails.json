@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "name": "Classic Martini",
+    "description": "A timeless cocktail with gin and vermouth",
+    "category": "classics",
+    "ingredients": ["Gin", "Dry Vermouth", "Olive or Lemon Twist"],
+    "instructions": "Stir with ice, strain into chilled glass",
+    "videoPath": "/cocktails/martini.mp4",
+    "isActive": true,
+    "order": 1,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+]
+
+

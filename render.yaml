@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: echo-catering
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5002
+      # Add these in Render dashboard (not here for security):
+      # - MONGODB_URI
+      # - JWT_SECRET
+      # - CLOUDINARY_CLOUD_NAME (if using Cloudinary)
+      # - CLOUDINARY_API_KEY (if using Cloudinary)
+      # - CLOUDINARY_API_SECRET (if using Cloudinary)
+
