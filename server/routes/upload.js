@@ -419,9 +419,16 @@ router.post('/about-image', [
 
     // Check if sectionNumber is provided in query or body
     // Note: With multer, non-file fields are in req.body
-    const sectionNumber = req.query.sectionNumber || req.body?.sectionNumber;
+    let sectionNumber = req.query.sectionNumber || req.body?.sectionNumber;
     
-    console.log('📋 Section number from request:', sectionNumber);
+    // Normalize section number: extract numeric part (handles "1", "section-1", "section1", etc.)
+    if (sectionNumber) {
+      const numericMatch = String(sectionNumber).match(/\d+/);
+      sectionNumber = numericMatch ? numericMatch[0] : sectionNumber;
+      console.log('📋 Section number from request (normalized):', sectionNumber);
+    } else {
+      console.log('📋 Section number from request:', sectionNumber);
+    }
     console.log('📋 Request body:', req.body);
     
     // If section number provided, save directly to section file and delete temporary file
@@ -487,13 +494,14 @@ router.post('/about-image', [
         // Upload to Cloudinary (non-blocking - if it fails, still return success with local path)
         try {
           console.log(`   ☁️  Uploading section ${sectionNumber} image to Cloudinary...`);
-          // Use consistent publicId for section to overwrite existing section images
-          const publicId = `section${sectionNumber}`; // e.g., "section1", "section2"
+          // Use consistent publicId for section to overwrite existing section images (same format as logo)
+          const publicId = `${sectionNumber}_about`; // e.g., "1_about", "2_about" -> echo-catering/about/1_about
           
           const cloudinaryResult = await uploadToCloudinary(sectionFilePath, {
             folder: 'echo-catering/about',
             resourceType: 'image',
-            publicId: publicId, // Consistent publicId ensures overwrite
+            publicId: publicId, // Consistent publicId ensures overwrite (like logo)
+            overwrite: true, // Explicitly enable overwrite like logo upload
           });
 
           console.log(`   ✅ Uploaded to Cloudinary: ${cloudinaryResult.url}`);
@@ -691,11 +699,16 @@ router.post('/copy-to-section', [
   requireEditor
 ], async (req, res) => {
   try {
-    const { sourcePath, sectionNumber } = req.body;
+    let { sourcePath, sectionNumber } = req.body;
     
     if (!sourcePath || !sectionNumber) {
       return res.status(400).json({ message: 'sourcePath and sectionNumber are required' });
     }
+    
+    // Normalize section number: extract numeric part (handles "1", "section-1", "section1", etc.)
+    const numericMatch = String(sectionNumber).match(/\d+/);
+    sectionNumber = numericMatch ? numericMatch[0] : sectionNumber;
+    console.log('📋 Section number (normalized):', sectionNumber);
 
     const aboutPath = path.join(__dirname, '../uploads/about');
     if (!fs.existsSync(aboutPath)) {
@@ -756,13 +769,14 @@ router.post('/copy-to-section', [
       // Upload to Cloudinary (non-blocking - if it fails, still return success with local path)
       try {
         console.log(`   ☁️  Uploading section ${sectionNumber} image to Cloudinary...`);
-        // Use consistent publicId for section to overwrite existing section images
-        const publicId = `section${sectionNumber}`; // e.g., "section1", "section2"
+        // Use consistent publicId for section to overwrite existing section images (same format as logo)
+        const publicId = `${sectionNumber}_about`; // e.g., "1_about", "2_about" -> echo-catering/about/1_about
         
         const cloudinaryResult = await uploadToCloudinary(aboutFilePath, {
           folder: 'echo-catering/about',
           resourceType: 'image',
-          publicId: publicId, // Consistent publicId ensures overwrite
+          publicId: publicId, // Consistent publicId ensures overwrite (like logo)
+          overwrite: true, // Explicitly enable overwrite like logo upload
         });
 
         console.log(`   ✅ Uploaded to Cloudinary: ${cloudinaryResult.url}`);

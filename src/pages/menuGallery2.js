@@ -334,20 +334,17 @@ function EchoCocktailSubpage2({
   const countryDisplayList = info ? getCountryDisplayList(info) : [];
   
   // ONLY use Cloudinary URLs - NO FALLBACK to local paths
+  // Prioritize cloudinaryVideoUrl first, then videoUrl (if it's a Cloudinary URL)
   let videoSrc = '';
   
-  // HARDCODED: Item 1 Cloudinary URL
-  const ITEM_1_CLOUDINARY_URL = 'https://res.cloudinary.com/duysruzct/video/upload/v1767647969/echo-catering/videos/1_g3xipv.mp4';
-  
-  // Check if this is item 1 and use hardcoded URL
-  if (info?.itemNumber === 1 || currentFile === 'item-1') {
-    videoSrc = ITEM_1_CLOUDINARY_URL;
-  } else if (isCloudinaryUrl(info?.cloudinaryVideoUrl)) {
-    // Use cloudinaryVideoUrl if it's a valid Cloudinary URL, otherwise try videoUrl
+  if (isCloudinaryUrl(info?.cloudinaryVideoUrl)) {
+    // Primary: Use cloudinaryVideoUrl if it's a valid Cloudinary URL
     videoSrc = info.cloudinaryVideoUrl;
   } else if (isCloudinaryUrl(info?.videoUrl)) {
+    // Fallback: Use videoUrl only if it's also a valid Cloudinary URL
     videoSrc = info.videoUrl;
   } else {
+    // No valid Cloudinary URL found - return empty string so VideoBackground doesn't render
     videoSrc = '';
   }
   
@@ -1155,6 +1152,23 @@ function EchoCocktailSubpage2({
   };
 
   const renderMap = () => {
+    // Prioritize Cloudinary map URLs - NO FALLBACK to local paths
+    let mapSrc = '/assets/images/worldmap.svg'; // Default fallback to SVG
+    
+    // Priority 1: cloudinaryMapSnapshotUrl (direct Cloudinary field)
+    if (isCloudinaryUrl(info?.cloudinaryMapSnapshotUrl)) {
+      mapSrc = info.cloudinaryMapSnapshotUrl;
+    } 
+    // Priority 2: mapSnapshotUrl (virtual that should prefer Cloudinary)
+    else if (isCloudinaryUrl(info?.mapSnapshotUrl)) {
+      mapSrc = info.mapSnapshotUrl;
+    } 
+    // Priority 3: mapSnapshot (if it's a Cloudinary URL)
+    else if (isCloudinaryUrl(info?.mapSnapshot)) {
+      mapSrc = info.mapSnapshot;
+    }
+    // If no valid Cloudinary URL, use default SVG (don't use local paths)
+    
     if (isVertical) {
       // Vertical layout styling
       return (
@@ -1169,7 +1183,7 @@ function EchoCocktailSubpage2({
             boxSizing: 'border-box',
       }}
     >
-          <img src={info?.mapSnapshot || '/assets/images/worldmap.svg'} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+          <img src={mapSrc} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
     </div>
   );
     } else {
@@ -1185,7 +1199,7 @@ function EchoCocktailSubpage2({
             boxSizing: 'border-box',
           }}
         >
-          <img src={info?.mapSnapshot || '/assets/images/worldmap.svg'} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+          <img src={mapSrc} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
         </div>
       );
     }
@@ -1235,14 +1249,23 @@ function EchoCocktailSubpage2({
             style={{
               display: 'flex',
               justifyContent: isVertical ? 'flex-end' : 'space-between',
+              alignItems: 'center',
               opacity: countriesVisible[index] ? 1 : 0,
               transition: countriesVisible[index] ? 'opacity 1.2s ease-out' : 'none',
               fontSize: countryFontSize,
               lineHeight: 1.2,
             }}
           >
-            {!isVertical && <span>{entry.name}</span>}
-            <span>{entry.code}</span>
+            {!isVertical ? (
+              <>
+                {/* Country name on the left */}
+                <span style={{ textAlign: 'left', flex: 1 }}>{entry.name || ''}</span>
+                {/* Country code on the right */}
+                <span style={{ textAlign: 'right', marginLeft: 'auto' }}>{entry.code}</span>
+              </>
+            ) : (
+              <span>{entry.code}</span>
+            )}
           </div>
         ))}
       </div>

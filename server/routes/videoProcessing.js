@@ -2694,7 +2694,7 @@ const processVideoForItem = async (itemNumber) => {
     
     const options = {
       hostname: 'localhost',
-      port: process.env.PORT || 5001,
+      port: process.env.PORT || 5002,
       path: '/api/video-processing/generate-background-fbf',
       method: 'POST',
       headers: {

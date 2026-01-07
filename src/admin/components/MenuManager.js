@@ -250,7 +250,7 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
         objectFit: 'cover',
         objectPosition: 'center',
         pointerEvents: 'none',
-        zIndex: 0,
+        zIndex: 0, // Video should be at the base layer
       }}
     >
       <source src={videoSrc} type="video/mp4" />
@@ -1039,6 +1039,48 @@ const MenuManager = () => {
                     cloudinaryIconUrl: processedItem.cloudinaryIconUrl,
                     videoUrl: processedItem.videoUrl
                   });
+                  
+                  // Update editingCocktail if it matches the processed item
+                  setEditingCocktail(prev => {
+                    if (prev && (prev.itemNumber === itemNumber || prev._id === processedItem._id)) {
+                      console.log('[MenuManager] Updating editingCocktail with new Cloudinary URL:', processedItem.cloudinaryVideoUrl);
+                      return {
+                        ...prev,
+                        cloudinaryVideoUrl: processedItem.cloudinaryVideoUrl,
+                        cloudinaryIconUrl: processedItem.cloudinaryIconUrl,
+                        cloudinaryVideoPublicId: processedItem.cloudinaryVideoPublicId,
+                        cloudinaryIconPublicId: processedItem.cloudinaryIconPublicId,
+                        videoUrl: processedItem.cloudinaryVideoUrl || prev.videoUrl // Also update videoUrl to Cloudinary URL
+                      };
+                    }
+                    return prev;
+                  });
+                  
+                  // Also update the cocktail in the cocktails state array if it matches
+                  // This ensures currentCocktail (when not editing) gets the updated URL
+                  setCocktails(prevCocktails => {
+                    const updated = prevCocktails.map(c => {
+                      if (c.itemNumber === itemNumber || c._id === processedItem._id) {
+                        console.log('[MenuManager] Updating cocktail in state array with Cloudinary URL:', processedItem.cloudinaryVideoUrl);
+                        return {
+                          ...c,
+                          cloudinaryVideoUrl: processedItem.cloudinaryVideoUrl,
+                          cloudinaryIconUrl: processedItem.cloudinaryIconUrl,
+                          cloudinaryVideoPublicId: processedItem.cloudinaryVideoPublicId,
+                          cloudinaryIconPublicId: processedItem.cloudinaryIconPublicId,
+                          videoUrl: processedItem.cloudinaryVideoUrl || c.videoUrl // Also update videoUrl to Cloudinary URL
+                        };
+                      }
+                      return c;
+                    });
+                    return updated;
+                  });
+                  
+                  // Also clear videoPreviewUrl since we now have the Cloudinary URL
+                  if (videoPreviewUrl) {
+                    URL.revokeObjectURL(videoPreviewUrl);
+                    setVideoPreviewUrl('');
+                  }
                 } else {
                   console.warn('[MenuManager] Processed item not found in refreshed list:', itemNumber);
                 }
@@ -1455,6 +1497,18 @@ const MenuManager = () => {
       video.style.display = 'none'; // Hide if no Cloudinary URL
     }
   }, [videoPreviewUrl, currentCocktail.videoUrl, currentCocktail.cloudinaryVideoUrl, currentCocktail.videoFile, currentCocktail.itemNumber, API_BASE_URL]);
+
+  // Debug: Log when currentCocktail changes (especially Cloudinary URLs)
+  useEffect(() => {
+    console.log('[MenuManager] currentCocktail changed:', {
+      itemNumber: currentCocktail?.itemNumber,
+      name: currentCocktail?.name,
+      cloudinaryVideoUrl: currentCocktail?.cloudinaryVideoUrl,
+      videoUrl: currentCocktail?.videoUrl,
+      isEditing: !!editingCocktail,
+      editingItemNumber: editingCocktail?.itemNumber
+    });
+  }, [currentCocktail?.itemNumber, currentCocktail?.cloudinaryVideoUrl, currentCocktail?.videoUrl, editingCocktail?.itemNumber]);
 
   // Sync flipped video with main video
 
@@ -2269,21 +2323,34 @@ const MenuManager = () => {
               {(currentCocktail.videoFile || currentCocktail.itemNumber || currentCocktail.videoUrl || currentCocktail.cloudinaryVideoUrl || videoPreviewUrl) ? (
                 <VideoBackground
                   videoSrc={(() => {
-                    // Prefer videoPreviewUrl (upload preview), then Cloudinary URL, then construct local path
-                    if (videoPreviewUrl) return videoPreviewUrl;
-                    if (currentCocktail.videoUrl) return currentCocktail.videoUrl; // API provides Cloudinary URL if available
-                    if (currentCocktail.cloudinaryVideoUrl) return currentCocktail.cloudinaryVideoUrl;
-                    if (currentCocktail.videoFile) {
-                      if (currentCocktail.videoFile.startsWith('item') && currentCocktail.itemNumber) {
-                        const ext = currentCocktail.videoFile.split('.').pop() || 'mp4';
-                        return `/menu-items/${currentCocktail.itemNumber}.${ext}`;
-                      }
-                      return `/menu-items/${currentCocktail.videoFile}`;
+                    // Prioritize Cloudinary URLs first, then preview URL (only if Cloudinary), then nothing
+                    let finalVideoSrc = '';
+                    
+                    if (isCloudinaryUrl(currentCocktail.cloudinaryVideoUrl)) {
+                      finalVideoSrc = currentCocktail.cloudinaryVideoUrl;
+                      console.log('[MenuManager] Video source: Using cloudinaryVideoUrl', finalVideoSrc);
+                    } else if (isCloudinaryUrl(currentCocktail.videoUrl)) {
+                      finalVideoSrc = currentCocktail.videoUrl;
+                      console.log('[MenuManager] Video source: Using videoUrl', finalVideoSrc);
+                    } else if (isCloudinaryUrl(videoPreviewUrl)) {
+                      // Only use videoPreviewUrl if it's a Cloudinary URL (blob URLs are not valid for final display)
+                      finalVideoSrc = videoPreviewUrl;
+                      console.log('[MenuManager] Video source: Using videoPreviewUrl', finalVideoSrc);
+                    } else {
+                      // No valid Cloudinary URL - return empty string so VideoBackground component doesn't render
+                      console.log('[MenuManager] Video source: No valid Cloudinary URL found', {
+                        hasCloudinaryVideoUrl: !!currentCocktail.cloudinaryVideoUrl,
+                        cloudinaryVideoUrl: currentCocktail.cloudinaryVideoUrl,
+                        hasVideoUrl: !!currentCocktail.videoUrl,
+                        videoUrl: currentCocktail.videoUrl,
+                        hasVideoPreviewUrl: !!videoPreviewUrl,
+                        videoPreviewUrl: videoPreviewUrl,
+                        itemNumber: currentCocktail.itemNumber
+                      });
+                      finalVideoSrc = '';
                     }
-                    if (currentCocktail.itemNumber) {
-                      return `/menu-items/${currentCocktail.itemNumber}.mp4`;
-                    }
-                    return '';
+                    
+                    return finalVideoSrc;
                   })()}
                   videoRef={videoRef}
                   currentCocktail={currentCocktail}

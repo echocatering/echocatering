@@ -34,6 +34,34 @@ const allowedVideoTypes = /\.(mp4|mov|m4v|webm|avi|mkv)$/i;
 const allowedImageTypes = /\.(jpg|jpeg|png|webp)$/i;
 const activeStatusFilter = [{ status: { $exists: false } }, { status: 'active' }];
 
+// Single source of truth for cocktail media fields (Cloudinary-first)
+const buildCocktailMediaFields = (cocktail) => {
+  if (!cocktail) {
+    return {
+      cloudinaryVideoUrl: '',
+      cloudinaryVideoPublicId: '',
+      cloudinaryIconUrl: '',
+      cloudinaryIconPublicId: '',
+      videoUrl: '',
+      cloudinaryMapSnapshotUrl: '',
+      cloudinaryMapSnapshotPublicId: ''
+    };
+  }
+
+  const cloudinaryVideoUrl = cocktail.cloudinaryVideoUrl || '';
+  const videoUrl = cloudinaryVideoUrl || cocktail.videoUrl || '';
+
+  return {
+    cloudinaryVideoUrl,
+    cloudinaryVideoPublicId: cocktail.cloudinaryVideoPublicId || '',
+    cloudinaryIconUrl: cocktail.cloudinaryIconUrl || '',
+    cloudinaryIconPublicId: cocktail.cloudinaryIconPublicId || '',
+    videoUrl,
+    cloudinaryMapSnapshotUrl: cocktail.cloudinaryMapSnapshotUrl || '',
+    cloudinaryMapSnapshotPublicId: cocktail.cloudinaryMapSnapshotPublicId || ''
+  };
+};
+
 // Parse a numeric suffix from itemId strings like "item4"
 const parseItemNumber = (itemId) => {
   if (!itemId) return null;
@@ -600,6 +628,20 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
     }
     const allCocktails = await Cocktail.find(cocktailQuery).lean();
     
+    // Debug: Log item 1 Cloudinary fields
+    const item1Cocktail = allCocktails.find(c => c.itemNumber === 1);
+    if (item1Cocktail) {
+      console.log('[menu-manager] Item 1 cocktail from DB:', {
+        itemNumber: item1Cocktail.itemNumber,
+        name: item1Cocktail.name,
+        cloudinaryVideoUrl: item1Cocktail.cloudinaryVideoUrl,
+        cloudinaryIconUrl: item1Cocktail.cloudinaryIconUrl,
+        videoUrl: item1Cocktail.videoUrl
+      });
+    } else {
+      console.log('[menu-manager] Item 1 cocktail NOT FOUND in allCocktails');
+    }
+    
     // Create lookup maps for cocktails
     const cocktailById = new Map();
     const cocktailByItemNumber = new Map();
@@ -745,6 +787,14 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
       }
       if (!cocktail && itemNumber) {
         cocktail = cocktailByItemNumber.get(Number(itemNumber));
+        // Debug: Log item 1 lookup
+        if (itemNumber === 1) {
+          console.log('[menu-manager] Item 1 lookup:', {
+            found: !!cocktail,
+            cloudinaryVideoUrl: cocktail?.cloudinaryVideoUrl,
+            cloudinaryIconUrl: cocktail?.cloudinaryIconUrl
+          });
+        }
         // Also check newly created cocktails
         if (!cocktail && savedCocktailsMap.has(Number(itemNumber))) {
           cocktail = savedCocktailsMap.get(Number(itemNumber));
@@ -785,7 +835,9 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
         // narrative stays in Cocktail model (not moved to Inventory)
         narrative: cocktail?.narrative || '',
         featured: cocktail?.featured || false,
-        itemId: cocktail?.itemId || (itemNumber ? `item${itemNumber}` : null)
+      itemId: cocktail?.itemId || (itemNumber ? `item${itemNumber}` : null),
+      // Cloudinary media fields (ensure UI can render processed assets)
+      ...buildCocktailMediaFields(cocktail)
       };
 
       // Read ingredients from Inventory (hidden column) as source of truth.
@@ -886,6 +938,19 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
       return (a.name || '').localeCompare(b.name || '');
     });
 
+    // Debug: Log item 1 in final response
+    const item1InResponse = filtered.find(item => item.itemNumber === 1);
+    if (item1InResponse) {
+      console.log('[menu-manager] Item 1 in final response:', {
+        itemNumber: item1InResponse.itemNumber,
+        name: item1InResponse.name,
+        cloudinaryVideoUrl: item1InResponse.cloudinaryVideoUrl,
+        cloudinaryIconUrl: item1InResponse.cloudinaryIconUrl,
+        videoUrl: item1InResponse.videoUrl,
+        hasCocktail: !!item1InResponse._id
+      });
+    }
+
     res.json(filtered);
   } catch (error) {
     console.error('Get menu-manager cocktails error:', error);
@@ -945,6 +1010,7 @@ router.get('/menu-gallery', async (req, res) => {
         const cloudinaryVideoUrlRaw = cocktail.get('cloudinaryVideoUrl');
         const cloudinaryIconUrlRaw = cocktail.get('cloudinaryIconUrl');
         const videoFileRaw = cocktail.get('videoFile');
+        const mediaFields = buildCocktailMediaFields(cocktail.toObject ? cocktail.toObject() : cocktail);
         
         // Get virtuals
         const cocktailJson = cocktail.toJSON({ virtuals: true });
@@ -955,13 +1021,17 @@ router.get('/menu-gallery', async (req, res) => {
           itemNumber: cocktail.itemNumber,
           name: cocktail.name,
           videoFile: videoFileRaw || null,
-          // CRITICAL: Always include cloudinaryVideoUrl - use raw value from database
-          cloudinaryVideoUrl: cloudinaryVideoUrlRaw !== undefined ? cloudinaryVideoUrlRaw : null,
-          cloudinaryIconUrl: cloudinaryIconUrlRaw !== undefined ? cloudinaryIconUrlRaw : null,
+          // CRITICAL: Always include cloudinaryVideoUrl - use raw value from database, fallback to helper
+          cloudinaryVideoUrl: cloudinaryVideoUrlRaw !== undefined ? cloudinaryVideoUrlRaw : mediaFields.cloudinaryVideoUrl,
+          cloudinaryIconUrl: cloudinaryIconUrlRaw !== undefined ? cloudinaryIconUrlRaw : mediaFields.cloudinaryIconUrl,
           // Include virtuals
-          videoUrl: cocktailJson.videoUrl || null,
+          videoUrl: mediaFields.videoUrl || cocktailJson.videoUrl || null,
           iconVideoUrl: cocktailJson.iconVideoUrl || null,
-          mapSnapshotUrl: cocktailJson.mapSnapshotUrl || null
+          mapSnapshotUrl: mediaFields.cloudinaryMapSnapshotUrl || cocktailJson.mapSnapshotUrl || null,
+          cloudinaryVideoPublicId: mediaFields.cloudinaryVideoPublicId || null,
+          cloudinaryIconPublicId: mediaFields.cloudinaryIconPublicId || null,
+          cloudinaryMapSnapshotUrl: mediaFields.cloudinaryMapSnapshotUrl || null,
+          cloudinaryMapSnapshotPublicId: mediaFields.cloudinaryMapSnapshotPublicId || null
         };
         
         // DEBUG: Log what we're storing for item 1
@@ -1014,19 +1084,16 @@ router.get('/menu-gallery', async (req, res) => {
 
         menuGalleryData[category].videoFiles.push(key);
         
-      // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl
+      // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl and cloudinaryMapSnapshotUrl
       // This bypasses any map/caching issues
       const cocktailFromDb = await Cocktail.findOne({ itemNumber: itemNumber })
-        .select('cloudinaryVideoUrl videoFile').lean();
+        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId').lean();
       
-      // CRITICAL: Get the actual value
-      let cloudinaryVideoUrlValue = cocktailFromDb?.cloudinaryVideoUrl;
+      const mediaFromDb = buildCocktailMediaFields(cocktailFromDb);
       const videoFileFromDb = cocktailFromDb?.videoFile || null;
-      
-      // Ensure it's a string or null, never undefined
-      if (!cloudinaryVideoUrlValue || typeof cloudinaryVideoUrlValue !== 'string') {
-        cloudinaryVideoUrlValue = null;
-      }
+      const mapSnapshotFileFromDb = cocktailFromDb?.mapSnapshotFile || null;
+      const cloudinaryVideoUrlValue = mediaFromDb.cloudinaryVideoUrl || null;
+      const cloudinaryMapSnapshotUrlValue = mediaFromDb.cloudinaryMapSnapshotUrl || null;
       
       if (itemNumber === 1) {
         console.log(`[Menu Gallery] Item ${itemNumber} DB QUERY:`, {
@@ -1037,21 +1104,16 @@ router.get('/menu-gallery', async (req, res) => {
         });
       }
       
-      // Determine videoUrl
-      let videoUrl = `/menu-items/${itemNumber}.mp4`; // Default
-      if (cloudinaryVideoUrlValue && 
-          typeof cloudinaryVideoUrlValue === 'string' &&
-          cloudinaryVideoUrlValue.trim() !== '' && 
-          (cloudinaryVideoUrlValue.startsWith('http://') || cloudinaryVideoUrlValue.startsWith('https://'))) {
-        videoUrl = cloudinaryVideoUrlValue;
-      } else if (videoFileFromDb) {
+      // Determine videoUrl (Cloudinary preferred)
+      let videoUrl = mediaFromDb.videoUrl || `/menu-items/${itemNumber}.mp4`;
+      if (!mediaFromDb.videoUrl && videoFileFromDb) {
         videoUrl = `/menu-items/${videoFileFromDb}`;
       }
       
       // Also get from map for other fields (but cloudinaryVideoUrl comes from DB)
       const cocktail = cocktailsByItemNumber.get(itemNumber);
       
-      // Create cocktailInfo entry - ALWAYS include cloudinaryVideoUrl field
+      // Create cocktailInfo entry - ALWAYS include cloudinaryVideoUrl and cloudinaryMapSnapshotUrl fields
       // Create as a single object literal to ensure all fields are included
       const cocktailInfoEntry = {
           name: values.name || '',
@@ -1061,10 +1123,17 @@ router.get('/menu-gallery', async (req, res) => {
           countryCodes: codes,
           countries,
           itemNumber,
-          mapSnapshot: `/menu-items/${itemNumber}.png`,
+          // Map snapshot: prioritize Cloudinary URL, fallback to local path only if no Cloudinary URL
+          mapSnapshot: cloudinaryMapSnapshotUrlValue ? cloudinaryMapSnapshotUrlValue : (mapSnapshotFileFromDb ? `/menu-items/${mapSnapshotFileFromDb}` : `/menu-items/${itemNumber}.png`),
+          cloudinaryMapSnapshotUrl: cloudinaryMapSnapshotUrlValue ? String(cloudinaryMapSnapshotUrlValue) : null,
+          mapSnapshotUrl: cloudinaryMapSnapshotUrlValue ? String(cloudinaryMapSnapshotUrlValue) : null, // Alias for compatibility
           videoUrl: videoUrl,
-        // CRITICAL: Always include cloudinaryVideoUrl - explicitly set it, never omit
-        cloudinaryVideoUrl: cloudinaryVideoUrlValue ? String(cloudinaryVideoUrlValue) : null,
+          // CRITICAL: Always include cloudinaryVideoUrl - explicitly set it, never omit
+          cloudinaryVideoUrl: cloudinaryVideoUrlValue ? String(cloudinaryVideoUrlValue) : null,
+          cloudinaryVideoPublicId: mediaFromDb.cloudinaryVideoPublicId || null,
+          cloudinaryIconUrl: mediaFromDb.cloudinaryIconUrl || null,
+          cloudinaryIconPublicId: mediaFromDb.cloudinaryIconPublicId || null,
+          cloudinaryMapSnapshotPublicId: mediaFromDb.cloudinaryMapSnapshotPublicId || null,
           category
         };
       

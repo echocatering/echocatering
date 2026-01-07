@@ -172,17 +172,39 @@ const ContentManager = () => {
       console.log('📥 Upload response received:', uploadResponse);
 
       if (uploadResponse.file) {
-        // Use sectionPath if provided (image was copied to section file), otherwise use path
-        const imagePath = uploadResponse.file.sectionPath || uploadResponse.file.path || `/uploads/about/section${sectionId}.jpg`;
+        // Prioritize Cloudinary URL if available (this is what we want to use)
+        // Fallback to sectionPath, then path, then default path
+        const imagePath = uploadResponse.file.cloudinaryUrl || 
+                         uploadResponse.file.sectionPath || 
+                         uploadResponse.file.path || 
+                         `/uploads/about/section${sectionId}.jpg`;
         
-        setSections(prev => prev.map(section => 
-          section.id === sectionId 
-            ? { ...section, image: imagePath }
-            : section
-        ));
+        console.log(`✅ Updating section ${sectionId} with image:`, imagePath);
+        
+        // Update the existing section with matching ID (don't create new section)
+        // Convert both to numbers for comparison to handle string/number mismatch
+        const sectionIdNum = Number(sectionId);
+        setSections(prev => {
+          const updatedSections = prev.map(section => {
+            const sectionIdToCompare = Number(section.id);
+            // Match by ID (not by index) to ensure we update the correct section
+            if (sectionIdToCompare === sectionIdNum) {
+              console.log(`✅ Found matching section with id ${section.id}, updating image to:`, imagePath);
+              return { ...section, image: imagePath };
+            }
+            return section; // Keep other sections unchanged
+          });
+          
+          console.log(`📊 Sections before update:`, prev.map(s => ({ id: s.id, hasImage: !!s.image })));
+          console.log(`📊 Sections after update:`, updatedSections.map(s => ({ id: s.id, hasImage: !!s.image })));
+          
+          return updatedSections;
+        });
+        
         setMessage(`Section ${sectionId} image updated successfully!`);
         setTimeout(() => setMessage(''), 3000);
       } else {
+        console.error('❌ Upload response missing file object:', uploadResponse);
         setMessage('Upload failed - invalid response from server');
       }
     } catch (error) {
