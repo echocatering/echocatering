@@ -1,6 +1,6 @@
 // Utility functions for fetching menu gallery data from the API
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 /**
  * Fetch menu gallery data from the API
