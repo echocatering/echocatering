@@ -103,15 +103,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Helper function to check if section image file exists
-function getSectionImagePath(sectionNumber) {
-  const sectionFileName = `section${sectionNumber}.jpg`;
-  const sectionFilePath = path.join(__dirname, '../uploads/about', sectionFileName);
-  if (fs.existsSync(sectionFilePath)) {
-    return `/uploads/about/${sectionFileName}`;
-  }
-  return null;
-}
+// Helper function removed - only Cloudinary URLs are used now
 
 // @route   GET /api/content/about
 // @desc    Get about page content (supports multi-section)
@@ -124,35 +116,25 @@ router.get('/about', async (req, res) => {
       page: 'about'
     }).sort({ order: 1, section: 1 });
 
-    // Helper to pull image - prefer Cloudinary URL if available
-    const getImage = (item, sectionNumber) => {
-      // First check for Cloudinary URL (must be valid URL, not empty string)
+    // Helper to pull image - ONLY use Cloudinary URL (no local fallbacks)
+    const getImage = (item) => {
+      // Only return Cloudinary URL if it's a valid URL
       if (item?.cloudinaryUrl && 
           item.cloudinaryUrl.trim() !== '' && 
-          (item.cloudinaryUrl.startsWith('http://') || item.cloudinaryUrl.startsWith('https://'))) {
+          item.cloudinaryUrl.startsWith('https://res.cloudinary.com/')) {
         return item.cloudinaryUrl;
       }
-      // Then check metadata
-      if (item?.metadata?.get) {
-        const metadataImage = item.metadata.get('image');
-        if (metadataImage) return metadataImage;
-      }
-      if (item?.metadata?.image) {
-        return item.metadata.image;
-      }
-      // Finally check local file
-      const sectionFile = getSectionImagePath(sectionNumber);
-      if (sectionFile) return sectionFile;
+      // No fallbacks - return empty string if no Cloudinary URL
       return '';
     };
 
     const sections = aboutContent.map((item, idx) => {
-      const img = getImage(item, idx + 1);
+      const img = getImage(item);
       return {
         id: idx + 1,
         title: item.title || '',
         content: item.content || '',
-        image: img,
+        image: img, // Only Cloudinary URLs, no local fallbacks
         imageVisibility: item.isActive !== false
       };
     });
@@ -163,62 +145,47 @@ router.get('/about', async (req, res) => {
     const team = sections[2] || {};
 
     const response = {
-      storyTitle: story.title || 'Our Story',
+      storyTitle: story.title || '',
       story: story.content || '',
       missionTitle: mission.title || '',
       mission: mission.content || '',
       teamTitle: team.title || '',
       team: team.content || '',
-        images: {
-        story: story.image || getSectionImagePath(1) || '',
-        mission: mission.title || mission.content ? (mission.image || getSectionImagePath(2) || '') : '',
-        team: team.title || team.content ? (team.image || getSectionImagePath(3) || '') : ''
-        },
-        imageVisibility: {
+      images: {
+        story: story.image || '', // Only Cloudinary URLs
+        mission: mission.title || mission.content ? (mission.image || '') : '',
+        team: team.title || team.content ? (team.image || '') : ''
+      },
+      imageVisibility: {
         story: story.imageVisibility !== false,
         mission: mission.title || mission.content ? mission.imageVisibility !== false : false,
         team: team.title || team.content ? team.imageVisibility !== false : false
       },
-      sections: sections.length > 0 ? sections : [
-        {
-          id: 1,
-          title: 'Our Story',
-          content: '',
-          image: getSectionImagePath(1) || '',
-          imageVisibility: true
-        }
-      ]
+      sections: sections.length > 0 ? sections : []
     };
 
     res.json(response);
   } catch (error) {
     console.error('Get about content error:', error);
+    // Return empty structure on error - no hardcoded fallbacks
     res.json({
-      storyTitle: 'Our Story',
-      story: 'ECHO Catering has been at the forefront of culinary excellence, serving discerning clients with innovative menus and impeccable service. Our passion for quality ingredients and creative presentation has made us a trusted partner for events of all sizes.',
+      storyTitle: '',
+      story: '',
       missionTitle: '',
       mission: '',
       teamTitle: '',
       team: '',
       images: {
-        story: getSectionImagePath(1) || '',
-        mission: getSectionImagePath(2) || '',
-        team: getSectionImagePath(3) || ''
+        story: '',
+        mission: '',
+        team: ''
       },
       imageVisibility: {
-        story: true,
+        story: false,
         mission: false,
         team: false
       },
-      sections: [
-        {
-          id: 1,
-          title: 'Our Story',
-          content: '',
-          image: getSectionImagePath(1) || '',
-          imageVisibility: true
-        }
-      ]
+      sections: []
     });
   }
 });

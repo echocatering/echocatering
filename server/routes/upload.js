@@ -427,7 +427,7 @@ router.post('/about-image', [
       sectionNumber = numericMatch ? numericMatch[0] : sectionNumber;
       console.log('📋 Section number from request (normalized):', sectionNumber);
     } else {
-      console.log('📋 Section number from request:', sectionNumber);
+    console.log('📋 Section number from request:', sectionNumber);
     }
     console.log('📋 Request body:', req.body);
     
@@ -519,11 +519,9 @@ router.post('/about-image', [
             // Update existing content
             content.cloudinaryUrl = cloudinaryResult.url;
             content.cloudinaryPublicId = cloudinaryResult.publicId;
-            // Keep metadata or content field for local path fallback
+            // Clear local path - Cloudinary is the source of truth
             if (content.metadata) {
-              content.metadata.set('image', localPath);
-            } else {
-              content.metadata = new Map([['image', localPath]]);
+              content.metadata.delete('image');
             }
             await content.save();
             console.log(`   ✅ Content record updated with Cloudinary URL for section ${sectionNumber}`);
@@ -535,11 +533,20 @@ router.post('/about-image', [
               type: 'image',
               cloudinaryUrl: cloudinaryResult.url,
               cloudinaryPublicId: cloudinaryResult.publicId,
-              metadata: new Map([['image', localPath]]),
               isActive: true
             });
             await content.save();
             console.log(`   ✅ New Content record created with Cloudinary URL for section ${sectionNumber}`);
+          }
+
+          // Delete local file after successful Cloudinary upload and DB update
+          try {
+            if (fs.existsSync(sectionFilePath)) {
+              await fs.promises.unlink(sectionFilePath);
+              console.log(`   🗑️  Deleted local file after Cloudinary upload: ${sectionFileName}`);
+            }
+          } catch (deleteError) {
+            console.warn(`   ⚠️  Could not delete local file:`, deleteError);
           }
         } catch (cloudinaryError) {
           // Log error but don't fail the upload
@@ -630,11 +637,9 @@ router.post('/about-image', [
         // Update existing content
         content.cloudinaryUrl = cloudinaryResult.url;
         content.cloudinaryPublicId = cloudinaryResult.publicId;
-        // Keep metadata or content field for local path fallback
+        // Clear local path - Cloudinary is the source of truth
         if (content.metadata) {
-          content.metadata.set('image', localPath);
-        } else {
-          content.metadata = new Map([['image', localPath]]);
+          content.metadata.delete('image');
         }
         await content.save();
         console.log('✅ Content record updated with Cloudinary URL');
@@ -646,11 +651,20 @@ router.post('/about-image', [
           type: 'image',
           cloudinaryUrl: cloudinaryResult.url,
           cloudinaryPublicId: cloudinaryResult.publicId,
-          metadata: new Map([['image', localPath]]),
           isActive: true
         });
         await content.save();
         console.log('✅ New Content record created with Cloudinary URL');
+      }
+
+      // Delete local file after successful Cloudinary upload and DB update
+      try {
+        if (fs.existsSync(actualFilePath)) {
+          await fs.promises.unlink(actualFilePath);
+          console.log(`   🗑️  Deleted local file after Cloudinary upload: ${req.file.filename}`);
+        }
+      } catch (deleteError) {
+        console.warn(`   ⚠️  Could not delete local file:`, deleteError);
       }
     } catch (cloudinaryError) {
       // Log error but don't fail the upload
@@ -794,11 +808,9 @@ router.post('/copy-to-section', [
           // Update existing content
           content.cloudinaryUrl = cloudinaryResult.url;
           content.cloudinaryPublicId = cloudinaryResult.publicId;
-          // Keep metadata for local path fallback
+          // Clear local path - Cloudinary is the source of truth
           if (content.metadata) {
-            content.metadata.set('image', localPath);
-          } else {
-            content.metadata = new Map([['image', localPath]]);
+            content.metadata.delete('image');
           }
           await content.save();
           console.log(`   ✅ Content record updated with Cloudinary URL for section ${sectionNumber}`);
@@ -810,11 +822,20 @@ router.post('/copy-to-section', [
             type: 'image',
             cloudinaryUrl: cloudinaryResult.url,
             cloudinaryPublicId: cloudinaryResult.publicId,
-            metadata: new Map([['image', localPath]]),
             isActive: true
           });
           await content.save();
           console.log(`   ✅ New Content record created with Cloudinary URL for section ${sectionNumber}`);
+        }
+
+        // Delete local file after successful Cloudinary upload and DB update
+        try {
+          if (fs.existsSync(aboutFilePath)) {
+            await fs.promises.unlink(aboutFilePath);
+            console.log(`   🗑️  Deleted local file after Cloudinary upload: ${sectionFileName}`);
+          }
+        } catch (deleteError) {
+          console.warn(`   ⚠️  Could not delete local file:`, deleteError);
         }
       } catch (cloudinaryError) {
         // Log error but don't fail the copy
