@@ -2,7 +2,7 @@ services:
   - type: web
     name: echo-catering
     env: node
-    nodeVersion: 18
+    nodeVersion: 22
     buildCommand: npm ci && npm run build
     startCommand: node server/index.js
     envVars:

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "@emailjs/browser": "^4.4.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -32,7 +33,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build": "npx craco build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server/index.js",
@@ -59,7 +60,6 @@
   },
   "proxy": "http://localhost:5002",
   "devDependencies": {
-    "@craco/craco": "^7.1.0",
     "concurrently": "^8.2.2"
   }
 }
