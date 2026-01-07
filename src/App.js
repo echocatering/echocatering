@@ -9,6 +9,7 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import MenuGallery from './pages/menuGallery2';
 import EventGallery from './pages/event_gallery';
 import VideoEdgeTest from './pages/VideoEdgeTest';
+import CloudinaryTest from './pages/CloudinaryTest';
 
 // Admin Panel Components
 import AdminApp from './admin/App';
@@ -106,6 +107,7 @@ function App() {
       
       {/* Test Routes */}
       <Route path="test/video-edge" element={<VideoEdgeTest />} />
+      <Route path="cloudinary-test" element={<CloudinaryTest />} />
       
       {/* Main Website Routes */}
       {isMobile ? (

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
+import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
 function EchoCocktailSubpage({ videoFiles = [], cocktailInfo = {}, title = '', selected, setSelected, subpageOrder, sidebarOpen, setSidebarOpen, galleryRef }) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
@@ -883,6 +884,7 @@ function EchoCocktailSubpage({ videoFiles = [], cocktailInfo = {}, title = '', s
           muted
           playsInline
           loop
+          crossOrigin="anonymous"
           onLoadedMetadata={(e) => {
             const video = e.target;
             if (video.videoWidth && video.videoHeight) {
@@ -1484,24 +1486,33 @@ function EchoCocktailSubpage({ videoFiles = [], cocktailInfo = {}, title = '', s
             zIndex: isMobileView ? 0 : 'auto',
             boxSizing: 'border-box'
           }}>
-            <video
-              ref={videoRef}
-              src={videoFiles[currentIndex] ? `/menu-items/${videoFiles[currentIndex]}` : ''}
-              autoPlay
-              muted
-              playsInline
-              loop
-              onLoadedMetadata={(e) => {
-                const video = e.target;
-                if (video.videoWidth && video.videoHeight) {
-                  const aspectRatio = video.videoWidth / video.videoHeight;
-                  const isSquare = Math.abs(aspectRatio - 1.0) < 0.05;
-                  setIsSquareVideo(isSquare);
-                }
-              }}
-              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: '1px', height: '1px' }}
-              aria-label="Spinning cocktail video"
-            />
+            {(() => {
+              const currentFile = videoFiles[currentIndex];
+              const currentInfo = currentFile ? cocktailInfo[currentFile] : null;
+              const videoSrc = currentInfo?.cloudinaryVideoUrl || currentInfo?.videoUrl;
+              return isCloudinaryUrl(videoSrc) ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop
+                  crossOrigin="anonymous"
+                  onLoadedMetadata={(e) => {
+                    const video = e.target;
+                    if (video.videoWidth && video.videoHeight) {
+                      const aspectRatio = video.videoWidth / video.videoHeight;
+                      const isSquare = Math.abs(aspectRatio - 1.0) < 0.05;
+                      setIsSquareVideo(isSquare);
+                    }
+                  }}
+                  style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: '1px', height: '1px' }}
+                  aria-label="Spinning cocktail video"
+                >
+                  <source src={videoSrc} type="video/mp4" />
+                </video>
+              ) : null;
+            })()}
             {/* Fixed-size container to crop videos */}
             <div style={{
               width: isMidDesktop ? '459px' : (isMobileView ? '100%' : '540px'),

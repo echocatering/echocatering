@@ -16,8 +16,8 @@ export const fetchLogo = async () => {
     if (response.ok) {
       const logoData = await response.json();
       
-      // If we got valid logo data, cache and return it
-      if (logoData && logoData.content && !logoData.message) {
+      // ONLY return if it's a Cloudinary URL - no fallbacks
+      if (logoData && logoData.content && logoData.content.startsWith('https://res.cloudinary.com/') && !logoData.message) {
         cachedLogo = logoData;
         logoCacheExpiry = Date.now() + CACHE_DURATION;
         return logoData;
@@ -27,7 +27,7 @@ export const fetchLogo = async () => {
     console.error('Error fetching logo:', error);
   }
 
-  // Return default logo if fetch fails or no logo in database
+  // Return empty content if no Cloudinary URL found (no fallback)
   return {
     content: '',
     title: 'ECHO Catering Logo',

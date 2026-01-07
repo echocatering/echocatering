@@ -81,20 +81,23 @@ export default function Layout({
           {/* Left Column - Logo */}
           <div className="logo-container">
             <div className="logo-button" onClick={() => navigate('/') }>
-              <img
-                src={logoPath}
-                alt="ECHO Catering Logo"
-                className="logo-image"
-                style={{
-                  width: 'auto',
-                  height: 'calc(100vh / 16)',
-                  display: 'block',
-                  objectFit: 'contain'
-                }}
-                onError={(e) => {
-                  e.target.src = '';
-                }}
-              />
+              {logoPath && logoPath.trim() !== '' ? (
+                <img
+                  src={logoPath}
+                  alt="ECHO Catering Logo"
+                  className="logo-image"
+                  style={{
+                    width: 'auto',
+                    height: 'calc(100vh / 16)',
+                    display: 'block',
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    console.error('Logo failed to load:', logoPath);
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : null}
             </div>
           </div>
 

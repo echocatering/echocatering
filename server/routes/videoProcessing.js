@@ -5,6 +5,8 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const sharp = require('sharp');
 const multer = require('multer');
+const Cocktail = require('../models/Cocktail');
+const { uploadToCloudinary } = require('../utils/cloudinary');
 
 const router = express.Router();
 const execAsync = promisify(exec);
@@ -1287,6 +1289,19 @@ router.post('/generate-background-fbf', async (req, res) => {
     processingStatus.progress = finalFrameCount;
     processingStatus.message = 'Encoding complete!';
     
+    // CRITICAL: Assert that output file exists and has non-zero size before returning
+    // This ensures the file is fully written to disk
+    if (!fs.existsSync(outputPath)) {
+      throw new Error(`Output file not found after encoding: ${outputPath}`);
+    }
+    
+    const outputStats = await fs.promises.stat(outputPath);
+    if (outputStats.size === 0) {
+      throw new Error(`Output file is empty (0 bytes): ${outputPath}`);
+    }
+    
+    console.log(`[generate-background-fbf] ✅ Output file verified: ${outputPath} (${(outputStats.size / (1024 * 1024)).toFixed(2)} MB)`);
+    
     // Cleanup temp preprocessed file if it was created
     if (preprocess && inputPath.includes('temp_preprocessed_')) {
       try {
@@ -1297,7 +1312,7 @@ router.post('/generate-background-fbf', async (req, res) => {
       }
     }
     
-    // Cleanup
+    // Cleanup temp directories (but NOT the output file)
     await fs.promises.rm(videoFramesDir, { recursive: true, force: true });
     await fs.promises.rm(preprocessedDir, { recursive: true, force: true });
     await fs.promises.rm(processedDir, { recursive: true, force: true });
@@ -1311,9 +1326,14 @@ router.post('/generate-background-fbf', async (req, res) => {
     processingStatus.stage = 'complete';
     processingStatus.message = 'Processing complete!';
     
+    // Return absolute output path explicitly
+    const absoluteOutputPath = path.resolve(outputPath);
+    console.log(`[generate-background-fbf] Returning absolute output path: ${absoluteOutputPath}`);
+    
     res.json({
       success: true,
-      outputUrl: `/uploads/test/${outputName}`,
+      outputPath: absoluteOutputPath, // Explicit absolute path
+      outputUrl: `/uploads/${outputDir}/${outputName}`, // Relative URL for compatibility
       message: 'Frame-by-frame background video generated',
       frameCount: finalFrameCount,
       duration: videoDuration,
@@ -2278,12 +2298,22 @@ const applyUniformGain = async (inputPath, outputPath, scale) => {
 
 // Helper function to generate icon video (480x480, <2MB, highest quality)
 const generateIconVideo = async (inputPath, outputPath, itemNumber) => {
+  console.log(`[generateIconVideo] Starting icon generation for item ${itemNumber}`);
+  console.log(`   Input: ${inputPath}`);
+  console.log(`   Output: ${outputPath}`);
+  console.log(`   Input exists: ${fs.existsSync(inputPath)}`);
+  
   const status = itemProcessingStatus.get(itemNumber);
   if (status) {
     status.stage = 'creating-icon';
     status.message = 'Creating icon version...';
     status.progress = 0;
     status.total = 100;
+    itemProcessingStatus.set(itemNumber, status);
+  }
+
+  if (!fs.existsSync(inputPath)) {
+    throw new Error(`Input file not found: ${inputPath}`);
   }
 
   // Try different quality settings until we get under 2MB
@@ -2297,46 +2327,245 @@ const generateIconVideo = async (inputPath, outputPath, itemNumber) => {
   
   const maxSizeMB = 2; // Target file size: 2MB or under
 
-  for (const setting of qualitySettings) {
+  for (let i = 0; i < qualitySettings.length; i++) {
+    const setting = qualitySettings[i];
     if (status) {
       status.message = `Creating icon (${setting.scale}, CRF ${setting.crf})...`;
+      status.progress = Math.floor((i / qualitySettings.length) * 100);
+      itemProcessingStatus.set(itemNumber, status);
     }
+    
+    console.log(`[generateIconVideo] Trying quality setting ${i + 1}/${qualitySettings.length}: CRF ${setting.crf}, scale ${setting.scale}`);
     
     const tempOutput = outputPath.replace('.mp4', '_temp.mp4');
     const cmd = `ffmpeg -y -i "${inputPath}" -vf "scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf ${setting.crf} -preset slow -movflags +faststart "${tempOutput}"`;
     
+    try {
     await execAsync(cmd);
+      console.log(`[generateIconVideo] FFmpeg command completed for setting ${i + 1}`);
+    } catch (error) {
+      console.error(`[generateIconVideo] FFmpeg failed for setting ${i + 1}:`, error.message);
+      // Try next setting
+      await fs.promises.unlink(tempOutput).catch(() => {});
+      continue;
+    }
+    
+    // Check if temp file was created
+    if (!fs.existsSync(tempOutput)) {
+      console.warn(`[generateIconVideo] Temp output file not created for setting ${i + 1}`);
+      continue;
+    }
     
     // Check file size
     const stats = await fs.promises.stat(tempOutput);
     const sizeMB = stats.size / (1024 * 1024);
+    console.log(`[generateIconVideo] Setting ${i + 1} produced file size: ${sizeMB.toFixed(2)} MB`);
     
     if (sizeMB < maxSizeMB) {
       // Success - move to final location
+      console.log(`[generateIconVideo] ✅ File size acceptable (${sizeMB.toFixed(2)} MB < ${maxSizeMB} MB)`);
       await fs.promises.rename(tempOutput, outputPath);
+      
+      // Verify final file exists
+      if (fs.existsSync(outputPath)) {
+        console.log(`[generateIconVideo] ✅ Icon video created successfully: ${outputPath}`);
       if (status) {
         status.message = 'Icon created successfully';
         status.progress = 100;
+          itemProcessingStatus.set(itemNumber, status);
       }
       return { success: true, sizeMB, quality: setting };
+      } else {
+        throw new Error(`Failed to create icon video: file not found after rename`);
+      }
     } else {
       // Too large, try next setting
+      console.log(`[generateIconVideo] File too large (${sizeMB.toFixed(2)} MB >= ${maxSizeMB} MB), trying next setting...`);
       await fs.promises.unlink(tempOutput).catch(() => {});
     }
   }
   
   // If all settings failed, use the last one anyway (best effort)
+  console.log(`[generateIconVideo] All quality settings exceeded 2MB, using last attempt anyway`);
   const finalTemp = outputPath.replace('.mp4', '_temp.mp4');
   if (fs.existsSync(finalTemp)) {
     await fs.promises.rename(finalTemp, outputPath);
-  }
-  
+    if (fs.existsSync(outputPath)) {
+      const finalStats = await fs.promises.stat(outputPath);
+      const finalSizeMB = finalStats.size / (1024 * 1024);
+      console.log(`[generateIconVideo] ✅ Icon video created (exceeds 2MB): ${finalSizeMB.toFixed(2)} MB`);
   if (status) {
-    status.message = 'Icon created (may exceed 2MB)';
+        status.message = `Icon created (${finalSizeMB.toFixed(2)} MB, exceeds 2MB target)`;
     status.progress = 100;
+        itemProcessingStatus.set(itemNumber, status);
+      }
+      return { success: true, sizeMB: finalSizeMB, quality: qualitySettings[qualitySettings.length - 1] };
+    }
   }
   
-  return { success: true, sizeMB: -1, quality: qualitySettings[qualitySettings.length - 1] };
+  // If we get here, icon generation completely failed
+  throw new Error(`Failed to generate icon video after trying all quality settings`);
+};
+
+/**
+ * Upload processed videos to Cloudinary and update database
+ * @param {number} itemNumber - Item number
+ * @param {string} mainVideoPath - Path to main video file
+ * @param {string} iconVideoPath - Path to icon video file
+ * @param {object} status - Processing status object to update
+ * @returns {Promise<object>} Object with cloudinaryVideoUrl and cloudinaryIconUrl
+ */
+const uploadVideosToCloudinary = async (itemNumber, mainVideoPath, iconVideoPath, status) => {
+  const results = {
+    cloudinaryVideoUrl: null,
+    cloudinaryIconUrl: null,
+    error: null
+  };
+  
+  console.log(`[uploadVideosToCloudinary] Starting upload for item ${itemNumber}`);
+  console.log(`   Main video path: ${mainVideoPath}`);
+  console.log(`   Icon video path: ${iconVideoPath}`);
+  console.log(`   Main video exists: ${fs.existsSync(mainVideoPath)}`);
+  console.log(`   Icon video exists: ${fs.existsSync(iconVideoPath)}`);
+  
+  // Check Cloudinary configuration
+  const cloudinaryConfig = {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY ? '***' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'NOT SET',
+    api_secret: process.env.CLOUDINARY_API_SECRET ? '***' + process.env.CLOUDINARY_API_SECRET.slice(-4) : 'NOT SET'
+  };
+  console.log(`[uploadVideosToCloudinary] Cloudinary config check:`, cloudinaryConfig);
+  
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    const error = 'Cloudinary environment variables not configured! Check .env file.';
+    console.error(`❌ ${error}`);
+    results.error = error;
+    return results;
+  }
+  
+  try {
+    // Update status
+    status.stage = 'cloudinary-upload';
+    status.message = 'Uploading videos to Cloudinary...';
+    status.progress = 92;
+    itemProcessingStatus.set(itemNumber, status);
+    
+    // Upload main video - CRITICAL: This must succeed
+    // Main video path is already verified to exist before this function is called
+    status.message = 'Uploading main video to Cloudinary...';
+    itemProcessingStatus.set(itemNumber, status);
+    
+    console.log(`[uploadVideosToCloudinary] Uploading main video: ${mainVideoPath}`);
+    console.log(`   Folder: echo-catering/videos`);
+    console.log(`   Public ID: ${itemNumber}_full`);
+    
+    // Use Cloudinary SDK directly (like gallery/logo)
+    const { cloudinary } = require('../utils/cloudinary');
+    
+    const mainVideoResult = await cloudinary.uploader.upload(mainVideoPath, {
+      public_id: `${itemNumber}_full`,
+      folder: 'echo-catering/videos', // Creates echo-catering/videos/{itemNumber}_full
+      resource_type: 'video',
+      overwrite: true, // Enable overwrite for re-processing
+    });
+    
+    // CRITICAL: Assert secure_url was returned
+    if (!mainVideoResult || !mainVideoResult.secure_url) {
+      throw new Error(`Main video upload did not return secure_url. Result: ${JSON.stringify(mainVideoResult)}`);
+    }
+    
+    results.cloudinaryVideoUrl = mainVideoResult.secure_url;
+    console.log(`✅ Main video uploaded to Cloudinary: ${mainVideoResult.secure_url}`);
+    console.log(`   Public ID: ${mainVideoResult.public_id}`);
+    status.progress = 96;
+    itemProcessingStatus.set(itemNumber, status);
+    
+    // Upload icon video - Independent, non-blocking
+    // Icon upload failure should not block the main video
+    if (fs.existsSync(iconVideoPath)) {
+      status.message = 'Uploading icon video to Cloudinary...';
+      itemProcessingStatus.set(itemNumber, status);
+      
+      console.log(`[uploadVideosToCloudinary] Uploading icon video: ${iconVideoPath}`);
+      console.log(`   Folder: echo-catering/videos`);
+      console.log(`   Public ID: ${itemNumber}_icon`);
+      
+      try {
+        const iconVideoResult = await cloudinary.uploader.upload(iconVideoPath, {
+          public_id: `${itemNumber}_icon`,
+          folder: 'echo-catering/videos', // Creates echo-catering/videos/{itemNumber}_icon
+          resource_type: 'video',
+          overwrite: true, // Enable overwrite for re-processing
+        });
+        
+        if (iconVideoResult && iconVideoResult.secure_url) {
+          results.cloudinaryIconUrl = iconVideoResult.secure_url;
+          console.log(`✅ Icon video uploaded to Cloudinary: ${iconVideoResult.secure_url}`);
+          console.log(`   Public ID: ${iconVideoResult.public_id}`);
+        } else {
+          console.warn(`⚠️  Icon video upload did not return secure_url (non-fatal)`);
+        }
+        status.progress = 98;
+        itemProcessingStatus.set(itemNumber, status);
+      } catch (iconError) {
+        // Icon upload failure is non-fatal - log but don't throw
+        console.warn(`⚠️  Icon video upload failed (non-fatal): ${iconError.message}`);
+        if (!results.error) {
+          results.error = `Icon upload failed: ${iconError.message}`;
+        } else {
+          results.error += `; Icon upload failed: ${iconError.message}`;
+        }
+      }
+    } else {
+      console.warn(`⚠️  Icon video not found: ${iconVideoPath} (non-fatal)`);
+      // Icon video missing is non-fatal - don't add to error
+    }
+    
+    // CRITICAL: Main video URL must exist (already verified above)
+    // Update database with Cloudinary URLs
+    status.message = 'Updating database with Cloudinary URLs...';
+    itemProcessingStatus.set(itemNumber, status);
+    
+    const updateData = {
+      cloudinaryVideoUrl: results.cloudinaryVideoUrl, // Always present (verified above)
+      cloudinaryVideoPublicId: mainVideoResult.public_id // Use actual public_id from Cloudinary
+    };
+    
+    if (results.cloudinaryIconUrl) {
+      updateData.cloudinaryIconUrl = results.cloudinaryIconUrl;
+      // Get icon public_id from the result if it was uploaded
+      const iconPublicId = iconVideoPath && fs.existsSync(iconVideoPath) 
+        ? `echo-catering/videos/${itemNumber}_icon` 
+        : null;
+      if (iconPublicId) {
+        updateData.cloudinaryIconPublicId = iconPublicId;
+      }
+    }
+    
+    console.log(`[uploadVideosToCloudinary] Updating database with:`, updateData);
+    
+    // Find cocktail by itemNumber and update
+    const cocktail = await Cocktail.findOne({ itemNumber: itemNumber });
+    if (!cocktail) {
+      throw new Error(`Cocktail not found for itemNumber ${itemNumber} - cannot update database`);
+    }
+    
+    Object.assign(cocktail, updateData);
+    await cocktail.save();
+    console.log(`✅ Database updated with Cloudinary URLs for item ${itemNumber}`);
+    console.log(`   cloudinaryVideoUrl: ${cocktail.cloudinaryVideoUrl}`);
+    console.log(`   cloudinaryIconUrl: ${cocktail.cloudinaryIconUrl || 'not set'}`);
+    
+    status.progress = 99;
+    itemProcessingStatus.set(itemNumber, status);
+    
+    return results;
+  } catch (error) {
+    console.error(`❌ Cloudinary upload failed for item ${itemNumber}:`, error);
+    console.error(`   Error stack:`, error.stack);
+    // Re-throw error - Cloudinary upload failure is now FATAL
+    throw error;
+  }
 };
 
 // Helper function to process video with per-item status tracking
@@ -2350,7 +2579,8 @@ const processVideoForItem = async (itemNumber) => {
     message: 'Starting processing...',
     startTime: Date.now(),
     estimatedTimeRemaining: null,
-    error: null
+    error: null,
+    itemNumber: itemNumber // Include itemNumber so frontend can match it
   };
   
   itemProcessingStatus.set(itemNumber, status);
@@ -2412,12 +2642,35 @@ const processVideoForItem = async (itemNumber) => {
     // We need to do this before deleting temp folder
     status.stage = 'icon-generation';
     status.message = 'Generating icon video...';
+    status.progress = 18;
+    itemProcessingStatus.set(itemNumber, status);
+    
     const iconOutputPath = path.join(__dirname, '..', 'uploads', 'items', `${itemNumber}_icon.mp4`);
-    await generateIconVideo(wbPath, iconOutputPath, itemNumber).catch(err => {
-      console.error(`Icon generation error for item ${itemNumber}:`, err);
-      // Don't fail the whole process if icon fails
-    });
+    console.log(`[processVideoForItem] Generating icon video for item ${itemNumber}`);
+    console.log(`   Input path: ${wbPath}`);
+    console.log(`   Output path: ${iconOutputPath}`);
+    console.log(`   Input exists: ${fs.existsSync(wbPath)}`);
+    
+    // Ensure items directory exists
+    const itemsDir = path.dirname(iconOutputPath);
+    await fs.promises.mkdir(itemsDir, { recursive: true });
+    
+    try {
+      const iconResult = await generateIconVideo(wbPath, iconOutputPath, itemNumber);
+      console.log(`✅ Icon video generated successfully for item ${itemNumber}:`, iconResult);
+      console.log(`   Icon file exists: ${fs.existsSync(iconOutputPath)}`);
+      if (fs.existsSync(iconOutputPath)) {
+        const iconStats = await fs.promises.stat(iconOutputPath);
+        console.log(`   Icon file size: ${(iconStats.size / (1024 * 1024)).toFixed(2)} MB`);
+      }
+    } catch (err) {
+      console.error(`❌ Icon generation error for item ${itemNumber}:`, err);
+      console.error(`   Error stack:`, err.stack);
+      // Don't fail the whole process if icon fails, but log it clearly
+      status.error = status.error ? `${status.error}; Icon generation failed: ${err.message}` : `Icon generation failed: ${err.message}`;
+    }
     status.progress = 20;
+    itemProcessingStatus.set(itemNumber, status);
     
     // Step 3: Call existing generate-background-fbf endpoint
     // We'll make an HTTP call to the existing endpoint, passing itemNumber so it updates per-item status
@@ -2463,6 +2716,8 @@ const processVideoForItem = async (itemNumber) => {
       }
     }, 500);
     
+    let mainVideoPath = null;
+    
     try {
       await new Promise((resolve, reject) => {
         const req = http.request(options, (res) => {
@@ -2471,24 +2726,21 @@ const processVideoForItem = async (itemNumber) => {
           res.on('end', () => {
             clearInterval(statusSyncInterval);
             if (res.statusCode === 200) {
-              // Move output file to final location if needed
-              const testOutput = path.join(__dirname, '..', 'uploads', 'test', `${itemNumber}.mp4`);
-              if (fs.existsSync(testOutput)) {
-                fs.promises.rename(testOutput, outputPath).then(() => {
-                  resolve();
-                }).catch(() => {
-                  // If rename fails, try copy
-                  fs.promises.copyFile(testOutput, outputPath).then(() => {
-                    resolve();
-                  }).catch(reject);
-                });
+              try {
+                const responseData = JSON.parse(data);
+                // Get absolute output path directly from response
+                if (responseData.outputPath) {
+                  mainVideoPath = responseData.outputPath;
+                  console.log(`[processVideoForItem] Main video path returned from generation: ${mainVideoPath}`);
               } else {
-                // Check if file is already in correct location
-                if (fs.existsSync(outputPath)) {
-                  resolve();
-                } else {
-                  reject(new Error('Output file not found'));
+                  // Fallback: construct path from outputUrl if outputPath not provided
+                  const relativePath = responseData.outputUrl || `/uploads/items/${itemNumber}.mp4`;
+                  mainVideoPath = path.join(__dirname, '..', relativePath.replace(/^\//, ''));
+                  console.log(`[processVideoForItem] Constructed main video path from outputUrl: ${mainVideoPath}`);
                 }
+                  resolve();
+              } catch (parseError) {
+                reject(new Error(`Failed to parse response: ${parseError.message}. Response: ${data}`));
               }
             } else {
               reject(new Error(`Processing failed: ${res.statusCode} - ${data}`));
@@ -2505,62 +2757,169 @@ const processVideoForItem = async (itemNumber) => {
         req.end();
       });
       
+      // CRITICAL: Assert main video path was received
+      if (!mainVideoPath) {
+        throw new Error('Main video path not returned from generation step');
+      }
+      
+      // CRITICAL: Assert main video file exists and has non-zero size
+      if (!fs.existsSync(mainVideoPath)) {
+        throw new Error(`Main video file does not exist: ${mainVideoPath}`);
+      }
+      
+      const mainVideoStats = await fs.promises.stat(mainVideoPath);
+      if (mainVideoStats.size === 0) {
+        throw new Error(`Main video file is empty (0 bytes): ${mainVideoPath}`);
+      }
+      
+      console.log(`[processVideoForItem] ✅ Main video verified: ${mainVideoPath} (${(mainVideoStats.size / (1024 * 1024)).toFixed(2)} MB)`);
+      
       status.progress = 90;
       status.message = 'Finalizing...';
+      itemProcessingStatus.set(itemNumber, status);
       
     } catch (error) {
       clearInterval(statusSyncInterval);
       throw error;
     }
     
-    // Verify final output files exist before cleanup
-    const finalVideoPath = path.join(__dirname, '..', 'uploads', 'items', `${itemNumber}.mp4`);
-    const finalIconPath = path.join(__dirname, '..', 'uploads', 'items', `${itemNumber}_icon.mp4`);
+    // CRITICAL: Enforce hard invariant - main video MUST exist before Cloudinary upload
+    if (!mainVideoPath || !fs.existsSync(mainVideoPath)) {
+      const error = `Main video file does not exist before Cloudinary upload: ${mainVideoPath || 'null'}`;
+      console.error(`[processVideoForItem] ❌ ${error}`);
+      status.active = false;
+      status.stage = 'error';
+      status.error = error;
+      status.message = `Error: ${error}`;
+      itemProcessingStatus.set(itemNumber, status);
+      throw new Error(error);
+    }
     
-    const finalVideoExists = fs.existsSync(finalVideoPath);
-    const finalIconExists = fs.existsSync(finalIconPath);
+    // Verify main video has non-zero size
+    const mainVideoStats = await fs.promises.stat(mainVideoPath);
+    if (mainVideoStats.size === 0) {
+      const error = `Main video file is empty (0 bytes): ${mainVideoPath}`;
+      console.error(`[processVideoForItem] ❌ ${error}`);
+      status.active = false;
+      status.stage = 'error';
+      status.error = error;
+      status.message = `Error: ${error}`;
+      itemProcessingStatus.set(itemNumber, status);
+      throw new Error(error);
+    }
     
-    if (!finalVideoExists || !finalIconExists) {
-      console.warn(`⚠️  Final files missing - keeping temp folder for item ${itemNumber}`);
-      console.warn(`   Video exists: ${finalVideoExists}, Icon exists: ${finalIconExists}`);
-    } else {
-      // Both final files exist - delete entire temp folder immediately (no longer needed)
+    // Icon video path (may or may not exist - that's OK)
+    const iconVideoPath = path.join(__dirname, '..', 'uploads', 'items', `${itemNumber}_icon.mp4`);
+    const iconVideoExists = fs.existsSync(iconVideoPath);
+    
+    // Log invariant before Cloudinary upload
+    console.log(`[processVideoForItem] ✅ Invariant check before Cloudinary upload:`);
+    console.log(`   Main video path: ${mainVideoPath}`);
+    console.log(`   Main video exists: true`);
+    console.log(`   Main video size: ${(mainVideoStats.size / (1024 * 1024)).toFixed(2)} MB`);
+    console.log(`   Icon video path: ${iconVideoPath}`);
+    console.log(`   Icon video exists: ${iconVideoExists}`);
+    if (iconVideoExists) {
+      const iconStats = await fs.promises.stat(iconVideoPath);
+      console.log(`   Icon video size: ${(iconStats.size / (1024 * 1024)).toFixed(2)} MB`);
+    }
+    
+    // ✅ Upload to Cloudinary and update database
+    // This step is now guaranteed to have a valid main video file
+    console.log(`[processVideoForItem] Starting Cloudinary upload for item ${itemNumber}...`);
+    
+    let cloudinaryResults;
+    try {
+      cloudinaryResults = await uploadVideosToCloudinary(
+        itemNumber,
+        mainVideoPath,
+        iconVideoPath,
+        status
+      );
+      
+      // CRITICAL: If main video upload failed, this is a fatal error
+      if (!cloudinaryResults.cloudinaryVideoUrl) {
+        const error = `Main video Cloudinary upload failed: ${cloudinaryResults.error || 'No URL returned'}`;
+        console.error(`[processVideoForItem] ❌ ${error}`);
+        status.active = false;
+        status.stage = 'error';
+        status.error = error;
+        status.message = `Error: ${error}`;
+        itemProcessingStatus.set(itemNumber, status);
+        throw new Error(error);
+      }
+      
+      console.log(`[processVideoForItem] ✅ Cloudinary upload complete for item ${itemNumber}`);
+      console.log(`   Main video: ${cloudinaryResults.cloudinaryVideoUrl}`);
+      console.log(`   Icon video: ${cloudinaryResults.cloudinaryIconUrl || 'not uploaded (non-fatal)'}`);
+      
+    } catch (cloudinaryError) {
+      // Cloudinary upload failure is FATAL - do not mark as complete
+      console.error(`[processVideoForItem] ❌ Cloudinary upload error (FATAL):`, cloudinaryError);
+      console.error(`   Error stack:`, cloudinaryError.stack);
+      status.active = false;
+      status.stage = 'error';
+      status.error = `Cloudinary upload failed: ${cloudinaryError.message}`;
+      status.message = `Error: ${cloudinaryError.message}`;
+      itemProcessingStatus.set(itemNumber, status);
+      throw cloudinaryError; // Re-throw to prevent cleanup and completion
+    }
+    
+    // CRITICAL: Only cleanup AFTER successful Cloudinary upload and database update
+    // Cleanup should never run if Cloudinary upload fails (caught above)
+    
+    // Delete temp folder (contains all intermediate processing files)
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+      console.log(`✅ Cleaned up temp folder for item ${itemNumber} (after successful Cloudinary upload)`);
+    } catch (cleanupError) {
+      console.warn(`⚠️  Failed to delete temp folder for item ${itemNumber}:`, cleanupError.message);
+      // Non-fatal - don't fail processing
+    }
+    
+    // Delete final video files from uploads/items (Cloudinary-only storage)
+    // Main video
+    try {
+      if (fs.existsSync(mainVideoPath)) {
+        await fs.promises.unlink(mainVideoPath);
+        console.log(`✅ Deleted local main video file: ${mainVideoPath}`);
+      }
+    } catch (deleteError) {
+      console.warn(`⚠️  Failed to delete local main video file:`, deleteError.message);
+      // Non-fatal - Cloudinary upload already succeeded
+    }
+    
+    // Icon video (if it exists)
+    if (iconVideoPath && fs.existsSync(iconVideoPath)) {
       try {
-        await fs.promises.rm(tempDir, { recursive: true, force: true });
-        console.log(`✅ Cleaned up temp folder for item ${itemNumber} (processing complete)`);
-      } catch (cleanupError) {
-        console.warn(`⚠️  Failed to delete temp folder for item ${itemNumber}:`, cleanupError.message);
+        await fs.promises.unlink(iconVideoPath);
+        console.log(`✅ Deleted local icon video file: ${iconVideoPath}`);
+      } catch (deleteError) {
+        console.warn(`⚠️  Failed to delete local icon video file:`, deleteError.message);
+        // Non-fatal - Cloudinary upload already succeeded
       }
     }
     
+    // Only mark as complete if we got here (main video exists, uploaded successfully, DB updated)
     status.stage = 'complete';
     status.message = 'Processing complete!';
     status.progress = 100;
     status.active = false;
     
   } catch (error) {
+    // CRITICAL: On any fatal error, mark processing as failed and inactive
     status.active = false;
+    status.stage = 'error';
     status.error = error.message;
     status.message = `Error: ${error.message}`;
-    console.error(`Error processing item ${itemNumber}:`, error);
+    itemProcessingStatus.set(itemNumber, status);
     
-    // Cleanup intermediate files on error (keep original for debugging)
-    const tempDir = path.join(__dirname, '..', 'uploads', 'items', 'temp_files', String(itemNumber));
-    try {
-      const files = await fs.promises.readdir(tempDir).catch(() => []);
-      for (const file of files) {
-        // Delete intermediate files but keep original
-        if (file.includes('_preprocessed') && !file.includes('_original')) {
-          const filePath = path.join(tempDir, file);
-          await fs.promises.unlink(filePath).catch(() => {});
-          console.log(`🧹 Cleaned up intermediate file on error: ${file}`);
-        }
-      }
-    } catch (cleanupError) {
-      console.warn(`⚠️  Could not cleanup intermediate files on error:`, cleanupError.message);
-    }
+    console.error(`[processVideoForItem] ❌ Fatal error processing item ${itemNumber}:`, error);
+    console.error(`   Error stack:`, error.stack);
     
-    // Keep original file and temp folder on error for debugging - can be manually cleaned up later
+    // Do NOT cleanup on error - keep files for debugging
+    // Original file and temp folder remain for manual inspection
+    
     throw error;
   }
 };
@@ -2656,6 +3015,31 @@ router.get('/status/:itemNumber', async (req, res) => {
   } catch (error) {
     console.error('Get status error:', error);
     res.status(500).json({ error: 'Failed to get status', message: error.message });
+  }
+});
+
+/**
+ * Get all active processing jobs
+ * GET /api/video-processing/active-jobs
+ */
+router.get('/active-jobs', (req, res) => {
+  try {
+    const activeJobs = [];
+    for (const [itemNumber, status] of itemProcessingStatus.entries()) {
+      if (status.active) {
+        activeJobs.push({
+          itemNumber,
+          ...status
+        });
+      }
+    }
+    res.json({
+      count: activeJobs.length,
+      jobs: activeJobs
+    });
+  } catch (error) {
+    console.error('Get active jobs error:', error);
+    res.status(500).json({ error: 'Failed to get active jobs', message: error.message });
   }
 });
 

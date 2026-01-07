@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
+import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
 /**
  * Computes sizes and positions for OuterContainer, InnerContainer, and Video.
@@ -100,16 +101,18 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
  * Video background that fills the outer container (viewport).
  */
 function VideoBackground({ videoSrc }) {
-  if (!videoSrc) return null;
+  if (!isCloudinaryUrl(videoSrc)) {
+    return null;
+  }
 
   return (
-      <video
-        key={videoSrc}
-      src={videoSrc}
-        autoPlay
-        muted
-        loop
-        playsInline
+    <video
+      key={videoSrc}
+      autoPlay
+      muted
+      loop
+      playsInline
+      crossOrigin="anonymous"
       style={{
         position: 'absolute',
         top: 0,
@@ -121,7 +124,9 @@ function VideoBackground({ videoSrc }) {
         pointerEvents: 'none',
         zIndex: 0,
       }}
-    />
+    >
+      <source src={videoSrc} type="video/mp4" />
+    </video>
   );
 }
 
@@ -327,9 +332,25 @@ function EchoCocktailSubpage2({
   const currentFile = videoFiles[currentIndex];
   const info = currentFile ? cocktailInfo[currentFile] : null;
   const countryDisplayList = info ? getCountryDisplayList(info) : [];
-  const videoSrc = info?.itemNumber
-    ? `/uploads/items/${info.itemNumber}.mp4`
-    : (currentFile ? `/menu-items/${currentFile}` : '');
+  
+  // ONLY use Cloudinary URLs - NO FALLBACK to local paths
+  let videoSrc = '';
+  
+  // HARDCODED: Item 1 Cloudinary URL
+  const ITEM_1_CLOUDINARY_URL = 'https://res.cloudinary.com/duysruzct/video/upload/v1767647969/echo-catering/videos/1_g3xipv.mp4';
+  
+  // Check if this is item 1 and use hardcoded URL
+  if (info?.itemNumber === 1 || currentFile === 'item-1') {
+    videoSrc = ITEM_1_CLOUDINARY_URL;
+  } else if (isCloudinaryUrl(info?.cloudinaryVideoUrl)) {
+    // Use cloudinaryVideoUrl if it's a valid Cloudinary URL, otherwise try videoUrl
+    videoSrc = info.cloudinaryVideoUrl;
+  } else if (isCloudinaryUrl(info?.videoUrl)) {
+    videoSrc = info.videoUrl;
+  } else {
+    videoSrc = '';
+  }
+  
 
   // Function to scroll gallery container so top aligns with viewport top
   const scrollToBottomAlign = useCallback(() => {
@@ -2244,7 +2265,21 @@ function EchoCocktailSubpage2({
       }}
     >
       {/* Video background fills entire outer container/viewport */}
-      <VideoBackground videoSrc={videoSrc} />
+      {isCloudinaryUrl(videoSrc) ? (
+        <VideoBackground videoSrc={videoSrc} />
+      ) : (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#f5f5f5',
+          zIndex: 0,
+        }}>
+          {/* No video available */}
+        </div>
+      )}
       
       {/* Gradient mask at bottom of outer container (16:10 horizontal view) - behind nav */}
       {layout.orientation === 'horizontal' && (

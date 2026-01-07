@@ -7,7 +7,7 @@ const Sidebar = () => {
   const location = useLocation();
   const { apiCall } = useAuth();
   const logoFileInputRef = useRef(null);
-  const [currentLogo, setCurrentLogo] = useState('/assets/icons/echo_.svg');
+  const [currentLogo, setCurrentLogo] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     echoInterface: true,
     inventory: true,
@@ -45,25 +45,21 @@ const Sidebar = () => {
   const fetchCurrentLogo = async () => {
     try {
       const response = await apiCall('/content/logo');
-      if (response && response.content) {
-        const logoPath = response.content;
-        if (logoPath && logoPath.startsWith('/uploads/')) {
-          try {
-            const testResponse = await fetch(logoPath);
-            if (testResponse.ok) {
-              setCurrentLogo(logoPath);
-              return;
-            }
-          } catch (fetchError) {
-            console.log('Uploaded logo file not accessible, falling back to default');
-          }
-        }
+      
+      // ONLY use Cloudinary URL - no fallbacks
+      if (response && response.content && response.content.startsWith('https://res.cloudinary.com/')) {
+        console.log('✅ Logo fetched (Cloudinary only):', response.content);
+        setCurrentLogo(response.content);
+        return;
       }
-      // Fallback to default logo
-      setCurrentLogo('/assets/icons/echo_.svg');
+      
+      // No Cloudinary URL found - show nothing
+      console.log('⚠️  No Cloudinary logo found - displaying empty');
+      setCurrentLogo(null);
     } catch (error) {
       console.error('Error fetching logo:', error);
-      setCurrentLogo('/assets/icons/echo_.svg');
+      // No fallback - show nothing if error
+      setCurrentLogo(null);
     }
   };
 
@@ -196,18 +192,35 @@ const Sidebar = () => {
             onChange={handleLogoFileSelect}
             style={{ display: 'none' }}
           />
-          <img
-            src={currentLogo}
-            alt="Logo"
-            style={{
+          {currentLogo && currentLogo.startsWith('https://res.cloudinary.com/') ? (
+            <img
+              src={currentLogo}
+              alt="Logo"
+              style={{
+                width: '172.8px',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                console.error('Logo image failed to load:', currentLogo);
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div style={{
               width: '172.8px',
-              height: 'auto',
-              objectFit: 'contain'
-            }}
-            onError={(e) => {
-              e.target.src = '/assets/icons/echo_.svg';
-            }}
-          />
+              height: '172.8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '0.8rem',
+              border: '1px dashed #ccc',
+              borderRadius: '4px'
+            }}>
+              No logo
+            </div>
+          )}
           <div style={{
             color: '#999',
             fontSize: '0.7rem',

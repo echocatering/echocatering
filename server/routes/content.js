@@ -124,12 +124,25 @@ router.get('/about', async (req, res) => {
       page: 'about'
     }).sort({ order: 1, section: 1 });
 
-    // Helper to pull image
+    // Helper to pull image - prefer Cloudinary URL if available
     const getImage = (item, sectionNumber) => {
+      // First check for Cloudinary URL (must be valid URL, not empty string)
+      if (item?.cloudinaryUrl && 
+          item.cloudinaryUrl.trim() !== '' && 
+          (item.cloudinaryUrl.startsWith('http://') || item.cloudinaryUrl.startsWith('https://'))) {
+        return item.cloudinaryUrl;
+      }
+      // Then check metadata
+      if (item?.metadata?.get) {
+        const metadataImage = item.metadata.get('image');
+        if (metadataImage) return metadataImage;
+      }
+      if (item?.metadata?.image) {
+        return item.metadata.image;
+      }
+      // Finally check local file
       const sectionFile = getSectionImagePath(sectionNumber);
       if (sectionFile) return sectionFile;
-      if (item?.metadata?.get) return item.metadata.get('image') || '';
-      if (item?.metadata?.image) return item.metadata.image || '';
       return '';
     };
 
@@ -340,7 +353,20 @@ router.get('/logo', async (req, res) => {
     });
     
     if (logoContent) {
-      res.json(logoContent);
+      // Return logo with Cloudinary URL if available, otherwise use content field
+      const logoData = logoContent.toObject();
+      // Prefer Cloudinary URL for content field (frontend expects 'content')
+      // Must be valid URL, not empty string
+      if (logoContent.cloudinaryUrl && 
+          logoContent.cloudinaryUrl.trim() !== '' && 
+          (logoContent.cloudinaryUrl.startsWith('http://') || logoContent.cloudinaryUrl.startsWith('https://'))) {
+        logoData.content = logoContent.cloudinaryUrl;
+        logoData.logoUrl = logoContent.cloudinaryUrl; // Also include for backwards compatibility
+      } else if (logoContent.content) {
+        // Fallback to content field (local path)
+        logoData.logoUrl = logoContent.content;
+      }
+      res.json(logoData);
     } else {
       // Return default logo if none in database
       res.json({
@@ -349,7 +375,8 @@ router.get('/logo', async (req, res) => {
         altText: 'ECHO Catering Logo',
         page: 'global',
         section: 'header',
-        type: 'logo'
+        type: 'logo',
+        logoUrl: ''
       });
     }
   } catch (error) {
@@ -361,7 +388,8 @@ router.get('/logo', async (req, res) => {
       altText: 'ECHO Catering Logo',
       page: 'global',
       section: 'header',
-      type: 'logo'
+      type: 'logo',
+      logoUrl: ''
     });
   }
 });

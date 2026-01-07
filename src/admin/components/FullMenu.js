@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 // Menu categories configuration - matches MenuManager
 const MENU_CATEGORIES = [
@@ -366,35 +367,43 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
                                 position: 'relative'
                               }}
                             >
-                              {(cocktail.itemNumber || cocktail.stage1File || cocktail.videoFile) ? (
-                        <video
-                                  src={cocktail.itemNumber ? `/menu-items/${cocktail.itemNumber}_icon.mp4` : `/menu-items/${cocktail.stage1File || cocktail.videoFile}`}
-                          autoPlay
-                          muted
-                          loop
-                                  playsInline
-                          style={{ 
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            position: 'relative',
-                            zIndex: 1
-                          }}
-                        />
-                      ) : (
-                                <div className="recipe-card-image-placeholder" style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  backgroundColor: isPremix && recipe?.backgroundColor ? recipe.backgroundColor : '#f5f5f5',
-                              display: 'flex',
-                              alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#999'
-                                }}>
-                                  No Video
-                        </div>
-                      )}
-                      {isSelected && (
+                              {(() => {
+                                const videoSrc = cocktail.cloudinaryIconUrl || cocktail.cloudinaryVideoUrl || cocktail.videoUrl;
+                                return isCloudinaryUrl(videoSrc) ? (
+                                  <video
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    style={{ 
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      position: 'relative',
+                                      zIndex: 1
+                                    }}
+                                  >
+                                    <source src={videoSrc} type="video/mp4" />
+                                  </video>
+                                ) : null;
+                              })()}
+                              {(() => {
+                                const videoSrc = cocktail.cloudinaryIconUrl || cocktail.cloudinaryVideoUrl || cocktail.videoUrl;
+                                return !isCloudinaryUrl(videoSrc) ? (
+                                  <div className="recipe-card-image-placeholder" style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    backgroundColor: isPremix && recipe?.backgroundColor ? recipe.backgroundColor : '#f5f5f5',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#999'
+                                  }}>
+                                    No Video
+                                  </div>
+                                ) : null;
+                              })()}
+                              {isSelected && (
                         <img
                           src="/assets/icons/cornercheck-01.svg"
                           alt="Selected"
@@ -493,34 +502,38 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
                         position: 'relative'
                       }}
                     >
-                      {(cocktail.itemNumber || cocktail.stage1File || cocktail.videoFile) ? (
-                        <video
-                          src={cocktail.itemNumber ? `/menu-items/${cocktail.itemNumber}_icon.mp4` : `/cocktails/${cocktail.stage1File || cocktail.videoFile}`}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          style={{ 
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            position: 'relative',
-                            zIndex: 1
-                          }}
-                        />
-                      ) : (
-                        <div className="recipe-card-image-placeholder" style={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          backgroundColor: isPremix && recipe?.backgroundColor ? recipe.backgroundColor : '#f5f5f5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#999'
-                        }}>
-                          No Video
-                        </div>
-                        )}
+                      {(() => {
+                        const videoSrc = cocktail.cloudinaryIconUrl || cocktail.cloudinaryVideoUrl || cocktail.videoUrl;
+                        return isCloudinaryUrl(videoSrc) ? (
+                          <video
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            style={{ 
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              position: 'relative',
+                              zIndex: 1
+                            }}
+                          >
+                            <source src={videoSrc} type="video/mp4" />
+                          </video>
+                        ) : (
+                          <div className="recipe-card-image-placeholder" style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            backgroundColor: isPremix && recipe?.backgroundColor ? recipe.backgroundColor : '#f5f5f5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#999'
+                          }}>
+                            No Video
+                          </div>
+                        );
+                      })()}
                       {isSelected && (
                         <img
                           src="/assets/icons/cornercheck-01.svg"

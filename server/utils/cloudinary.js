@@ -1,0 +1,88 @@
+const cloudinary = require('cloudinary').v2;
+require('dotenv').config();
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/**
+ * Upload a file to Cloudinary
+ * @param {string} filePath - Local file path
+ * @param {object} options - Upload options
+ * @param {string} options.folder - Cloudinary folder path
+ * @param {string} options.resourceType - 'image', 'video', or 'auto'
+ * @param {string} options.publicId - Optional custom public ID
+ * @returns {Promise<object>} Cloudinary upload result
+ */
+const uploadToCloudinary = async (filePath, options = {}) => {
+  const {
+    folder = 'echo-catering',
+    resourceType = 'auto',
+    publicId = null,
+  } = options;
+
+  try {
+    const uploadOptions = {
+      folder,
+      resource_type: resourceType, // Use resource_type (Cloudinary API format)
+      use_filename: false, // Don't use filename when publicId is provided
+      unique_filename: false, // Don't make unique when publicId is provided
+      overwrite: true, // Allow overwriting when re-processing videos
+    };
+
+    if (publicId) {
+      uploadOptions.public_id = publicId;
+      // When publicId is provided, don't use filename or unique_filename
+      uploadOptions.use_filename = false;
+      uploadOptions.unique_filename = false;
+    }
+
+    const result = await cloudinary.uploader.upload(filePath, uploadOptions);
+
+    // CRITICAL: Assert secure_url exists
+    if (!result.secure_url) {
+      throw new Error(`Cloudinary upload succeeded but did not return secure_url. Result: ${JSON.stringify(result)}`);
+    }
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+      bytes: result.bytes,
+      duration: result.duration, // For videos
+    };
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw new Error(`Failed to upload to Cloudinary: ${error.message}`);
+  }
+};
+
+/**
+ * Delete a file from Cloudinary
+ * @param {string} publicId - Cloudinary public ID
+ * @param {string} resourceType - 'image' or 'video'
+ * @returns {Promise<object>} Deletion result
+ */
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+    });
+    return result;
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    throw new Error(`Failed to delete from Cloudinary: ${error.message}`);
+  }
+};
+
+module.exports = {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+  cloudinary,
+};
+

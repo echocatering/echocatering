@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamicGallery from '../utils/dynamicGallery';
+import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
 // CSS animations for modal transitions
 const modalAnimations = `
@@ -285,8 +286,21 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           sequence1Items.forEach((item, itemIndex) => {
             const actualImageIndex = (sequenceIndex * 3 + itemIndex) % images.length;
             const image = images[actualImageIndex];
-            // Ensure we have a valid image src - check multiple possible properties
-            const imageSrc = image?.src || image?.imagePath || (typeof image === 'string' ? image : `/gallery/${image?.filename}`) || '';
+            // Ensure we have a valid image src - prioritize Cloudinary URLs
+            // Priority 1: cloudinaryUrl directly
+            // Priority 2: src (which should already prefer Cloudinary from galleryUtils)
+            // Priority 3: imagePath virtual (which should prefer Cloudinary)
+            // Priority 4: Fallback to local path
+            let imageSrc = '';
+            if (isCloudinaryUrl(image?.cloudinaryUrl)) {
+              imageSrc = image.cloudinaryUrl;
+            } else if (isCloudinaryUrl(image?.src)) {
+              imageSrc = image.src;
+            } else if (isCloudinaryUrl(image?.imagePath)) {
+              imageSrc = image.imagePath;
+            } else if (isCloudinaryUrl(image)) {
+              imageSrc = image;
+            }
             
             mobileGridItems.push({
               ...item,
@@ -345,8 +359,21 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           sequence2Items.forEach((item, itemIndex) => {
             const actualImageIndex = (sequenceIndex * 3 + itemIndex) % images.length;
             const image = images[actualImageIndex];
-            // Ensure we have a valid image src - check multiple possible properties
-            const imageSrc = image?.src || image?.imagePath || (typeof image === 'string' ? image : `/gallery/${image?.filename}`) || '';
+            // Ensure we have a valid image src - prioritize Cloudinary URLs
+            // Priority 1: cloudinaryUrl directly
+            // Priority 2: src (which should already prefer Cloudinary from galleryUtils)
+            // Priority 3: imagePath virtual (which should prefer Cloudinary)
+            // Priority 4: Fallback to local path
+            let imageSrc = '';
+            if (isCloudinaryUrl(image?.cloudinaryUrl)) {
+              imageSrc = image.cloudinaryUrl;
+            } else if (isCloudinaryUrl(image?.src)) {
+              imageSrc = image.src;
+            } else if (isCloudinaryUrl(image?.imagePath)) {
+              imageSrc = image.imagePath;
+            } else if (isCloudinaryUrl(image)) {
+              imageSrc = image;
+            }
             
             mobileGridItems.push({
               ...item,
@@ -1226,13 +1253,14 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                       }}
                       onClick={() => handleImageClick(item.imageSrc)}
                     >
-                      <img
-                        src={`${item.imageSrc}?w=1200&auto=format`}
-                        srcSet={`${item.imageSrc}?w=800&auto=format 800w, ${item.imageSrc}?w=1200&auto=format 1200w, ${item.imageSrc} 2000w`}
-                        sizes="(max-width: 1200px) 50vw, 33vw"
-                        loading="lazy"
-                        decoding="async"
-                        alt={`Gallery ${item.sequenceIndex}-${item.itemIndex}`}
+                      {isCloudinaryUrl(item.imageSrc) && (
+                        <img
+                          src={`${item.imageSrc}?w=1200&auto=format`}
+                          srcSet={`${item.imageSrc}?w=800&auto=format 800w, ${item.imageSrc}?w=1200&auto=format 1200w, ${item.imageSrc} 2000w`}
+                          sizes="(max-width: 1200px) 50vw, 33vw"
+                          loading="lazy"
+                          decoding="async"
+                          alt={`Gallery ${item.sequenceIndex}-${item.itemIndex}`}
                         onError={(e) => {
                           console.error(`❌ Image failed to load:`, item.imageSrc);
                           console.error(`   Item details:`, item);
@@ -1271,7 +1299,8 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                           })(),
                           transition: 'filter 0.75s ease-in-out' // Smooth fade transition
                         }}
-                      />
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1547,9 +1576,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               padding: 0
             }}
           >
-            <img
-              src={fullscreenImage}
-              alt="Fullscreen gallery"
+            {isCloudinaryUrl(fullscreenImage) && (
+              <img
+                src={fullscreenImage}
+                alt="Fullscreen gallery"
               style={{
                 maxWidth: '100vw',
                 maxHeight: '100vh',
@@ -1560,7 +1590,8 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                 display: 'block'
               }}
               onClick={(e) => e.stopPropagation()}
-            />
+              />
+            )}
           </div>
           {/* Bottom controls */}
           <div 
@@ -1870,9 +1901,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                 padding: 0
             }}
           >
-          <img
-            src={selectedImage}
-            alt="Enlarged gallery"
+          {isCloudinaryUrl(selectedImage) && (
+            <img
+              src={selectedImage}
+              alt="Enlarged gallery"
             style={{
                   maxWidth: '100vw',
                   maxHeight: '100vh',
@@ -1883,7 +1915,8 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                   display: 'block'
                 }}
                 onClick={(e) => e.stopPropagation()}
-              />
+                />
+              )}
             </div>
 
             {/* Navigation and close controls - bottom row */}
@@ -2069,9 +2102,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={isFullscreen ? fullscreenImage : selectedImage}
-              alt="Gallery"
+            {isCloudinaryUrl(isFullscreen ? fullscreenImage : selectedImage) && (
+              <img
+                src={isFullscreen ? fullscreenImage : selectedImage}
+                alt="Gallery"
               style={{
                 maxWidth: '100vw',
                 maxHeight: 'calc(100vh - 140px)',
@@ -2081,7 +2115,8 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                 pointerEvents: 'auto',
                 display: 'block'
               }}
-            />
+              />
+            )}
           </div>
 
           <div 

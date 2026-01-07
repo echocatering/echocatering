@@ -120,6 +120,32 @@ const cocktailSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  // Cloudinary fields for video storage
+  cloudinaryVideoUrl: {
+    type: String,
+    default: ''
+  },
+  cloudinaryVideoPublicId: {
+    type: String,
+    default: ''
+  },
+  cloudinaryIconUrl: {
+    type: String,
+    default: ''
+  },
+  cloudinaryIconPublicId: {
+    type: String,
+    default: ''
+  },
+  // Cloudinary fields for map snapshot storage
+  cloudinaryMapSnapshotUrl: {
+    type: String,
+    default: ''
+  },
+  cloudinaryMapSnapshotPublicId: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
@@ -138,7 +164,26 @@ cocktailSchema.virtual('videoPath').get(function() {
 });
 
 cocktailSchema.virtual('videoUrl').get(function() {
+  // Prefer Cloudinary URL if available, fallback to local
+  // Check for truthy value AND that it's not an empty string AND that it starts with http/https
+  if (this.cloudinaryVideoUrl && 
+      this.cloudinaryVideoUrl.trim() !== '' && 
+      (this.cloudinaryVideoUrl.startsWith('http://') || this.cloudinaryVideoUrl.startsWith('https://'))) {
+    return this.cloudinaryVideoUrl;
+  }
   return this.videoFile ? `/menu-items/${this.videoFile}` : '';
+});
+
+cocktailSchema.virtual('iconVideoUrl').get(function() {
+  // Prefer Cloudinary URL if available, fallback to local
+  // Check for truthy value AND that it's not an empty string AND that it starts with http/https
+  if (this.cloudinaryIconUrl && 
+      this.cloudinaryIconUrl.trim() !== '' && 
+      (this.cloudinaryIconUrl.startsWith('http://') || this.cloudinaryIconUrl.startsWith('https://'))) {
+    return this.cloudinaryIconUrl;
+  }
+  const iconFile = this.videoFile ? this.videoFile.replace('.mp4', '_icon.mp4') : '';
+  return iconFile ? `/menu-items/${iconFile}` : '';
 });
 
 cocktailSchema.virtual('mapSnapshotPath').get(function() {
@@ -146,6 +191,13 @@ cocktailSchema.virtual('mapSnapshotPath').get(function() {
 });
 
 cocktailSchema.virtual('mapSnapshotUrl').get(function() {
+  // Prefer Cloudinary URL if available, fallback to local
+  // Check for truthy value AND that it's not an empty string AND that it starts with http/https
+  if (this.cloudinaryMapSnapshotUrl && 
+      this.cloudinaryMapSnapshotUrl.trim() !== '' && 
+      (this.cloudinaryMapSnapshotUrl.startsWith('http://') || this.cloudinaryMapSnapshotUrl.startsWith('https://'))) {
+    return this.cloudinaryMapSnapshotUrl;
+  }
   return this.mapSnapshotFile ? `/menu-items/${this.mapSnapshotFile}` : '';
 });
 

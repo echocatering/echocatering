@@ -103,7 +103,7 @@ const GalleryManager = () => {
     const files = Array.from(event.target.files);
     if (files.length > 0) {
       setSelectedFiles(files);
-      // Automatically start upload when files are selected
+      // Upload files one at a time (single-file endpoint)
       await handleUpload(files);
     }
   };
@@ -126,58 +126,40 @@ const GalleryManager = () => {
       }
 
       console.log('🔐 Authentication token found, proceeding with upload...');
+      console.log(`📤 Uploading ${files.length} file(s) one at a time...`);
 
-      const formData = new FormData();
-      files.forEach(file => {
-        formData.append('gallery', file);
-      });
-
-      console.log(`📤 Uploading ${selectedFiles.length} file(s)...`);
-
-      // Custom upload with progress tracking
-      const response = await fetch('http://localhost:5001/api/upload/gallery', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      console.log('📡 Upload response received:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Upload failed:', errorData);
+      // Upload files one at a time (single-file endpoint)
+      // Backend creates DB records automatically - no need to call createGalleryEntry
+      let successCount = 0;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`   Uploading ${i + 1}/${files.length}: ${file.name}`);
         
-        if (response.status === 401) {
-          setError('❌ Authentication failed. Your session may have expired. Please log in again.');
-        } else if (response.status === 413) {
-          setError('❌ File too large. Maximum file size is 50MB.');
-        } else if (response.status === 400) {
-          setError(`❌ Upload error: ${errorData.message || 'Invalid file format'}`);
-        } else {
-          setError(`❌ Upload failed: ${errorData.message || 'Server error'}`);
-        }
-        return;
-      }
+        const formData = new FormData();
+        formData.append('gallery', file);
 
-      const responseData = await response.json();
-      console.log('✅ Upload successful:', responseData);
-
-      // After successful upload, create gallery entries
-      console.log('📝 Creating gallery database entries...');
-      for (const fileInfo of responseData.files) {
         try {
-          await createGalleryEntry(fileInfo);
-          console.log(`✅ Created entry for: ${fileInfo.filename}`);
-        } catch (error) {
-          console.error(`❌ Failed to create entry for ${fileInfo.filename}:`, error);
-          setError(`⚠️ Uploaded ${responseData.files.length} image(s) but failed to create database entries. Images may not appear in the gallery.`);
-          return;
+          const response = await apiCall('/upload/gallery', {
+            method: 'POST',
+            body: formData
+          });
+
+          console.log(`   ✅ Upload ${i + 1} successful:`, response);
+          successCount++;
+          
+          // Update progress
+          setUploadProgress(Math.floor(((i + 1) / files.length) * 100));
+        } catch (uploadError) {
+          console.error(`   ❌ Upload ${i + 1} failed:`, uploadError);
+          setError(`⚠️ Failed to upload ${file.name}: ${uploadError.message}`);
+          // Continue with next file
         }
       }
 
-      setSuccess(`🎉 Successfully uploaded ${files.length} image(s)! They are now available in the gallery.`);
+      if (successCount > 0) {
+        setSuccess(`🎉 Successfully uploaded ${successCount} of ${files.length} image(s)!`);
+      }
+      
       setSelectedFiles([]);
       setUploadProgress(0);
       
@@ -206,32 +188,8 @@ const GalleryManager = () => {
     }
   };
 
-  const createGalleryEntry = async (fileInfo) => {
-    try {
-      console.log('📝 Creating gallery entry for:', fileInfo);
-      
-      const galleryData = {
-        filename: fileInfo.filename,
-        originalName: fileInfo.originalName,
-        category: 'gallery',
-        title: fileInfo.originalName.replace(/\.[^/.]+$/, ''), // Remove file extension for title
-        isActive: true
-      };
-      
-      console.log('📋 Gallery data to send:', galleryData);
-      
-      const response = await apiCall('/gallery', {
-        method: 'POST',
-        body: JSON.stringify(galleryData)
-      });
-      
-      console.log('✅ Gallery entry created successfully:', response);
-      return response;
-    } catch (error) {
-      console.error('❌ Error creating gallery entry:', error);
-      throw error;
-    }
-  };
+  // No longer needed - upload endpoint creates DB record automatically
+  // const createGalleryEntry = async (fileInfo) => { ... };
 
   const handleDelete = async (imageId) => {
     const confirmed = await showConfirm('Are you sure you want to delete this image? This action cannot be undone.', 'This action can\'t be undone…');
@@ -243,18 +201,10 @@ const GalleryManager = () => {
       setDeleting(true);
       setError('');
 
-      // Delete from gallery database
+      // Delete from Cloudinary and database (single endpoint handles both)
       await apiCall(`/gallery/${imageId}`, {
         method: 'DELETE'
       });
-      
-      // Delete the actual file
-      const image = images.find(img => img._id === imageId);
-      if (image) {
-        await apiCall(`/upload/gallery/${image.filename}`, {
-          method: 'DELETE'
-        });
-      }
 
       setSuccess('Image deleted successfully!');
       
@@ -387,11 +337,21 @@ const GalleryManager = () => {
               <div className="text-center" style={{ width: '100%' }}>
                 {/* Full-width image container */}
                 <div className="mb-4 flex items-center justify-center" style={{width: '100%', height: '770px', minHeight: '770px'}}>
-                  <img
-                    src={images[currentImageIndex]?.imagePath || `/gallery/${images[currentImageIndex]?.filename}`}
-                    alt={images[currentImageIndex]?.title || 'Gallery image'}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
+                  {images[currentImageIndex]?.cloudinaryUrl && images[currentImageIndex].cloudinaryUrl.startsWith('https://res.cloudinary.com/') ? (
+                    <img
+                      src={images[currentImageIndex].cloudinaryUrl}
+                      alt={images[currentImageIndex]?.title || 'Gallery image'}
+                      className="w-full h-full object-cover rounded-lg"
+                      onError={(e) => {
+                        console.error('Gallery image failed to load:', images[currentImageIndex].cloudinaryUrl);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
+                      <p className="text-gray-500">No image available</p>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Navigation Arrows Below Image */}
@@ -538,10 +498,15 @@ const GalleryManager = () => {
             {/* Thumbnail Navigation */}
             <div className="flex flex-wrap justify-center gap-2 max-w-full overflow-x-auto pb-2">
               {images.map((image, index) => {
-                // Use thumbnail if available, fallback to full image
-                const thumbnailSrc = image.thumbnailPath || 
-                  (image.filename ? `/gallery/thumbnails/${image.filename.replace(/\.[^/.]+$/, '')}_thumb.jpg` : null);
-                const imageSrc = thumbnailSrc || image.imagePath || `/gallery/${image.filename}`;
+                // Use Cloudinary URLs only - no local paths
+                const thumbnailSrc = image.thumbnailUrl && image.thumbnailUrl.startsWith('https://res.cloudinary.com/')
+                  ? image.thumbnailUrl
+                  : (image.cloudinaryUrl && image.cloudinaryUrl.startsWith('https://res.cloudinary.com/')
+                    ? image.cloudinaryUrl
+                    : null);
+                const imageSrc = image.cloudinaryUrl && image.cloudinaryUrl.startsWith('https://res.cloudinary.com/')
+                  ? image.cloudinaryUrl
+                  : null;
                 
                 return (
                 <button
@@ -552,18 +517,27 @@ const GalleryManager = () => {
                       ? 'border-blue-500 scale-110' 
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
+                  disabled={!imageSrc}
                 >
-                  <img
-                      src={imageSrc}
-                    alt={image.title || 'Thumbnail'}
-                    className="w-full h-full object-cover"
+                  {imageSrc ? (
+                    <img
+                      src={thumbnailSrc || imageSrc}
+                      alt={image.title || 'Thumbnail'}
+                      className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Fallback to full image if thumbnail doesn't exist
-                        if (thumbnailSrc && e.target.src !== (image.imagePath || `/gallery/${image.filename}`)) {
-                          e.target.src = image.imagePath || `/gallery/${image.filename}`;
+                        console.error('Thumbnail failed to load, trying full image:', thumbnailSrc || imageSrc);
+                        if (thumbnailSrc && imageSrc && e.target.src !== imageSrc) {
+                          e.target.src = imageSrc;
+                        } else {
+                          e.target.style.display = 'none';
                         }
                       }}
-                  />
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-xs">
+                      No image
+                    </div>
+                  )}
                 </button>
                 );
               })}

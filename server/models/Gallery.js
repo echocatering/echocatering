@@ -30,6 +30,11 @@ const gallerySchema = new mongoose.Schema({
     trim: true,
     maxlength: 50
   }],
+  photoNumber: {
+    type: Number,
+    unique: true,
+    sparse: true
+  },
   order: {
     type: Number,
     default: 0
@@ -56,6 +61,19 @@ const gallerySchema = new mongoose.Schema({
     type: String,
     maxlength: 200
   },
+  // Cloudinary fields for image storage
+  cloudinaryUrl: {
+    type: String,
+    default: ''
+  },
+  cloudinaryPublicId: {
+    type: String,
+    default: ''
+  },
+  thumbnailUrl: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -74,13 +92,32 @@ gallerySchema.index({ isActive: 1 });
 gallerySchema.index({ featured: 1 });
 gallerySchema.index({ tags: 1 });
 
-// Virtual for full image path
+// Virtual for full image path - prefer Cloudinary URL if available
 gallerySchema.virtual('imagePath').get(function() {
+  // Prefer Cloudinary URL if available, fallback to local
+  // Check for truthy value AND that it's not an empty string AND that it starts with http/https
+  if (this.cloudinaryUrl && 
+      this.cloudinaryUrl.trim() !== '' && 
+      (this.cloudinaryUrl.startsWith('http://') || this.cloudinaryUrl.startsWith('https://'))) {
+    return this.cloudinaryUrl;
+  }
   return `/gallery/${this.filename}`;
 });
 
-// Virtual for thumbnail path
+// Virtual for thumbnail path - use Cloudinary transformation if available
 gallerySchema.virtual('thumbnailPath').get(function() {
+  // If cloudinaryPublicId exists, generate Cloudinary thumbnail URL
+  if (this.cloudinaryPublicId) {
+    const cloudinary = require('cloudinary').v2;
+    return cloudinary.url(this.cloudinaryPublicId, {
+      width: 200,
+      height: 200,
+      crop: 'fill',
+      quality: 'auto',
+      fetch_format: 'auto'
+    });
+  }
+  // Fallback (should not be used with Cloudinary-only storage)
   const nameWithoutExt = this.filename.replace(/\.[^/.]+$/, '');
   return `/gallery/thumbnails/${nameWithoutExt}_thumb.jpg`;
 });

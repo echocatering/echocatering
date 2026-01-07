@@ -35,6 +35,16 @@ async function filterExistingImages(images) {
       continue;
     }
     
+    // If image has Cloudinary URL, include it (no need to check local file)
+    // Check for valid Cloudinary URL (not just truthy - must be a valid HTTP URL)
+    if (image.cloudinaryUrl && 
+        image.cloudinaryUrl.trim() !== '' && 
+        (image.cloudinaryUrl.startsWith('http://') || image.cloudinaryUrl.startsWith('https://'))) {
+      existingImages.push(image);
+      continue;
+    }
+    
+    // Otherwise, check if local file exists
     const uploadsPath = getGalleryFilePath(filename);
     const existsInUploads = await fileExists(uploadsPath);
     
@@ -165,19 +175,66 @@ router.get('/', async (req, res) => {
     const images = await Gallery.find(query)
       .sort({ category: 1, order: 1, createdAt: -1 });
 
+    // DEBUG: Log first image to see what's in the database
+    if (images.length > 0) {
+      const firstImage = images[0];
+      console.log('🔍 DEBUG - First gallery image from DB:', {
+        _id: firstImage._id,
+        filename: firstImage.filename,
+        cloudinaryUrl: firstImage.cloudinaryUrl,
+        cloudinaryUrlType: typeof firstImage.cloudinaryUrl,
+        cloudinaryUrlLength: firstImage.cloudinaryUrl?.length || 0,
+        hasCloudinaryUrl: !!firstImage.cloudinaryUrl,
+        cloudinaryUrlStartsWithHttp: firstImage.cloudinaryUrl?.startsWith('http') || false,
+        // Check virtual
+        imagePath: firstImage.imagePath,
+        imagePathType: typeof firstImage.imagePath
+      });
+      
+      // Convert to JSON to see what virtuals return
+      const firstImageJson = firstImage.toJSON({ virtuals: true });
+      console.log('🔍 DEBUG - First image as JSON (with virtuals):', {
+        cloudinaryUrl: firstImageJson.cloudinaryUrl,
+        imagePath: firstImageJson.imagePath,
+        allKeys: Object.keys(firstImageJson)
+      });
+    }
+
     // Filter images to only include files that exist
     const existingImages = await filterExistingImages(images);
     console.log(`📊 Gallery: ${existingImages.length} of ${images.length} images exist`);
     
+    // CRITICAL: Convert Mongoose documents to JSON with virtuals included
+    // This ensures imagePath virtual (which prefers Cloudinary) is included in the response
+    const imagesJson = existingImages.map(img => {
+      // Convert Mongoose document to plain object with virtuals
+      const imgObj = img.toJSON({ virtuals: true });
+      return imgObj;
+    });
+    
+    // DEBUG: Check if imagesJson have cloudinaryUrl and imagePath after conversion
+    if (imagesJson.length > 0) {
+      const firstExisting = imagesJson[0];
+      console.log('🔍 DEBUG - First existing image after JSON conversion:', {
+        filename: firstExisting.filename,
+        cloudinaryUrl: firstExisting.cloudinaryUrl,
+        cloudinaryUrlType: typeof firstExisting.cloudinaryUrl,
+        imagePath: firstExisting.imagePath,
+        imagePathType: typeof firstExisting.imagePath,
+        isCloudinaryUrl: firstExisting.cloudinaryUrl?.startsWith('http') || false,
+        isImagePathCloudinary: firstExisting.imagePath?.startsWith('http') || false
+      });
+    }
+    
     // Also scan folder for any files not in database and add them
     const scannedImages = await scanGalleryFolder();
-    const dbFilenames = new Set(existingImages.map(img => img.filename));
+    const dbFilenames = new Set(imagesJson.map(img => img.filename));
     const missingFromDb = scannedImages.filter(img => !dbFilenames.has(img.filename));
     
     if (missingFromDb.length > 0) {
       console.log(`📋 Found ${missingFromDb.length} images in folder not in database`);
       // Combine existing database images with missing folder images
-      const allImages = [...existingImages, ...missingFromDb];
+      const allImages = [...imagesJson, ...missingFromDb];
       // Sort by filename for consistency
       allImages.sort((a, b) => {
         if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
@@ -188,7 +245,7 @@ router.get('/', async (req, res) => {
       return res.json(allImages);
     }
     
-    res.json(existingImages);
+    res.json(imagesJson);
   } catch (error) {
     console.error('Get gallery error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -490,7 +547,7 @@ router.put('/:id', [
 });
 
 // @route   DELETE /api/gallery/:id
-// @desc    Delete gallery image and its thumbnail
+// @desc    Delete gallery image from Cloudinary and database (Cloudinary-only storage)
 // @access  Private (Editor)
 router.delete('/:id', [authenticateToken, requireEditor], async (req, res) => {
   try {
@@ -502,41 +559,33 @@ router.delete('/:id', [authenticateToken, requireEditor], async (req, res) => {
       }
     }
 
+    // 1. Look up the Gallery record by ID
     const image = await Gallery.findById(req.params.id);
     if (!image) {
       return res.status(404).json({ message: 'Image not found' });
     }
 
-    const filename = image.filename || image.originalName;
-    
-    // Delete the main image file
-    const uploadsPath = getGalleryFilePath(filename);
-    try {
-      if (await fileExists(uploadsPath)) {
-        await fs.unlink(uploadsPath);
-        console.log(`✅ Deleted image: ${filename}`);
-      }
-    } catch (fileError) {
-      console.warn(`⚠️  Error deleting image file: ${fileError.message}`);
-    }
-    
-    // Delete the thumbnail file
-    if (filename) {
-      const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-      const thumbnailPath = path.join(__dirname, '../uploads/gallery/thumbnails', `${nameWithoutExt}_thumb.jpg`);
+    // 2. Delete from Cloudinary using cloudinaryPublicId
+    if (image.cloudinaryPublicId) {
       try {
-        if (await fileExists(thumbnailPath)) {
-          await fs.unlink(thumbnailPath);
-          console.log(`✅ Deleted thumbnail: ${nameWithoutExt}_thumb.jpg`);
-        }
-      } catch (thumbError) {
-        console.warn(`⚠️  Error deleting thumbnail: ${thumbError.message}`);
+        const { cloudinary } = require('../utils/cloudinary');
+        console.log(`☁️  Deleting from Cloudinary: ${image.cloudinaryPublicId}`);
+        await cloudinary.uploader.destroy(image.cloudinaryPublicId, {
+          resource_type: 'image'
+        });
+        console.log('✅ Deleted from Cloudinary');
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary delete failed:', cloudinaryError.message);
+        // Continue with DB deletion even if Cloudinary delete fails
       }
     }
 
-    // Delete from database
+    // 3. Delete the Gallery record from the database
     await Gallery.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Image and thumbnail deleted successfully' });
+    console.log(`✅ Deleted Gallery record: ${req.params.id}`);
+
+    // 4. Return success to the frontend
+    res.json({ message: 'Image deleted successfully' });
   } catch (error) {
     console.error('Delete image error:', error);
     res.status(500).json({ message: 'Server error' });

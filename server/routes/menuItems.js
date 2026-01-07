@@ -23,6 +23,7 @@ const {
   cleanupOldPreviews
 } = require('../utils/fileStorage');
 const { optimizeVideo } = require('../utils/videoOptimizer');
+const { uploadToCloudinary, cloudinary } = require('../utils/cloudinary');
 
 const router = express.Router();
 
@@ -917,25 +918,142 @@ router.get('/menu-gallery', async (req, res) => {
       return { codes, countries };
     };
 
+    // Pre-fetch all cocktails to avoid N+1 queries
+    const allItemNumbers = new Set();
     sheetKeys.forEach((sheetKey) => {
       const sheet = sheetsByKey.get(sheetKey);
       if (!sheet || !Array.isArray(sheet.rows)) return;
-
       sheet.rows.forEach((row) => {
         if (row.isDeleted) return;
         const values =
           row.values instanceof Map ? Object.fromEntries(row.values) : row.values || {};
         const itemNumber = Number(values.itemNumber);
-        if (!Number.isFinite(itemNumber)) return;
+        if (Number.isFinite(itemNumber)) {
+          allItemNumbers.add(itemNumber);
+        }
+      });
+    });
+    
+    // Fetch all cocktails - get full Mongoose documents to ensure all fields are included
+    const cocktails = await Cocktail.find({ itemNumber: { $in: Array.from(allItemNumbers) } });
+    const cocktailsByItemNumber = new Map();
+    
+    cocktails.forEach(cocktail => {
+      if (cocktail.itemNumber) {
+        // Get the raw field value directly from the document using .get() method
+        // This is the most reliable way to get the actual database value
+        const cloudinaryVideoUrlRaw = cocktail.get('cloudinaryVideoUrl');
+        const cloudinaryIconUrlRaw = cocktail.get('cloudinaryIconUrl');
+        const videoFileRaw = cocktail.get('videoFile');
+        
+        // Get virtuals
+        const cocktailJson = cocktail.toJSON({ virtuals: true });
+        
+        // MANUALLY construct the object to ensure cloudinaryVideoUrl is ALWAYS included
+        // Don't rely on toObject() which might omit fields
+        const cocktailObj = {
+          itemNumber: cocktail.itemNumber,
+          name: cocktail.name,
+          videoFile: videoFileRaw || null,
+          // CRITICAL: Always include cloudinaryVideoUrl - use raw value from database
+          cloudinaryVideoUrl: cloudinaryVideoUrlRaw !== undefined ? cloudinaryVideoUrlRaw : null,
+          cloudinaryIconUrl: cloudinaryIconUrlRaw !== undefined ? cloudinaryIconUrlRaw : null,
+          // Include virtuals
+          videoUrl: cocktailJson.videoUrl || null,
+          iconVideoUrl: cocktailJson.iconVideoUrl || null,
+          mapSnapshotUrl: cocktailJson.mapSnapshotUrl || null
+        };
+        
+        // DEBUG: Log what we're storing for item 1
+        if (cocktail.itemNumber === 1) {
+          console.log(`[Menu Gallery Setup] Item ${cocktail.itemNumber} - MANUAL CONSTRUCTION:`, {
+            cloudinaryVideoUrlRaw: cloudinaryVideoUrlRaw,
+            cloudinaryVideoUrlRawType: typeof cloudinaryVideoUrlRaw,
+            cloudinaryVideoUrlInObj: cocktailObj.cloudinaryVideoUrl,
+            cloudinaryVideoUrlInObjType: typeof cocktailObj.cloudinaryVideoUrl,
+            hasCloudinaryInObj: !!cocktailObj.cloudinaryVideoUrl,
+            hasCloudinaryKey: 'cloudinaryVideoUrl' in cocktailObj,
+            allKeys: Object.keys(cocktailObj),
+            objStringified: JSON.stringify(cocktailObj).substring(0, 200)
+          });
+        }
+        
+        cocktailsByItemNumber.set(cocktail.itemNumber, cocktailObj);
+      }
+    });
+
+    // Process all rows and collect item numbers first
+    const allRows = [];
+    sheetKeys.forEach((sheetKey) => {
+      const sheet = sheetsByKey.get(sheetKey);
+      if (!sheet || !Array.isArray(sheet.rows)) return;
+      sheet.rows.forEach((row) => {
+        if (!row.isDeleted) {
+          allRows.push({ row, sheetKey });
+        }
+      });
+    });
+    
+    // Now process each row with async/await support
+    for (const { row, sheetKey } of allRows) {
+      const sheet = sheetsByKey.get(sheetKey);
+      if (!sheet) continue;
+      
+      if (row.isDeleted) continue;
+      
+        const values =
+          row.values instanceof Map ? Object.fromEntries(row.values) : row.values || {};
+        const itemNumber = Number(values.itemNumber);
+      if (!Number.isFinite(itemNumber)) continue;
 
         const category = normalizeCategory(sheetKey);
-        if (!category || !menuGalleryData[category]) return;
+      if (!category || !menuGalleryData[category]) continue;
 
         const key = `item-${itemNumber}`;
         const { codes, countries } = normalizeCountries(values.region);
 
         menuGalleryData[category].videoFiles.push(key);
-        menuGalleryData[category].cocktailInfo[key] = {
+        
+      // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl
+      // This bypasses any map/caching issues
+      const cocktailFromDb = await Cocktail.findOne({ itemNumber: itemNumber })
+        .select('cloudinaryVideoUrl videoFile').lean();
+      
+      // CRITICAL: Get the actual value
+      let cloudinaryVideoUrlValue = cocktailFromDb?.cloudinaryVideoUrl;
+      const videoFileFromDb = cocktailFromDb?.videoFile || null;
+      
+      // Ensure it's a string or null, never undefined
+      if (!cloudinaryVideoUrlValue || typeof cloudinaryVideoUrlValue !== 'string') {
+        cloudinaryVideoUrlValue = null;
+      }
+      
+      if (itemNumber === 1) {
+        console.log(`[Menu Gallery] Item ${itemNumber} DB QUERY:`, {
+          found: !!cocktailFromDb,
+          cloudinaryVideoUrl: cloudinaryVideoUrlValue,
+          cloudinaryVideoUrlType: typeof cloudinaryVideoUrlValue,
+          cloudinaryVideoUrlLength: cloudinaryVideoUrlValue?.length || 0
+        });
+      }
+      
+      // Determine videoUrl
+      let videoUrl = `/menu-items/${itemNumber}.mp4`; // Default
+      if (cloudinaryVideoUrlValue && 
+          typeof cloudinaryVideoUrlValue === 'string' &&
+          cloudinaryVideoUrlValue.trim() !== '' && 
+          (cloudinaryVideoUrlValue.startsWith('http://') || cloudinaryVideoUrlValue.startsWith('https://'))) {
+        videoUrl = cloudinaryVideoUrlValue;
+      } else if (videoFileFromDb) {
+        videoUrl = `/menu-items/${videoFileFromDb}`;
+      }
+      
+      // Also get from map for other fields (but cloudinaryVideoUrl comes from DB)
+      const cocktail = cocktailsByItemNumber.get(itemNumber);
+      
+      // Create cocktailInfo entry - ALWAYS include cloudinaryVideoUrl field
+      // Create as a single object literal to ensure all fields are included
+      const cocktailInfoEntry = {
           name: values.name || '',
           concept: values.concept || '',
           ingredients: values.ingredients || '',
@@ -943,13 +1061,99 @@ router.get('/menu-gallery', async (req, res) => {
           countryCodes: codes,
           countries,
           itemNumber,
-          mapSnapshot: `/uploads/items/${itemNumber}.png`,
-          videoUrl: `/uploads/items/${itemNumber}.mp4`,
+          mapSnapshot: `/menu-items/${itemNumber}.png`,
+          videoUrl: videoUrl,
+        // CRITICAL: Always include cloudinaryVideoUrl - explicitly set it, never omit
+        cloudinaryVideoUrl: cloudinaryVideoUrlValue ? String(cloudinaryVideoUrlValue) : null,
           category
         };
-      });
-    });
+      
+      // VERIFY it's set for item 1
+      if (itemNumber === 1) {
+        console.log(`[Menu Gallery] Item ${itemNumber} ENTRY CREATED:`, {
+          hasCloudinaryVideoUrl: 'cloudinaryVideoUrl' in cocktailInfoEntry,
+          cloudinaryVideoUrl: cocktailInfoEntry.cloudinaryVideoUrl,
+          cloudinaryVideoUrlType: typeof cocktailInfoEntry.cloudinaryVideoUrl,
+          allKeys: Object.keys(cocktailInfoEntry),
+          jsonTest: JSON.stringify(cocktailInfoEntry).includes('cloudinaryVideoUrl')
+        });
+      }
+      
+      // VERIFY it's set
+      if (itemNumber === 1) {
+        console.log(`[Menu Gallery] Item 1 - cloudinaryVideoUrlValue:`, cloudinaryVideoUrlValue);
+        console.log(`[Menu Gallery] Item 1 - cocktailInfoEntry.cloudinaryVideoUrl:`, cocktailInfoEntry.cloudinaryVideoUrl);
+        console.log(`[Menu Gallery] Item 1 - has key:`, 'cloudinaryVideoUrl' in cocktailInfoEntry);
+      }
+      
+      // Store it
+      menuGalleryData[category].cocktailInfo[key] = cocktailInfoEntry;
+      
+      // IMMEDIATE VERIFICATION: Check that the field exists
+      if (itemNumber === 1) {
+        const stored = menuGalleryData[category].cocktailInfo[key];
+        console.log(`[Menu Gallery] IMMEDIATE CHECK after storing item ${itemNumber}:`, {
+          hasCloudinaryVideoUrl: 'cloudinaryVideoUrl' in stored,
+          cloudinaryVideoUrl: stored.cloudinaryVideoUrl,
+          cloudinaryVideoUrlType: typeof stored.cloudinaryVideoUrl,
+          allKeys: Object.keys(stored),
+          jsonString: JSON.stringify(stored).substring(0, 300)
+        });
+      }
+      
+      // DEBUG: Verify for item 1
+      if (itemNumber === 1) {
+        console.log(`[Menu Gallery] Item ${itemNumber} FINAL:`, {
+          cocktailExists: !!cocktail,
+          cloudinaryVideoUrlFromCocktail: cocktail?.cloudinaryVideoUrl,
+          cloudinaryVideoUrlValue: cloudinaryVideoUrlValue,
+          cloudinaryVideoUrlInEntry: cocktailInfoEntry.cloudinaryVideoUrl,
+          entryHasField: 'cloudinaryVideoUrl' in cocktailInfoEntry,
+          entryKeys: Object.keys(cocktailInfoEntry),
+          entryStringified: JSON.stringify(cocktailInfoEntry).substring(0, 200)
+        });
+      }
+    }
 
+    // FINAL VERIFICATION: Check the actual object that will be sent
+    const finalCheck = Object.values(menuGalleryData.cocktails?.cocktailInfo || {}).find(i => i.itemNumber === 1);
+    if (finalCheck) {
+      console.log(`[Menu Gallery] PRE-SEND CHECK Item 1:`, {
+        cloudinaryVideoUrl: finalCheck.cloudinaryVideoUrl,
+        type: typeof finalCheck.cloudinaryVideoUrl,
+        hasKey: 'cloudinaryVideoUrl' in finalCheck,
+        keys: Object.keys(finalCheck),
+        jsonHasField: JSON.stringify(finalCheck).includes('cloudinaryVideoUrl'),
+        fullJson: JSON.stringify(finalCheck)
+      });
+      
+    }
+    
+    // ABSOLUTE FINAL FIX: Force cloudinaryVideoUrl into ALL items before sending
+    const finalItemNums = Array.from(allItemNumbers);
+    if (finalItemNums.length > 0) {
+      const allItems = await Cocktail.find({ itemNumber: { $in: finalItemNums } })
+        .select('itemNumber cloudinaryVideoUrl').lean();
+      
+      allItems.forEach(c => {
+        Object.values(menuGalleryData).forEach(cat => {
+          if (cat.cocktailInfo) {
+            Object.keys(cat.cocktailInfo).forEach(key => {
+              if (cat.cocktailInfo[key].itemNumber === c.itemNumber) {
+                cat.cocktailInfo[key].cloudinaryVideoUrl = c.cloudinaryVideoUrl || null;
+              }
+            });
+          }
+        });
+      });
+    }
+
+    // Disable caching for this endpoint to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.json(menuGalleryData);
   } catch (error) {
     console.error('Get menu gallery error:', error);
@@ -1089,32 +1293,78 @@ router.post('/map/:itemNumber',
       console.log(`   - path: ${req.file.path}`);
       console.log(`   - size: ${req.file.size} bytes`);
 
-      // Find cocktail by itemNumber and update mapSnapshotFile
+      // Find cocktail by itemNumber
       const cocktail = await Cocktail.findOne({ itemNumber: itemNumber });
-      if (cocktail) {
-        // Delete old map if it exists
-        if (cocktail.mapSnapshotFile && cocktail.mapSnapshotFile !== req.file.filename) {
+      if (!cocktail) {
+        // Delete temp file if cocktail not found
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (err) {
+          console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
+        }
+        return res.status(404).json({ 
+          message: `Cocktail not found for itemNumber: ${itemNumber}` 
+        });
+      }
+
+      // Delete old local map file if it exists (Cloudinary-only storage)
+      if (cocktail.mapSnapshotFile) {
           const oldMapPath = path.join(videoDir, cocktail.mapSnapshotFile);
           try {
             if (fs.existsSync(oldMapPath)) {
-              fs.unlinkSync(oldMapPath);
+            await fs.promises.unlink(oldMapPath);
+            console.log(`🗑️  Deleted old local map file: ${oldMapPath}`);
             }
           } catch (err) {
             console.warn(`⚠️  Failed to delete old map: ${err.message}`);
           }
         }
         
-        cocktail.mapSnapshotFile = req.file.filename;
+      // Upload to Cloudinary (Cloudinary-only storage, like logo/gallery/videos)
+      console.log(`   ☁️  Uploading map snapshot to Cloudinary...`);
+      const cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
+        public_id: `${itemNumber}_map`,
+        folder: 'echo-catering/maps', // Creates echo-catering/maps/{itemNumber}_map
+        resource_type: 'image',
+        overwrite: true, // Enable overwrite for re-uploading maps
+      });
+
+      if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+        // Delete temp file before throwing error
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (err) {
+          console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
+        }
+        throw new Error('Cloudinary upload failed - no secure_url returned');
+      }
+
+      console.log(`   ✅ Uploaded to Cloudinary: ${cloudinaryResult.secure_url}`);
+      console.log(`   📌 Public ID: ${cloudinaryResult.public_id}`);
+
+      // Update Cocktail record with Cloudinary URL (no local file reference)
+      cocktail.cloudinaryMapSnapshotUrl = cloudinaryResult.secure_url;
+      cocktail.cloudinaryMapSnapshotPublicId = cloudinaryResult.public_id;
+      // Clear old local file reference
+      cocktail.mapSnapshotFile = null;
         await cocktail.save();
-        console.log(`✅ Saved map snapshot: ${req.file.filename} for itemNumber: ${itemNumber}`);
-      } else {
-        console.log(`⚠️  Cocktail not found for itemNumber: ${itemNumber}, but map saved: ${req.file.filename}`);
+      
+      console.log(`✅ Saved map snapshot to Cloudinary for itemNumber: ${itemNumber}`);
+      console.log(`   Cloudinary URL: ${cloudinaryResult.secure_url}`);
+
+      // Delete temp file after successful Cloudinary upload
+      try {
+        await fs.promises.unlink(req.file.path);
+        console.log(`🗑️  Deleted temp file: ${req.file.path}`);
+      } catch (err) {
+        console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
       }
 
       res.json({ 
         success: true, 
-        filename: req.file.filename,
-        itemNumber: itemNumber
+        itemNumber: itemNumber,
+        cloudinaryUrl: cloudinaryResult.secure_url,
+        publicId: cloudinaryResult.public_id
       });
     } catch (error) {
       console.error('Error saving map snapshot:', error);

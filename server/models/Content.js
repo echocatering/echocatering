@@ -68,6 +68,20 @@ const contentSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  // Cloudinary fields for image/video storage
+  cloudinaryUrl: {
+    type: String,
+    default: ''
+  },
+  cloudinaryPublicId: {
+    type: String,
+    default: ''
+  },
+  // Legacy field for backward compatibility
+  value: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true

@@ -5,6 +5,7 @@ import countryAliasMap from '../../shared/countryAliasMap.json';
 import { useAuth } from '../contexts/AuthContext';
 import RecipeBuilder from './recipes/RecipeBuilder';
 import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
+import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 const getCodeFromAttributes = (pathEl) => {
   if (!pathEl) return null;
@@ -214,32 +215,21 @@ function useContainerSize(containerRef) {
  * Video background component for viewer (based on menugallery2.js VideoBackground)
  */
 function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl }) {
-  if (!videoSrc) return null;
-
-  const handleError = (e) => {
-    console.error('Video loading error:', e);
-    // Try to construct correct filename from itemNumber
-    if (!videoPreviewUrl && currentCocktail?.itemNumber && !e.target.src.includes(API_BASE_URL)) {
-      const fallbackSrc = `${API_BASE_URL}/menu-items/${currentCocktail.itemNumber}.mp4`;
-      e.target.src = fallbackSrc;
-    } else if (!videoPreviewUrl && currentCocktail?.videoFile && !e.target.src.includes(API_BASE_URL)) {
-      // Legacy fallback
-      e.target.src = `${API_BASE_URL}/menu-items/${currentCocktail.videoFile}`;
-    }
-    if (onError) onError(e);
-  };
+  if (!isCloudinaryUrl(videoSrc)) {
+    return null;
+  }
 
   return (
     <video
-      key={videoPreviewUrl || currentCocktail?.videoFile || currentCocktail?.itemNumber || 'no-video'}
+      key={videoSrc}
       ref={videoRef}
-      src={videoSrc}
       autoPlay
       muted
       loop
       playsInline
       preload="auto"
-      onError={handleError}
+      crossOrigin="anonymous"
+      onError={onError}
       onLoadedData={onLoadedData}
       onLoadedMetadata={() => {
         if (videoRef?.current) {
@@ -262,14 +252,16 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
         pointerEvents: 'none',
         zIndex: 0,
       }}
-    />
+    >
+      <source src={videoSrc} type="video/mp4" />
+    </video>
   );
 }
 
 const MenuManager = () => {
   const { apiCall, isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
   const [cocktails, setCocktails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('cocktails');
@@ -434,6 +426,18 @@ const MenuManager = () => {
       });
 
       setCocktails(normalized);
+      
+      // Debug: Log Cloudinary URLs for all cocktails
+      console.log('[MenuManager] Fetched cocktails with Cloudinary URLs:');
+      normalized.forEach(c => {
+        if (c.cloudinaryVideoUrl || c.cloudinaryIconUrl) {
+          console.log(`  Item ${c.itemNumber} (${c.name}):`, {
+            cloudinaryVideoUrl: c.cloudinaryVideoUrl,
+            cloudinaryIconUrl: c.cloudinaryIconUrl
+          });
+        }
+      });
+      
       return normalized;
       
       // If we had an editingCocktail, try to preserve it by finding its index
@@ -797,10 +801,15 @@ const MenuManager = () => {
   const handleVideoOption = async (option) => {
     const { file, itemNumber } = videoOptionsModal;
     
+    console.log('[MenuManager] handleVideoOption called', { option, file: file?.name, itemNumber });
+    
     // Close modal
     setVideoOptionsModal({ show: false, file: null, itemNumber: null });
     
-    if (!file || !itemNumber) return;
+    if (!file || !itemNumber) {
+      console.warn('[MenuManager] handleVideoOption: Missing file or itemNumber', { file: !!file, itemNumber });
+      return;
+    }
     
     switch (option) {
       case 'process':
@@ -821,6 +830,8 @@ const MenuManager = () => {
   };
   
   const handleProcessVideo = async (file, itemNumber) => {
+    console.log('[MenuManager] handleProcessVideo called', { file: file?.name, itemNumber, API_BASE_URL });
+    
     try {
       // Set preview
       if (videoPreviewUrl) {
@@ -834,19 +845,22 @@ const MenuManager = () => {
       }
       
       // Initialize processing status
+      console.log('[MenuManager] Setting processing status to active for item', itemNumber);
       setProcessingStatus({
         active: true,
         stage: 'uploading',
         progress: 0,
         total: 100,
         message: 'Uploading video...',
-        error: null
+        error: null,
+        itemNumber: itemNumber // Include itemNumber so overlay can match
       });
       
       // Step 1: Upload to temp_files
       const formData = new FormData();
       formData.append('video', file);
       
+      console.log('[MenuManager] Uploading video to:', `${API_BASE_URL}/api/video-processing/upload-base/${itemNumber}`);
       const uploadResponse = await fetch(`${API_BASE_URL}/api/video-processing/upload-base/${itemNumber}`, {
         method: 'POST',
         headers: {
@@ -855,9 +869,15 @@ const MenuManager = () => {
         body: formData
       });
       
+      console.log('[MenuManager] Upload response:', { ok: uploadResponse.ok, status: uploadResponse.status, statusText: uploadResponse.statusText });
+      
       if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
+        const errorText = await uploadResponse.text();
+        console.error('[MenuManager] Upload failed:', errorText);
+        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
       }
+      
+      console.log('[MenuManager] Upload successful, starting processing...');
       
       // Step 2: Start processing
       const processResponse = await fetch(`${API_BASE_URL}/api/video-processing/process/${itemNumber}`, {
@@ -868,15 +888,21 @@ const MenuManager = () => {
         }
       });
       
+      console.log('[MenuManager] Process response:', { ok: processResponse.ok, status: processResponse.status, statusText: processResponse.statusText });
+      
       if (!processResponse.ok) {
-        throw new Error('Failed to start processing');
+        const errorText = await processResponse.text();
+        console.error('[MenuManager] Process failed:', errorText);
+        throw new Error(`Failed to start processing: ${processResponse.status} ${processResponse.statusText}`);
       }
+      
+      console.log('[MenuManager] Processing started, beginning status polling...');
       
       // Start polling for status
       startProcessingPoll(itemNumber);
       
     } catch (error) {
-      console.error('Process video error:', error);
+      console.error('[MenuManager] Process video error:', error);
       setProcessingStatus(prev => ({
         ...prev,
         active: false,
@@ -933,7 +959,8 @@ const MenuManager = () => {
         progress: 0,
         total: 100,
         message: 'Creating icon version...',
-        error: null
+        error: null,
+        itemNumber: itemNumber // Include itemNumber so overlay can match
       });
       
       // Upload and process icon
@@ -967,6 +994,8 @@ const MenuManager = () => {
   };
   
   const startProcessingPoll = (itemNumber) => {
+    console.log('[MenuManager] startProcessingPoll called for item', itemNumber);
+    
     // Clear any existing interval
     if (processingPollIntervalRef.current) {
       clearInterval(processingPollIntervalRef.current);
@@ -975,7 +1004,10 @@ const MenuManager = () => {
     // Poll every 2 seconds
     processingPollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/video-processing/status/${itemNumber}`, {
+        const statusUrl = `${API_BASE_URL}/api/video-processing/status/${itemNumber}`;
+        console.log('[MenuManager] Polling status from:', statusUrl);
+        
+        const response = await fetch(statusUrl, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -983,18 +1015,38 @@ const MenuManager = () => {
         
         if (response.ok) {
           const status = await response.json();
+          console.log('[MenuManager] Status received:', status);
           setProcessingStatus(status);
           
           // Stop polling if not active
           if (!status.active) {
+            console.log('[MenuManager] Processing no longer active, stopping poll');
             clearInterval(processingPollIntervalRef.current);
             processingPollIntervalRef.current = null;
             
             // Refresh cocktails list to get updated video
             if (status.stage === 'complete' && !status.error) {
-              fetchCocktails();
+              console.log('[MenuManager] Processing complete! Refreshing cocktails list...');
+              fetchCocktails().then((cocktails) => {
+                console.log('[MenuManager] Cocktails refreshed:', cocktails?.length, 'items');
+                // Find the item that was just processed
+                const processedItem = cocktails?.find(c => c.itemNumber === itemNumber);
+                if (processedItem) {
+                  console.log('[MenuManager] Processed item data:', {
+                    itemNumber: processedItem.itemNumber,
+                    name: processedItem.name,
+                    cloudinaryVideoUrl: processedItem.cloudinaryVideoUrl,
+                    cloudinaryIconUrl: processedItem.cloudinaryIconUrl,
+                    videoUrl: processedItem.videoUrl
+                  });
+                } else {
+                  console.warn('[MenuManager] Processed item not found in refreshed list:', itemNumber);
+                }
+              });
             }
           }
+        } else {
+          console.warn('[MenuManager] Status poll failed:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Status poll error:', error);
@@ -1370,54 +1422,39 @@ const MenuManager = () => {
     };
   }, [currentIndex, filteredCocktails, editingCocktail, currentCocktail.videoFile, videoPreviewUrl]);
 
-  // Handle video source changes
+  // Handle video source changes - ONLY use Cloudinary URLs, NO FALLBACK
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Determine video filename - ALWAYS prefer itemNumber over videoFile (itemNumber is source of truth)
-    // This prevents issues with stale videoFile values in the database
-    let videoFilename = '';
-    if (videoPreviewUrl) {
-      videoFilename = videoPreviewUrl;
-    } else if (currentCocktail.itemNumber && Number.isFinite(currentCocktail.itemNumber)) {
-      // itemNumber is source of truth - always use it to construct filename
-      videoFilename = `/menu-items/${currentCocktail.itemNumber}.mp4`;
-    } else if (currentCocktail.videoFile) {
-      // Fallback: use videoFile if itemNumber not available
-      // If videoFile is in legacy format (item1.mp4), try to extract itemNumber
-      if (currentCocktail.videoFile.startsWith('item')) {
-        const match = currentCocktail.videoFile.match(/item(\d+)\./);
-        if (match && match[1]) {
-          videoFilename = `/menu-items/${match[1]}.mp4`;
-        } else {
-          videoFilename = `/menu-items/${currentCocktail.videoFile}`;
-        }
-      } else {
-        videoFilename = `/cocktails/${currentCocktail.videoFile}`;
-      }
-    }
+    // Determine video URL - ONLY Cloudinary URLs, no local paths
+    let videoSrc = '';
     
-    const videoSrc = videoFilename;
+    if (isCloudinaryUrl(videoPreviewUrl)) {
+      videoSrc = videoPreviewUrl;
+    } else if (isCloudinaryUrl(currentCocktail.cloudinaryVideoUrl)) {
+      videoSrc = currentCocktail.cloudinaryVideoUrl;
+    } else if (isCloudinaryUrl(currentCocktail.videoUrl)) {
+      videoSrc = currentCocktail.videoUrl;
+    }
     
     if (videoSrc && video.src !== videoSrc && !video.src.endsWith(videoSrc)) {
       video.src = videoSrc;
       video.load(); // Force reload
       video.play().catch(err => {
-        // If public path fails, try API_BASE_URL as fallback
-        if (!videoPreviewUrl && videoFilename) {
-          const fallbackSrc = videoFilename.startsWith('http') ? videoFilename : `${API_BASE_URL}${videoFilename}`;
-          video.src = fallbackSrc;
-          video.load();
-          video.play().catch(fallbackErr => {
-            console.error('Video failed to load from both paths:', fallbackErr);
-          });
+        // NO FALLBACK - Only Cloudinary URLs
+        console.error('❌ [MenuManager] Video failed to load from Cloudinary:', err);
+        console.error('   Video URL was:', videoSrc);
+        // Hide video if it fails
+        if (video) {
+          video.style.display = 'none';
         }
       });
     } else if (!videoSrc) {
       video.src = '';
+      video.style.display = 'none'; // Hide if no Cloudinary URL
     }
-  }, [videoPreviewUrl, currentCocktail.videoFile, API_BASE_URL]);
+  }, [videoPreviewUrl, currentCocktail.videoUrl, currentCocktail.cloudinaryVideoUrl, currentCocktail.videoFile, currentCocktail.itemNumber, API_BASE_URL]);
 
   // Sync flipped video with main video
 
@@ -2229,10 +2266,13 @@ const MenuManager = () => {
                 </div>
               </div>
               {/* Video background fills entire viewer container */}
-              {(currentCocktail.videoFile || currentCocktail.itemNumber || videoPreviewUrl) ? (
+              {(currentCocktail.videoFile || currentCocktail.itemNumber || currentCocktail.videoUrl || currentCocktail.cloudinaryVideoUrl || videoPreviewUrl) ? (
                 <VideoBackground
                   videoSrc={(() => {
+                    // Prefer videoPreviewUrl (upload preview), then Cloudinary URL, then construct local path
                     if (videoPreviewUrl) return videoPreviewUrl;
+                    if (currentCocktail.videoUrl) return currentCocktail.videoUrl; // API provides Cloudinary URL if available
+                    if (currentCocktail.cloudinaryVideoUrl) return currentCocktail.cloudinaryVideoUrl;
                     if (currentCocktail.videoFile) {
                       if (currentCocktail.videoFile.startsWith('item') && currentCocktail.itemNumber) {
                         const ext = currentCocktail.videoFile.split('.').pop() || 'mp4';
@@ -2274,19 +2314,36 @@ const MenuManager = () => {
                 </div>
               )}
 
-              {/* Processing status overlay */}
-              {processingStatus && processingStatus.active && (processingStatus.itemNumber === (editingCocktail?.itemNumber || currentCocktail?.itemNumber)) && (
+              {/* Processing status overlay - appears in center of viewer behind arrows and form fields */}
+              {(() => {
+                const shouldShow = processingStatus && processingStatus.active && (processingStatus.itemNumber === (editingCocktail?.itemNumber || currentCocktail?.itemNumber));
+                if (processingStatus && processingStatus.active) {
+                  console.log('[MenuManager] Processing status check:', {
+                    hasProcessingStatus: !!processingStatus,
+                    isActive: processingStatus.active,
+                    statusItemNumber: processingStatus.itemNumber,
+                    editingItemNumber: editingCocktail?.itemNumber,
+                    currentItemNumber: currentCocktail?.itemNumber,
+                    shouldShow: shouldShow
+                  });
+                }
+                return shouldShow;
+              })() && (
                   <div style={{
                     position: 'absolute',
-                    inset: 0,
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: 'rgba(255, 255, 255, 0.95)',
-                  zIndex: 20,
+                    zIndex: 5, // Above video (zIndex: 0) and vignette (zIndex: 1), but below arrows (zIndex: 10) and form fields (zIndex: 25)
+                    pointerEvents: 'none', // Don't block interaction with arrows and form fields
                   }}>
-                    <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+                    <div className="loading-spinner" style={{ marginBottom: '1rem', width: '50px', height: '50px' }}></div>
                     <div style={{
                       textAlign: 'center',
                       color: '#333',
@@ -2297,12 +2354,15 @@ const MenuManager = () => {
                       <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
                         {processingStatus.stage === 'uploading' && 'Uploading video...'}
                         {processingStatus.stage === 'preprocessing' && 'Cropping and trimming...'}
+                        {processingStatus.stage === 'white-balance' && 'Applying white balance...'}
+                        {processingStatus.stage === 'icon-generation' && 'Generating icon video...'}
                         {processingStatus.stage === 'extracting' && 'Extracting frames...'}
                         {processingStatus.stage === 'preprocessing-frames' && 'Preprocessing frames...'}
                         {processingStatus.stage === 'processing' && 'Processing video...'}
                         {processingStatus.stage === 'blurring' && 'Blurring background...'}
                         {processingStatus.stage === 'compositing' && 'Compositing video...'}
                         {processingStatus.stage === 'encoding' && 'Encoding final video...'}
+                        {processingStatus.stage === 'cloudinary-upload' && 'Uploading to Cloudinary...'}
                         {processingStatus.stage === 'creating-icon' && 'Creating icon version...'}
                         {processingStatus.stage === 'complete' && 'Processing complete!'}
                         {processingStatus.stage === 'initializing' && 'Initializing...'}

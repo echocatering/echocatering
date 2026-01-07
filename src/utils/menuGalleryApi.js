@@ -14,6 +14,29 @@ export const fetchMenuGalleryData = async () => {
     }
     const data = await response.json();
     console.log('📊 Fetched menu gallery data:', data);
+    
+    // Debug: Log first category's cocktailInfo to see structure
+    if (data.cocktails && data.cocktails.cocktailInfo) {
+      const entries = Object.entries(data.cocktails.cocktailInfo);
+      if (entries.length > 0) {
+        // Log first 3 entries to see what we're getting
+        entries.slice(0, 3).forEach(([key, info]) => {
+          console.log(`📊 CocktailInfo entry [${key}]:`, {
+            itemNumber: info.itemNumber,
+            name: info.name,
+            cloudinaryVideoUrl: info.cloudinaryVideoUrl,
+            cloudinaryVideoUrlType: typeof info.cloudinaryVideoUrl,
+            cloudinaryVideoUrlLength: info.cloudinaryVideoUrl?.length || 0,
+            cloudinaryVideoUrlIsHttp: info.cloudinaryVideoUrl?.startsWith('http') || false,
+            videoUrl: info.videoUrl,
+            videoUrlType: typeof info.videoUrl,
+            videoUrlIsHttp: info.videoUrl?.startsWith('http') || false,
+            allKeys: Object.keys(info)
+          });
+        });
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error('Error fetching menu gallery data:', error);

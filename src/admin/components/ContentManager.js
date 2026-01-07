@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 const ContentManager = () => {
   const { apiCall } = useAuth();
@@ -263,22 +264,12 @@ const ContentManager = () => {
                       justifyContent: 'center'
                     }}
                   >
-                      {section.image ? (
+                      {section.image && isCloudinaryUrl(section.image) ? (
                       <img 
-                          src={
-                            (() => {
-                              const imagePath = section.image || '';
-                              if (imagePath.startsWith('http')) return imagePath;
-                              if (imagePath.startsWith('/')) return imagePath;
-                              return `/${imagePath}`;
-                            })()
-                          } 
+                          src={section.image}
                         alt=""
                         className="w-full h-full object-cover rounded-lg"
                         style={{ objectFit: 'cover' }}
-                        onError={(e) => {
-                            console.log('❌ Image failed to load:', section.image);
-                        }}
                       />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 rounded-lg">

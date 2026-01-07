@@ -8,6 +8,7 @@ import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { IconComponent } from '../utils/iconData';
 import dynamicGallery from '../utils/dynamicGallery';
+import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
 
 
@@ -823,7 +824,9 @@ const Home = forwardRef((props, ref) => {
                   bottom: 0,
                   width: '100%',
                   height: '100%',
-                  backgroundImage: `url('${image.src || image.imagePath || `/gallery/${image.filename}`}')`,
+                  backgroundImage: isCloudinaryUrl(image.cloudinaryUrl) || isCloudinaryUrl(image.src) || isCloudinaryUrl(image.imagePath) 
+                    ? `url('${image.cloudinaryUrl || image.src || image.imagePath}')` 
+                    : 'none',
                   backgroundPosition: 'center',
                   backgroundSize: 'cover',
                   backgroundRepeat: 'no-repeat',
@@ -2081,23 +2084,7 @@ const Home = forwardRef((props, ref) => {
                 bottom: '120px', // Leave space for bottom navigation
                 padding: '1rem'
               }}>
-                <video
-                  key={selected}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    borderRadius: 'clamp(8px, 2vw, 16px)',
-                    maxWidth: '100%',
-                    maxHeight: '100%'
-                  }}
-                >
-                  <source src={`/menu-items/cocktail${selected === 'cocktails' ? '2' : selected === 'mocktails' ? '3' : selected === 'spirits' ? '2' : '2'}.mp4`} type="video/mp4" />
-                </video>
+                {/* Video removed - only Cloudinary URLs are supported */}
               </div>
             </div>
 

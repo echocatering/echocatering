@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { clearLogoCache } from '../../utils/logoUtils';
+import { clearLogoCache, fetchLogo } from '../../utils/logoUtils';
 
 const LogoManager = () => {
   const { apiCall } = useAuth();
@@ -17,40 +17,25 @@ const LogoManager = () => {
 
   const fetchCurrentLogo = async () => {
     try {
-      // Try the simple logo endpoint first
-      const response = await apiCall('/content/logo');
-      if (response && response.content) {
-        // Check if the content path actually exists
-        const logoPath = response.content;
-        if (logoPath && logoPath.startsWith('/uploads/')) {
-          // This is an uploaded file, check if it exists
-          try {
-            const testResponse = await fetch(logoPath);
-            if (testResponse.ok) {
-              setCurrentLogo(response);
-              setLogoTitle(response.title || 'ECHO Catering Logo');
-              return;
-            }
-          } catch (fetchError) {
-            console.log('Uploaded logo file not accessible, falling back to default');
-          }
-        }
+      // Use the same fetchLogo utility that the frontend uses
+      const logoData = await fetchLogo();
+      
+      // ONLY use Cloudinary URL - no fallbacks
+      if (logoData && logoData.content && logoData.content.startsWith('https://res.cloudinary.com/')) {
+        console.log('✅ Logo fetched (Cloudinary only):', logoData.content);
+        setCurrentLogo(logoData);
+        setLogoTitle(logoData.title || 'ECHO Catering Logo');
+        return;
       }
       
-      // Fallback to default logo from resources
-      console.log('Using default logo from resources');
-      setCurrentLogo({
-        content: '',
-        title: 'ECHO Catering Logo'
-      });
+      // No Cloudinary URL found - show nothing
+      console.log('⚠️  No Cloudinary logo found - displaying empty');
+      setCurrentLogo(null);
       setLogoTitle('ECHO Catering Logo');
     } catch (error) {
       console.error('Error fetching logo:', error);
-      // Fallback to current logo
-      setCurrentLogo({
-        content: '',
-        title: 'ECHO Catering Logo'
-      });
+      // No fallback - show nothing if error
+      setCurrentLogo(null);
       setLogoTitle('ECHO Catering Logo');
     }
   };
@@ -115,54 +100,26 @@ const LogoManager = () => {
 
       console.log('=== UPLOAD RESPONSE ===');
       console.log('Full upload response:', uploadResponse);
-      console.log('Upload response type:', typeof uploadResponse);
-      console.log('Upload response file property:', uploadResponse?.file);
-      console.log('Upload response file path:', uploadResponse?.file?.path);
 
-      if (uploadResponse && uploadResponse.file && uploadResponse.file.path) {
-        console.log('✅ File uploaded successfully, updating logo content...');
-        console.log('File path to save:', uploadResponse.file.path);
+      if (uploadResponse && uploadResponse.success) {
+        console.log('✅ Logo uploaded successfully to Cloudinary');
+        console.log('Cloudinary URL:', uploadResponse.file?.cloudinaryUrl);
         
-        // Update logo content in database with new file path and title
-        console.log('Making content update API call...');
-        const updateResponse = await apiCall('/content/logo', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            content: uploadResponse.file.path,
-            title: logoTitle
-          })
-        });
-
-        console.log('=== CONTENT UPDATE RESPONSE ===');
-        console.log('Full update response:', updateResponse);
-
-        if (updateResponse) {
-          // Create the updated logo object with the new file path
-          const updatedLogo = {
-            ...updateResponse,
-            content: uploadResponse.file.path // Use the actual uploaded file path
-          };
-          console.log('Final logo object:', updatedLogo);
-          
-          setCurrentLogo(updatedLogo);
-          setMessage('Logo uploaded and saved successfully!');
-          // Clear the logo cache so frontend immediately shows new logo
-          clearLogoCache();
-          // Reset file input and selected file
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-          setSelectedFile(null);
-          console.log('✅ Logo upload and save completed successfully!');
-        } else {
-          console.error('❌ No response from content update');
-          setMessage('Error: No response from content update');
+        // The backend already updated the Content record with Cloudinary URL
+        // Just refresh the logo display by fetching it again
+        await fetchCurrentLogo();
+        
+        setMessage('Logo uploaded and saved successfully!');
+        // Clear the logo cache so frontend immediately shows new logo
+        clearLogoCache();
+        // Reset file input and selected file
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
         }
+        setSelectedFile(null);
+        console.log('✅ Logo upload completed successfully!');
       } else {
-        console.error('❌ Upload response missing file property or path');
+        console.error('❌ Upload response missing success or file property');
         console.error('Upload response:', uploadResponse);
         setMessage('Error: Upload response missing file information');
       }
@@ -188,29 +145,23 @@ const LogoManager = () => {
   return (
     <div className="logo-manager bg-white h-screen w-full flex justify-center items-center">
       <div className="bg-white rounded-lg max-w-6xl w-full">
-        {currentLogo && currentLogo.content ? (
+        {currentLogo && currentLogo.content && currentLogo.content.startsWith('https://res.cloudinary.com/') ? (
           <div className="flex justify-center">
             <div className="flex flex-row items-start gap-12">
               <div className="logo-preview flex-shrink-0">
                 <div className="bg-white rounded-lg p-8 border border-gray-200" style={{width: '700px', height: '700px'}}>
                   <div className="flex justify-center items-center h-full">
-                    {currentLogo && currentLogo.content ? (
-                      <>
-                        <img 
-                          src={currentLogo.content} 
-                          alt="Current Logo"
-                          style={{width: '600px', height: '600px'}}
-                          className="object-contain"
-                          onError={(e) => {
-                            console.error('Logo image failed to load:', currentLogo.content);
-                            e.target.style.display = 'none';
-                          }}
-                          onLoad={() => console.log('Logo loaded successfully:', currentLogo.content)}
-                        />
-                      </>
-                    ) : (
-                      <div className="text-gray-500">No logo content available</div>
-                    )}
+                    <img 
+                      src={currentLogo.content} 
+                      alt="Current Logo"
+                      style={{width: '600px', height: '600px'}}
+                      className="object-contain"
+                      onError={(e) => {
+                        console.error('Logo image failed to load:', currentLogo.content);
+                        e.target.style.display = 'none';
+                      }}
+                      onLoad={() => console.log('Logo loaded successfully:', currentLogo.content)}
+                    />
                   </div>
                 </div>
               </div>
