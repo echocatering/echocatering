@@ -92,23 +92,109 @@ app.use('/assets', express.static(path.join(__dirname, '../public/assets')));
 app.use('/resources', express.static(path.join(__dirname, '../public/assets/images')));
 app.use('/socials', express.static(path.join(__dirname, '../public/assets/socials')));
 
-// Database connection - make it optional for development
+// Database connection with retry logic for paused Atlas clusters
 let dbConnected = false;
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/echo-catering', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('✅ Connected to MongoDB');
-  dbConnected = true;
-  // Make database status available to routes AFTER connection is established
-  app.locals.dbConnected = dbConnected;
-})
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err);
-  console.log('⚠️  Server will run without database connection');
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 5000; // 5 seconds between retries
+
+const connectToMongoDB = async (retryCount = 0) => {
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/echo-catering';
+  
+  // Skip retries for local MongoDB
+  if (mongoUri.includes('localhost') || mongoUri.includes('127.0.0.1')) {
+    try {
+      await mongoose.connect(mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log('✅ Connected to MongoDB (local)');
+      dbConnected = true;
+      app.locals.dbConnected = dbConnected;
+      return;
+    } catch (err) {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.log('⚠️  Server will run without database connection');
+      dbConnected = false;
+      app.locals.dbConnected = dbConnected;
+      return;
+    }
+  }
+
+  // Retry logic for Atlas clusters (may be paused)
+  try {
+    if (retryCount > 0) {
+      console.log(`🔄 Attempting to connect to MongoDB Atlas... retry #${retryCount}/${MAX_RETRIES}`);
+      console.log('   (This may take a moment if the cluster is paused and waking up)');
+    } else {
+      console.log('🔄 Connecting to MongoDB Atlas...');
+    }
+
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // 10 second timeout per attempt
+      socketTimeoutMS: 45000, // 45 second socket timeout
+    });
+
+    console.log('✅ Connected to MongoDB Atlas');
+    dbConnected = true;
+    app.locals.dbConnected = dbConnected;
+
+    // Handle connection events
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err.message);
+      dbConnected = false;
+      app.locals.dbConnected = dbConnected;
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️  MongoDB disconnected');
+      dbConnected = false;
+      app.locals.dbConnected = dbConnected;
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+      dbConnected = true;
+      app.locals.dbConnected = dbConnected;
+    });
+
+  } catch (err) {
+    const isPausedCluster = err.message.includes('ReplicaSetNoPrimary') || 
+                           err.message.includes('buffering') ||
+                           err.message.includes('timeout') ||
+                           err.name === 'MongoServerSelectionError';
+
+    if (isPausedCluster && retryCount < MAX_RETRIES) {
+      console.warn(`⚠️  MongoDB cluster appears to be paused or waking up (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      console.log(`   Waiting ${RETRY_DELAY / 1000} seconds before retry...`);
+      console.log(`   Error: ${err.message}`);
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      
+      // Retry connection
+      return connectToMongoDB(retryCount + 1);
+    } else {
+      // Max retries reached or non-retryable error
+      console.error('❌ MongoDB connection failed after', retryCount + 1, 'attempt(s)');
+      console.error('   Error:', err.message);
+      if (retryCount >= MAX_RETRIES) {
+        console.error('   ⚠️  Maximum retries reached. The cluster may still be waking up.');
+        console.error('   💡 Tip: Free Atlas clusters can take 1-2 minutes to fully wake up.');
+        console.error('   💡 The server will continue running and retry on the next request.');
+      }
+      console.log('⚠️  Server will run without database connection');
+      dbConnected = false;
+      app.locals.dbConnected = dbConnected;
+    }
+  }
+};
+
+// Start connection (non-blocking - server starts even if DB connection fails)
+connectToMongoDB().catch(err => {
+  console.error('❌ Fatal MongoDB connection error:', err);
   dbConnected = false;
-  // Make database status available to routes even if connection fails
   app.locals.dbConnected = dbConnected;
 });
 
@@ -206,27 +292,25 @@ if (require.main === module) {
   });
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    server.close(() => {
+  const gracefulShutdown = async (signal) => {
+    console.log(`${signal} received, shutting down gracefully...`);
+    server.close(async () => {
       console.log('Server closed');
-      mongoose.connection.close(false, () => {
-        console.log('MongoDB connection closed');
-        process.exit(0);
-      });
+      try {
+        // Mongoose 8+ uses promises, not callbacks
+        if (mongoose.connection.readyState === 1) {
+          await mongoose.connection.close();
+          console.log('MongoDB connection closed');
+        }
+      } catch (err) {
+        console.error('Error closing MongoDB connection:', err);
+      }
+      process.exit(0);
     });
-  });
+  };
 
-  process.on('SIGINT', () => {
-    console.log('\nSIGINT received, shutting down gracefully...');
-    server.close(() => {
-      console.log('Server closed');
-      mongoose.connection.close(false, () => {
-        console.log('MongoDB connection closed');
-        process.exit(0);
-      });
-    });
-  });
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 } else {
   // If this file is required (not run directly), export the app for testing or other uses
   module.exports = app;
