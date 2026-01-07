@@ -7,6 +7,8 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+// Behind Render's proxy; needed for express-rate-limit to honor X-Forwarded-For
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5002;
 
 // Get allowed origins from environment or use default
