@@ -12,7 +12,8 @@ services:
       # Add these in Render dashboard (not here for security):
       # - MONGODB_URI
       # - JWT_SECRET
-      # - CLOUDINARY_CLOUD_NAME (if using Cloudinary)
-      # - CLOUDINARY_API_KEY (if using Cloudinary)
-      # - CLOUDINARY_API_SECRET (if using Cloudinary)
+      # - CLOUDINARY_CLOUD_NAME (REQUIRED - all assets use Cloudinary)
+      # - CLOUDINARY_API_KEY (REQUIRED - all assets use Cloudinary)
+      # - CLOUDINARY_API_SECRET (REQUIRED - all assets use Cloudinary)
+      # - ALLOWED_ORIGINS (optional - comma-separated list of allowed origins)
 

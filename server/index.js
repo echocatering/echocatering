@@ -9,7 +9,16 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5002;
 
-const allowedProdOrigins = ['https://yourdomain.com'];
+// Get allowed origins from environment or use default
+// In production, allow Render domain and any custom domains
+const allowedProdOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [];
+  
+// Auto-allow Render domain if running on Render
+if (process.env.RENDER_EXTERNAL_URL) {
+  allowedProdOrigins.push(process.env.RENDER_EXTERNAL_URL);
+}
 
 const corsOptions = {
   origin: (origin, callback) => {
