@@ -209,8 +209,16 @@ router.post('/gallery', [
     const publicId = `echo-catering/gallery/${nextNumber}_gallery`;
     console.log(`   📸 Public ID: ${publicId}`);
 
-    // 3. Upload to Cloudinary (temp file only - will be deleted after upload)
+    // 3. Upload to Cloudinary (upload first, cleanup after)
     console.log(`   ☁️  Uploading to Cloudinary...`);
+    // Verify temp file exists on disk before uploading
+    try {
+      const stats = fs.statSync(file.path);
+      console.log(`   ✅ Temp file exists (${stats.size} bytes)`);
+    } catch (statErr) {
+      console.error(`   ❌ Temp file missing before upload: ${file.path}`);
+      return res.status(500).json({ message: 'Uploaded file not found on disk' });
+    }
     const cloudinaryResult = await cloudinary.uploader.upload(file.path, {
       public_id: publicId, // Full path: echo-catering/gallery/{number}_gallery
       resource_type: 'image',
@@ -237,39 +245,57 @@ router.post('/gallery', [
     console.log(`   🖼️  Thumbnail URL: ${thumbnailUrl}`);
 
     // 6. Save photoNumber, cloudinaryPublicId, and cloudinaryUrl in database
-    const galleryRecord = await Gallery.create({
-      filename: `${nextNumber}.jpg`, // Virtual filename for compatibility
-      originalName: file.originalname,
-      title: file.originalname.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      category: 'gallery',
-      photoNumber: nextNumber, // Sequential photo number
-      order: nextNumber,
-      isActive: true,
-      featured: false,
-      fileSize: file.size,
-      mimeType: file.mimetype,
-      cloudinaryUrl: cloudinaryResult.secure_url,
-      cloudinaryPublicId: cloudinaryResult.public_id,
-      thumbnailUrl: thumbnailUrl,
-      dimensions: {
-        width: cloudinaryResult.width,
-        height: cloudinaryResult.height
+    let galleryRecord = null;
+    try {
+      galleryRecord = await Gallery.create({
+        filename: `${nextNumber}.jpg`, // Virtual filename for compatibility
+        originalName: file.originalname,
+        title: file.originalname.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        category: 'gallery',
+        photoNumber: nextNumber, // Sequential photo number
+        order: nextNumber,
+        isActive: true,
+        featured: false,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        cloudinaryUrl: cloudinaryResult.secure_url,
+        cloudinaryPublicId: cloudinaryResult.public_id,
+        thumbnailUrl: thumbnailUrl,
+        dimensions: {
+          width: cloudinaryResult.width,
+          height: cloudinaryResult.height
+        }
+      });
+    } catch (dbErr) {
+      console.error('   ❌ Failed to create gallery DB record:', dbErr.message);
+      // Attempt to avoid orphan temp file
+      try {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+          console.log(`   🗑️  Deleted temp file after DB error: ${file.path}`);
+        }
+      } catch (cleanupErr) {
+        console.warn(`   ⚠️  Temp file cleanup failed after DB error: ${cleanupErr.message}`);
       }
-    });
+      return res.status(500).json({ message: 'Database save failed after Cloudinary upload' });
+    }
 
     console.log(`   ✅ Database record created: ${galleryRecord._id}`);
     console.log(`   📸 Photo number: ${galleryRecord.photoNumber}`);
     console.log(`   ☁️  Cloudinary URL: ${galleryRecord.cloudinaryUrl}`);
     console.log(`   📌 Cloudinary Public ID: ${galleryRecord.cloudinaryPublicId}`);
 
-    // 7. Delete local temp file after successful upload and DB save
-    fs.unlink(file.path, (err) => {
-      if (err) {
-        console.error(`   ⚠️  Failed to delete temp file: ${err.message}`);
-      } else {
+    // 7. Delete local temp file after successful upload and DB save (safe cleanup)
+    try {
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
         console.log(`   🗑️  Deleted temp file: ${file.path}`);
+      } else {
+        console.log(`   ℹ️  Temp file already removed: ${file.path}`);
       }
-    });
+    } catch (cleanupErr) {
+      console.warn(`   ⚠️  Failed to delete temp file: ${cleanupErr.message}`);
+    }
 
     // 6. Return response for frontend (compatible with existing UI)
     res.json({
@@ -285,6 +311,15 @@ router.post('/gallery', [
     });
   } catch (error) {
     console.error('❌ Gallery upload error:', error);
+    // Attempt safe cleanup if multer saved the file and it still exists
+    try {
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+        console.log(`   🗑️  Deleted temp file after error: ${req.file.path}`);
+      }
+    } catch (cleanupErr) {
+      console.warn(`   ⚠️  Failed to cleanup temp file after error: ${cleanupErr.message}`);
+    }
     res.status(500).json({ message: 'Upload failed' });
   }
 });

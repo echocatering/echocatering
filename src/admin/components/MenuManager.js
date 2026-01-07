@@ -2851,7 +2851,7 @@ const MenuManager = () => {
                   paddingBottom: '60px',
                   margin: 0,
                   boxSizing: 'border-box',
-                  zIndex: 20,
+                  zIndex: 30, // Increased from 20 to 30 to be above form fields (zIndex: 25)
                   pointerEvents: 'auto',
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -2862,13 +2862,15 @@ const MenuManager = () => {
                 <button
                   onClick={(e) => {
                     if (editingCocktail) {
-                      e.currentTarget.style.setProperty('color', '#000', 'important');
-                      e.currentTarget.style.borderColor = '#000';
+                      const button = e.currentTarget;
+                      button.style.setProperty('color', '#000', 'important');
+                      button.style.setProperty('borderColor', '#000', 'important');
                       handleSave(editingCocktail);
                       setTimeout(() => {
-                        if (!e.currentTarget.disabled) {
-                          e.currentTarget.style.setProperty('color', '#666666', 'important');
-                          e.currentTarget.style.borderColor = '#666666';
+                        // Check if button still exists and is not disabled
+                        if (button && !button.disabled) {
+                          button.style.setProperty('color', '#666666', 'important');
+                          button.style.setProperty('borderColor', '#666666', 'important');
                         }
                       }, 200);
                     }
@@ -2891,6 +2893,9 @@ const MenuManager = () => {
                     MozAppearance: 'none',
                     appearance: 'none',
                     margin: 0,
+                    position: 'relative',
+                    zIndex: 31, // Ensure button is above container (zIndex: 30)
+                    pointerEvents: 'auto',
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {

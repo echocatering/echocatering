@@ -166,7 +166,59 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-});
+// CRITICAL: Only start server if this file is run directly (not required)
+// This prevents the server from starting multiple times if index.js is imported elsewhere
+if (require.main === module) {
+  // Start server with error handling
+  const server = app.listen(PORT, () => {
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`✅ SERVER SUCCESSFULLY STARTED`);
+    console.log(`   Port: ${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   Health check: http://localhost:${PORT}/api/health`);
+    console.log(`   Database: ${dbConnected ? '✅ Connected' : '⚠️  Not connected'}`);
+    console.log('═══════════════════════════════════════════════════════════');
+  });
+
+  // Handle EADDRINUSE errors explicitly
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error('═══════════════════════════════════════════════════════════');
+      console.error(`❌ PORT ${PORT} IS ALREADY IN USE`);
+      console.error(`   Another process is already running on port ${PORT}`);
+      console.error(`   Please stop the existing server or use a different port`);
+      console.error(`   To find and kill the process: lsof -ti:${PORT} | xargs kill -9`);
+      console.error('═══════════════════════════════════════════════════════════');
+      process.exit(1);
+    } else {
+      console.error('❌ Server error:', err);
+      process.exit(1);
+    }
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    server.close(() => {
+      console.log('Server closed');
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      });
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('\nSIGINT received, shutting down gracefully...');
+    server.close(() => {
+      console.log('Server closed');
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      });
+    });
+  });
+} else {
+  // If this file is required (not run directly), export the app for testing or other uses
+  module.exports = app;
+}

@@ -1250,24 +1250,9 @@ const generateItemIdMiddleware = async (req, res, next) => {
 // @route   POST /api/menu-items/map/:itemNumber
 // @desc    Save map snapshot PNG for an item
 // @access  Private (Editor)
-const mapUpload = multer({ 
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, videoDir);
-    },
-    filename: (req, file, cb) => {
-      const itemNumber = req.params.itemNumber;
-      cb(null, `${itemNumber}.png`);
-    }
-  }),
-  fileFilter: (req, file, cb) => {
-    // Accept any file with fieldname 'map' - we'll always save as PNG
-    if (file.fieldname === 'map') {
-      cb(null, true);
-    } else {
-      cb(new Error('Map file must have fieldname "map"'));
-    }
-  }
+const mapUpload = multer({
+  dest: videoDir,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
 });
 
 router.post('/map/:itemNumber',
@@ -1275,107 +1260,111 @@ router.post('/map/:itemNumber',
   requireEditor,
   mapUpload.single('map'),
   async (req, res) => {
+    const itemNumber = Number(req.params.itemNumber);
+
+    if (!Number.isFinite(itemNumber)) {
+      return res.status(400).json({ error: 'Invalid item number' });
+    }
+
+    // ========== DEBUG: Log req.file ==========
+    console.log('========== MAP UPLOAD DEBUG ==========');
+    console.log('req.file:', JSON.stringify(req.file, null, 2));
+    console.log('req.file details:', {
+      fieldname: req.file?.fieldname,
+      originalname: req.file?.originalname,
+      encoding: req.file?.encoding,
+      mimetype: req.file?.mimetype,
+      size: req.file?.size,
+      destination: req.file?.destination,
+      filename: req.file?.filename,
+      path: req.file?.path,
+      buffer: req.file?.buffer ? `Buffer(${req.file.buffer.length} bytes)` : 'no buffer'
+    });
+    console.log('req.body:', JSON.stringify(req.body, null, 2));
+    console.log('req.headers:', {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length']
+    });
+    console.log('=======================================');
+
+    if (!req.file) {
+      console.error('❌ No file received in map upload');
+      return res.status(400).json({ error: 'No map file uploaded' });
+    }
+
+    const tempFilePath = req.file.path;
+
     try {
-      const itemNumber = Number(req.params.itemNumber);
-      if (!Number.isFinite(itemNumber)) {
-        return res.status(400).json({ message: 'Invalid itemNumber' });
-      }
-
-      if (!req.file) {
-        console.error('❌ No file received in map upload');
-        console.error('   - req.files:', req.files);
-        console.error('   - req.body:', req.body);
-        return res.status(400).json({ message: 'No map file uploaded' });
-      }
-
       console.log(`📸 Received map upload for itemNumber: ${itemNumber}`);
       console.log(`   - filename: ${req.file.filename}`);
-      console.log(`   - path: ${req.file.path}`);
+      console.log(`   - path: ${tempFilePath}`);
       console.log(`   - size: ${req.file.size} bytes`);
+      console.log(`   - mimetype: ${req.file.mimetype}`);
+      console.log(`   - originalname: ${req.file.originalname}`);
 
-      // Find cocktail by itemNumber
-      const cocktail = await Cocktail.findOne({ itemNumber: itemNumber });
-      if (!cocktail) {
-        // Delete temp file if cocktail not found
-        try {
-          await fs.promises.unlink(req.file.path);
-        } catch (err) {
-          console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
-        }
-        return res.status(404).json({ 
-          message: `Cocktail not found for itemNumber: ${itemNumber}` 
-        });
+      // Verify file exists on disk
+      try {
+        const stats = await fs.promises.stat(tempFilePath);
+        console.log(`   ✅ File exists on disk: ${stats.size} bytes`);
+      } catch (statErr) {
+        console.error(`   ❌ File does not exist on disk: ${statErr.message}`);
+        throw new Error(`Uploaded file not found on disk: ${tempFilePath}`);
       }
 
-      // Delete old local map file if it exists (Cloudinary-only storage)
-      if (cocktail.mapSnapshotFile) {
-          const oldMapPath = path.join(videoDir, cocktail.mapSnapshotFile);
-          try {
-            if (fs.existsSync(oldMapPath)) {
-            await fs.promises.unlink(oldMapPath);
-            console.log(`🗑️  Deleted old local map file: ${oldMapPath}`);
-            }
-          } catch (err) {
-            console.warn(`⚠️  Failed to delete old map: ${err.message}`);
-          }
-        }
-        
-      // Upload to Cloudinary (Cloudinary-only storage, like logo/gallery/videos)
+      // Find cocktail
+      const cocktail = await Cocktail.findOne({ itemNumber: itemNumber });
+      if (!cocktail) {
+        await fs.promises.unlink(tempFilePath); // cleanup
+        return res.status(404).json({ error: 'Cocktail not found' });
+      }
+
+      // Upload to Cloudinary
       console.log(`   ☁️  Uploading map snapshot to Cloudinary...`);
-      const cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
+      const uploadResult = await cloudinary.uploader.upload(tempFilePath, {
+        folder: 'echo-catering/maps',
         public_id: `${itemNumber}_map`,
-        folder: 'echo-catering/maps', // Creates echo-catering/maps/{itemNumber}_map
         resource_type: 'image',
-        overwrite: true, // Enable overwrite for re-uploading maps
+        overwrite: true,
       });
 
-      if (!cloudinaryResult || !cloudinaryResult.secure_url) {
-        // Delete temp file before throwing error
-        try {
-          await fs.promises.unlink(req.file.path);
-        } catch (err) {
-          console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
-        }
+      if (!uploadResult || !uploadResult.secure_url) {
         throw new Error('Cloudinary upload failed - no secure_url returned');
       }
 
-      console.log(`   ✅ Uploaded to Cloudinary: ${cloudinaryResult.secure_url}`);
-      console.log(`   📌 Public ID: ${cloudinaryResult.public_id}`);
+      console.log(`   ✅ Uploaded to Cloudinary: ${uploadResult.secure_url}`);
+      console.log(`   📌 Public ID: ${uploadResult.public_id}`);
 
-      // Update Cocktail record with Cloudinary URL (no local file reference)
-      cocktail.cloudinaryMapSnapshotUrl = cloudinaryResult.secure_url;
-      cocktail.cloudinaryMapSnapshotPublicId = cloudinaryResult.public_id;
-      // Clear old local file reference
-      cocktail.mapSnapshotFile = null;
-        await cocktail.save();
-      
-      console.log(`✅ Saved map snapshot to Cloudinary for itemNumber: ${itemNumber}`);
-      console.log(`   Cloudinary URL: ${cloudinaryResult.secure_url}`);
+      // Update cocktail
+      cocktail.cloudinaryMapSnapshotUrl = uploadResult.secure_url;
+      cocktail.cloudinaryMapSnapshotPublicId = uploadResult.public_id;
+      cocktail.mapSnapshotFile = null; // clear local reference
+      await cocktail.save();
 
-      // Delete temp file after successful Cloudinary upload
-      try {
-        await fs.promises.unlink(req.file.path);
-        console.log(`🗑️  Deleted temp file: ${req.file.path}`);
-      } catch (err) {
-        console.warn(`⚠️  Failed to delete temp file: ${err.message}`);
-      }
+      // Delete temp file
+      await fs.promises.unlink(tempFilePath);
+      console.log(`🗑️  Deleted temp file: ${tempFilePath}`);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         itemNumber: itemNumber,
-        cloudinaryUrl: cloudinaryResult.secure_url,
-        publicId: cloudinaryResult.public_id
+        cloudinaryUrl: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
       });
-    } catch (error) {
-      console.error('Error saving map snapshot:', error);
-      if (req.file) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (err) {
-          console.warn('Failed to cleanup uploaded file:', err);
-        }
+    } catch (err) {
+      console.error('❌ Error saving map snapshot:', err);
+      console.error('   Error details:', err.message);
+      console.error('   Stack:', err.stack);
+      // Cleanup temp file if exists
+      try { 
+        await fs.promises.unlink(tempFilePath); 
+        console.log(`🗑️  Cleaned up temp file after error: ${tempFilePath}`);
+      } catch (cleanupErr) {
+        console.warn('⚠️  Failed to cleanup temp file:', cleanupErr);
       }
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ 
+        error: 'Server error saving map snapshot',
+        message: err.message 
+      });
     }
   }
 );
