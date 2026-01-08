@@ -27,3 +27,4 @@ __pycache__/
 *.pyc
 *.pyo
 server/uploads/
+.env

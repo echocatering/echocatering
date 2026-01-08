@@ -4,7 +4,29 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+
+// Only load dotenv if not in production (Render provides env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
+// Fail fast on missing critical env vars
+const requiredEnv = [
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'MONGODB_URI'
+];
+const missing = requiredEnv.filter((key) => !process.env[key]);
+if (missing.length) {
+  const isRender = !!process.env.RENDER;
+  const envHint = isRender 
+    ? '\n💡 On Render: Check your service dashboard → Environment tab → Ensure vars are set in the BACKEND service (not frontend)'
+    : '\n💡 Locally: Check your .env file in the project root';
+  const message = `Missing required environment variables: ${missing.join(', ')}${envHint}`;
+  console.error('❌', message);
+  throw new Error(message);
+}
 
 const app = express();
 // Behind Render's proxy; needed for express-rate-limit to honor X-Forwarded-For
@@ -81,8 +103,7 @@ const staticOptions = {
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 };
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), staticOptions));
-app.use('/gallery', express.static(path.join(__dirname, 'uploads/gallery'), staticOptions));
+// Gallery/media are Cloudinary-only; no /uploads or /gallery static serving
 // Serve cocktails and preview directories
 app.use('/menu-items', express.static(path.join(__dirname, 'uploads/items'), staticOptions));
 // Keep /cocktails as alias for backward compatibility

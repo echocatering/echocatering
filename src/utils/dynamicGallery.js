@@ -1,5 +1,5 @@
 // Professional dynamic gallery system with server API integration
-import { fetchGalleryImages, getFallbackImages } from './galleryUtils';
+import { fetchGalleryImages } from './galleryUtils';
 
 class DynamicGallery {
   constructor() {
@@ -39,12 +39,9 @@ class DynamicGallery {
       console.log(`✅ Loaded ${images.length} gallery images`);
       return images;
     } catch (error) {
-      console.warn('Gallery API not available, using fallback:', error);
-      console.warn('Error details:', error.message);
-      this.images = getFallbackImages();
-      this.isLoaded = true;
-      this.lastFetch = Date.now();
-      return this.images;
+      console.error('❌ Gallery API not available:', error);
+      this.isLoaded = false;
+      throw error;
     }
   }
 

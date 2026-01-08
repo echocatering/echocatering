@@ -8,23 +8,31 @@ export default function CloudinaryTest() {
   const [galleryImages, setGalleryImages] = useState([]);
   const [menuData, setMenuData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch gallery images
         const galleryRes = await fetch('/api/gallery');
+        if (!galleryRes.ok) {
+          throw new Error(`Gallery fetch failed: ${galleryRes.status}`);
+        }
         const galleryData = await galleryRes.json();
         setGalleryImages(galleryData);
 
         // Fetch menu gallery data
         const menuRes = await fetch('/api/menu-items/menu-gallery');
+        if (!menuRes.ok) {
+          throw new Error(`Menu fetch failed: ${menuRes.status}`);
+        }
         const menuData = await menuRes.json();
         setMenuData(menuData);
 
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
+        setError(error.message);
         setLoading(false);
       }
     };
@@ -34,6 +42,10 @@ export default function CloudinaryTest() {
 
   if (loading) {
     return <div style={{ padding: '20px' }}>Loading...</div>;
+  }
+
+  if (error) {
+    return <div style={{ padding: '20px', color: 'red' }}>Error: {error}</div>;
   }
 
   return (
