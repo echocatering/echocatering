@@ -61,6 +61,10 @@ async function filterExistingImages(images) {
 // Helper function to scan gallery folder and create entries for all images
 // Scans server/uploads/gallery - this is the primary source for hero and event gallery images
 async function scanGalleryFolder() {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🚫 Skipping gallery filesystem scan in production');
+    return [];
+  }
   const galleryPath = path.join(__dirname, '../uploads/gallery');
   const imageExtensions = /\.(jpeg|jpg|png|gif|webp)$/i;
   const images = [];
@@ -151,6 +155,10 @@ router.get('/', async (req, res) => {
     // Check if database is connected
     if (!req.app.locals.dbConnected) {
       // When database is not available, scan the gallery folder directly
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🚫 Skipping gallery filesystem scan in production (DB not connected)');
+        return res.json([]);
+      }
       console.log('📁 Database not connected, scanning gallery folder...');
       const scannedImages = await scanGalleryFolder();
       return res.json(scannedImages);
@@ -227,22 +235,24 @@ router.get('/', async (req, res) => {
     }
     
     // Also scan folder for any files not in database and add them
-    const scannedImages = await scanGalleryFolder();
-    const dbFilenames = new Set(imagesJson.map(img => img.filename));
-    const missingFromDb = scannedImages.filter(img => !dbFilenames.has(img.filename));
-    
-    if (missingFromDb.length > 0) {
-      console.log(`📋 Found ${missingFromDb.length} images in folder not in database`);
-      // Combine existing database images with missing folder images
-      const allImages = [...imagesJson, ...missingFromDb];
-      // Sort by filename for consistency
-      allImages.sort((a, b) => {
-        if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
-          return a.order - b.order;
-        }
-        return (a.filename || '').localeCompare(b.filename || '');
-      });
-      return res.json(allImages);
+    if (process.env.NODE_ENV !== 'production') {
+      const scannedImages = await scanGalleryFolder();
+      const dbFilenames = new Set(imagesJson.map(img => img.filename));
+      const missingFromDb = scannedImages.filter(img => !dbFilenames.has(img.filename));
+      
+      if (missingFromDb.length > 0) {
+        console.log(`📋 Found ${missingFromDb.length} images in folder not in database`);
+        // Combine existing database images with missing folder images
+        const allImages = [...imagesJson, ...missingFromDb];
+        // Sort by filename for consistency
+        allImages.sort((a, b) => {
+          if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
+            return a.order - b.order;
+          }
+          return (a.filename || '').localeCompare(b.filename || '');
+        });
+        return res.json(allImages);
+      }
     }
     
     res.json(imagesJson);
