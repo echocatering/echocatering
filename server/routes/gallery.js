@@ -26,6 +26,10 @@ function getGalleryFilePath(filename) {
 
 // Helper function to filter images that exist
 async function filterExistingImages(images) {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🚫 Skipping gallery filesystem existence checks in production');
+    return images;
+  }
   const existingImages = [];
   
   for (const image of images) {
