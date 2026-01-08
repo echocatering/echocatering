@@ -55,7 +55,9 @@ const corsOptions = {
     if (allowedProdOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    const err = new Error('Not allowed by CORS');
+    err.status = 403;
+    return callback(err);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -105,9 +107,10 @@ const staticOptions = {
 };
 // Gallery/media are Cloudinary-only; no /uploads or /gallery static serving
 // Serve cocktails and preview directories
-app.use('/menu-items', express.static(path.join(__dirname, 'uploads/items'), staticOptions));
-// Keep /cocktails as alias for backward compatibility
-app.use('/cocktails', express.static(path.join(__dirname, 'uploads/items'), staticOptions));
+const itemsStatic = express.static(path.join(__dirname, 'uploads/items'), staticOptions);
+app.use('/menu-items', itemsStatic);
+// Keep /cocktails as alias for backward compatibility (same underlying middleware)
+app.use('/cocktails', itemsStatic);
 app.use('/maps', express.static(path.join(__dirname, 'uploads/maps'), staticOptions));
 // Serve static files from public folder (for proxy compatibility)
 app.use('/assets', express.static(path.join(__dirname, '../public/assets')));
@@ -277,10 +280,20 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+  const status = err.status || err.statusCode || 500;
+  const isDev = process.env.NODE_ENV !== 'production';
+  const message = err.message || 'Internal Server Error';
+
+  // Always log server-side. Avoid noisy full stacks in production unless it's a 5xx.
+  if (isDev || status >= 500) {
+    console.error(err);
+  } else {
+    console.warn(`Request error (${status}):`, message);
+  }
+
+  return res.status(status).json({
+    message,
+    ...(isDev ? { stack: err.stack } : {})
   });
 });
 

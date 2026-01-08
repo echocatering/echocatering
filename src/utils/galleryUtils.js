@@ -2,7 +2,6 @@
 
 // Fetch gallery images from the server API
 export const fetchGalleryImages = async () => {
-  console.log('🔍 fetchGalleryImages: Starting fetch to /api/gallery...');
   const response = await fetch('/api/gallery');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);

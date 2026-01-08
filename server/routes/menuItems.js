@@ -628,20 +628,6 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
     }
     const allCocktails = await Cocktail.find(cocktailQuery).lean();
     
-    // Debug: Log item 1 Cloudinary fields
-    const item1Cocktail = allCocktails.find(c => c.itemNumber === 1);
-    if (item1Cocktail) {
-      console.log('[menu-manager] Item 1 cocktail from DB:', {
-        itemNumber: item1Cocktail.itemNumber,
-        name: item1Cocktail.name,
-        cloudinaryVideoUrl: item1Cocktail.cloudinaryVideoUrl,
-        cloudinaryIconUrl: item1Cocktail.cloudinaryIconUrl,
-        videoUrl: item1Cocktail.videoUrl
-      });
-    } else {
-      console.log('[menu-manager] Item 1 cocktail NOT FOUND in allCocktails');
-    }
-    
     // Create lookup maps for cocktails
     const cocktailById = new Map();
     const cocktailByItemNumber = new Map();
@@ -787,14 +773,6 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
       }
       if (!cocktail && itemNumber) {
         cocktail = cocktailByItemNumber.get(Number(itemNumber));
-        // Debug: Log item 1 lookup
-        if (itemNumber === 1) {
-          console.log('[menu-manager] Item 1 lookup:', {
-            found: !!cocktail,
-            cloudinaryVideoUrl: cocktail?.cloudinaryVideoUrl,
-            cloudinaryIconUrl: cocktail?.cloudinaryIconUrl
-          });
-        }
         // Also check newly created cocktails
         if (!cocktail && savedCocktailsMap.has(Number(itemNumber))) {
           cocktail = savedCocktailsMap.get(Number(itemNumber));
@@ -938,19 +916,6 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
       return (a.name || '').localeCompare(b.name || '');
     });
 
-    // Debug: Log item 1 in final response
-    const item1InResponse = filtered.find(item => item.itemNumber === 1);
-    if (item1InResponse) {
-      console.log('[menu-manager] Item 1 in final response:', {
-        itemNumber: item1InResponse.itemNumber,
-        name: item1InResponse.name,
-        cloudinaryVideoUrl: item1InResponse.cloudinaryVideoUrl,
-        cloudinaryIconUrl: item1InResponse.cloudinaryIconUrl,
-        videoUrl: item1InResponse.videoUrl,
-        hasCocktail: !!item1InResponse._id
-      });
-    }
-
     res.json(filtered);
   } catch (error) {
     console.error('Get menu-manager cocktails error:', error);
@@ -1034,20 +999,6 @@ router.get('/menu-gallery', async (req, res) => {
           cloudinaryMapSnapshotPublicId: mediaFields.cloudinaryMapSnapshotPublicId || null
         };
         
-        // DEBUG: Log what we're storing for item 1
-        if (cocktail.itemNumber === 1) {
-          console.log(`[Menu Gallery Setup] Item ${cocktail.itemNumber} - MANUAL CONSTRUCTION:`, {
-            cloudinaryVideoUrlRaw: cloudinaryVideoUrlRaw,
-            cloudinaryVideoUrlRawType: typeof cloudinaryVideoUrlRaw,
-            cloudinaryVideoUrlInObj: cocktailObj.cloudinaryVideoUrl,
-            cloudinaryVideoUrlInObjType: typeof cocktailObj.cloudinaryVideoUrl,
-            hasCloudinaryInObj: !!cocktailObj.cloudinaryVideoUrl,
-            hasCloudinaryKey: 'cloudinaryVideoUrl' in cocktailObj,
-            allKeys: Object.keys(cocktailObj),
-            objStringified: JSON.stringify(cocktailObj).substring(0, 200)
-          });
-        }
-        
         cocktailsByItemNumber.set(cocktail.itemNumber, cocktailObj);
       }
     });
@@ -1095,15 +1046,6 @@ router.get('/menu-gallery', async (req, res) => {
       const cloudinaryVideoUrlValue = mediaFromDb.cloudinaryVideoUrl || null;
       const cloudinaryMapSnapshotUrlValue = mediaFromDb.cloudinaryMapSnapshotUrl || null;
       
-      if (itemNumber === 1) {
-        console.log(`[Menu Gallery] Item ${itemNumber} DB QUERY:`, {
-          found: !!cocktailFromDb,
-          cloudinaryVideoUrl: cloudinaryVideoUrlValue,
-          cloudinaryVideoUrlType: typeof cloudinaryVideoUrlValue,
-          cloudinaryVideoUrlLength: cloudinaryVideoUrlValue?.length || 0
-        });
-      }
-      
       // Determine videoUrl (Cloudinary preferred)
       let videoUrl = mediaFromDb.videoUrl || `/menu-items/${itemNumber}.mp4`;
       if (!mediaFromDb.videoUrl && videoFileFromDb) {
@@ -1137,67 +1079,10 @@ router.get('/menu-gallery', async (req, res) => {
           category
         };
       
-      // VERIFY it's set for item 1
-      if (itemNumber === 1) {
-        console.log(`[Menu Gallery] Item ${itemNumber} ENTRY CREATED:`, {
-          hasCloudinaryVideoUrl: 'cloudinaryVideoUrl' in cocktailInfoEntry,
-          cloudinaryVideoUrl: cocktailInfoEntry.cloudinaryVideoUrl,
-          cloudinaryVideoUrlType: typeof cocktailInfoEntry.cloudinaryVideoUrl,
-          allKeys: Object.keys(cocktailInfoEntry),
-          jsonTest: JSON.stringify(cocktailInfoEntry).includes('cloudinaryVideoUrl')
-        });
-      }
-      
-      // VERIFY it's set
-      if (itemNumber === 1) {
-        console.log(`[Menu Gallery] Item 1 - cloudinaryVideoUrlValue:`, cloudinaryVideoUrlValue);
-        console.log(`[Menu Gallery] Item 1 - cocktailInfoEntry.cloudinaryVideoUrl:`, cocktailInfoEntry.cloudinaryVideoUrl);
-        console.log(`[Menu Gallery] Item 1 - has key:`, 'cloudinaryVideoUrl' in cocktailInfoEntry);
-      }
-      
       // Store it
       menuGalleryData[category].cocktailInfo[key] = cocktailInfoEntry;
-      
-      // IMMEDIATE VERIFICATION: Check that the field exists
-      if (itemNumber === 1) {
-        const stored = menuGalleryData[category].cocktailInfo[key];
-        console.log(`[Menu Gallery] IMMEDIATE CHECK after storing item ${itemNumber}:`, {
-          hasCloudinaryVideoUrl: 'cloudinaryVideoUrl' in stored,
-          cloudinaryVideoUrl: stored.cloudinaryVideoUrl,
-          cloudinaryVideoUrlType: typeof stored.cloudinaryVideoUrl,
-          allKeys: Object.keys(stored),
-          jsonString: JSON.stringify(stored).substring(0, 300)
-        });
-      }
-      
-      // DEBUG: Verify for item 1
-      if (itemNumber === 1) {
-        console.log(`[Menu Gallery] Item ${itemNumber} FINAL:`, {
-          cocktailExists: !!cocktail,
-          cloudinaryVideoUrlFromCocktail: cocktail?.cloudinaryVideoUrl,
-          cloudinaryVideoUrlValue: cloudinaryVideoUrlValue,
-          cloudinaryVideoUrlInEntry: cocktailInfoEntry.cloudinaryVideoUrl,
-          entryHasField: 'cloudinaryVideoUrl' in cocktailInfoEntry,
-          entryKeys: Object.keys(cocktailInfoEntry),
-          entryStringified: JSON.stringify(cocktailInfoEntry).substring(0, 200)
-        });
-      }
     }
 
-    // FINAL VERIFICATION: Check the actual object that will be sent
-    const finalCheck = Object.values(menuGalleryData.cocktails?.cocktailInfo || {}).find(i => i.itemNumber === 1);
-    if (finalCheck) {
-      console.log(`[Menu Gallery] PRE-SEND CHECK Item 1:`, {
-        cloudinaryVideoUrl: finalCheck.cloudinaryVideoUrl,
-        type: typeof finalCheck.cloudinaryVideoUrl,
-        hasKey: 'cloudinaryVideoUrl' in finalCheck,
-        keys: Object.keys(finalCheck),
-        jsonHasField: JSON.stringify(finalCheck).includes('cloudinaryVideoUrl'),
-        fullJson: JSON.stringify(finalCheck)
-      });
-      
-    }
-    
     // ABSOLUTE FINAL FIX: Force cloudinaryVideoUrl into ALL items before sending
     const finalItemNums = Array.from(allItemNumbers);
     if (finalItemNums.length > 0) {
@@ -1286,7 +1171,6 @@ const generateItemIdMiddleware = async (req, res, next) => {
       req.body.itemNumber = itemNumber;
       req.itemId = itemId;
       req.itemNumber = itemNumber;
-      console.log(`🔧 Using provided itemNumber from body: ${itemNumber}, itemId: ${itemId}`);
     } else if (req.body && req.body.itemId) {
       itemId = req.body.itemId;
       itemNumber = parseItemNumber(itemId);
@@ -1295,7 +1179,6 @@ const generateItemIdMiddleware = async (req, res, next) => {
         req.itemNumber = itemNumber;
       }
       req.itemId = itemId;
-      console.log(`🔧 Parsed itemNumber from itemId: ${itemNumber}, itemId: ${itemId}`);
     } else if (!req.body || !req.body.itemId) {
       // Generate new itemId/itemNumber if not provided
       const nextIds = await getNextItemIdentifiers();
@@ -1306,7 +1189,6 @@ const generateItemIdMiddleware = async (req, res, next) => {
       req.body.itemNumber = itemNumber;
       req.itemId = itemId;
       req.itemNumber = itemNumber;
-      console.log(`🔧 Generated new itemNumber: ${itemNumber}, itemId: ${itemId}`);
     }
     
     next();
@@ -1335,48 +1217,17 @@ router.post('/map/:itemNumber',
       return res.status(400).json({ error: 'Invalid item number' });
     }
 
-    // ========== DEBUG: Log req.file ==========
-    console.log('========== MAP UPLOAD DEBUG ==========');
-    console.log('req.file:', JSON.stringify(req.file, null, 2));
-    console.log('req.file details:', {
-      fieldname: req.file?.fieldname,
-      originalname: req.file?.originalname,
-      encoding: req.file?.encoding,
-      mimetype: req.file?.mimetype,
-      size: req.file?.size,
-      destination: req.file?.destination,
-      filename: req.file?.filename,
-      path: req.file?.path,
-      buffer: req.file?.buffer ? `Buffer(${req.file.buffer.length} bytes)` : 'no buffer'
-    });
-    console.log('req.body:', JSON.stringify(req.body, null, 2));
-    console.log('req.headers:', {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length']
-    });
-    console.log('=======================================');
-
     if (!req.file) {
-      console.error('❌ No file received in map upload');
       return res.status(400).json({ error: 'No map file uploaded' });
     }
 
     const tempFilePath = req.file.path;
 
     try {
-      console.log(`📸 Received map upload for itemNumber: ${itemNumber}`);
-      console.log(`   - filename: ${req.file.filename}`);
-      console.log(`   - path: ${tempFilePath}`);
-      console.log(`   - size: ${req.file.size} bytes`);
-      console.log(`   - mimetype: ${req.file.mimetype}`);
-      console.log(`   - originalname: ${req.file.originalname}`);
-
       // Verify file exists on disk
       try {
         const stats = await fs.promises.stat(tempFilePath);
-        console.log(`   ✅ File exists on disk: ${stats.size} bytes`);
       } catch (statErr) {
-        console.error(`   ❌ File does not exist on disk: ${statErr.message}`);
         throw new Error(`Uploaded file not found on disk: ${tempFilePath}`);
       }
 
@@ -1388,7 +1239,6 @@ router.post('/map/:itemNumber',
       }
 
       // Upload to Cloudinary
-      console.log(`   ☁️  Uploading map snapshot to Cloudinary...`);
       const uploadResult = await cloudinary.uploader.upload(tempFilePath, {
         folder: 'echo-catering/maps',
         public_id: `${itemNumber}_map`,
@@ -1400,9 +1250,6 @@ router.post('/map/:itemNumber',
         throw new Error('Cloudinary upload failed - no secure_url returned');
       }
 
-      console.log(`   ✅ Uploaded to Cloudinary: ${uploadResult.secure_url}`);
-      console.log(`   📌 Public ID: ${uploadResult.public_id}`);
-
       // Update cocktail
       cocktail.cloudinaryMapSnapshotUrl = uploadResult.secure_url;
       cocktail.cloudinaryMapSnapshotPublicId = uploadResult.public_id;
@@ -1411,7 +1258,6 @@ router.post('/map/:itemNumber',
 
       // Delete temp file
       await fs.promises.unlink(tempFilePath);
-      console.log(`🗑️  Deleted temp file: ${tempFilePath}`);
 
       res.json({
         success: true,
@@ -1420,19 +1266,16 @@ router.post('/map/:itemNumber',
         publicId: uploadResult.public_id,
       });
     } catch (err) {
-      console.error('❌ Error saving map snapshot:', err);
-      console.error('   Error details:', err.message);
-      console.error('   Stack:', err.stack);
+      console.error('Error saving map snapshot:', err);
       // Cleanup temp file if exists
       try { 
         await fs.promises.unlink(tempFilePath); 
-        console.log(`🗑️  Cleaned up temp file after error: ${tempFilePath}`);
       } catch (cleanupErr) {
-        console.warn('⚠️  Failed to cleanup temp file:', cleanupErr);
+        // best-effort cleanup
       }
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Server error saving map snapshot',
-        message: err.message 
+        ...(process.env.NODE_ENV !== 'production' ? { message: err.message } : {})
       });
     }
   }

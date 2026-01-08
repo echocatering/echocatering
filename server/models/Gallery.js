@@ -107,16 +107,32 @@ gallerySchema.virtual('imagePath').get(function() {
 // Virtual for thumbnail path - use Cloudinary transformation if available
 gallerySchema.virtual('thumbnailPath').get(function() {
   // If cloudinaryPublicId exists, generate Cloudinary thumbnail URL
-  if (this.cloudinaryPublicId) {
-    const cloudinary = require('cloudinary').v2;
-    return cloudinary.url(this.cloudinaryPublicId, {
-      width: 200,
-      height: 200,
-      crop: 'fill',
-      quality: 'auto',
-      fetch_format: 'auto'
-    });
+  if (this.cloudinaryPublicId && this.cloudinaryPublicId.trim() !== '') {
+    try {
+      const cloudinary = require('cloudinary').v2;
+      // Only generate URL if Cloudinary is configured
+      if (cloudinary.config().cloud_name) {
+        return cloudinary.url(this.cloudinaryPublicId, {
+          width: 200,
+          height: 200,
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        });
+      }
+    } catch (error) {
+      // Cloudinary not configured or error - fall through to use cloudinaryUrl or fallback
+      console.warn('Cloudinary not configured for thumbnail generation:', error.message);
+    }
   }
+  
+  // If we have a Cloudinary URL, use it directly (no transformation)
+  if (this.cloudinaryUrl && 
+      this.cloudinaryUrl.trim() !== '' && 
+      this.cloudinaryUrl.startsWith('https://')) {
+    return this.cloudinaryUrl;
+  }
+  
   // Fallback (should not be used with Cloudinary-only storage)
   const nameWithoutExt = this.filename.replace(/\.[^/.]+$/, '');
   return `/gallery/thumbnails/${nameWithoutExt}_thumb.jpg`;

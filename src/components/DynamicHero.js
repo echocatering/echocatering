@@ -55,60 +55,20 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
 
 
 
-  // Load hero images dynamically
+  // Load hero images once
   useEffect(() => {
     const loadImages = async () => {
       try {
-        console.log('🔄 Loading hero images...');
-        console.log('🔍 About to call dynamicGallery.getHeroImages()...');
         const images = await dynamicGallery.getHeroImages();
-        console.log('✅ Hero images loaded:', images);
-        console.log('📊 Total images loaded:', images.length);
-        if (images && images.length > 0) {
-          images.forEach((img, index) => {
-            console.log(`🖼️ Image ${index}:`, img);
-            console.log(`   - src: ${img.src}`);
-            console.log(`   - imagePath: ${img.imagePath}`);
-            console.log(`   - filename: ${img.filename}`);
-          });
-        } else {
-          console.log('⚠️ No images returned from getHeroImages()');
-        }
         setHeroImages(images);
-        setIsLoading(false);
       } catch (error) {
-        console.error('❌ Error loading hero images:', error);
-        console.error('❌ Error details:', error.message);
-        console.error('❌ Error stack:', error.stack);
+        console.error('Error loading hero images:', error);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    // Initial load
     loadImages();
-
-    // Refresh images every 30 seconds to catch new uploads
-    const refreshInterval = setInterval(loadImages, 30000);
-
-    // Refresh when window comes into focus (user returns to tab)
-    const handleFocus = () => {
-      console.log('🔄 Window focused, refreshing hero images...');
-      loadImages();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    // Listen for custom refresh events from admin panel
-    const handleRefreshEvent = () => {
-      console.log('🔄 Refresh event received, updating hero images...');
-      loadImages();
-    };
-    window.addEventListener('hero-refresh', handleRefreshEvent);
-
-    return () => {
-      clearInterval(refreshInterval);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('hero-refresh', handleRefreshEvent);
-    };
   }, []);
 
 

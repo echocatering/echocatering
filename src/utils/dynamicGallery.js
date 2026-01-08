@@ -11,32 +11,24 @@ class DynamicGallery {
 
   // Load images from the server with caching
   async loadImages(forceRefresh = false) {
-    console.log('🔍 DynamicGallery.loadImages() called, forceRefresh:', forceRefresh);
     const now = Date.now();
     
     // Return cached images if they're still fresh
     if (!forceRefresh && this.isLoaded && this.lastFetch && (now - this.lastFetch) < this.cacheTimeout) {
-      console.log('📦 Using cached gallery images');
       return this.images;
     }
     
-    console.log('🔍 Fetching fresh images from server...');
     return await this._fetchImages();
   }
 
   // Fetch images from the server API
   async _fetchImages() {
     try {
-      console.log('🔄 Fetching gallery images from server...');
-      console.log('🔍 About to call fetchGalleryImages()...');
       const images = await fetchGalleryImages();
-      console.log('🔍 fetchGalleryImages() returned:', images);
       
       this.images = images;
       this.isLoaded = true;
       this.lastFetch = Date.now();
-      
-      console.log(`✅ Loaded ${images.length} gallery images`);
       return images;
     } catch (error) {
       console.error('❌ Gallery API not available:', error);
@@ -71,11 +63,7 @@ class DynamicGallery {
 
   // Get hero images (all images)
   async getHeroImages() {
-    console.log('🔍 DynamicGallery.getHeroImages() called');
-    const images = await this.loadImages();
-    console.log('🔍 DynamicGallery.loadImages() returned:', images);
-    console.log('🔍 Returning images:', images);
-    return images; // Return all images instead of limiting to 4
+    return await this.loadImages(); // Return all images instead of limiting to 4
   }
 
   // Get footer images (first 4)

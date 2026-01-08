@@ -26,8 +26,6 @@ function validateAndConfig() {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
-  
-  console.log('✅ Cloudinary configured with cloud:', process.env.CLOUDINARY_CLOUD_NAME);
 }
 
 // Validate immediately (will throw if missing)
