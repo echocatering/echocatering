@@ -2,8 +2,53 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Gallery = require('../models/Gallery');
 const { authenticateToken, requireEditor } = require('../middleware/auth');
+const { deleteFromCloudinary } = require('../utils/cloudinary');
 
 const router = express.Router();
+
+// DELETE /api/gallery/purge
+// Protected admin tool: wipe gallery documents and best-effort delete Cloudinary assets.
+router.delete('/purge', [authenticateToken, requireEditor], async (req, res) => {
+  try {
+    // Safety latch to prevent accidental wipes
+    if (req.query.confirm !== 'true') {
+      return res.status(400).json({
+        message: 'Confirmation required. Re-run with ?confirm=true to purge the gallery.'
+      });
+    }
+
+    const docs = await Gallery.find({}).select('_id cloudinaryPublicId mimeType').lean();
+    const total = docs.length;
+
+    let cloudinaryDeleted = 0;
+    let cloudinaryFailed = 0;
+
+    for (const d of docs) {
+      const publicId = (d.cloudinaryPublicId || '').trim();
+      if (!publicId) continue;
+      const resourceType = (d.mimeType || '').startsWith('video') ? 'video' : 'image';
+      try {
+        await deleteFromCloudinary(publicId, resourceType);
+        cloudinaryDeleted += 1;
+      } catch (err) {
+        cloudinaryFailed += 1;
+      }
+    }
+
+    await Gallery.deleteMany({});
+
+    return res.json({
+      success: true,
+      deletedMongoDocs: total,
+      attemptedCloudinaryDeletes: docs.filter(d => (d.cloudinaryPublicId || '').trim()).length,
+      cloudinaryDeleted,
+      cloudinaryFailed
+    });
+  } catch (error) {
+    console.error('Purge gallery error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // GET /api/gallery
 router.get('/', async (req, res) => {
@@ -165,7 +210,17 @@ router.delete('/:id', [authenticateToken, requireEditor], async (req, res) => {
       return res.status(404).json({ message: 'Image not found' });
     }
 
-    // Cloudinary deletion is handled in upload route delete; this route only removes DB
+    // Delete Cloudinary asset first (best effort), then delete DB record.
+    if (image.cloudinaryPublicId && image.cloudinaryPublicId.trim() !== '') {
+      const resourceType = (image.mimeType || '').startsWith('video') ? 'video' : 'image';
+      try {
+        await deleteFromCloudinary(image.cloudinaryPublicId, resourceType);
+      } catch (err) {
+        // Continue with DB delete even if Cloudinary delete fails
+        console.warn('Cloudinary delete failed (continuing with DB delete):', err.message);
+      }
+    }
+
     await Gallery.findByIdAndDelete(req.params.id);
     return res.json({ message: 'Image deleted successfully' });
   } catch (error) {
