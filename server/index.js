@@ -296,7 +296,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server (Render expects the process to bind to process.env.PORT)
-const server = app.listen(PORT, () => {
+// Bind explicitly to 0.0.0.0 so Render can detect the open port reliably.
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`✅ SERVER SUCCESSFULLY STARTED`);
   console.log(`   Port: ${PORT}`);
