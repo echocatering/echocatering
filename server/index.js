@@ -71,7 +71,17 @@ const corsOptions = {
 
 // Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Allow Cloudinary-hosted assets (images/videos) while keeping Helmet defaults.
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      // Helmet's default img-src is "'self' data:"; extend to Cloudinary
+      'img-src': ["'self'", 'data:', 'https://res.cloudinary.com'],
+      // Allow Cloudinary video/image media loads
+      'media-src': ["'self'", 'https://res.cloudinary.com'],
+    }
+  }
 }));
 app.use(cors(corsOptions));
 
