@@ -31,7 +31,23 @@ if (missing.length) {
 const app = express();
 // Behind Render's proxy; needed for express-rate-limit to honor X-Forwarded-For
 app.set('trust proxy', 1);
-const PORT = process.env.PORT || 5002;
+const isProd = process.env.NODE_ENV === 'production';
+const isRender = !!process.env.RENDER || !!process.env.RENDER_EXTERNAL_URL;
+
+// Render expects the app to listen on the provided PORT env var.
+// If we listen on a different port, Render will send SIGTERM and restart the service.
+if ((isProd || isRender) && !process.env.PORT) {
+  throw new Error(
+    'Missing required environment variable: PORT\n' +
+    '💡 On Render: PORT is set automatically for web services. If it is missing, check your service type and start command.\n' +
+    '💡 Locally: set PORT or run with the default (5002) in development.'
+  );
+}
+
+const PORT = Number(process.env.PORT || 5002);
+if (!Number.isFinite(PORT) || PORT <= 0) {
+  throw new Error(`Invalid PORT value: ${process.env.PORT}`);
+}
 
 // Get allowed origins from environment or use default
 // In production, allow Render domain and any custom domains
@@ -129,10 +145,7 @@ const connectToMongoDB = async (retryCount = 0) => {
   // Skip retries for local MongoDB
   if (mongoUri.includes('localhost') || mongoUri.includes('127.0.0.1')) {
     try {
-      await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
+      await mongoose.connect(mongoUri);
       console.log('✅ Connected to MongoDB (local)');
       dbConnected = true;
       app.locals.dbConnected = dbConnected;
@@ -156,8 +169,6 @@ const connectToMongoDB = async (retryCount = 0) => {
     }
 
     await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 10000, // 10 second timeout per attempt
       socketTimeoutMS: 45000, // 45 second socket timeout
     });
