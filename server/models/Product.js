@@ -79,8 +79,6 @@ const productSchema = new mongoose.Schema({
 // Indexes for efficient queries
 productSchema.index({ category: 1, order: 1 });
 productSchema.index({ isActive: 1 });
-productSchema.index({ sku: 1 });
-productSchema.index({ barcode: 1 });
 
 module.exports = mongoose.model('Product', productSchema);
 

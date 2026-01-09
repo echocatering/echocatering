@@ -155,8 +155,6 @@ const cocktailSchema = new mongoose.Schema({
 cocktailSchema.index({ category: 1, order: 1 });
 cocktailSchema.index({ isActive: 1 });
 cocktailSchema.index({ status: 1 });
-// Guardrail: itemNumber should be unique, but keep sparse to allow migration
-cocktailSchema.index({ itemNumber: 1 }, { unique: true, sparse: true });
 
 // Virtual for full video path
 cocktailSchema.virtual('videoPath').get(function() {
