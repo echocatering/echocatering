@@ -31,20 +31,7 @@ if (missing.length) {
 const app = express();
 // Behind Render's proxy; needed for express-rate-limit to honor X-Forwarded-For
 app.set('trust proxy', 1);
-const isProd = process.env.NODE_ENV === 'production';
-const isRender = !!process.env.RENDER || !!process.env.RENDER_EXTERNAL_URL;
-
-// Render expects the app to listen on the provided PORT env var.
-// If we listen on a different port, Render will send SIGTERM and restart the service.
-if ((isProd || isRender) && !process.env.PORT) {
-  throw new Error(
-    'Missing required environment variable: PORT\n' +
-    '💡 On Render: PORT is set automatically for web services. If it is missing, check your service type and start command.\n' +
-    '💡 Locally: set PORT or run with the default (5002) in development.'
-  );
-}
-
-const PORT = Number(process.env.PORT || 5002);
+const PORT = Number(process.env.PORT || 3000);
 if (!Number.isFinite(PORT) || PORT <= 0) {
   throw new Error(`Invalid PORT value: ${process.env.PORT}`);
 }
@@ -308,57 +295,48 @@ app.use((err, req, res, next) => {
   });
 });
 
-// CRITICAL: Only start server if this file is run directly (not required)
-// This prevents the server from starting multiple times if index.js is imported elsewhere
-if (require.main === module) {
-  // Start server with error handling
-  const server = app.listen(PORT, () => {
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log(`✅ SERVER SUCCESSFULLY STARTED`);
-    console.log(`   Port: ${PORT}`);
-    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   Health check: http://localhost:${PORT}/api/health`);
-    console.log(`   Database: ${dbConnected ? '✅ Connected' : '⚠️  Not connected'}`);
-    console.log('═══════════════════════════════════════════════════════════');
-  });
+// Start server (Render expects the process to bind to process.env.PORT)
+const server = app.listen(PORT, () => {
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log(`✅ SERVER SUCCESSFULLY STARTED`);
+  console.log(`   Port: ${PORT}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   Health check: http://localhost:${PORT}/api/health`);
+  console.log(`   Database: ${dbConnected ? '✅ Connected' : '⚠️  Not connected'}`);
+  console.log('═══════════════════════════════════════════════════════════');
+});
 
-  // Handle EADDRINUSE errors explicitly
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error('═══════════════════════════════════════════════════════════');
-      console.error(`❌ PORT ${PORT} IS ALREADY IN USE`);
-      console.error(`   Another process is already running on port ${PORT}`);
-      console.error(`   Please stop the existing server or use a different port`);
-      console.error(`   To find and kill the process: lsof -ti:${PORT} | xargs kill -9`);
-      console.error('═══════════════════════════════════════════════════════════');
-      process.exit(1);
-    } else {
-      console.error('❌ Server error:', err);
-      process.exit(1);
-    }
-  });
+// Handle EADDRINUSE errors explicitly
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error('═══════════════════════════════════════════════════════════');
+    console.error(`❌ PORT ${PORT} IS ALREADY IN USE`);
+    console.error(`   Another process is already running on port ${PORT}`);
+    console.error(`   Please stop the existing server or use a different port`);
+    console.error(`   To find and kill the process: lsof -ti:${PORT} | xargs kill -9`);
+    console.error('═══════════════════════════════════════════════════════════');
+    process.exit(1);
+  }
+  console.error('❌ Server error:', err);
+  process.exit(1);
+});
 
-  // Graceful shutdown
-  const gracefulShutdown = async (signal) => {
-    console.log(`${signal} received, shutting down gracefully...`);
-    server.close(async () => {
-      console.log('Server closed');
-      try {
-        // Mongoose 8+ uses promises, not callbacks
-        if (mongoose.connection.readyState === 1) {
-          await mongoose.connection.close();
-          console.log('MongoDB connection closed');
-        }
-      } catch (err) {
-        console.error('Error closing MongoDB connection:', err);
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+  console.log(`${signal} received, shutting down gracefully...`);
+  server.close(async () => {
+    console.log('Server closed');
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed');
       }
-      process.exit(0);
-    });
-  };
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err);
+    }
+    process.exit(0);
+  });
+};
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-} else {
-  // If this file is required (not run directly), export the app for testing or other uses
-  module.exports = app;
-}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
