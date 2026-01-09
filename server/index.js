@@ -78,7 +78,9 @@ app.use(cors(corsOptions));
 // Rate limiting - exclude auth endpoints from strict rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000 // relaxed limit in development
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // relaxed limit in development
+  // Never rate limit health/logo endpoints (Render may poll these during deploy)
+  skip: (req) => req.path === '/health' || req.path === '/logo'
 });
 
 const authLimiter = rateLimit({
