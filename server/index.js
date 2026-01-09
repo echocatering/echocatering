@@ -49,7 +49,9 @@ if (process.env.RENDER_EXTERNAL_URL) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) {
+    // Allow requests with no Origin header (server-side tools, health checks)
+    // Some clients send the literal string "null" as Origin; treat it as no-origin.
+    if (!origin || origin === 'null') {
       return callback(null, true);
     }
     if (process.env.NODE_ENV !== 'production') {
