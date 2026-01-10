@@ -2,16 +2,20 @@
 
 // Fetch gallery images from the server API
 export const fetchGalleryImages = async () => {
-  const response = await fetch('/api/gallery');
+  // Cloudinary is the source of truth for gallery media
+  const response = await fetch('/api/media/gallery');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   const images = await response.json();
-  return images.map(img => ({
-    ...img,
-    src: img.imagePath || img.cloudinaryUrl,
-    alt: img.title || img.originalName || 'Gallery image'
+  return images.map((item) => ({
+    ...item,
+    // Normalize to what the gallery UI expects
+    src: item.url,
+    imagePath: item.url,
+    cloudinaryUrl: item.url,
+    alt: 'Gallery image',
   }));
 };
 

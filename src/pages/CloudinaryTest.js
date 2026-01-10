@@ -13,8 +13,8 @@ export default function CloudinaryTest() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch gallery images
-        const galleryRes = await fetch('/api/gallery');
+        // Fetch gallery images (Cloudinary is source of truth)
+        const galleryRes = await fetch('/api/media/gallery');
         if (!galleryRes.ok) {
           throw new Error(`Gallery fetch failed: ${galleryRes.status}`);
         }

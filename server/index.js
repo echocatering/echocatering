@@ -240,6 +240,7 @@ connectToMongoDB().catch(err => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/menu-items', require('./routes/menuItems'));
 app.use('/api/gallery', require('./routes/gallery'));
+app.use('/api/media', require('./routes/media'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/countries', require('./routes/countries'));

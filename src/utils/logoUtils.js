@@ -11,8 +11,8 @@ export const fetchLogo = async () => {
   }
 
   try {
-    // Use the content endpoint for logo
-    const response = await fetch('/api/content/logo');
+    // Cloudinary is the source of truth for logo media
+    const response = await fetch('/api/media/logo');
     if (response.ok) {
       const logoData = await response.json();
       
