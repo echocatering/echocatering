@@ -104,25 +104,14 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
   const filteredCocktails = useMemo(() => {
     const isPlaceholderItem = (cocktail) => {
       // Render admin currently has a legacy seeded placeholder that shows up as "ITEM 1".
-      // Filter it out if it looks empty and unconfigured.
+      // Always filter out items with placeholder names like "ITEM 1", "item 1", etc.
       const name = String(cocktail?.name || '').trim();
       const isItemLabel = /^item\s*\d+$/i.test(name);
-      if (!isItemLabel) return false;
-
-      const itemNumber = Number(cocktail?.itemNumber);
-      const hasMedia =
-        !!cocktail?.cloudinaryVideoUrl ||
-        !!cocktail?.cloudinaryIconUrl ||
-        !!cocktail?.cloudinaryMapSnapshotUrl ||
-        !!cocktail?.videoFile ||
-        !!cocktail?.mapSnapshotFile;
-      const hasText =
-        !!String(cocktail?.concept || '').trim() ||
-        !!String(cocktail?.ingredients || '').trim() ||
-        !!String(cocktail?.narrative || '').trim();
-
-      // Only hide if it's clearly empty (and typically the first seeded row).
-      return (!Number.isFinite(itemNumber) || itemNumber === 1) && !hasMedia && !hasText;
+      
+      // Always hide placeholder items (regardless of content - they're seeded/empty)
+      if (isItemLabel) return true;
+      
+      return false;
     };
 
     let filtered = cocktails.filter(cocktail => {
