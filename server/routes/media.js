@@ -142,6 +142,26 @@ router.get('/logo', async (req, res) => {
   }
 });
 
+// GET /api/media/ping
+// Diagnostic: verify Cloudinary Admin API connectivity from the server.
+router.get('/ping', async (req, res) => {
+  try {
+    const result = await cloudinary.api.ping();
+    return res.json({ ok: true, result });
+  } catch (error) {
+    console.error('Cloudinary ping error:', error);
+    return res.status(502).json({
+      ok: false,
+      message: 'Cloudinary ping failed',
+      error: {
+        name: error?.name,
+        message: error?.message,
+        http_code: error?.http_code || error?.statusCode,
+      },
+    });
+  }
+});
+
 module.exports = router;
 
 
