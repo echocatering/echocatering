@@ -146,17 +146,36 @@ router.get('/logo', async (req, res) => {
 // Diagnostic: verify Cloudinary Admin API connectivity from the server.
 router.get('/ping', async (req, res) => {
   try {
+    const cfg = cloudinary.config() || {};
     const result = await cloudinary.api.ping();
-    return res.json({ ok: true, result });
+    return res.json({
+      ok: true,
+      cloudinary: {
+        cloudName: cfg.cloud_name || null,
+        hasApiKey: !!cfg.api_key,
+        hasApiSecret: !!cfg.api_secret,
+      },
+      result,
+    });
   } catch (error) {
     console.error('Cloudinary ping error:', error);
     return res.status(502).json({
       ok: false,
       message: 'Cloudinary ping failed',
+      cloudinary: {
+        cloudName: cloudinary.config()?.cloud_name || null,
+        hasApiKey: !!cloudinary.config()?.api_key,
+        hasApiSecret: !!cloudinary.config()?.api_secret,
+      },
       error: {
-        name: error?.name,
-        message: error?.message,
-        http_code: error?.http_code || error?.statusCode,
+        type: typeof error,
+        toString: String(error),
+        keys: error && typeof error === 'object' ? Object.keys(error) : [],
+        // Cloudinary often nests useful details under `error.error`
+        nestedKeys: error?.error && typeof error.error === 'object' ? Object.keys(error.error) : [],
+        message: error?.message || error?.error?.message,
+        name: error?.name || error?.error?.name,
+        http_code: error?.http_code || error?.statusCode || error?.error?.http_code,
       },
     });
   }
