@@ -4,15 +4,9 @@ import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 const ContentManager = () => {
   const { apiCall } = useAuth();
-  const [sections, setSections] = useState([
-    {
-      id: 1,
-      title: 'new taste. lasting impressions',
-      content: '',
-      image: '',
-      imageVisibility: true
-    }
-  ]);
+  // Start empty so we never flash legacy placeholder content.
+  const [sections, setSections] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [uploading, setUploading] = useState({});
   const [message, setMessage] = useState('');
 
@@ -46,7 +40,7 @@ const ContentManager = () => {
         if (response.storyTitle || response.story || response.images?.story) {
           legacySections.push({
             id: 1,
-            title: response.storyTitle || 'new taste. lasting impressions',
+            title: response.storyTitle || '',
             content: response.story || '',
             image: response.images?.story || '',
             imageVisibility: response.imageVisibility?.story !== false
@@ -77,6 +71,8 @@ const ContentManager = () => {
       }
     } catch (error) {
       console.error('Error fetching about content:', error);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -246,6 +242,8 @@ const ContentManager = () => {
   return (
     <div className="content-manager bg-white min-h-screen w-full flex justify-center items-start pt-8">
       <div className="bg-white rounded-lg max-w-6xl w-full">
+        {/* Render nothing until we have real data (prevents legacy flash). */}
+        {initialLoading ? null : null}
         {/* Blank Header */}
         <header className="mb-6 flex flex-col gap-4" style={{ position: 'relative', zIndex: 1001, pointerEvents: 'auto' }}>
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -256,7 +254,7 @@ const ContentManager = () => {
         </header>
         
         {/* Dynamic Sections - show all sections, including empty/new ones */}
-        {sections.map((section, index) => (
+        {!initialLoading && sections.map((section, index) => (
           <div key={section.id} className="flex justify-center mb-12">
           <div className="flex flex-row items-start gap-12">
             <div className="text-editor flex-shrink-0">
