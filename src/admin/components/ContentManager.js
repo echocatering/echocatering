@@ -216,7 +216,8 @@ const ContentManager = () => {
   };
 
   const handleAddSection = () => {
-    const newSectionId = Math.max(...sections.map(s => s.id), 0) + 1;
+    // Always keep section numbers contiguous (1..n)
+    const newSectionId = sections.length + 1;
     setSections(prev => [...prev, {
       id: newSectionId,
       title: '',
@@ -232,7 +233,14 @@ const ContentManager = () => {
       setTimeout(() => setMessage(''), 3000);
       return;
     }
-    setSections(prev => prev.filter(section => section.id !== sectionId));
+    // Remove and then renumber so sections stay contiguous (no "section 3" gap)
+    setSections(prev => {
+      const kept = prev.filter(section => section.id !== sectionId);
+      return kept.map((section, idx) => ({
+        ...section,
+        id: idx + 1,
+      }));
+    });
   };
   
   return (

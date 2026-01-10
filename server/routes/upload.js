@@ -30,6 +30,66 @@ const assertCloudinaryEnv = () => {
   }
 };
 
+// About image upload (memory only, overwrite fixed public_id per section)
+const aboutUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 1,
+    fileSize: 10 * 1024 * 1024, // 10MB cap
+  },
+  fileFilter: (req, file, cb) => {
+    const name = (file.originalname || '').toLowerCase();
+    const isImage = /\.(jpe?g|png|gif|webp|svg)$/.test(name);
+    if (isImage) return cb(null, true);
+    return cb(new Error('Only image files are allowed for about uploads'));
+  },
+});
+
+// POST /api/upload/about-image
+router.post(
+  '/about-image',
+  [authenticateToken, requireEditor, aboutUpload.single('aboutImage')],
+  async (req, res) => {
+    try {
+      assertCloudinaryEnv();
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const sectionNumberRaw = req.body?.sectionNumber;
+      const sectionNumber = Number(sectionNumberRaw);
+      if (!Number.isFinite(sectionNumber) || sectionNumber <= 0) {
+        return res.status(400).json({ message: 'Invalid sectionNumber' });
+      }
+
+      const publicId = `echo-catering/about/${sectionNumber}_about`;
+      const cloudinaryResult = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: 'echo-catering/about',
+        resourceType: 'image',
+        publicId,
+      });
+
+      return res.json({
+        success: true,
+        message: 'About image uploaded successfully',
+        file: {
+          cloudinaryUrl: cloudinaryResult.url,
+          publicId: cloudinaryResult.publicId,
+          width: cloudinaryResult.width,
+          height: cloudinaryResult.height,
+          bytes: cloudinaryResult.bytes,
+          resourceType: cloudinaryResult.resourceType,
+          format: cloudinaryResult.format,
+        },
+      });
+    } catch (error) {
+      console.error('❌ About image upload error:', error.message);
+      return res.status(500).json({ message: 'Upload failed', error: error.message });
+    }
+  }
+);
+
 // Logo upload (memory only, overwrite fixed public_id)
 const logoUpload = multer({
   storage: multer.memoryStorage(),

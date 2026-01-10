@@ -1,76 +1,17 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
+// NOTE: About images are Cloudinary-only. Legacy filesystem utilities were previously used
+// to copy/convert images into `server/uploads/about`, but that path is no longer part of
+// the runtime pipeline.
 const Content = require('../models/Content');
 const Gallery = require('../models/Gallery');
 const { authenticateToken, requireEditor } = require('../middleware/auth');
+const { cloudinary } = require('../utils/cloudinary');
 
 const router = express.Router();
 
-// Helper function to copy an uploaded image to a section file
-async function copyImageToSection(sourceImagePath, sectionNumber) {
-  try {
-    const aboutPath = path.join(__dirname, '../uploads/about');
-    if (!fs.existsSync(aboutPath)) {
-      fs.mkdirSync(aboutPath, { recursive: true });
-    }
-
-    const sectionFileName = `section${sectionNumber}.jpg`;
-    const aboutFilePath = path.join(aboutPath, sectionFileName);
-    
-    // Get source file path - handle both /uploads paths and full paths
-    let sourceFilePath;
-    if (sourceImagePath.startsWith('/uploads/')) {
-      // Remove /uploads prefix and construct full path
-      const relativePath = sourceImagePath.replace('/uploads/', '');
-      sourceFilePath = path.join(__dirname, '../uploads', relativePath);
-    } else if (sourceImagePath.startsWith('/')) {
-      // Absolute path from root
-      sourceFilePath = path.join(__dirname, '..', sourceImagePath);
-    } else {
-      sourceFilePath = sourceImagePath;
-    }
-
-    if (!fs.existsSync(sourceFilePath)) {
-      console.warn(`⚠️  Source image not found: ${sourceFilePath} (from ${sourceImagePath})`);
-      return false;
-    }
-
-    // Overwrite existing file if it exists
-    if (fs.existsSync(aboutFilePath)) {
-      fs.unlinkSync(aboutFilePath);
-      console.log(`   🔄 Overwriting existing ${sectionFileName}`);
-    }
-
-    // Get file extension
-    const ext = path.extname(sourceFilePath).toLowerCase();
-
-    // Convert to JPEG format using sharp
-    if (ext === '.jpg' || ext === '.jpeg') {
-      // Already JPEG, just copy
-      fs.copyFileSync(sourceFilePath, aboutFilePath);
-    } else {
-      // Convert to JPEG using sharp
-      await sharp(sourceFilePath)
-        .jpeg({ 
-          quality: 90,
-          mozjpeg: true 
-        })
-        .toFile(aboutFilePath);
-    }
-
-    console.log(`   ✅ Copied/Converted ${sourceImagePath} to ${sectionFileName}`);
-    return true;
-  } catch (error) {
-    console.error(`   ❌ Error copying image to section ${sectionNumber}:`, error.message);
-    return false;
-  }
-}
-
-// NOTE: Removed copyLatestGalleryImagesToAbout function - about section images
-// should only come from images uploaded directly to the about sections, not from gallery
+// NOTE: Removed legacy filesystem helpers (copy/convert into `uploads/about`).
+// About images are streamed directly to Cloudinary and served from Cloudinary URLs.
 
 // @route   GET /api/content
 // @desc    Get all content
@@ -116,22 +57,40 @@ router.get('/about', async (req, res) => {
       page: 'about'
     }).sort({ order: 1, section: 1 });
 
-    // Helper to pull image - ONLY use Cloudinary URL (no local fallbacks)
-    const getImage = (item) => {
-      // Only return Cloudinary URL if it's a valid URL
-      if (item?.cloudinaryUrl && 
-          item.cloudinaryUrl.trim() !== '' && 
-          item.cloudinaryUrl.startsWith('https://res.cloudinary.com/')) {
-        return item.cloudinaryUrl;
+    // Cloudinary is the source of truth for about images.
+    // List the current contents of the about folder and map by section number.
+    const aboutImagesBySection = new Map();
+    try {
+      const resp = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: 'echo-catering/about',
+        resource_type: 'image',
+        max_results: 200,
+      });
+      const resources = Array.isArray(resp?.resources) ? resp.resources : [];
+      for (const r of resources) {
+        const pid = String(r.public_id || '');
+        const match = pid.match(/\/(\d+)_about$/);
+        if (!match) continue;
+        const sectionNum = Number(match[1]);
+        if (!Number.isFinite(sectionNum) || sectionNum <= 0) continue;
+        if (r.secure_url) {
+          aboutImagesBySection.set(sectionNum, r.secure_url);
+        }
       }
-      // No fallbacks - return empty string if no Cloudinary URL
-      return '';
-    };
+    } catch (err) {
+      // If listing fails, fall back to stored URLs (best effort)
+      console.warn('⚠️  Cloudinary about folder listing failed:', err?.message);
+    }
 
     const sections = aboutContent.map((item, idx) => {
-      const img = getImage(item);
+      const sectionNumber = idx + 1;
+      const img =
+        aboutImagesBySection.get(sectionNumber) ||
+        (item?.cloudinaryUrl && item.cloudinaryUrl.trim() !== '' ? item.cloudinaryUrl : '') ||
+        '';
       return {
-        id: idx + 1,
+        id: sectionNumber,
         title: item.title || '',
         content: item.content || '',
         image: img, // Only Cloudinary URLs, no local fallbacks
