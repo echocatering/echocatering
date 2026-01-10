@@ -102,11 +102,35 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
 
   // Filter cocktails based on active category and search
   const filteredCocktails = useMemo(() => {
+    const isPlaceholderItem = (cocktail) => {
+      // Render admin currently has a legacy seeded placeholder that shows up as "ITEM 1".
+      // Filter it out if it looks empty and unconfigured.
+      const name = String(cocktail?.name || '').trim();
+      const isItemLabel = /^item\s*\d+$/i.test(name);
+      if (!isItemLabel) return false;
+
+      const itemNumber = Number(cocktail?.itemNumber);
+      const hasMedia =
+        !!cocktail?.cloudinaryVideoUrl ||
+        !!cocktail?.cloudinaryIconUrl ||
+        !!cocktail?.cloudinaryMapSnapshotUrl ||
+        !!cocktail?.videoFile ||
+        !!cocktail?.mapSnapshotFile;
+      const hasText =
+        !!String(cocktail?.concept || '').trim() ||
+        !!String(cocktail?.ingredients || '').trim() ||
+        !!String(cocktail?.narrative || '').trim();
+
+      // Only hide if it's clearly empty (and typically the first seeded row).
+      return (!Number.isFinite(itemNumber) || itemNumber === 1) && !hasMedia && !hasText;
+    };
+
     let filtered = cocktails.filter(cocktail => {
       const key = normalizeCategoryKey(cocktail.category);
       // Only show active items (not archived)
       const isActive = cocktail.status !== 'archived' && (cocktail.isActive !== false);
       if (!isActive) return false;
+      if (isPlaceholderItem(cocktail)) return false;
       
       // If showing full menu, include all categories
       if (showFullMenu) return true;
