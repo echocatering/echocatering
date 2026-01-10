@@ -1,5 +1,7 @@
 const express = require('express');
 const { cloudinary } = require('../utils/cloudinary');
+const { deleteFromCloudinary } = require('../utils/cloudinary');
+const { authenticateToken, requireEditor } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -60,8 +62,12 @@ async function listCloudinaryByPrefix({ prefix, resourceType = 'image', max = 50
 router.get('/gallery', async (req, res) => {
   try {
     const cacheKey = 'gallery';
-    const cached = cacheGet(cacheKey);
-    if (cached) return res.json(cached);
+    const noCache = String(req.query?.nocache || '').toLowerCase();
+    const bypassCache = noCache === '1' || noCache === 'true';
+    if (!bypassCache) {
+      const cached = cacheGet(cacheKey);
+      if (cached) return res.json(cached);
+    }
 
     const folder = FOLDERS.gallery;
 
@@ -103,13 +109,50 @@ router.get('/gallery', async (req, res) => {
   }
 });
 
+// DELETE /api/media/gallery
+// Admin tool: delete a Cloudinary asset by publicId (Cloudinary is source of truth).
+router.delete('/gallery', [authenticateToken, requireEditor], async (req, res) => {
+  try {
+    const publicId = String(req.body?.publicId || '').trim();
+    const resourceType = String(req.body?.resourceType || 'image').trim();
+
+    if (!publicId) {
+      return res.status(400).json({ message: 'publicId is required' });
+    }
+    if (!['image', 'video', 'raw'].includes(resourceType)) {
+      return res.status(400).json({ message: 'Invalid resourceType' });
+    }
+
+    const result = await deleteFromCloudinary(publicId, resourceType);
+
+    // Invalidate cache so the next list reflects the deletion immediately.
+    cache.delete('gallery');
+
+    return res.json({ success: true, result });
+  } catch (error) {
+    console.error('Delete Cloudinary gallery asset error:', error);
+    return res.status(502).json({
+      message: 'Cloudinary delete failed',
+      error: {
+        name: error?.name,
+        message: error?.message,
+        http_code: error?.http_code || error?.statusCode,
+      },
+    });
+  }
+});
+
 // GET /api/media/logo
 // Source of truth: newest logo in Cloudinary logo folder.
 router.get('/logo', async (req, res) => {
   try {
     const cacheKey = 'logo';
-    const cached = cacheGet(cacheKey);
-    if (cached) return res.json(cached);
+    const noCache = String(req.query?.nocache || '').toLowerCase();
+    const bypassCache = noCache === '1' || noCache === 'true';
+    if (!bypassCache) {
+      const cached = cacheGet(cacheKey);
+      if (cached) return res.json(cached);
+    }
 
     const folder = FOLDERS.logo;
     const resources = await listCloudinaryByPrefix({ prefix: folder, resourceType: 'image', max: 50 });

@@ -77,15 +77,28 @@ const GalleryManager = () => {
       setLoading(true);
       console.log('🔄 Fetching gallery images...');
       
-      const response = await apiCall('/gallery');
+      // Cloudinary is the source of truth for gallery media.
+      // Use nocache to ensure admin sees uploads/deletes immediately.
+      const response = await apiCall('/media/gallery?nocache=1');
       console.log('📡 Gallery API response:', response);
       
       if (Array.isArray(response)) {
-        console.log(`✅ Found ${response.length} images in gallery`);
-        response.forEach((img, index) => {
-          console.log(`   ${index + 1}. ${img.filename} - ${img.title} - Active: ${img.isActive}`);
-        });
-        setImages(response);
+        // Admin UI currently renders <img>; keep it image-only for now.
+        const onlyImages = response.filter((r) => r?.resourceType === 'image' && r?.url);
+        console.log(`✅ Found ${onlyImages.length} Cloudinary images in gallery`);
+
+        const normalized = onlyImages.map((r) => ({
+          _id: r.publicId, // use publicId as stable identifier
+          filename: String(r.publicId || '').split('/').pop() || r.publicId,
+          title: r.publicId,
+          isActive: true,
+          cloudinaryUrl: r.url,
+          thumbnailUrl: r.url,
+          resourceType: r.resourceType,
+          createdAt: r.createdAt,
+        }));
+
+        setImages(normalized);
       } else {
         console.error('❌ Gallery response is not an array:', response);
         setImages([]);
@@ -201,9 +214,10 @@ const GalleryManager = () => {
       setDeleting(true);
       setError('');
 
-      // Delete from Cloudinary and database (single endpoint handles both)
-      await apiCall(`/gallery/${imageId}`, {
-        method: 'DELETE'
+      // Cloudinary-truth delete: delete the asset by publicId.
+      await apiCall('/media/gallery', {
+        method: 'DELETE',
+        body: { publicId: imageId, resourceType: 'image' },
       });
 
       setSuccess('Image deleted successfully!');
