@@ -44,7 +44,7 @@ const Sidebar = () => {
   // Logo management functions
   const fetchCurrentLogo = async () => {
     try {
-      const response = await apiCall('/content/logo');
+      const response = await apiCall('/media/logo');
       
       // ONLY use Cloudinary URL - no fallbacks
       if (response && response.content && response.content.startsWith('https://res.cloudinary.com/')) {
@@ -127,37 +127,19 @@ const Sidebar = () => {
 
       console.log('📥 Upload response:', uploadResponse);
 
-      if (uploadResponse && uploadResponse.file && uploadResponse.file.path) {
-        console.log('✅ Upload successful, updating content...');
-        
-        // Update logo content in database
-        const updateResponse = await apiCall('/content/logo', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            content: uploadResponse.file.path,
-            title: 'ECHO Catering Logo'
-          })
-        });
-
-        console.log('📥 Content update response:', updateResponse);
-
-        if (updateResponse) {
-          const newLogoPath = updateResponse.content || uploadResponse.file.path;
-          console.log('✅ Logo updated successfully:', newLogoPath);
-          setCurrentLogo(newLogoPath);
-          // Clear the logo cache so frontend immediately shows new logo
-          clearLogoCache();
-          // Clear the file input
-          if (logoFileInputRef.current) {
-            logoFileInputRef.current.value = '';
-          }
+      const cloudinaryUrl = uploadResponse?.file?.cloudinaryUrl || uploadResponse?.file?.url || '';
+      if (uploadResponse?.success && cloudinaryUrl.startsWith('https://res.cloudinary.com/')) {
+        console.log('✅ Logo uploaded successfully:', cloudinaryUrl);
+        setCurrentLogo(cloudinaryUrl);
+        // Clear the logo cache so frontend immediately shows new logo
+        clearLogoCache();
+        // Clear the file input
+        if (logoFileInputRef.current) {
+          logoFileInputRef.current.value = '';
         }
       } else {
         console.error('❌ Upload response missing file info:', uploadResponse);
-        alert('Upload failed: No file path returned from server');
+        alert('Upload failed: No Cloudinary URL returned from server');
       }
     } catch (error) {
       console.error('❌ Error uploading logo:', error);

@@ -30,6 +30,61 @@ const assertCloudinaryEnv = () => {
   }
 };
 
+// Logo upload (memory only, overwrite fixed public_id)
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 1,
+    fileSize: 10 * 1024 * 1024, // 10MB cap
+  },
+  fileFilter: (req, file, cb) => {
+    const name = (file.originalname || '').toLowerCase();
+    const isImage = /\.(jpe?g|png|gif|webp|svg)$/.test(name);
+    if (isImage) return cb(null, true);
+    return cb(new Error('Only image files are allowed for logo uploads'));
+  },
+});
+
+// POST /api/upload/logo
+router.post(
+  '/logo',
+  [authenticateToken, requireEditor, logoUpload.single('logo')],
+  async (req, res) => {
+    try {
+      assertCloudinaryEnv();
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Fixed public id so uploads overwrite
+      const publicId = 'echo-catering/logo/current_logo';
+      const cloudinaryResult = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: 'echo-catering/logo',
+        resourceType: 'image',
+        publicId,
+      });
+
+      return res.json({
+        success: true,
+        message: 'Logo uploaded successfully',
+        file: {
+          cloudinaryUrl: cloudinaryResult.url,
+          publicId: cloudinaryResult.publicId,
+          width: cloudinaryResult.width,
+          height: cloudinaryResult.height,
+          bytes: cloudinaryResult.bytes,
+          resourceType: cloudinaryResult.resourceType,
+          format: cloudinaryResult.format,
+        },
+      });
+    } catch (error) {
+      console.error('❌ Logo upload error:', error.message);
+      return res.status(500).json({ message: 'Upload failed', error: error.message });
+    }
+  }
+);
+
 // POST /api/upload/gallery
 router.post(
   '/gallery',
