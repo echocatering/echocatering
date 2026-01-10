@@ -91,7 +91,15 @@ router.get('/gallery', async (req, res) => {
     return res.json(merged);
   } catch (error) {
     console.error('Get Cloudinary gallery error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(502).json({
+      message: 'Cloudinary gallery listing failed',
+      // Keep this small/safe; helps diagnose misconfigured credentials in production.
+      error: {
+        name: error?.name,
+        message: error?.message,
+        http_code: error?.http_code || error?.statusCode,
+      },
+    });
   }
 });
 
@@ -123,7 +131,14 @@ router.get('/logo', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     console.error('Get Cloudinary logo error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(502).json({
+      message: 'Cloudinary logo lookup failed',
+      error: {
+        name: error?.name,
+        message: error?.message,
+        http_code: error?.http_code || error?.statusCode,
+      },
+    });
   }
 });
 
