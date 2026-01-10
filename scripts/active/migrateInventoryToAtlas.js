@@ -52,9 +52,32 @@ async function main() {
   const destClient = new MongoClient(destUri);
 
   console.log('🔄 Connecting to SOURCE:', { db: sourceDbName });
-  await sourceClient.connect();
+  try {
+    await sourceClient.connect();
+    console.log('✅ Connected to SOURCE');
+  } catch (err) {
+    const msg = err?.message || String(err);
+    throw new Error(
+      `SOURCE connection failed: ${msg}\n` +
+        `Tips: ensure your local MongoDB is running and the URI/db name are correct.`
+    );
+  }
+
   console.log('🔄 Connecting to DEST:', { db: destDbName });
-  await destClient.connect();
+  try {
+    await destClient.connect();
+    console.log('✅ Connected to DEST');
+  } catch (err) {
+    const msg = err?.message || String(err);
+    throw new Error(
+      `DEST connection failed: ${msg}\n` +
+        `Tips:\n` +
+        `- Re-copy the Atlas connection string from MongoDB Atlas (Database → Connect → Drivers)\n` +
+        `- If you recently rotated the DB user password, update the URI\n` +
+        `- If your password contains special characters, URL-encode them (e.g. '@' → '%40')\n` +
+        `- Verify the DB user exists and has read/write permissions on the target database`
+    );
+  }
 
   const sourceDb = sourceClient.db(sourceDbName);
   const destDb = destClient.db(destDbName);
