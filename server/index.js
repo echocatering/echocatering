@@ -90,7 +90,12 @@ const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // relaxed limit in development
   // Never rate limit health/logo endpoints (Render may poll these during deploy)
-  skip: (req) => req.path === '/health' || req.path === '/logo'
+  // NOTE: req.path here is the path AFTER the `/api/` mount (because limiter is applied on `/api/`).
+  // We also skip worker heartbeat/status so a 3s heartbeat doesn't trip the limiter.
+  skip: (req) =>
+    req.path === '/health' ||
+    req.path === '/logo' ||
+    req.path.startsWith('/video-worker/')
 });
 
 const authLimiter = rateLimit({
