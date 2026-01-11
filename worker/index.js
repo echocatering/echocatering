@@ -7,6 +7,15 @@ const { spawn } = require('child_process');
 const cloudinary = require('cloudinary').v2;
 const sharp = require('sharp');
 
+// Load environment variables from worker/local.env if it exists
+// This allows running the worker directly without needing to source the env file in the shell
+try {
+  require('dotenv').config({ path: path.join(__dirname, 'local.env') });
+} catch (err) {
+  // dotenv is optional - env vars might be set by the shell instead
+  // If dotenv fails, we'll just use whatever is in process.env
+}
+
 /**
  * Local Video Worker (runs on your Mac)
  *
