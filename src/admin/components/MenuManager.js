@@ -922,21 +922,40 @@ const MenuManager = () => {
         fileName: file.name 
       });
 
-      const workerResp = await fetch(workerUploadUrl, {
-        method: 'POST',
-        headers: {
-          'X-Upload-Token': uploadToken,
-        },
-        body: formData,
-      });
+      // Add timeout for large file uploads (5 minutes = 300 seconds for large files)
+      const uploadTimeoutMs = 5 * 60 * 1000; // 5 minutes
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.error('[MenuManager] Upload timeout after', uploadTimeoutMs / 1000, 'seconds');
+        abortController.abort();
+      }, uploadTimeoutMs);
 
-      if (!workerResp.ok) {
-        const text = await workerResp.text();
-        throw new Error(`Worker upload failed: ${workerResp.status} ${workerResp.statusText} ${text || ''}`.trim());
+      try {
+        const workerResp = await fetch(workerUploadUrl, {
+          method: 'POST',
+          headers: {
+            'X-Upload-Token': uploadToken,
+          },
+          body: formData,
+          signal: abortController.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!workerResp.ok) {
+          const text = await workerResp.text();
+          throw new Error(`Worker upload failed: ${workerResp.status} ${workerResp.statusText} ${text || ''}`.trim());
+        }
+
+        const workerResult = await workerResp.json();
+        console.log('[MenuManager] Upload to worker successful:', workerResult);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error(`Upload timeout after ${uploadTimeoutMs / 1000} seconds. The file may be too large or the worker may be unreachable.`);
+        }
+        throw fetchError;
       }
-
-      const workerResult = await workerResp.json();
-      console.log('[MenuManager] Upload to worker successful:', workerResult);
 
       // Begin polling job status from Render backend (DB-backed)
       startProcessingPoll(itemNumber);
