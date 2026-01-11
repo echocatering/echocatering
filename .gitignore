@@ -28,3 +28,4 @@ __pycache__/
 *.pyo
 server/uploads/
 .env
+worker/uploads/

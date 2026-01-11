@@ -162,13 +162,13 @@ function requireWorkerSecret(req, res, next) {
 // POST /api/video-jobs/:jobId/progress
 router.post('/:jobId/progress', [requireWorkerSecret], async (req, res) => {
   const jobId = req.params.jobId;
-  const { stage, progress, message, workerId } = req.body || {};
+  const { stage, progress, message, workerId, status } = req.body || {};
 
   const update = {
     ...(stage !== undefined ? { stage: String(stage) } : {}),
     ...(progress !== undefined ? { progress: Number(progress) } : {}),
     ...(message !== undefined ? { message: String(message) } : {}),
-    status: 'processing',
+    ...(status ? { status: String(status) } : { status: 'processing' }),
     workerLastSeenAt: new Date(),
     ...(workerId ? { workerId: String(workerId) } : {}),
   };
