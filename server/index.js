@@ -76,8 +76,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {
-      // Helmet's default img-src is "'self' data:"; extend to Cloudinary
-      'img-src': ["'self'", 'data:', 'https://res.cloudinary.com'],
+      // Helmet's default img-src is "'self' data:"; extend to Cloudinary and blob: URLs (for SVG-to-PNG conversion)
+      'img-src': ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
       // Allow Cloudinary video/image media loads
       'media-src': ["'self'", 'https://res.cloudinary.com'],
       // Allow the admin UI to POST large uploads directly to the local worker via Cloudflare Tunnel.

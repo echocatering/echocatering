@@ -742,7 +742,10 @@ const MenuManager = () => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
-        img.onerror = (err) => reject(err);
+        img.onerror = (event) => {
+          // Event objects don't have .message, so wrap in Error
+          reject(new Error(`Failed to load SVG image: ${event.type || 'unknown error'}`));
+        };
         img.src = svgUrl;
       });
 
@@ -1773,7 +1776,13 @@ const MenuManager = () => {
         } catch (error) {
           console.error('Error saving map snapshot:', error);
           // Show error to user but don't fail the whole save
-          alert(`Map snapshot could not be saved: ${error.message || error}. The item was saved successfully.`);
+          // Extract error message properly (handle Error objects, Event objects, and strings)
+          const errorMessage = error instanceof Error 
+            ? error.message 
+            : typeof error === 'string' 
+              ? error 
+              : error?.message || String(error);
+          alert(`Map snapshot could not be saved: ${errorMessage}. The item was saved successfully.`);
         }
       } else if (!isPremix) {
         // Warn if we couldn't save map due to missing itemNumber
