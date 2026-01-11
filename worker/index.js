@@ -183,6 +183,8 @@ async function isSuperseded(jobId, itemNumber) {
 }
 
 async function processAndUpload(jobId, itemNumber, inputPath) {
+  console.log(`🎬 Starting processAndUpload for job ${jobId}, item ${itemNumber}, input: ${inputPath}`);
+  
   // If a new upload starts for this item, stop as soon as possible.
   if (await isSuperseded(jobId, itemNumber)) {
     throw new Error('Job superseded by a newer upload');
@@ -192,6 +194,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
   const outFull = path.join(jobDir, `${itemNumber}_full.mp4`);
   const outIcon = path.join(jobDir, `${itemNumber}_icon.mp4`);
 
+  console.log(`📐 Starting preprocessing (crop/trim/encode) for job ${jobId}...`);
   await postJobProgress(jobId, {
     status: 'processing',
     stage: 'preprocessing',
@@ -248,6 +251,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
     outFull,
   ]);
 
+  console.log(`✅ Main video encoding complete for job ${jobId}, starting icon generation...`);
   await postJobProgress(jobId, {
     status: 'processing',
     stage: 'icon-generation',
@@ -256,6 +260,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
   });
 
   // Icon: downscale and higher CRF to stay small-ish.
+  console.log(`🎨 Generating icon video for job ${jobId}...`);
   await runCmd('ffmpeg', [
     '-y',
     '-i',
@@ -279,6 +284,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
     throw new Error('Job superseded by a newer upload');
   }
 
+  console.log(`✅ Icon video generated for job ${jobId}, uploading to Cloudinary...`);
   await postJobProgress(jobId, {
     status: 'cloudinary-upload',
     stage: 'cloudinary-upload',
@@ -287,6 +293,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
   });
 
   // Upload to Cloudinary
+  console.log(`☁️ Uploading main video to Cloudinary for job ${jobId}...`);
   const mainVideoResult = await cloudinary.uploader.upload(outFull, {
     folder: 'echo-catering/videos',
     public_id: `${itemNumber}_full`,
@@ -299,15 +306,17 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
 
   let iconVideoResult = null;
   try {
+    console.log(`☁️ Uploading icon video to Cloudinary for job ${jobId}...`);
     iconVideoResult = await cloudinary.uploader.upload(outIcon, {
       folder: 'echo-catering/videos',
       public_id: `${itemNumber}_icon`,
       resource_type: 'video',
       overwrite: true,
     });
+    console.log(`✅ Icon video uploaded to Cloudinary for job ${jobId}`);
   } catch (err) {
     // Non-fatal: main video is the critical asset.
-    console.warn('⚠️ Icon upload failed (non-fatal):', err.message);
+    console.warn(`⚠️ Icon upload failed (non-fatal) for job ${jobId}:`, err.message);
   }
 
   await postJobProgress(jobId, {
@@ -317,6 +326,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
     message: 'Finalizing...',
   });
 
+  console.log(`✅ All uploads complete for job ${jobId}, marking job complete...`);
   await postJobComplete(jobId, {
     result: {
       cloudinaryVideoUrl: mainVideoResult.secure_url,
@@ -328,7 +338,9 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
   });
 
   // Cleanup local job folder
+  console.log(`🧹 Cleaning up local files for job ${jobId}...`);
   await fs.promises.rm(jobDir, { recursive: true, force: true }).catch(() => {});
+  console.log(`🎉 Job ${jobId} completed successfully!`);
 }
 
 const runningJobs = new Set();
@@ -360,15 +372,18 @@ app.get('/health', (req, res) => {
 // POST /upload/:jobId  (multipart: video=<file>, header X-Upload-Token or Authorization: Bearer <token>)
 app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
   const jobId = req.params.jobId;
+  console.log(`📤 Upload request received for job ${jobId}`);
   try {
     const tokenHeader =
       String(req.headers['x-upload-token'] || '').trim() ||
       String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
 
     if (!tokenHeader) {
+      console.error(`❌ Upload request for job ${jobId} rejected: Missing upload token`);
       return res.status(401).json({ ok: false, message: 'Missing upload token' });
     }
 
+    console.log(`🔐 Verifying upload token for job ${jobId}...`);
     // Verify token with Render backend
     await fetchJson(`${RENDER_API_BASE}/api/video-jobs/${jobId}/verify-upload`, {
       method: 'POST',
@@ -377,8 +392,11 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
     });
 
     if (!req.file) {
+      console.error(`❌ Upload request for job ${jobId} rejected: No file uploaded`);
       return res.status(400).json({ ok: false, message: 'No file uploaded' });
     }
+
+    console.log(`✅ Token verified for job ${jobId}, file received: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
 
     const verify = await fetchJson(`${RENDER_API_BASE}/api/video-jobs/${jobId}/verify-upload`, {
       method: 'POST',
@@ -388,8 +406,11 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
 
     const itemNumber = Number(verify?.itemNumber);
     if (!Number.isFinite(itemNumber) || itemNumber <= 0) {
+      console.error(`❌ Upload request for job ${jobId} rejected: Invalid itemNumber from verify: ${verify?.itemNumber}`);
       return res.status(400).json({ ok: false, message: 'Invalid itemNumber from verify' });
     }
+
+    console.log(`📥 Upload received for job ${jobId}, item ${itemNumber}, file size: ${(req.file.size / 1024 / 1024).toFixed(2)} MB, path: ${req.file.path}`);
 
     // Mark job as uploaded (DB-backed status)
     await postJobProgress(jobId, {
@@ -399,12 +420,13 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
       message: 'Upload received by local worker',
     });
 
-    // Start processing asynchronously (don’t block the HTTP response)
+    // Start processing asynchronously (don't block the HTTP response)
     if (!runningJobs.has(jobId)) {
       runningJobs.add(jobId);
+      console.log(`🚀 Starting processing for job ${jobId}, item ${itemNumber}...`);
       processAndUpload(jobId, itemNumber, req.file.path)
         .catch(async (err) => {
-          console.error('❌ Job failed:', err.message);
+          console.error(`❌ Job ${jobId} failed:`, err.message);
           try {
             await postJobFail(jobId, { error: err.message, message: 'Video processing failed' });
           } catch (postErr) {
@@ -413,7 +435,10 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
         })
         .finally(() => {
           runningJobs.delete(jobId);
+          console.log(`✅ Job ${jobId} finished processing`);
         });
+    } else {
+      console.warn(`⚠️ Job ${jobId} is already running, skipping duplicate start`);
     }
 
     return res.json({ ok: true, jobId, itemNumber });
