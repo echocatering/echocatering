@@ -36,15 +36,48 @@ if (!Number.isFinite(PORT) || PORT <= 0) {
   throw new Error(`Invalid PORT value: ${process.env.PORT}`);
 }
 
-// Get allowed origins from environment or use default
-// In production, allow Render domain and any custom domains
-const allowedProdOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-  : [];
-  
+// Get allowed origins from environment.
+// In production, this MUST include your custom domain(s), e.g.:
+// ALLOWED_ORIGINS=https://echocatering.com,https://www.echocatering.com
+function normalizeOrigin(o) {
+  return String(o || '')
+    .trim()
+    .replace(/\/+$/, ''); // strip trailing slash
+}
+
+function expandAllowedOriginEntry(entry) {
+  const raw = normalizeOrigin(entry);
+  if (!raw) return [];
+
+  // If user provided a bare hostname (e.g. echocatering.com), accept https/http forms.
+  if (!/^https?:\/\//i.test(raw)) {
+    return [`https://${raw}`, `http://${raw}`];
+  }
+
+  // If user provided a full URL, keep only its origin for matching.
+  try {
+    const u = new URL(raw);
+    return [u.origin];
+  } catch {
+    // If it's not a valid URL, keep as-is (best effort).
+    return [raw];
+  }
+}
+
+const allowedProdOrigins = new Set(
+  (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
+    .flatMap(expandAllowedOriginEntry)
+    .map(normalizeOrigin)
+    .filter(Boolean)
+);
+
 // Auto-allow Render domain if running on Render
 if (process.env.RENDER_EXTERNAL_URL) {
-  allowedProdOrigins.push(process.env.RENDER_EXTERNAL_URL);
+  try {
+    allowedProdOrigins.add(new URL(process.env.RENDER_EXTERNAL_URL).origin);
+  } catch {
+    allowedProdOrigins.add(normalizeOrigin(process.env.RENDER_EXTERNAL_URL));
+  }
 }
 
 const corsOptions = {
@@ -57,7 +90,8 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    if (allowedProdOrigins.includes(origin)) {
+    const normalized = normalizeOrigin(origin);
+    if (allowedProdOrigins.has(normalized)) {
       return callback(null, true);
     }
     const err = new Error('Not allowed by CORS');
