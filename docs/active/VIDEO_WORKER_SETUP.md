@@ -11,6 +11,11 @@
 In Render → Backend Service → Environment:
 - **`VIDEO_WORKER_SECRET`**: a long random string (shared secret between worker ↔ backend)
 - **`VIDEO_WORKER_URL`**: set this later once you have the `https://xxxxx.trycloudflare.com` URL
+ 
+Also required on the worker (local only):
+- **`CLOUDINARY_CLOUD_NAME`**
+- **`CLOUDINARY_API_KEY`**
+- **`CLOUDINARY_API_SECRET`**
 
 ### 2) Start the local worker (Mac)
 From repo root:
@@ -25,6 +30,11 @@ WORKER_ID=andy-mac-worker
 RENDER_API_BASE=https://echocatering.onrender.com
 ALLOWED_ORIGIN=https://echocatering.onrender.com
 VIDEO_WORKER_SECRET=REPLACE_WITH_THE_SAME_VALUE_AS_RENDER
+
+# Cloudinary creds (local worker uploads processed outputs)
+CLOUDINARY_CLOUD_NAME=REPLACE_ME
+CLOUDINARY_API_KEY=REPLACE_ME
+CLOUDINARY_API_SECRET=REPLACE_ME
 EOF
 
 # Start the worker

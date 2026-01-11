@@ -159,6 +159,28 @@ function requireWorkerSecret(req, res, next) {
   return next();
 }
 
+// Worker-safe status by itemNumber (allows worker to check supersede without user auth).
+router.get('/worker/status/:itemNumber', [requireWorkerSecret], async (req, res) => {
+  const itemNumber = Number(req.params.itemNumber);
+  if (!Number.isFinite(itemNumber) || itemNumber <= 0) {
+    return res.status(400).json({ message: 'Invalid itemNumber' });
+  }
+
+  const job = await VideoJob.findOne({ itemNumber }).sort({ createdAt: -1 }).lean();
+  if (!job) return res.json({ found: false });
+
+  return res.json({
+    found: true,
+    jobId: String(job._id),
+    status: job.status,
+    stage: job.stage,
+    progress: job.progress ?? 0,
+    message: job.message || '',
+    error: job.error || null,
+    workerLastSeenAt: job.workerLastSeenAt || null,
+  });
+});
+
 // POST /api/video-jobs/:jobId/progress
 router.post('/:jobId/progress', [requireWorkerSecret], async (req, res) => {
   const jobId = req.params.jobId;
