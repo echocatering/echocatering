@@ -167,20 +167,56 @@ Now `worker.echocatering.com` is permanent - it will **never change** even if yo
 
 ---
 
-## Running the Tunnel (Every Time You Process Videos)
+## Running the Worker (Every Time You Process Videos)
 
-**Two terminals:**
+**⚠️ IMPORTANT: The worker does NOT start automatically. You must start it manually before processing videos.**
 
+### Quick Start (Two Terminal Windows)
+
+**Terminal 1: Start the Worker**
 ```bash
-# Terminal 1: Worker
 cd /Users/andybernegger/echo-catering
-set -a && source worker/local.env && set +a
 node worker/index.js
 ```
 
+You should see:
+```
+✅ Local video worker listening: { port: 8787, workerId: 'andy-mac-worker' }
+   Render API: https://echocatering.onrender.com
+   Allowed origin: https://echocatering.com
+```
+
+**Terminal 2: Start the Tunnel**
 ```bash
-# Terminal 2: Tunnel
 cloudflared tunnel run worker-echo
+```
+
+You should see:
+```
+2026-01-11T18:30:01Z INF Connection established
+```
+
+**Then in the Render admin UI:**
+- The "Process Video" button will be enabled (no longer grayed out)
+- You'll see "Worker: ONLINE" in the video options modal
+- You can now click "Process Video" and it will work
+
+### Verify Worker is Running
+
+Check from your browser or terminal:
+```bash
+curl https://echocatering.com/api/video-worker/status
+```
+
+Should return:
+```json
+{
+  "online": true,
+  "workerId": "andy-mac-worker",
+  "lastHeartbeatAt": "2026-01-11T18:30:00.000Z",
+  "lastSeenSecondsAgo": 0,
+  "configured": true
+}
 ```
 
 ---
