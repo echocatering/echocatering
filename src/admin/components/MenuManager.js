@@ -916,6 +916,12 @@ const MenuManager = () => {
       const formData = new FormData();
       formData.append('video', file);
 
+      console.log('[MenuManager] Starting upload to worker:', { 
+        workerUploadUrl, 
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        fileName: file.name 
+      });
+
       const workerResp = await fetch(workerUploadUrl, {
         method: 'POST',
         headers: {
@@ -928,6 +934,9 @@ const MenuManager = () => {
         const text = await workerResp.text();
         throw new Error(`Worker upload failed: ${workerResp.status} ${workerResp.statusText} ${text || ''}`.trim());
       }
+
+      const workerResult = await workerResp.json();
+      console.log('[MenuManager] Upload to worker successful:', workerResult);
 
       // Begin polling job status from Render backend (DB-backed)
       startProcessingPoll(itemNumber);
