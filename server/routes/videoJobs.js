@@ -3,6 +3,7 @@ const express = require('express');
 const { authenticateToken, requireEditor } = require('../middleware/auth');
 const VideoJob = require('../models/VideoJob');
 const Cocktail = require('../models/Cocktail');
+const { deleteFromCloudinary } = require('../utils/cloudinary');
 
 const router = express.Router();
 
@@ -100,6 +101,23 @@ router.post('/:itemNumber/start', [authenticateToken, requireEditor], async (req
     { itemNumber, status: { $in: ['queued', 'awaiting-upload', 'uploaded', 'processing', 'cloudinary-upload'] } },
     { $set: { status: 'superseded', message: 'Superseded by a newer upload' } }
   );
+
+  // Hard requirement: starting a new job should delete any existing Cloudinary outputs
+  // for this item to avoid “old assets” showing while a new job is processing.
+  // Best-effort: missing assets are fine; credential issues should fail loudly.
+  const publicIdFull = `echo-catering/videos/${itemNumber}_full`;
+  const publicIdIcon = `echo-catering/videos/${itemNumber}_icon`;
+  try {
+    // These are uploaded as resource_type=video in Cloudinary.
+    await deleteFromCloudinary(publicIdFull, 'video').catch(() => {});
+    await deleteFromCloudinary(publicIdIcon, 'video').catch(() => {});
+  } catch (err) {
+    // If Cloudinary credentials are broken, we want the admin to know immediately.
+    return res.status(502).json({
+      message: 'Failed to delete existing Cloudinary video assets before starting a new job',
+      error: err.message,
+    });
+  }
 
   const uploadToken = randomToken();
   const uploadTokenHash = sha256Hex(uploadToken);

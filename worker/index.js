@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const cloudinary = require('cloudinary').v2;
+const sharp = require('sharp');
 
 /**
  * Local Video Worker (runs on your Mac)
@@ -55,6 +56,11 @@ app.use(
 );
 
 app.use(express.json({ limit: '2mb' }));
+
+// Track in-flight work so we can cancel immediately when a new job supersedes the current one.
+// itemNumber -> { jobId, abortController, children:Set<ChildProcess>, jobDir, uploadedPublicIds:Set<string> }
+const activeByItem = new Map();
+const activeByJobId = new Map();
 
 function uploadsDirForJob(jobId) {
   return path.join(__dirname, 'uploads', String(jobId));
@@ -109,11 +115,27 @@ async function fetchJson(url, options = {}) {
   return data;
 }
 
-function runCmd(cmd, args, { onLine } = {}) {
+function runCmd(cmd, args, { onLine, signal, onChild } = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    if (onChild) onChild(p);
     let stderr = '';
     let stdout = '';
+
+    const abortHandler = () => {
+      try {
+        p.kill('SIGTERM');
+        setTimeout(() => {
+          try {
+            p.kill('SIGKILL');
+          } catch {}
+        }, 1500);
+      } catch {}
+    };
+    if (signal) {
+      if (signal.aborted) abortHandler();
+      signal.addEventListener('abort', abortHandler, { once: true });
+    }
 
     p.stdout.on('data', (d) => {
       const s = d.toString();
@@ -128,6 +150,12 @@ function runCmd(cmd, args, { onLine } = {}) {
 
     p.on('error', (err) => reject(err));
     p.on('close', (code) => {
+      if (signal) signal.removeEventListener('abort', abortHandler);
+      if (signal?.aborted) {
+        const e = new Error(`${cmd} aborted`);
+        e.name = 'AbortError';
+        return reject(e);
+      }
       if (code === 0) return resolve({ stdout, stderr });
       return reject(new Error(`${cmd} exited with code ${code}\n${stderr || stdout}`));
     });
@@ -182,168 +210,605 @@ async function isSuperseded(jobId, itemNumber) {
   return String(status.jobId) !== String(jobId);
 }
 
-async function processAndUpload(jobId, itemNumber, inputPath) {
-  console.log(`🎬 Starting processAndUpload for job ${jobId}, item ${itemNumber}, input: ${inputPath}`);
-  
-  // If a new upload starts for this item, stop as soon as possible.
-  if (await isSuperseded(jobId, itemNumber)) {
-    throw new Error('Job superseded by a newer upload');
-  }
-
-  const jobDir = uploadsDirForJob(jobId);
-  const outFull = path.join(jobDir, `${itemNumber}_full.mp4`);
-  const outIcon = path.join(jobDir, `${itemNumber}_icon.mp4`);
-
-  console.log(`📐 Starting preprocessing (crop/trim/encode) for job ${jobId}...`);
-  await postJobProgress(jobId, {
-    status: 'processing',
-    stage: 'preprocessing',
-    progress: 10,
-    message: 'Cropping/trimming/encoding locally...',
-  });
-
-  // Minimal pipeline:
-  // - Skip first 2 seconds
-  // - Trim to ~15.58s
-  // - Crop center square based on input height
-  // - Encode h264 mp4 faststart
-  const probe = await runCmd('ffprobe', [
-    '-v',
-    'error',
-    '-select_streams',
-    'v:0',
-    '-show_entries',
-    'stream=width,height',
-    '-of',
-    'json',
-    inputPath,
-  ]);
-  const probeJson = JSON.parse(probe.stdout || '{}');
-  const stream = probeJson?.streams?.[0];
-  if (!stream?.width || !stream?.height) throw new Error('ffprobe could not read video dimensions');
-
-  const w = Number(stream.width);
-  const h = Number(stream.height);
-  const cropSize = h;
-  const cropX = Math.max(0, Math.floor((w - cropSize) / 2));
-
-  const cropFilter = `crop=${cropSize}:${cropSize}:${cropX}:0`;
-  await runCmd('ffmpeg', [
-    '-y',
-    '-ss',
-    '2',
-    '-i',
-    inputPath,
-    '-t',
-    '15.58',
-    '-vf',
-    cropFilter,
-    '-c:v',
-    'libx264',
-    '-preset',
-    'medium',
-    '-crf',
-    '18',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
-    outFull,
-  ]);
-
-  console.log(`✅ Main video encoding complete for job ${jobId}, starting icon generation...`);
-  await postJobProgress(jobId, {
-    status: 'processing',
-    stage: 'icon-generation',
-    progress: 55,
-    message: 'Generating icon video...',
-  });
-
-  // Icon: downscale and higher CRF to stay small-ish.
-  console.log(`🎨 Generating icon video for job ${jobId}...`);
-  await runCmd('ffmpeg', [
-    '-y',
-    '-i',
-    outFull,
-    '-vf',
-    'scale=512:512',
-    '-c:v',
-    'libx264',
-    '-preset',
-    'medium',
-    '-crf',
-    '28',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
-    outIcon,
-  ]);
-
-  if (await isSuperseded(jobId, itemNumber)) {
-    throw new Error('Job superseded by a newer upload');
-  }
-
-  console.log(`✅ Icon video generated for job ${jobId}, uploading to Cloudinary...`);
-  await postJobProgress(jobId, {
-    status: 'cloudinary-upload',
-    stage: 'cloudinary-upload',
-    progress: 80,
-    message: 'Uploading processed videos to Cloudinary...',
-  });
-
-  // Upload to Cloudinary
-  console.log(`☁️ Uploading main video to Cloudinary for job ${jobId}...`);
-  const mainVideoResult = await cloudinary.uploader.upload(outFull, {
-    folder: 'echo-catering/videos',
-    public_id: `${itemNumber}_full`,
-    resource_type: 'video',
-    overwrite: true,
-  });
-  if (!mainVideoResult?.secure_url || !mainVideoResult?.public_id) {
-    throw new Error('Cloudinary main upload failed: missing secure_url/public_id');
-  }
-
-  let iconVideoResult = null;
+async function cancelActiveJobForItem(itemNumber, reason) {
+  const active = activeByItem.get(itemNumber);
+  if (!active) return;
+  console.warn(`🛑 Cancelling active job for item ${itemNumber}:`, { jobId: active.jobId, reason });
   try {
-    console.log(`☁️ Uploading icon video to Cloudinary for job ${jobId}...`);
-    iconVideoResult = await cloudinary.uploader.upload(outIcon, {
+    active.abortController.abort();
+  } catch {}
+  try {
+    await postJobProgress(active.jobId, {
+      status: 'superseded',
+      stage: 'superseded',
+      progress: 0,
+      message: reason || 'Superseded by a newer upload',
+    });
+  } catch {}
+  // Best-effort cleanup of local files
+  try {
+    if (active.jobDir) await fs.promises.rm(active.jobDir, { recursive: true, force: true });
+  } catch {}
+  activeByItem.delete(itemNumber);
+  activeByJobId.delete(active.jobId);
+}
+
+async function sampleTopRowWhiteBalanceScale(inputPath, { signal, onChild } = {}) {
+  const tempFramePath = path.join(path.dirname(inputPath), `wb_frame_${Date.now()}.png`);
+  try {
+    await runCmd('ffmpeg', ['-y', '-i', inputPath, '-frames:v', '1', tempFramePath], { signal, onChild });
+    const { data, info } = await sharp(tempFramePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height, channels } = info;
+    if (!width || !height || channels < 3) throw new Error('Could not read frame pixels for white balance');
+
+    let topRowMax = -Infinity;
+    const stride = channels;
+    for (let idx = 0; idx < data.length; idx += stride) {
+      const pixelIndex = idx / stride;
+      const y = Math.floor(pixelIndex / width);
+      if (y !== 0) continue;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      const maxChannel = Math.max(r, g, b);
+      if (maxChannel > topRowMax) topRowMax = maxChannel;
+    }
+    if (!Number.isFinite(topRowMax) || topRowMax <= 0) throw new Error('Brightest pixel on top row not found');
+    return { scale: 255 / topRowMax };
+  } finally {
+    fs.promises.unlink(tempFramePath).catch(() => {});
+  }
+}
+
+async function applyUniformGain(inputPath, outputPath, scale, { signal, onChild } = {}) {
+  const scaleStr = Number(scale).toFixed(6);
+  await runCmd(
+    'ffmpeg',
+    [
+      '-y',
+      '-i',
+      inputPath,
+      '-vf',
+      `colorchannelmixer=rr=${scaleStr}:gg=${scaleStr}:bb=${scaleStr}`,
+      '-c:v',
+      'prores_ks',
+      '-profile:v',
+      '3',
+      '-c:a',
+      'copy',
+      outputPath,
+    ],
+    { signal, onChild }
+  );
+}
+
+async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, onChild } = {}) {
+  // Match old backend: 480x480 padded, target under 2MB.
+  const qualitySettings = [
+    { crf: 18, scale: '480:480' },
+    { crf: 20, scale: '480:480' },
+    { crf: 22, scale: '480:480' },
+    { crf: 24, scale: '480:480' },
+  ];
+  const maxSizeMB = 2;
+
+  for (let i = 0; i < qualitySettings.length; i++) {
+    const setting = qualitySettings[i];
+    const tempOutput = outputPath.replace(/\.mp4$/i, `_temp_${i}.mp4`);
+    await runCmd(
+      'ffmpeg',
+      [
+        '-y',
+        '-i',
+        inputPath,
+        '-vf',
+        `scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2`,
+        '-c:v',
+        'libx264',
+        '-crf',
+        String(setting.crf),
+        '-preset',
+        'slow',
+        '-movflags',
+        '+faststart',
+        tempOutput,
+      ],
+      { signal, onChild }
+    );
+
+    const stats = await fs.promises.stat(tempOutput);
+    const sizeMB = stats.size / (1024 * 1024);
+    if (sizeMB < maxSizeMB) {
+      await fs.promises.rename(tempOutput, outputPath);
+      return { success: true, sizeMB, quality: setting };
+    }
+    await fs.promises.unlink(tempOutput).catch(() => {});
+  }
+
+  throw new Error(`Failed to generate icon video under ${maxSizeMB}MB for item ${itemNumber}`);
+}
+
+async function generateBackgroundFbf({
+  jobId,
+  itemNumber,
+  inputPath,
+  outputPath,
+  maxDuration = 15.58,
+  encodingCRF = 30,
+  encodingPreset = 'medium',
+  signal,
+  onChild,
+  ensureNotSuperseded,
+}) {
+  // Port of the old backend "generate-background-fbf" pipeline, simplified for the worker.
+  const probe = await runCmd(
+    'ffprobe',
+    [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=width,height,duration,r_frame_rate',
+      '-count_frames',
+      '-show_entries',
+      'stream=nb_read_frames',
+      '-of',
+      'json',
+      inputPath,
+    ],
+    { signal, onChild }
+  );
+  const probeJson = JSON.parse(probe.stdout || '{}');
+  const s = probeJson?.streams?.[0];
+  if (!s) throw new Error('Could not read video properties');
+
+  const originalWidth = parseInt(s.width) || 1080;
+  const originalHeight = parseInt(s.height) || 1080;
+  const originalSize = Math.min(originalWidth, originalHeight);
+  const duration = parseFloat(s.duration) || maxDuration;
+
+  let fps = 30;
+  if (s.r_frame_rate) {
+    const [num, den] = String(s.r_frame_rate).split('/').map(Number);
+    if (den && den > 0) fps = num / den;
+  }
+
+  let actualFrameCount = null;
+  if (s.nb_read_frames) actualFrameCount = parseInt(s.nb_read_frames);
+
+  const outerSize = 3240;
+  const innerSize = 1080;
+  const innerLeft = Math.floor((outerSize - innerSize) / 2);
+  const innerTop = Math.floor((outerSize - innerSize) / 2);
+  const innerRight = innerLeft + innerSize;
+  const innerBottom = innerTop + innerSize;
+  const extractSize = Math.max(originalSize, innerSize * 3); // 3240+
+
+  const framesToProcess = actualFrameCount
+    ? Math.min(actualFrameCount, Math.ceil(maxDuration * fps))
+    : Math.ceil(maxDuration * fps);
+
+  const videoFramesDir = path.join(path.dirname(outputPath), 'video_frames_fbf');
+  const preprocessedDir = path.join(path.dirname(outputPath), 'preprocessed_video_frames_fbf');
+  const processedDir = path.join(path.dirname(outputPath), 'processed_frames_fbf');
+  const blurredDir = path.join(path.dirname(outputPath), 'blurred_frames_fbf');
+  const finalDir = path.join(path.dirname(outputPath), 'final_frames_fbf');
+
+  await fs.promises.mkdir(videoFramesDir, { recursive: true });
+  await fs.promises.mkdir(preprocessedDir, { recursive: true });
+  await fs.promises.mkdir(processedDir, { recursive: true });
+  await fs.promises.mkdir(blurredDir, { recursive: true });
+  await fs.promises.mkdir(finalDir, { recursive: true });
+
+  await postJobProgress(jobId, { status: 'processing', stage: 'extracting', progress: 20, message: `Extracting ${framesToProcess} frames...` });
+  const frameInterval = 1 / fps;
+  for (let frameNum = 0; frameNum < framesToProcess; frameNum++) {
+    if (frameNum % 10 === 0) await ensureNotSuperseded(`extract-${frameNum}`);
+    const timestamp = frameNum * frameInterval;
+    const frameFileName = `frame_${String(frameNum + 1).padStart(6, '0')}.png`;
+    const framePath = path.join(videoFramesDir, frameFileName);
+    await runCmd(
+      'ffmpeg',
+      [
+        '-ss',
+        timestamp.toFixed(6),
+        '-i',
+        inputPath,
+        '-vf',
+        `scale=${extractSize}:${extractSize}:force_original_aspect_ratio=increase`,
+        '-frames:v',
+        '1',
+        '-vsync',
+        '0',
+        '-y',
+        framePath,
+      ],
+      { signal, onChild }
+    );
+  }
+
+  await postJobProgress(jobId, { status: 'processing', stage: 'preprocessing', progress: 35, message: 'Preprocessing frames (white/off-white fade)...' });
+  const whiteThreshold = 150;
+  const centerX = innerSize / 2;
+  const centerY = innerSize / 2;
+  const maxDistance = innerSize / 2;
+  const fadeStartDistance = maxDistance * 0.8;
+  const fadeStartDistanceSq = fadeStartDistance * fadeStartDistance;
+
+  for (let i = 0; i < framesToProcess; i++) {
+    if (i % 10 === 0) await ensureNotSuperseded(`preprocess-${i}`);
+    const frameFileName = `frame_${String(i + 1).padStart(6, '0')}.png`;
+    const srcPath = path.join(videoFramesDir, frameFileName);
+    const outPath = path.join(preprocessedDir, frameFileName);
+
+    const resizedBuffer = await sharp(srcPath)
+      .resize(innerSize, innerSize, {
+        kernel: 'lanczos3',
+        fit: 'contain',
+        position: 'center',
+        withoutEnlargement: false,
+      })
+      .sharpen()
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+
+    const videoData = Buffer.from(resizedBuffer);
+
+    // Fade white/off-white in outer ring and apply 5px border fade.
+    const maxCornerDistance = maxDistance * Math.sqrt(2);
+    const processingRadius = Math.max(maxDistance, maxCornerDistance * 1.05);
+    const startY = Math.floor(centerY - processingRadius);
+    const endY = Math.ceil(centerY + processingRadius);
+    const startX = Math.floor(centerX - processingRadius);
+    const endX = Math.ceil(centerX + processingRadius);
+
+    for (let y = Math.max(0, startY); y < Math.min(innerSize, endY); y++) {
+      for (let x = Math.max(0, startX); x < Math.min(innerSize, endX); x++) {
+        const idx = (y * innerSize + x) * 4;
+        const r = videoData[idx];
+        const g = videoData[idx + 1];
+        const b = videoData[idx + 2];
+        const a = videoData[idx + 3];
+
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distanceSq = dx * dx + dy * dy;
+
+        const avgBrightness = (r + g + b) / 3;
+        const isWhite = (r > whiteThreshold && g > whiteThreshold && b > whiteThreshold) || avgBrightness > 170;
+        if (a === 0 || !isWhite) continue;
+
+        if (distanceSq >= fadeStartDistanceSq) {
+          const distanceFromCenter = Math.sqrt(distanceSq);
+          const effectiveFadeEnd = Math.max(maxDistance, maxCornerDistance * 1.05);
+          const effectiveFadeRange = effectiveFadeEnd - fadeStartDistance;
+          if (distanceFromCenter <= effectiveFadeEnd) {
+            const t = (distanceFromCenter - fadeStartDistance) / effectiveFadeRange;
+            const smoothT = t * t * (3 - 2 * t);
+            const fadeFactor = Math.max(0, 1 - smoothT);
+            videoData[idx + 3] = Math.floor(a * fadeFactor);
+            if (videoData[idx + 3] === 0) {
+              videoData[idx] = 0;
+              videoData[idx + 1] = 0;
+              videoData[idx + 2] = 0;
+            }
+          } else {
+            videoData[idx + 3] = 0;
+            videoData[idx] = 0;
+            videoData[idx + 1] = 0;
+            videoData[idx + 2] = 0;
+          }
+        }
+      }
+    }
+
+    const borderWidth = 5;
+    for (let y = 0; y < innerSize; y++) {
+      for (let x = 0; x < innerSize; x++) {
+        const minDistFromEdge = Math.min(x, innerSize - 1 - x, y, innerSize - 1 - y);
+        if (minDistFromEdge < borderWidth) {
+          const idx = (y * innerSize + x) * 4;
+          videoData[idx + 3] = 0;
+          videoData[idx] = 0;
+          videoData[idx + 1] = 0;
+          videoData[idx + 2] = 0;
+        }
+      }
+    }
+
+    for (let p = 0; p < videoData.length; p += 4) {
+      const r = videoData[p];
+      const g = videoData[p + 1];
+      const b = videoData[p + 2];
+      const avgBrightness = (r + g + b) / 3;
+      const isWhite = (r > whiteThreshold && g > whiteThreshold && b > whiteThreshold) || avgBrightness > 170;
+      if (!isWhite && videoData[p + 3] > 0) {
+        videoData[p + 3] = 255;
+      }
+      if (videoData[p + 3] === 0) {
+        videoData[p] = 0;
+        videoData[p + 1] = 0;
+        videoData[p + 2] = 0;
+      }
+    }
+
+    await sharp(videoData, { raw: { width: innerSize, height: innerSize, channels: 4 } })
+      .ensureAlpha()
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toFile(outPath);
+  }
+
+  await postJobProgress(jobId, { status: 'processing', stage: 'processing', progress: 55, message: 'Building blurred background projection...' });
+
+  for (let i = 0; i < framesToProcess; i++) {
+    if (i % 5 === 0) await ensureNotSuperseded(`projection-${i}`);
+    const frameFileName = `frame_${String(i + 1).padStart(6, '0')}.png`;
+    const srcPath = path.join(videoFramesDir, frameFileName);
+    const processedPath = path.join(processedDir, frameFileName);
+    const blurredPath = path.join(blurredDir, frameFileName);
+    const finalPath = path.join(finalDir, frameFileName);
+    const preprocessedPath = path.join(preprocessedDir, frameFileName);
+
+    const videoData = await sharp(srcPath).ensureAlpha().raw().toBuffer();
+    const outputData = Buffer.alloc(outerSize * outerSize * 4, 0);
+
+    const getVideoPixel = (x, y) => {
+      const scaleFactor = extractSize / innerSize;
+      const extractX = Math.floor(x * scaleFactor);
+      const extractY = Math.floor(y * scaleFactor);
+      const clampedX = Math.max(0, Math.min(extractSize - 1, extractX));
+      const clampedY = Math.max(0, Math.min(extractSize - 1, extractY));
+      const idx = (clampedY * extractSize + clampedX) * 4;
+      if (idx >= 0 && idx < videoData.length - 3) {
+        return { r: videoData[idx], g: videoData[idx + 1], b: videoData[idx + 2], a: videoData[idx + 3] };
+      }
+      return { r: 0, g: 0, b: 0, a: 0 };
+    };
+
+    for (let y = 0; y < outerSize; y++) {
+      for (let x = 0; x < outerSize; x++) {
+        const idx = (y * outerSize + x) * 4;
+        if (x >= innerLeft && x < innerRight && y >= innerTop && y < innerBottom) continue;
+
+        let edgeX;
+        let edgeY;
+        if (x < innerLeft) {
+          edgeX = innerLeft;
+          edgeY = Math.max(innerTop, Math.min(innerBottom - 1, y));
+        } else if (x >= innerRight) {
+          edgeX = innerRight - 1;
+          edgeY = Math.max(innerTop, Math.min(innerBottom - 1, y));
+        } else if (y < innerTop) {
+          edgeX = Math.max(innerLeft, Math.min(innerRight - 1, x));
+          edgeY = innerTop;
+        } else {
+          edgeX = Math.max(innerLeft, Math.min(innerRight - 1, x));
+          edgeY = innerBottom - 1;
+        }
+
+        const videoEdgeX = edgeX - innerLeft;
+        const videoEdgeY = edgeY - innerTop;
+        const px = getVideoPixel(videoEdgeX, videoEdgeY);
+        outputData[idx] = px.r;
+        outputData[idx + 1] = px.g;
+        outputData[idx + 2] = px.b;
+        outputData[idx + 3] = px.a;
+      }
+    }
+
+    await sharp(outputData, { raw: { width: outerSize, height: outerSize, channels: 4 } }).png().toFile(processedPath);
+    await sharp(processedPath).blur(50).toFile(blurredPath);
+    await sharp(blurredPath)
+      .composite([{ input: preprocessedPath, left: innerLeft, top: innerTop, blend: 'over' }])
+      .ensureAlpha()
+      .toFile(finalPath);
+  }
+
+  await postJobProgress(jobId, { status: 'processing', stage: 'encoding', progress: 75, message: 'Encoding frames to mp4...' });
+  const finalFrameCount = framesToProcess;
+  const videoDuration = duration || maxDuration;
+  const encodeFps = videoDuration > 0 && finalFrameCount > 0 ? finalFrameCount / videoDuration : fps;
+
+  await runCmd(
+    'ffmpeg',
+    [
+      '-y',
+      '-framerate',
+      encodeFps.toFixed(6),
+      '-i',
+      path.join(finalDir, 'frame_%06d.png'),
+      '-fps_mode',
+      'passthrough',
+      '-c:v',
+      'libx264',
+      '-preset',
+      encodingPreset,
+      '-crf',
+      String(encodingCRF),
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ],
+    { signal, onChild }
+  );
+
+  // Cleanup frame directories (keep only the output mp4)
+  await fs.promises.rm(videoFramesDir, { recursive: true, force: true }).catch(() => {});
+  await fs.promises.rm(preprocessedDir, { recursive: true, force: true }).catch(() => {});
+  await fs.promises.rm(processedDir, { recursive: true, force: true }).catch(() => {});
+  await fs.promises.rm(blurredDir, { recursive: true, force: true }).catch(() => {});
+  await fs.promises.rm(finalDir, { recursive: true, force: true }).catch(() => {});
+}
+
+async function processAndUpload(jobId, itemNumber, inputPath) {
+  const jobDir = uploadsDirForJob(jobId);
+  const state = {
+    jobId,
+    itemNumber,
+    jobDir,
+    abortController: new AbortController(),
+    children: new Set(),
+    uploadedPublicIds: new Set(),
+  };
+  activeByItem.set(itemNumber, state);
+  activeByJobId.set(jobId, state);
+
+  const { signal } = state.abortController;
+  const trackChild = (p) => {
+    state.children.add(p);
+    p.on('close', () => state.children.delete(p));
+  };
+
+  const ensureNotSuperseded = async (label) => {
+    if (signal.aborted) {
+      const e = new Error(`Job aborted (${label || 'cancelled'})`);
+      e.name = 'AbortError';
+      throw e;
+    }
+    if (await isSuperseded(jobId, itemNumber)) {
+      const e = new Error('Job superseded by a newer upload');
+      e.name = 'SupersededError';
+      throw e;
+    }
+  };
+
+  console.log(`🎬 Starting FULL pipeline for job ${jobId}, item ${itemNumber}`);
+  try {
+    await ensureNotSuperseded('start');
+
+    await postJobProgress(jobId, { status: 'processing', stage: 'preprocessing', progress: 5, message: 'Cropping and trimming...' });
+    const probe = await runCmd(
+      'ffprobe',
+      ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'json', inputPath],
+      { signal, onChild: trackChild }
+    );
+    const probeJson = JSON.parse(probe.stdout || '{}');
+    const stream = probeJson?.streams?.[0];
+    if (!stream?.width || !stream?.height) throw new Error('ffprobe could not read video dimensions');
+
+    const w = Number(stream.width);
+    const h = Number(stream.height);
+    const cropSize = h;
+    const cropX = Math.max(0, Math.floor((w - cropSize) / 2));
+    const preprocessedPath = path.join(jobDir, `${itemNumber}_preprocessed.mov`);
+    await runCmd(
+      'ffmpeg',
+      [
+        '-y',
+        '-ss',
+        '2',
+        '-i',
+        inputPath,
+        '-t',
+        '15.58',
+        '-vf',
+        `crop=${cropSize}:${cropSize}:${cropX}:0`,
+        '-c:v',
+        'prores_ks',
+        '-profile:v',
+        '3',
+        '-c:a',
+        'copy',
+        preprocessedPath,
+      ],
+      { signal, onChild: trackChild }
+    );
+
+    await ensureNotSuperseded('after-preprocess');
+
+    await postJobProgress(jobId, { status: 'processing', stage: 'white-balance', progress: 12, message: 'Applying white balance...' });
+    const wbPath = path.join(jobDir, `${itemNumber}_preprocessed_wb.mov`);
+    const { scale: wbScale } = await sampleTopRowWhiteBalanceScale(preprocessedPath, { signal, onChild: trackChild });
+    await applyUniformGain(preprocessedPath, wbPath, wbScale, { signal, onChild: trackChild });
+    await fs.promises.unlink(preprocessedPath).catch(() => {});
+
+    await ensureNotSuperseded('after-white-balance');
+
+    await postJobProgress(jobId, { status: 'processing', stage: 'icon-generation', progress: 18, message: 'Generating icon video...' });
+    const outIcon = path.join(jobDir, `${itemNumber}_icon.mp4`);
+    try {
+      await generateIconVideo(wbPath, outIcon, itemNumber, { signal, onChild: trackChild });
+    } catch (err) {
+      console.warn('⚠️ Icon generation failed (continuing):', err.message);
+    }
+
+    await ensureNotSuperseded('after-icon');
+
+    // Main video pipeline (old backend: generate-background-fbf with CRF 30)
+    const outFull = path.join(jobDir, `${itemNumber}_full.mp4`);
+    await postJobProgress(jobId, { status: 'processing', stage: 'processing', progress: 22, message: 'Generating full video (frame-by-frame)...' });
+    await generateBackgroundFbf({
+      jobId,
+      itemNumber,
+      inputPath: wbPath,
+      outputPath: outFull,
+      maxDuration: 15.58,
+      encodingCRF: 30,
+      encodingPreset: 'medium',
+      signal,
+      onChild: trackChild,
+      ensureNotSuperseded,
+    });
+
+    await ensureNotSuperseded('after-full');
+
+    // Upload to Cloudinary
+    await postJobProgress(jobId, { status: 'cloudinary-upload', stage: 'cloudinary-upload', progress: 85, message: 'Uploading to Cloudinary...' });
+    const mainVideoResult = await cloudinary.uploader.upload(outFull, {
       folder: 'echo-catering/videos',
-      public_id: `${itemNumber}_icon`,
+      public_id: `${itemNumber}_full`,
       resource_type: 'video',
       overwrite: true,
     });
-    console.log(`✅ Icon video uploaded to Cloudinary for job ${jobId}`);
+    if (mainVideoResult?.public_id) state.uploadedPublicIds.add(mainVideoResult.public_id);
+    if (!mainVideoResult?.secure_url || !mainVideoResult?.public_id) throw new Error('Cloudinary main upload failed');
+
+    let iconVideoResult = null;
+    if (fs.existsSync(outIcon)) {
+      try {
+        iconVideoResult = await cloudinary.uploader.upload(outIcon, {
+          folder: 'echo-catering/videos',
+          public_id: `${itemNumber}_icon`,
+          resource_type: 'video',
+          overwrite: true,
+        });
+        if (iconVideoResult?.public_id) state.uploadedPublicIds.add(iconVideoResult.public_id);
+      } catch (err) {
+        console.warn('⚠️ Icon upload failed (non-fatal):', err.message);
+      }
+    }
+
+    await postJobProgress(jobId, { status: 'processing', stage: 'finalizing', progress: 95, message: 'Finalizing...' });
+    await postJobComplete(jobId, {
+      result: {
+        cloudinaryVideoUrl: mainVideoResult.secure_url,
+        cloudinaryVideoPublicId: mainVideoResult.public_id,
+        cloudinaryIconUrl: iconVideoResult?.secure_url || '',
+        cloudinaryIconPublicId: iconVideoResult?.public_id || '',
+      },
+      message: 'Complete',
+    });
   } catch (err) {
-    // Non-fatal: main video is the critical asset.
-    console.warn(`⚠️ Icon upload failed (non-fatal) for job ${jobId}:`, err.message);
+    if (err?.name === 'SupersededError' || err?.name === 'AbortError') {
+      // Best-effort delete anything uploaded by this job (requirement: cancelled job should not leave assets).
+      for (const publicId of state.uploadedPublicIds) {
+        try {
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+        } catch {}
+      }
+      throw err;
+    }
+    throw err;
+  } finally {
+    await fs.promises.rm(jobDir, { recursive: true, force: true }).catch(() => {});
+    activeByItem.delete(itemNumber);
+    activeByJobId.delete(jobId);
   }
-
-  await postJobProgress(jobId, {
-    status: 'processing',
-    stage: 'finalizing',
-    progress: 95,
-    message: 'Finalizing...',
-  });
-
-  console.log(`✅ All uploads complete for job ${jobId}, marking job complete...`);
-  await postJobComplete(jobId, {
-    result: {
-      cloudinaryVideoUrl: mainVideoResult.secure_url,
-      cloudinaryVideoPublicId: mainVideoResult.public_id,
-      cloudinaryIconUrl: iconVideoResult?.secure_url || '',
-      cloudinaryIconPublicId: iconVideoResult?.public_id || '',
-    },
-    message: 'Complete',
-  });
-
-  // Cleanup local job folder
-  console.log(`🧹 Cleaning up local files for job ${jobId}...`);
-  await fs.promises.rm(jobDir, { recursive: true, force: true }).catch(() => {});
-  console.log(`🎉 Job ${jobId} completed successfully!`);
 }
-
-const runningJobs = new Set();
 
 async function heartbeatOnce() {
   try {
@@ -355,6 +820,18 @@ async function heartbeatOnce() {
       },
       body: JSON.stringify({ workerId: WORKER_ID }),
     });
+
+    // Also enforce "newest upload wins" even if the browser hasn't uploaded yet.
+    // If an admin starts a new job on Render, the backend supersedes the old job immediately.
+    // This loop makes the worker cancel within the heartbeat window (~3s).
+    for (const [itemNumber, active] of activeByItem.entries()) {
+      // eslint-disable-next-line no-await-in-loop
+      const superseded = await isSuperseded(active.jobId, itemNumber).catch(() => false);
+      if (superseded) {
+        // eslint-disable-next-line no-await-in-loop
+        await cancelActiveJobForItem(itemNumber, 'Superseded by a newer job (heartbeat)');
+      }
+    }
   } catch (err) {
     console.warn('⚠️ Heartbeat failed:', err.message);
   }
@@ -404,6 +881,12 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
       return res.status(400).json({ ok: false, message: 'Invalid itemNumber from verify' });
     }
 
+    // If there's already an active job for this item, cancel it immediately (newest wins).
+    const existing = activeByItem.get(itemNumber);
+    if (existing && String(existing.jobId) !== String(jobId)) {
+      await cancelActiveJobForItem(itemNumber, 'Superseded by a newer upload');
+    }
+
     console.log(`📥 Upload received for job ${jobId}, item ${itemNumber}, file size: ${(req.file.size / 1024 / 1024).toFixed(2)} MB, path: ${req.file.path}`);
 
     // Mark job as uploaded (DB-backed status)
@@ -415,25 +898,24 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
     });
 
     // Start processing asynchronously (don't block the HTTP response)
-    if (!runningJobs.has(jobId)) {
-      runningJobs.add(jobId);
-      console.log(`🚀 Starting processing for job ${jobId}, item ${itemNumber}...`);
-      processAndUpload(jobId, itemNumber, req.file.path)
-        .catch(async (err) => {
-          console.error(`❌ Job ${jobId} failed:`, err.message);
-          try {
-            await postJobFail(jobId, { error: err.message, message: 'Video processing failed' });
-          } catch (postErr) {
-            console.warn('⚠️ Failed to post job failure:', postErr.message);
-          }
-        })
-        .finally(() => {
-          runningJobs.delete(jobId);
-          console.log(`✅ Job ${jobId} finished processing`);
-        });
-    } else {
-      console.warn(`⚠️ Job ${jobId} is already running, skipping duplicate start`);
-    }
+    console.log(`🚀 Starting processing for job ${jobId}, item ${itemNumber}...`);
+    processAndUpload(jobId, itemNumber, req.file.path)
+      .catch(async (err) => {
+        // Superseded/aborted jobs are expected when the user starts a new upload.
+        if (err?.name === 'SupersededError' || err?.name === 'AbortError') {
+          console.warn(`🛑 Job ${jobId} stopped:`, err.message);
+          return;
+        }
+        console.error(`❌ Job ${jobId} failed:`, err.message);
+        try {
+          await postJobFail(jobId, { error: err.message, message: 'Video processing failed' });
+        } catch (postErr) {
+          console.warn('⚠️ Failed to post job failure:', postErr.message);
+        }
+      })
+      .finally(() => {
+        console.log(`✅ Job ${jobId} finished processing`);
+      });
 
     return res.json({ ok: true, jobId, itemNumber });
   } catch (err) {
