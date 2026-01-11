@@ -2255,10 +2255,27 @@ const MenuManager = () => {
           <div className="delete-modal-content">
             <p className="delete-warning">Video Options</p>
             <p className="delete-question">Choose how to handle this video:</p>
-            <p style={{ fontSize: '0.85rem', color: workerStatus?.online ? '#166534' : '#b91c1c', marginTop: '-0.25rem' }}>
-              Worker: {workerStatus?.online ? 'ONLINE' : 'OFFLINE'}
-              {typeof workerStatus?.lastSeenSecondsAgo === 'number' ? ` (last seen ${workerStatus.lastSeenSecondsAgo}s ago)` : ''}
-            </p>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.75rem 0',
+                marginTop: '0.25rem',
+                marginBottom: '0.25rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  color: workerStatus?.online ? '#15803d' : '#dc2626',
+                }}
+              >
+                {workerStatus?.online ? 'ONLINE' : 'OFFLINE'}
+              </span>
+            </div>
             <div className="delete-modal-actions" style={{ flexDirection: 'column', gap: '0.5rem', width: '100%', alignItems: 'stretch' }}>
               <button
                 type="button"

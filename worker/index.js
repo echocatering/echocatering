@@ -401,34 +401,97 @@ async function generateBackgroundFbf({
   await fs.promises.mkdir(blurredDir, { recursive: true });
   await fs.promises.mkdir(finalDir, { recursive: true });
 
-  await postJobProgress(jobId, { status: 'processing', stage: 'extracting', progress: 20, message: `Extracting ${framesToProcess} frames...` });
-  const frameInterval = 1 / fps;
-  for (let frameNum = 0; frameNum < framesToProcess; frameNum++) {
-    if (frameNum % 10 === 0) await ensureNotSuperseded(`extract-${frameNum}`);
-    const timestamp = frameNum * frameInterval;
-    const frameFileName = `frame_${String(frameNum + 1).padStart(6, '0')}.png`;
-    const framePath = path.join(videoFramesDir, frameFileName);
-    await runCmd(
-      'ffmpeg',
-      [
-        '-ss',
-        timestamp.toFixed(6),
-        '-i',
-        inputPath,
-        '-vf',
-        `scale=${extractSize}:${extractSize}:force_original_aspect_ratio=increase`,
-        '-frames:v',
-        '1',
-        '-vsync',
-        '0',
-        '-y',
-        framePath,
-      ],
-      { signal, onChild }
+  // Fast path: batch extract frames in one ffmpeg invocation.
+  // Safety: verify frame count; if mismatch, fall back to slow per-frame extraction.
+  await postJobProgress(jobId, {
+    status: 'processing',
+    stage: 'extracting',
+    progress: 0,
+    total: framesToProcess,
+    message: `Extracting frames (0/${framesToProcess})...`,
+  });
+
+  const batchOutputPattern = path.join(videoFramesDir, 'frame_%06d.png');
+  const batchArgs = [
+    '-y',
+    '-ss',
+    '0',
+    '-i',
+    inputPath,
+    '-t',
+    String(maxDuration),
+    '-vf',
+    `scale=${extractSize}:${extractSize}:force_original_aspect_ratio=increase`,
+    '-vsync',
+    '0',
+    '-start_number',
+    '1',
+    batchOutputPattern,
+  ];
+
+  await runCmd('ffmpeg', batchArgs, { signal, onChild });
+
+  let extracted = (await fs.promises.readdir(videoFramesDir)).filter((f) => f.endsWith('.png')).length;
+  if (extracted !== framesToProcess) {
+    console.warn(
+      `⚠️ Batch extract frame count mismatch (got ${extracted}, expected ${framesToProcess}). Falling back to per-frame extraction.`
     );
+    await fs.promises.rm(videoFramesDir, { recursive: true, force: true });
+    await fs.promises.mkdir(videoFramesDir, { recursive: true });
+
+    const frameInterval = 1 / fps;
+    for (let frameNum = 0; frameNum < framesToProcess; frameNum++) {
+      if (frameNum % 5 === 0) await ensureNotSuperseded(`extract-${frameNum}`);
+      const timestamp = frameNum * frameInterval;
+      const frameFileName = `frame_${String(frameNum + 1).padStart(6, '0')}.png`;
+      const framePath = path.join(videoFramesDir, frameFileName);
+      await runCmd(
+        'ffmpeg',
+        [
+          '-ss',
+          timestamp.toFixed(6),
+          '-i',
+          inputPath,
+          '-vf',
+          `scale=${extractSize}:${extractSize}:force_original_aspect_ratio=increase`,
+          '-frames:v',
+          '1',
+          '-vsync',
+          '0',
+          '-y',
+          framePath,
+        ],
+        { signal, onChild }
+      );
+      if ((frameNum + 1) % 10 === 0 || frameNum + 1 === framesToProcess) {
+        // eslint-disable-next-line no-await-in-loop
+        await postJobProgress(jobId, {
+          status: 'processing',
+          stage: 'extracting',
+          progress: frameNum + 1,
+          total: framesToProcess,
+          message: `Extracting frames (${frameNum + 1}/${framesToProcess})...`,
+        });
+      }
+    }
+    extracted = framesToProcess;
   }
 
-  await postJobProgress(jobId, { status: 'processing', stage: 'preprocessing', progress: 35, message: 'Preprocessing frames (white/off-white fade)...' });
+  await postJobProgress(jobId, {
+    status: 'processing',
+    stage: 'extracting',
+    progress: extracted,
+    total: framesToProcess,
+    message: `Extracting frames (${extracted}/${framesToProcess})...`,
+  });
+
+  await postJobProgress(jobId, {
+    status: 'processing',
+    stage: 'preprocessing',
+    progress: 0,
+    total: framesToProcess,
+    message: `Preprocessing frames (0/${framesToProcess})...`,
+  });
   const whiteThreshold = 150;
   const centerX = innerSize / 2;
   const centerY = innerSize / 2;
@@ -437,7 +500,7 @@ async function generateBackgroundFbf({
   const fadeStartDistanceSq = fadeStartDistance * fadeStartDistance;
 
   for (let i = 0; i < framesToProcess; i++) {
-    if (i % 10 === 0) await ensureNotSuperseded(`preprocess-${i}`);
+    if (i % 5 === 0) await ensureNotSuperseded(`preprocess-${i}`);
     const frameFileName = `frame_${String(i + 1).padStart(6, '0')}.png`;
     const srcPath = path.join(videoFramesDir, frameFileName);
     const outPath = path.join(preprocessedDir, frameFileName);
@@ -538,75 +601,72 @@ async function generateBackgroundFbf({
       .ensureAlpha()
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toFile(outPath);
+
+    if ((i + 1) % 5 === 0 || i + 1 === framesToProcess) {
+      // eslint-disable-next-line no-await-in-loop
+      await postJobProgress(jobId, {
+        status: 'processing',
+        stage: 'preprocessing',
+        progress: i + 1,
+        total: framesToProcess,
+        message: `Preprocessing frames (${i + 1}/${framesToProcess})...`,
+      });
+    }
   }
 
-  await postJobProgress(jobId, { status: 'processing', stage: 'processing', progress: 55, message: 'Building blurred background projection...' });
+  // Big perf win: build blurred background via sharp.extend({ extendWith: 'copy' }) instead of per-pixel JS loops.
+  await postJobProgress(jobId, {
+    status: 'processing',
+    stage: 'compositing',
+    progress: 0,
+    total: framesToProcess,
+    message: `Compositing frames (0/${framesToProcess})...`,
+  });
 
+  const pad = innerLeft; // 1080
   for (let i = 0; i < framesToProcess; i++) {
-    if (i % 5 === 0) await ensureNotSuperseded(`projection-${i}`);
+    if (i % 2 === 0) await ensureNotSuperseded(`composite-${i}`);
     const frameFileName = `frame_${String(i + 1).padStart(6, '0')}.png`;
     const srcPath = path.join(videoFramesDir, frameFileName);
-    const processedPath = path.join(processedDir, frameFileName);
-    const blurredPath = path.join(blurredDir, frameFileName);
     const finalPath = path.join(finalDir, frameFileName);
     const preprocessedPath = path.join(preprocessedDir, frameFileName);
 
-    const videoData = await sharp(srcPath).ensureAlpha().raw().toBuffer();
-    const outputData = Buffer.alloc(outerSize * outerSize * 4, 0);
+    // Background: inner 1080 extracted frame -> extend edges -> blur
+    const innerFrame = await sharp(srcPath)
+      .resize(innerSize, innerSize, {
+        kernel: 'lanczos3',
+        fit: 'contain',
+        position: 'center',
+        withoutEnlargement: false,
+      })
+      .ensureAlpha()
+      .toBuffer();
 
-    const getVideoPixel = (x, y) => {
-      const scaleFactor = extractSize / innerSize;
-      const extractX = Math.floor(x * scaleFactor);
-      const extractY = Math.floor(y * scaleFactor);
-      const clampedX = Math.max(0, Math.min(extractSize - 1, extractX));
-      const clampedY = Math.max(0, Math.min(extractSize - 1, extractY));
-      const idx = (clampedY * extractSize + clampedX) * 4;
-      if (idx >= 0 && idx < videoData.length - 3) {
-        return { r: videoData[idx], g: videoData[idx + 1], b: videoData[idx + 2], a: videoData[idx + 3] };
-      }
-      return { r: 0, g: 0, b: 0, a: 0 };
-    };
+    const blurredBackground = await sharp(innerFrame)
+      .extend({ top: pad, bottom: pad, left: pad, right: pad, extendWith: 'copy' })
+      .blur(50)
+      .ensureAlpha()
+      .toBuffer();
 
-    for (let y = 0; y < outerSize; y++) {
-      for (let x = 0; x < outerSize; x++) {
-        const idx = (y * outerSize + x) * 4;
-        if (x >= innerLeft && x < innerRight && y >= innerTop && y < innerBottom) continue;
-
-        let edgeX;
-        let edgeY;
-        if (x < innerLeft) {
-          edgeX = innerLeft;
-          edgeY = Math.max(innerTop, Math.min(innerBottom - 1, y));
-        } else if (x >= innerRight) {
-          edgeX = innerRight - 1;
-          edgeY = Math.max(innerTop, Math.min(innerBottom - 1, y));
-        } else if (y < innerTop) {
-          edgeX = Math.max(innerLeft, Math.min(innerRight - 1, x));
-          edgeY = innerTop;
-        } else {
-          edgeX = Math.max(innerLeft, Math.min(innerRight - 1, x));
-          edgeY = innerBottom - 1;
-        }
-
-        const videoEdgeX = edgeX - innerLeft;
-        const videoEdgeY = edgeY - innerTop;
-        const px = getVideoPixel(videoEdgeX, videoEdgeY);
-        outputData[idx] = px.r;
-        outputData[idx + 1] = px.g;
-        outputData[idx + 2] = px.b;
-        outputData[idx + 3] = px.a;
-      }
-    }
-
-    await sharp(outputData, { raw: { width: outerSize, height: outerSize, channels: 4 } }).png().toFile(processedPath);
-    await sharp(processedPath).blur(50).toFile(blurredPath);
-    await sharp(blurredPath)
+    await sharp(blurredBackground)
       .composite([{ input: preprocessedPath, left: innerLeft, top: innerTop, blend: 'over' }])
       .ensureAlpha()
+      .png()
       .toFile(finalPath);
+
+    if ((i + 1) % 2 === 0 || i + 1 === framesToProcess) {
+      // eslint-disable-next-line no-await-in-loop
+      await postJobProgress(jobId, {
+        status: 'processing',
+        stage: 'compositing',
+        progress: i + 1,
+        total: framesToProcess,
+        message: `Compositing frames (${i + 1}/${framesToProcess})...`,
+      });
+    }
   }
 
-  await postJobProgress(jobId, { status: 'processing', stage: 'encoding', progress: 75, message: 'Encoding frames to mp4...' });
+  await postJobProgress(jobId, { status: 'processing', stage: 'encoding', progress: 0, total: framesToProcess, message: 'Encoding frames to mp4...' });
   const finalFrameCount = framesToProcess;
   const videoDuration = duration || maxDuration;
   const encodeFps = videoDuration > 0 && finalFrameCount > 0 ? finalFrameCount / videoDuration : fps;
@@ -633,14 +693,31 @@ async function generateBackgroundFbf({
       '+faststart',
       outputPath,
     ],
-    { signal, onChild }
+    {
+      signal,
+      onChild,
+      onLine: (line) => {
+        const m = String(line || '').match(/frame=\s*(\d+)/);
+        if (!m) return;
+        const frame = Number(m[1]);
+        if (!Number.isFinite(frame)) return;
+        // Best-effort progress updates; keep them throttled.
+        if (frame % 30 === 0 || frame >= finalFrameCount) {
+          postJobProgress(jobId, {
+            status: 'processing',
+            stage: 'encoding',
+            progress: Math.min(frame, finalFrameCount),
+            total: finalFrameCount,
+            message: `Encoding (${Math.min(frame, finalFrameCount)}/${finalFrameCount})...`,
+          }).catch(() => {});
+        }
+      },
+    }
   );
 
   // Cleanup frame directories (keep only the output mp4)
   await fs.promises.rm(videoFramesDir, { recursive: true, force: true }).catch(() => {});
   await fs.promises.rm(preprocessedDir, { recursive: true, force: true }).catch(() => {});
-  await fs.promises.rm(processedDir, { recursive: true, force: true }).catch(() => {});
-  await fs.promises.rm(blurredDir, { recursive: true, force: true }).catch(() => {});
   await fs.promises.rm(finalDir, { recursive: true, force: true }).catch(() => {});
 }
 
@@ -837,7 +914,8 @@ async function heartbeatOnce() {
   }
 }
 
-setInterval(heartbeatOnce, 3000);
+const HEARTBEAT_MS = Number(process.env.WORKER_HEARTBEAT_MS || 5000);
+setInterval(heartbeatOnce, HEARTBEAT_MS);
 heartbeatOnce();
 
 // Health
