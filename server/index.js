@@ -95,7 +95,8 @@ const generalLimiter = rateLimit({
   skip: (req) =>
     req.path === '/health' ||
     req.path === '/logo' ||
-    req.path.startsWith('/video-worker/')
+    req.path.startsWith('/video-worker/') ||
+    req.path.startsWith('/video-jobs/')
 });
 
 const authLimiter = rateLimit({
