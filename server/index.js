@@ -80,6 +80,15 @@ app.use(helmet({
       'img-src': ["'self'", 'data:', 'https://res.cloudinary.com'],
       // Allow Cloudinary video/image media loads
       'media-src': ["'self'", 'https://res.cloudinary.com'],
+      // Allow the admin UI to POST large uploads directly to the local worker via Cloudflare Tunnel.
+      // Without this, the browser can block the request before it shows up in DevTools → Network.
+      'connect-src': [
+        "'self'",
+        // Temporary Cloudflare Tunnel hostnames
+        'https://*.trycloudflare.com',
+        // Also allow the specifically configured worker URL (future custom domain)
+        ...(process.env.VIDEO_WORKER_URL ? [new URL(process.env.VIDEO_WORKER_URL).origin] : []),
+      ],
     }
   }
 }));
