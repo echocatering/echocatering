@@ -2416,7 +2416,11 @@ const MenuManager = () => {
 
               {/* Processing status overlay - appears in center of viewer behind arrows and form fields */}
               {(() => {
-                const shouldShow = processingStatus && processingStatus.active && (processingStatus.itemNumber === (editingCocktail?.itemNumber || currentCocktail?.itemNumber));
+                const currentItem = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
+                const shouldShow =
+                  !!processingStatus &&
+                  !!processingStatus.active &&
+                  Number(processingStatus.itemNumber) === Number(currentItem);
                 if (processingStatus && processingStatus.active) {
                   console.log('[MenuManager] Processing status check:', {
                     hasProcessingStatus: !!processingStatus,
