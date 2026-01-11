@@ -384,8 +384,8 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
     }
 
     console.log(`🔐 Verifying upload token for job ${jobId}...`);
-    // Verify token with Render backend
-    await fetchJson(`${RENDER_API_BASE}/api/video-jobs/${jobId}/verify-upload`, {
+    // Verify token with Render backend and get itemNumber
+    const verify = await fetchJson(`${RENDER_API_BASE}/api/video-jobs/${jobId}/verify-upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: tokenHeader }),
@@ -397,12 +397,6 @@ app.post('/upload/:jobId', upload.single('video'), async (req, res) => {
     }
 
     console.log(`✅ Token verified for job ${jobId}, file received: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
-
-    const verify = await fetchJson(`${RENDER_API_BASE}/api/video-jobs/${jobId}/verify-upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: tokenHeader }),
-    });
 
     const itemNumber = Number(verify?.itemNumber);
     if (!Number.isFinite(itemNumber) || itemNumber <= 0) {
