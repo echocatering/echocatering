@@ -2899,7 +2899,7 @@ const MenuManager = () => {
                   gap: '0',
                 }}
               >
-              <div style={{ marginBottom: '0' }}>
+              <div style={{ marginBottom: '0', pointerEvents: 'none' }}>
                 <MemoizedMapContainer
                   mapSvgContent={mapSvgContent}
                   mapError={mapError}
@@ -2909,7 +2909,7 @@ const MenuManager = () => {
                 />
               </div>
 
-              <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '-60px' }}>
+              <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '-60px', pointerEvents: 'auto', position: 'relative', zIndex: 1 }}>
                   <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '6px' }}>Countries</label>
                   <input
                     type="text"
