@@ -283,6 +283,12 @@ const MenuManager = () => {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState('');
   const [processingStatus, setProcessingStatus] = useState(null); // { active, stage, progress, total, message, error } for current item
   const processingPollIntervalRef = useRef(null);
+  const [workerStatus, setWorkerStatus] = useState({
+    online: false,
+    configured: false,
+    workerId: null,
+    lastSeenSecondsAgo: null,
+  });
   const [videoOptionsModal, setVideoOptionsModal] = useState({
     show: false,
     file: null,
@@ -316,6 +322,30 @@ const MenuManager = () => {
       }
     };
   }, [videoPreviewUrl]);
+
+  // Poll local worker availability (Render backend reports heartbeats)
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const status = await apiCall('/video-worker/status');
+        if (!cancelled && status && typeof status === 'object') {
+          setWorkerStatus((prev) => ({ ...prev, ...status }));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setWorkerStatus((prev) => ({ ...prev, online: false }));
+        }
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [apiCall]);
   
   // Handle URL parameters to navigate to specific item
   useEffect(() => {
@@ -813,6 +843,10 @@ const MenuManager = () => {
     
     switch (option) {
       case 'process':
+        if (!workerStatus?.online) {
+          alert('Local worker is offline. Start the worker + tunnel first, then try again.');
+          return;
+        }
         await handleProcessVideo(file, itemNumber);
         break;
       case 'upload':
@@ -848,57 +882,54 @@ const MenuManager = () => {
       console.log('[MenuManager] Setting processing status to active for item', itemNumber);
       setProcessingStatus({
         active: true,
-        stage: 'uploading',
+        stage: 'creating-job',
         progress: 0,
         total: 100,
-        message: 'Uploading video...',
+        message: 'Creating job...',
         error: null,
         itemNumber: itemNumber // Include itemNumber so overlay can match
       });
-      
-      // Step 1: Upload to temp_files
+
+      // Step 1: Create job on Render backend (returns worker upload URL + upload token)
+      const jobStart = await apiCall(`/video-jobs/${itemNumber}/start`, {
+        method: 'POST',
+      });
+
+      const workerUploadUrl = jobStart?.workerUploadUrl;
+      const uploadToken = jobStart?.uploadToken;
+      if (!workerUploadUrl || !uploadToken) {
+        throw new Error('Job start failed: missing workerUploadUrl or uploadToken');
+      }
+
+      setProcessingStatus((prev) => ({
+        ...(prev || {}),
+        active: true,
+        stage: 'uploading-to-worker',
+        progress: 1,
+        total: 100,
+        message: 'Uploading to local worker...',
+        error: null,
+        itemNumber,
+      }));
+
+      // Step 2: Upload raw video directly to the local worker (via Cloudflare Tunnel URL)
       const formData = new FormData();
       formData.append('video', file);
-      
-      console.log('[MenuManager] Uploading video to:', `${API_BASE_URL}/api/video-processing/upload-base/${itemNumber}`);
-      const uploadResponse = await fetch(`${API_BASE_URL}/api/video-processing/upload-base/${itemNumber}`, {
+
+      const workerResp = await fetch(workerUploadUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'X-Upload-Token': uploadToken,
         },
-        body: formData
+        body: formData,
       });
-      
-      console.log('[MenuManager] Upload response:', { ok: uploadResponse.ok, status: uploadResponse.status, statusText: uploadResponse.statusText });
-      
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('[MenuManager] Upload failed:', errorText);
-        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+
+      if (!workerResp.ok) {
+        const text = await workerResp.text();
+        throw new Error(`Worker upload failed: ${workerResp.status} ${workerResp.statusText} ${text || ''}`.trim());
       }
-      
-      console.log('[MenuManager] Upload successful, starting processing...');
-      
-      // Step 2: Start processing
-      const processResponse = await fetch(`${API_BASE_URL}/api/video-processing/process/${itemNumber}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      console.log('[MenuManager] Process response:', { ok: processResponse.ok, status: processResponse.status, statusText: processResponse.statusText });
-      
-      if (!processResponse.ok) {
-        const errorText = await processResponse.text();
-        console.error('[MenuManager] Process failed:', errorText);
-        throw new Error(`Failed to start processing: ${processResponse.status} ${processResponse.statusText}`);
-      }
-      
-      console.log('[MenuManager] Processing started, beginning status polling...');
-      
-      // Start polling for status
+
+      // Begin polling job status from Render backend (DB-backed)
       startProcessingPoll(itemNumber);
       
     } catch (error) {
@@ -1004,28 +1035,28 @@ const MenuManager = () => {
     // Poll every 2 seconds
     processingPollIntervalRef.current = setInterval(async () => {
       try {
-        const statusUrl = `${API_BASE_URL}/api/video-processing/status/${itemNumber}`;
-        console.log('[MenuManager] Polling status from:', statusUrl);
-        
-        const response = await fetch(statusUrl, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
+        const response = await fetch(`/api/video-jobs/${itemNumber}/status`);
         if (response.ok) {
           const status = await response.json();
-          console.log('[MenuManager] Status received:', status);
-          setProcessingStatus(status);
+          // If a job is active but worker is offline, surface it explicitly.
+          const hydrated =
+            status?.active && status?.workerOnline === false
+              ? {
+                  ...status,
+                  stage: 'worker-disconnected',
+                  message: 'Local worker disconnected',
+                }
+              : status;
+          setProcessingStatus(hydrated);
           
           // Stop polling if not active
-          if (!status.active) {
+          if (!hydrated.active) {
             console.log('[MenuManager] Processing no longer active, stopping poll');
             clearInterval(processingPollIntervalRef.current);
             processingPollIntervalRef.current = null;
             
             // Refresh cocktails list to get updated video
-            if (status.stage === 'complete' && !status.error) {
+            if (hydrated.stage === 'complete' && !hydrated.error) {
               console.log('[MenuManager] Processing complete! Refreshing cocktails list...');
               fetchCocktails().then((cocktails) => {
                 console.log('[MenuManager] Cocktails refreshed:', cocktails?.length, 'items');
@@ -1137,11 +1168,7 @@ const MenuManager = () => {
       // Check if this item is processing on the server
       const checkStatus = async () => {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/video-processing/status/${currentItemNumber}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
+          const response = await fetch(`/api/video-jobs/${currentItemNumber}/status`);
           
           if (response.ok) {
             const status = await response.json();
@@ -2200,6 +2227,10 @@ const MenuManager = () => {
           <div className="delete-modal-content">
             <p className="delete-warning">Video Options</p>
             <p className="delete-question">Choose how to handle this video:</p>
+            <p style={{ fontSize: '0.85rem', color: workerStatus?.online ? '#166534' : '#b91c1c', marginTop: '-0.25rem' }}>
+              Worker: {workerStatus?.online ? 'ONLINE' : 'OFFLINE'}
+              {typeof workerStatus?.lastSeenSecondsAgo === 'number' ? ` (last seen ${workerStatus.lastSeenSecondsAgo}s ago)` : ''}
+            </p>
             <div className="delete-modal-actions" style={{ flexDirection: 'column', gap: '0.5rem', width: '100%', alignItems: 'stretch' }}>
               <button
                 type="button"
@@ -2212,8 +2243,10 @@ const MenuManager = () => {
                   borderRadius: '9999px',
                   padding: '0.35rem 0.9rem',
                   fontSize: '0.85rem',
-                  cursor: 'pointer'
+                  cursor: workerStatus?.online ? 'pointer' : 'not-allowed',
+                  opacity: workerStatus?.online ? 1 : 0.5
                 }}
+                disabled={!workerStatus?.online}
               >
                 Process Video
               </button>
@@ -2419,6 +2452,11 @@ const MenuManager = () => {
                       padding: '0 1rem'
                     }}>
                       <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+                        {processingStatus.stage === 'creating-job' && 'Creating job...'}
+                        {processingStatus.stage === 'uploading-to-worker' && 'Uploading to local worker...'}
+                        {processingStatus.stage === 'awaiting-upload' && 'Waiting for upload...'}
+                        {processingStatus.stage === 'uploaded' && 'Uploaded. Waiting for processing...'}
+                        {processingStatus.stage === 'worker-disconnected' && 'Local worker disconnected'}
                         {processingStatus.stage === 'uploading' && 'Uploading video...'}
                         {processingStatus.stage === 'preprocessing' && 'Cropping and trimming...'}
                         {processingStatus.stage === 'white-balance' && 'Applying white balance...'}
