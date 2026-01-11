@@ -96,6 +96,56 @@ In Terminal 2 (Tunnel):
 
 ---
 
+## Auto-Start Worker on Mac Boot (Optional)
+
+If you want the worker to start automatically when you log in to your Mac:
+
+### Install Auto-Start Service
+
+Run the installation script:
+
+```bash
+cd /Users/andybernegger/echo-catering
+./scripts/active/install-worker-service.sh
+```
+
+This will:
+- ✅ Create a LaunchAgent plist file
+- ✅ Configure it to auto-start the worker on login
+- ✅ Set up log files at `~/Library/Logs/echocatering-worker.log`
+
+**After installation:**
+- The worker will start automatically when you log in
+- Logs are available at `~/Library/Logs/echocatering-worker.log`
+- You'll still need to start the tunnel manually (or set it up as a service too)
+
+### Useful Commands
+
+```bash
+# Check if service is running
+launchctl list | grep echocatering
+
+# View worker logs
+tail -f ~/Library/Logs/echocatering-worker.log
+
+# View error logs
+tail -f ~/Library/Logs/echocatering-worker-error.log
+
+# Stop auto-start (but keep service installed)
+launchctl unload ~/Library/LaunchAgents/com.echocatering.worker.plist
+
+# Start service manually
+launchctl load ~/Library/LaunchAgents/com.echocatering.worker.plist
+
+# Uninstall auto-start completely
+launchctl unload ~/Library/LaunchAgents/com.echocatering.worker.plist
+rm ~/Library/LaunchAgents/com.echocatering.worker.plist
+```
+
+**Note:** Even with auto-start, you'll still need to start the tunnel manually (or set it up as a service - see tunnel setup docs).
+
+---
+
 ## Troubleshooting
 
 ### "Worker: OFFLINE" in Admin UI
