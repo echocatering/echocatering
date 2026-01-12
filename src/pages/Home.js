@@ -1045,10 +1045,10 @@ const Home = forwardRef((props, ref) => {
             top: 0,
             left: 0,
             right: 0,
-            height: 'calc(100vh / 8)',
+            height: 'calc(100vh / 4)',
             background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%)',
             pointerEvents: 'none',
-            zIndex: 10
+            zIndex: 5
           }} />
           {/* White vignette overlay at edges for menu gallery */}
           <div style={{
@@ -3234,7 +3234,7 @@ const Home = forwardRef((props, ref) => {
             height: 'calc(100vh / 8)',
             background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%)',
             pointerEvents: 'none',
-            zIndex: 10
+            zIndex: 5
           }} />
           
           {isLoading ? (

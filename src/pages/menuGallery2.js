@@ -1769,42 +1769,6 @@ function EchoCocktailSubpage2({
                 All Items
               </button>
             )}
-            {viewMode === 'web' && (
-              <button
-                onClick={() => {
-                  const section = document.getElementById('event-request-section');
-                  if (section) section.scrollIntoView({ behavior: 'smooth' });
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#222';
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.borderColor = '#888';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #888',
-                  color: '#888',
-                  padding: '6px 8px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  position: 'relative',
-                }}
-              >
-                Schedule an Event
-              </button>
-            )}
           </div>
         </div>
 
