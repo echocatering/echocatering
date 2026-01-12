@@ -101,7 +101,7 @@ echo-catering/
 │   │   ├── About.js
 │   │   ├── Contact.js
 │   │   ├── event_gallery.js
-│   │   ├── menugallery.js
+│   │   ├── menuGallery2.js
 │   │   ├── EventRequestForm.js
 │   │   └── PlaceholderPage.js
 │   │

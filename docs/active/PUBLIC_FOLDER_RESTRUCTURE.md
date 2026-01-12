@@ -81,7 +81,6 @@ public/
 - `src/pages/About.js`
 - `src/pages/event_gallery.js`
 - `src/pages/menuGallery2.js`
-- `src/pages/menugallery.js`
 - `src/components/DynamicHero.js`
 - `src/components/DynamicLogo.js`
 - `src/Layout.js`

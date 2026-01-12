@@ -221,6 +221,44 @@ const Home = forwardRef((props, ref) => {
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
+  // Optional dev-only scroll tracing to identify unexpected scroll "jumps".
+  // Enable in DevTools with: window.__ECHO_SCROLL_TRACE__ = true
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (typeof window === 'undefined') return;
+    if (window.__ECHO_SCROLL_TRACE__ !== true) return;
+    if (window.__ECHO_SCROLL_TRACE_PATCHED__ === true) return;
+
+    window.__ECHO_SCROLL_TRACE_PATCHED__ = true;
+
+    const originalScrollTo = window.scrollTo.bind(window);
+    window.scrollTo = (...args) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[scroll trace] window.scrollTo', args, new Error('scrollTo stack').stack);
+      } catch (_) {}
+      return originalScrollTo(...args);
+    };
+
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (...args) {
+      try {
+        // eslint-disable-next-line no-console
+        console.log(
+          '[scroll trace] element.scrollIntoView',
+          { id: this?.id, className: this?.className, tagName: this?.tagName },
+          args,
+          new Error('scrollIntoView stack').stack
+        );
+      } catch (_) {}
+      return originalScrollIntoView.apply(this, args);
+    };
+
+    return () => {
+      // Intentionally do not unpatch: this is an opt-in debug tool that should persist for the session.
+    };
+  }, []);
+
   console.log('🏠 Home component - isMobile:', isMobile, 'mobileCurrentPage:', mobileCurrentPage);
 
   // Close sidebar when navigating away from gallery section

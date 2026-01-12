@@ -29,7 +29,6 @@
    - **Locations:**
      - `src/pages/Home.js` - Fallback for map snapshots
      - `src/pages/menuGallery2.js` - Fallback for map snapshots
-     - `src/pages/menugallery.js` - Fallback for map snapshots
      - `src/admin/components/MenuManager.js` - Map preview (3 places)
      - `scripts/active/generate/generateMapSnapshots.js` - Map generation
      - `scripts/archive/generate-old/generateMapSnapshots.js` - Map generation

@@ -9,7 +9,7 @@ The checkmark that appears when a cocktail is added via the "Add item" button in
 
 ## Current Animation Timeline
 
-From `menugallery.js`:
+From `menuGallery2.js` (legacy note: `menugallery.js` has been removed):
 - **Title animation delay**: 0.5s (line 496)
 - **Title animation duration**: 0.9s (line 610)
 - **Total time**: 1.4s from cocktail change to title fully visible
