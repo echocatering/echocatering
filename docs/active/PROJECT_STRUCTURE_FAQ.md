@@ -180,3 +180,4 @@ npm install
 
 **Recommendation:** Keep the local folder if you're actively developing or processing videos. Only delete it if you're sure you won't need it for a while, and always save `worker/local.env` securely first.
 
+

@@ -8,7 +8,7 @@ import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { IconComponent } from '../utils/iconData';
 import dynamicGallery from '../utils/dynamicGallery';
-import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
+import { isCloudinaryUrl, getHeroOptimizedUrl, getAboutOptimizedUrl } from '../utils/cloudinaryUtils';
 
 
 
@@ -379,7 +379,7 @@ const Home = forwardRef((props, ref) => {
           <div 
             style={{
               width: '70px',
-              height: '70px',
+              height: '140px',
               cursor: 'pointer',
               marginLeft: '-5px'
             }}
@@ -824,9 +824,13 @@ const Home = forwardRef((props, ref) => {
                   bottom: 0,
                   width: '100%',
                   height: '100%',
-                  backgroundImage: isCloudinaryUrl(image.cloudinaryUrl) || isCloudinaryUrl(image.src) || isCloudinaryUrl(image.imagePath) 
-                    ? `url('${image.cloudinaryUrl || image.src || image.imagePath}')` 
-                    : 'none',
+                  backgroundImage: (() => {
+                    const imageUrl = image.cloudinaryUrl || image.src || image.imagePath;
+                    if (isCloudinaryUrl(imageUrl)) {
+                      return `url('${getHeroOptimizedUrl(imageUrl)}')`;
+                    }
+                    return 'none';
+                  })(),
                   backgroundPosition: 'center',
                   backgroundSize: 'cover',
                   backgroundRepeat: 'no-repeat',
@@ -1141,7 +1145,7 @@ const Home = forwardRef((props, ref) => {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                   }}>
                     <img
-                      src={section.image}
+                      src={isCloudinaryUrl(section.image) ? getAboutOptimizedUrl(section.image) : section.image}
                       alt={section.title || 'About image'}
                       style={{
                         width: '100%',

@@ -4,10 +4,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const { readOnlyMiddleware, isReadOnlyEnabled } = require('./middleware/readOnly');
 
 // Only load dotenv if not in production (Render provides env vars directly)
 if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
+  // Load from project root so running from /server or repo root behaves the same.
+  require('dotenv').config({ path: path.join(__dirname, '../.env') });
 }
 
 // Fail fast on missing critical env vars
@@ -31,7 +33,8 @@ if (missing.length) {
 const app = express();
 // Behind Render's proxy; needed for express-rate-limit to honor X-Forwarded-For
 app.set('trust proxy', 1);
-const PORT = Number(process.env.PORT || 3000);
+// Frontend dev server runs on 3000; backend default must match CRA proxy (see package.json).
+const PORT = Number(process.env.PORT || 5002);
 if (!Number.isFinite(PORT) || PORT <= 0) {
   throw new Error(`Invalid PORT value: ${process.env.PORT}`);
 }
@@ -162,6 +165,13 @@ if (process.env.NODE_ENV === 'production') {
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Optional safety rail for local layout work: block all mutating requests.
+// Enable with READ_ONLY_MODE=true in your local env.
+if (isReadOnlyEnabled()) {
+  console.log('🔒 READ_ONLY_MODE enabled: blocking POST/PUT/PATCH/DELETE requests');
+}
+app.use(readOnlyMiddleware);
 
 // Static file serving with CORS headers for WebGL compatibility
 const staticOptions = {

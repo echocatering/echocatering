@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamicGallery from '../utils/dynamicGallery';
-import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
+import { isCloudinaryUrl, getEventOptimizedUrl } from '../utils/cloudinaryUtils';
 
 // CSS animations for modal transitions
 const modalAnimations = `
@@ -1255,9 +1255,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                     >
                       {isCloudinaryUrl(item.imageSrc) && (
                         <img
-                          src={`${item.imageSrc}?w=1200&auto=format`}
-                          srcSet={`${item.imageSrc}?w=800&auto=format 800w, ${item.imageSrc}?w=1200&auto=format 1200w, ${item.imageSrc} 2000w`}
-                          sizes="(max-width: 1200px) 50vw, 33vw"
+                          src={getEventOptimizedUrl(item.imageSrc)}
                           loading="lazy"
                           decoding="async"
                           alt={`Gallery ${item.sequenceIndex}-${item.itemIndex}`}

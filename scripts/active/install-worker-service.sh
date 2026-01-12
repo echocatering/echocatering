@@ -92,3 +92,4 @@ echo "  Stop service:     launchctl unload ~/Library/LaunchAgents/com.echocateri
 echo "  Start service:    launchctl load ~/Library/LaunchAgents/com.echocatering.worker.plist"
 echo ""
 
+

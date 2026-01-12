@@ -4,6 +4,13 @@
  * Run this on Render or locally to verify env vars are set correctly
  */
 
+// Load .env locally (Render provides env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  const path = require('path');
+  // eslint-disable-next-line global-require
+  require('dotenv').config({ path: path.join(__dirname, '../.env') });
+}
+
 const requiredEnv = [
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
@@ -49,4 +56,5 @@ if (allPresent) {
   console.log('  - Redeploy after adding env vars');
   process.exit(1);
 }
+
 

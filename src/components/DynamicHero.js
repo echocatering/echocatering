@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamicGallery from '../utils/dynamicGallery';
 import DynamicLogo from './DynamicLogo';
 import { IconComponent } from '../utils/iconData';
-import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
+import { isCloudinaryUrl, getHeroOptimizedUrl } from '../utils/cloudinaryUtils';
 
 export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
   const [heroImages, setHeroImages] = useState([]);
@@ -193,9 +193,13 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
                 bottom: 0,
                 width: '100vw',
                 height: '100vh',
-                backgroundImage: isCloudinaryUrl(image.cloudinaryUrl) || isCloudinaryUrl(image.src) || isCloudinaryUrl(image.imagePath)
-                  ? `url('${image.cloudinaryUrl || image.src || image.imagePath}')`
-                  : 'none',
+                backgroundImage: (() => {
+                  const imageUrl = image.cloudinaryUrl || image.src || image.imagePath;
+                  if (isCloudinaryUrl(imageUrl)) {
+                    return `url('${getHeroOptimizedUrl(imageUrl)}')`;
+                  }
+                  return 'none';
+                })(),
                 backgroundPosition: 'center',
                 backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
@@ -1068,9 +1072,13 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundImage: isCloudinaryUrl(image.cloudinaryUrl) || isCloudinaryUrl(image.src) || isCloudinaryUrl(image.imagePath)
-                ? `url('${image.cloudinaryUrl || image.src || image.imagePath}')`
-                : 'none',
+              backgroundImage: (() => {
+                const imageUrl = image.cloudinaryUrl || image.src || image.imagePath;
+                if (isCloudinaryUrl(imageUrl)) {
+                  return `url('${getHeroOptimizedUrl(imageUrl)}')`;
+                }
+                return 'none';
+              })(),
               backgroundPosition: 'center',
               backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',

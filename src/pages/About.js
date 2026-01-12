@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isCloudinaryUrl, getAboutOptimizedUrl } from '../utils/cloudinaryUtils';
 
 export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPage }) {
   const [aboutContent, setAboutContent] = useState({
@@ -315,7 +316,7 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
             }}
           />
           <img 
-            src={section.image} 
+            src={isCloudinaryUrl(section.image) ? getAboutOptimizedUrl(section.image) : section.image} 
             alt={section.title} 
             style={{
               width: '100%',

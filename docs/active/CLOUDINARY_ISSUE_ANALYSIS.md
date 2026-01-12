@@ -237,3 +237,4 @@ db.cocktails.findOne({ itemNumber: 1 })
 3. Check server logs to see what API is returning
 4. Verify Cloudinary URLs are valid (start with https://)
 
+
