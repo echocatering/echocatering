@@ -1,10 +1,11 @@
 [
   {
     "id": "1",
-    "email": "admin@echo-catering.com",
-    "password": "$2a$10$aHX3k1Euu4mKIG8RFISVseglGO9q3ibBpvCwDSXGyHBt0HjtiP3CC",
+    "username": "andykoster",
+    "email": "echocateringllc@gmail.com",
+    "password": "$2a$10$KdItP.MtwJeMk4IdCrdJsulbcxDmpTkNTmBMa54anoaIHF/fkAR0C",
     "role": "admin",
-    "name": "Admin User",
+    "name": "Andy Koster",
     "createdAt": "2024-01-01T00:00:00.000Z"
   }
 ]

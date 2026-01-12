@@ -47,6 +47,22 @@ const findUserByEmail = async (email) => {
   return users.find(user => user.email === email);
 };
 
+// Find user by username/login
+const findUserByUsername = async (username) => {
+  const users = await readUsers();
+  return users.find(user => user.username === username || user.login === username);
+};
+
+// Find user by email or username/login
+const findUserByEmailOrUsername = async (identifier) => {
+  const users = await readUsers();
+  return users.find(user => 
+    user.email === identifier || 
+    user.username === identifier || 
+    user.login === identifier
+  );
+};
+
 // Find user by ID
 const findUserById = async (id) => {
   const users = await readUsers();
@@ -75,6 +91,8 @@ module.exports = {
   readUsers,
   writeUsers,
   findUserByEmail,
+  findUserByUsername,
+  findUserByEmailOrUsername,
   findUserById,
   verifyPassword,
   createUser

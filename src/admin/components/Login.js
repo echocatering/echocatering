@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ const Login = () => {
     setError('');
 
     try {
-      const result = await login(email, password);
+      const result = await login(username, password);
       
       if (result.success) {
         navigate('/admin/');
@@ -46,17 +46,18 @@ const Login = () => {
           )}
           
           <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email Address
+            <label htmlFor="username" className="form-label">
+              Username
             </label>
             <input
-              type="email"
-              id="email"
+              type="text"
+              id="username"
               className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your username"
+              autoComplete="username"
             />
           </div>
           
@@ -93,7 +94,7 @@ const Login = () => {
         
         <div className="login-footer">
           <p className="text-gray-500 text-sm">
-            Default credentials: admin@echo-catering.com / admin123
+            Admin Login Required
           </p>
         </div>
       </div>

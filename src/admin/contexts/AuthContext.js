@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-// TEMPORARY: Set to true to disable authentication
-const DISABLE_AUTH = true;
+// Authentication is enabled - set to true to disable (not recommended for production)
+const DISABLE_AUTH = false;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -74,15 +74,15 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [token, API_BASE_URL]);
 
-  // Login function
-  const login = async (email, password) => {
+  // Login function (accepts username or email)
+  const login = async (username, password) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ username, password })
       });
 
       // Clone response to read it as text if JSON parsing fails

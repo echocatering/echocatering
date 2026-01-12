@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { findUserById } = require('../utils/fileAuth');
 
-// TEMPORARY: Set to true to disable authentication
-const DISABLE_AUTH = true;
+// Authentication is enabled - set to true to disable (not recommended for production)
+const DISABLE_AUTH = false;
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {

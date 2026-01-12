@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const { findUserByEmail, verifyPassword, findUserById } = require('../utils/fileAuth');
+const { findUserByEmail, findUserByEmailOrUsername, verifyPassword, findUserById } = require('../utils/fileAuth');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -16,11 +16,12 @@ const generateToken = (userId, email, role) => {
 };
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user (accepts username/login or email)
 // @access  Public
 router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 })
+  body('email').optional().trim(),
+  body('username').optional().trim(),
+  body('password').isLength({ min: 1 }).withMessage('Password is required')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -28,10 +29,15 @@ router.post('/login', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
+    const identifier = email || username;
 
-    // Find user by email
-    const user = await findUserByEmail(email);
+    if (!identifier) {
+      return res.status(400).json({ message: 'Username or email is required' });
+    }
+
+    // Find user by email or username/login
+    const user = await findUserByEmailOrUsername(identifier);
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -43,7 +49,7 @@ router.post('/login', [
     }
 
     // Generate token
-    const token = generateToken(user.id, user.email, user.role);
+    const token = generateToken(user.id, user.email || user.username, user.role);
 
     res.json({
       message: 'Login successful',
@@ -52,6 +58,7 @@ router.post('/login', [
         id: user.id,
         name: user.name,
         email: user.email,
+        username: user.username,
         role: user.role
       }
     });
@@ -125,9 +132,10 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     res.json({
       user: {
-        id: req.user._id,
+        id: req.user.id || req.user._id,
         username: req.user.username,
         email: req.user.email,
+        name: req.user.name,
         role: req.user.role,
         lastLogin: req.user.lastLogin
       }
@@ -143,14 +151,19 @@ router.get('/me', authenticateToken, async (req, res) => {
 // @access  Private
 router.post('/refresh', authenticateToken, async (req, res) => {
   try {
-    const token = generateToken(req.user._id);
+    const token = generateToken(
+      req.user.id || req.user._id,
+      req.user.email || req.user.username,
+      req.user.role
+    );
     res.json({
       message: 'Token refreshed',
       token,
       user: {
-        id: req.user._id,
+        id: req.user.id || req.user._id,
         username: req.user.username,
         email: req.user.email,
+        name: req.user.name,
         role: req.user.role
       }
     });
