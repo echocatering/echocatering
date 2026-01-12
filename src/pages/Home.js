@@ -378,10 +378,10 @@ const Home = forwardRef((props, ref) => {
           {/* Logo */}
           <div 
             style={{
-              width: '70px',
-              height: '140px',
+              width: '120px',
+              height: '70px',
               cursor: 'pointer',
-              marginLeft: '-5px'
+              paddingLeft: '8px'
             }}
             onClick={() => {
               const homeSection = document.getElementById('mobile-home-section');

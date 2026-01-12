@@ -51,20 +51,50 @@ function computeStageLayout(outerWidth, outerHeight) {
  */
 function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'web') {
   const ref = useRef(null);
-  const [size, setSize] = useState(() => ({
-    width: outerWidthOverride || (typeof window !== 'undefined' ? window.innerWidth : 1280),
-    height: outerHeightOverride || (typeof window !== 'undefined' ? window.innerHeight : 720),
-  }));
+  
+  // Helper to get actual screen/viewport size (not affected by browser UI)
+  const getScreenSize = () => {
+    if (typeof window === 'undefined') return { width: 1280, height: 720 };
+    
+    // Use visual viewport if available (handles mobile browser UI changes)
+    if (window.visualViewport) {
+      return {
+        width: window.visualViewport.width,
+        height: window.visualViewport.height,
+      };
+    }
+    
+    // Fallback to screen dimensions (actual device screen, not browser window)
+    return {
+      width: window.screen.width,
+      height: window.screen.height,
+    };
+  };
+  
+  const [size, setSize] = useState(() => {
+    if (outerWidthOverride && outerHeightOverride) {
+      return { width: outerWidthOverride, height: outerHeightOverride };
+    }
+    return getScreenSize();
+  });
 
   useEffect(() => {
     if (outerWidthOverride && outerHeightOverride) return;
     
-    // In web mode without overrides, always use viewport dimensions
+    // In web mode without overrides, use screen/viewport dimensions that don't change with browser UI
     if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride) {
       const handle = () => {
-        setSize({ width: window.innerWidth, height: window.innerHeight });
+        setSize(getScreenSize());
       };
       handle(); // Set initial size
+      
+      // Use visualViewport events if available (better for mobile)
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handle);
+        return () => window.visualViewport?.removeEventListener('resize', handle);
+      }
+      
+      // Fallback to window resize
       window.addEventListener('resize', handle);
       return () => window.removeEventListener('resize', handle);
     }
