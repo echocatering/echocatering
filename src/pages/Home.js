@@ -513,7 +513,13 @@ const Home = forwardRef((props, ref) => {
                     const viewportHeight = window.innerHeight;
                     const sectionHeight = rect.height;
                     const targetScroll = scrollTop + rect.top + sectionHeight - viewportHeight;
-                    window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                    
+                    // Force mobile browser UI to hide: scroll slightly more first, then correct
+                    // This triggers the address bar to hide on mobile browsers
+                    window.scrollBy({ top: 1, behavior: 'auto' });
+                    setTimeout(() => {
+                      window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                    }, 10);
                   }
                 }}
                 style={{
