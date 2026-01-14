@@ -1951,7 +1951,35 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
         </div>
         )}
         {hideActions && (
-          <div className="recipe-actions" style={{ position: 'relative', backgroundColor }}>
+          <div className="recipe-actions" style={{ position: 'relative', backgroundColor, display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="recipes-primary-btn"
+              disabled={saving}
+              onClick={() => onSave && onSave()}
+              style={{ 
+                position: 'relative',
+                backgroundColor: '#d0d0d0',
+                color: '#000',
+                border: '2px solid #666666',
+                borderColor: '#666666',
+                borderRadius: '0'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = '#b8b8b8';
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = '#d0d0d0';
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
+            >
+              {saving ? 'Saving…' : 'SAVE RECIPE'}
+            </button>
             <button
               type="button"
               className="recipes-primary-btn"

@@ -3446,8 +3446,10 @@ const MenuManager = () => {
               type={getRecipeType(editingCocktail.category)}
               saving={savingRecipe}
               onSave={async () => {
-                // Recipe will be saved when cocktail is saved
-                // This is just a placeholder to satisfy RecipeBuilder's onSave prop
+                // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
+                if (editingCocktail) {
+                  handleSave(editingCocktail);
+                }
               }}
               onDelete={null}
               disableTitleEdit={false} // Allow typing; MM name stays synced via onChange
@@ -3476,7 +3478,10 @@ const MenuManager = () => {
               type={getRecipeType(editingCocktail.category)}
               saving={savingRecipe}
               onSave={async () => {
-                // Recipe will be saved when cocktail is saved
+                // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
+                if (editingCocktail) {
+                  handleSave(editingCocktail);
+                }
               }}
               onDelete={null}
               disableTitleEdit={false} // Allow title editing for PRE-MIX

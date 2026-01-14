@@ -1,8 +1,12 @@
 const jwt = require('jsonwebtoken');
 const { findUserById } = require('../utils/fileAuth');
 
-// Authentication is enabled - set to true to disable (not recommended for production)
-const DISABLE_AUTH = false;
+// Check if running locally (development on port 5002)
+// PORT defaults to 5002 in development (see server/index.js)
+const isLocalDev = process.env.NODE_ENV !== 'production' && (process.env.PORT === '5002' || process.env.PORT === undefined);
+
+// Authentication is enabled by default, but bypassed for local development
+const DISABLE_AUTH = isLocalDev;
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -15,7 +19,9 @@ const authenticateToken = async (req, res, next) => {
       role: 'admin',
       _id: 'bypass-user'
     };
-    console.log('⚠️  AUTHENTICATION BYPASSED - This is temporary!');
+    if (isLocalDev) {
+      console.log('🔓 Authentication bypassed for local development (port 5002)');
+    }
     return next();
   }
 

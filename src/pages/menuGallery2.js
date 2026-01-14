@@ -115,17 +115,47 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
  * Video background that fills the outer container (viewport).
  */
 function VideoBackground({ videoSrc }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // iOS requires programmatic play() call even with autoplay
+    const playVideo = () => {
+      if (video.paused) {
+        video.play().catch(() => {
+          // Silently handle play() errors (common on iOS)
+        });
+      }
+    };
+
+    // Try to play when video can play
+    video.addEventListener('canplay', playVideo);
+    video.addEventListener('loadeddata', playVideo);
+
+    // Initial attempt
+    playVideo();
+
+    return () => {
+      video.removeEventListener('canplay', playVideo);
+      video.removeEventListener('loadeddata', playVideo);
+    };
+  }, [videoSrc]);
+
   if (!isCloudinaryUrl(videoSrc)) {
     return null;
   }
 
   return (
     <video
+      ref={videoRef}
       key={videoSrc}
       autoPlay
       muted
       loop
       playsInline
+      preload="auto"
       crossOrigin="anonymous"
       style={{
         position: 'absolute',

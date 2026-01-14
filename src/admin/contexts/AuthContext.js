@@ -2,8 +2,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-// Authentication is enabled - set to true to disable (not recommended for production)
-const DISABLE_AUTH = false;
+// Check if running locally (development mode)
+// In development, React sets NODE_ENV to 'development' when running 'npm start'
+const isLocalDev = process.env.NODE_ENV !== 'production';
+
+// Authentication is enabled by default, but bypassed for local development
+const DISABLE_AUTH = isLocalDev;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -30,9 +34,9 @@ export const AuthProvider = ({ children }) => {
   // Check if user is authenticated on mount
   useEffect(() => {
     const checkAuth = async () => {
-      // TEMPORARY: Bypass authentication if disabled
+      // Bypass authentication for local development
       if (DISABLE_AUTH) {
-        console.log('⚠️  AUTHENTICATION BYPASSED - This is temporary!');
+        console.log('🔓 Authentication bypassed for local development');
         setUser({
           id: 'bypass-user',
           email: 'bypass@example.com',
