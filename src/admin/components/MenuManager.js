@@ -2357,6 +2357,24 @@ const MenuManager = () => {
         </div>
       )}
       <div className="menu-manager bg-white min-h-screen px-6 pb-6 w-full" style={{ paddingTop: 0, position: 'relative' }}>
+        {/* Category Navigation Header - Always visible, pinned to top, aligned right */}
+        <header style={{ position: 'absolute', top: '60px', right: 0, zIndex: 101, display: 'flex', justifyContent: 'flex-end', paddingRight: '100px' }}>
+          <div className="flex gap-4">
+            {menuCategories.map((category) => (
+              <button
+                key={category.key}
+                onClick={() => setSelectedCategory(category.key)}
+                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                  selectedCategory === category.key
+                    ? 'bg-gray-800 text-white border-gray-800'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+        </header>
         {filteredCocktails.length > 0 || editingCocktail ? (
           normalizeCategoryKey(selectedCategory) !== 'premix' ? (
             /* Viewer container wrapper with vignette */
@@ -2388,24 +2406,6 @@ const MenuManager = () => {
                   fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
                 }}
               >
-              {/* Category Navigation - On top of viewer, pinned to top, aligned right */}
-              <div style={{ position: 'absolute', top: '60px', right: 0, zIndex: 101, display: 'flex', justifyContent: 'flex-end', paddingRight: '100px' }}>
-                <div className="flex gap-4">
-                  {menuCategories.map((category) => (
-                    <button
-                      key={category.key}
-                      onClick={() => setSelectedCategory(category.key)}
-                      className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
-                        selectedCategory === category.key
-                          ? 'bg-gray-800 text-white border-gray-800'
-                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {category.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               {/* Video background fills entire viewer container */}
               {(currentCocktail.videoFile || currentCocktail.itemNumber || currentCocktail.videoUrl || currentCocktail.cloudinaryVideoUrl || videoPreviewUrl) ? (
                 <VideoBackground
@@ -3413,14 +3413,71 @@ const MenuManager = () => {
                     </div>
           )
         ) : (
-          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-200" style={{ paddingTop: '460px' }}>
             <p className="text-gray-500 text-lg mb-4">No items found in {menuCategories.find(c => c.key === selectedCategory)?.label}.</p>
             <button 
               onClick={handleNewItem}
-              className="btn btn-primary"
               disabled={selectedCategory === 'archived'}
+              className="menu-manager-action-button"
+              style={{ 
+                background: 'transparent',
+                border: '2px solid #666666',
+                color: '#666666',
+                padding: '10px 16px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                cursor: selectedCategory !== 'archived' ? 'pointer' : 'not-allowed',
+                textTransform: 'uppercase',
+                transition: 'all 0.2s ease',
+                opacity: selectedCategory !== 'archived' ? 1 : 0.5,
+                outline: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none',
+                margin: 0,
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#000', 'important');
+                  e.currentTarget.style.borderColor = '#000';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#666666', 'important');
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
+              onMouseDown={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#000', 'important');
+                  e.currentTarget.style.borderColor = '#000';
+                }
+              }}
+              onMouseUp={(e) => {
+                if (!e.currentTarget.disabled && e.currentTarget.matches(':hover')) {
+                  e.currentTarget.style.setProperty('color', '#000', 'important');
+                  e.currentTarget.style.borderColor = '#000';
+                } else if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#666666', 'important');
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
+              onFocus={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#666666', 'important');
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
+              onBlur={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.setProperty('color', '#666666', 'important');
+                  e.currentTarget.style.borderColor = '#666666';
+                }
+              }}
             >
-              Add first item to {menuCategories.find(c => c.key === selectedCategory)?.label}
+              ADD FIRST ITEM
             </button>
           </div>
         )}

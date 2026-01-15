@@ -114,7 +114,7 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
 /**
  * Video background that fills the outer container (viewport).
  */
-function VideoBackground({ videoSrc }) {
+function VideoBackground({ videoSrc, isVertical = false }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -167,6 +167,7 @@ function VideoBackground({ videoSrc }) {
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0,
+        transform: isVertical ? 'scale(1.32)' : 'scale(1)',
       }}
     >
       <source src={videoSrc} type="video/mp4" />
@@ -1224,7 +1225,6 @@ function EchoCocktailSubpage2({
         width: '100%',
             paddingLeft: layout?.inner?.width ? `${(layout.inner.width / 24).toFixed(1)}px` : '0.75rem',
             paddingRight: layout?.inner?.width ? `${(layout.inner.width / 12).toFixed(1)}px` : '0.75rem',
-            paddingTop: layout?.inner?.height ? `${(layout.inner.height / 24).toFixed(1)}px` : '0.75rem',
             boxSizing: 'border-box',
       }}
     >
@@ -1679,7 +1679,7 @@ function EchoCocktailSubpage2({
             background: `radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.15) 100%)`,
             filter: 'blur(20px)',
             pointerEvents: 'none',
-            zIndex: 15,
+            zIndex: 5,
           }}
         />
 
@@ -1956,9 +1956,10 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + layout.inner.width / 6}px`,
-            top: showConceptInfo ? `${innerTop + layout.inner.height / 10}px` : `${innerTop + layout.inner.height / 5}px`,
+            top: showConceptInfo ? `${innerTop + layout.inner.height / 20}px` : `${innerTop + layout.inner.height / 5}px`,
             width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
             boxSizing: 'border-box',
+            zIndex: showConceptInfo ? 16 : undefined,
           }}
         >
           {showConceptInfo ? renderMap() : renderTitleBlock()}
@@ -2005,7 +2006,7 @@ function EchoCocktailSubpage2({
         </div>
 
         {/* Left menu button - centered between screen left and arrow left */}
-            <button
+        <button
           onClick={() => {
             const newSidebarOpen = !sidebarOpen;
             setSidebarOpen?.(newSidebarOpen);
@@ -2070,7 +2071,6 @@ function EchoCocktailSubpage2({
           onMouseEnter={(e) => {
             const img = e.currentTarget.querySelector('img');
             if (img) {
-              // #222 (rgb(34,34,34)) - darker, almost black
               img.style.filter = 'brightness(0) saturate(100%)';
               img.style.transform = 'scale(1.1)';
             }
@@ -2078,49 +2078,53 @@ function EchoCocktailSubpage2({
           onMouseLeave={(e) => {
             const img = e.currentTarget.querySelector('img');
             if (img) {
-              // #888 (rgb(136,136,136)) - medium gray
               img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
               img.style.transform = 'scale(1)';
             }
           }}
-              style={{
-                position: 'absolute',
+          style={{
+            position: 'absolute',
             left: `${innerLeft + layout.inner.width / 12 + (layout.inner.width - 256) / 4 - 28}px`,
-            bottom: '2px',
-            width: 56,
-            height: 56,
-                borderRadius: 8,
-                background: 'transparent',
+            bottom: '12px',
+            width: '56px',
+            height: '56px',
+            borderRadius: 8,
+            background: 'transparent',
             border: 'none',
-                cursor: 'pointer',
+            padding: 0,
+            margin: 0,
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.2s ease',
             zIndex: 9999,
+            flexShrink: 0,
+            minWidth: '56px',
+            minHeight: '56px',
           }}
         >
           <img 
             src="/assets/icons/originals.svg" 
             alt="Menu" 
             style={{ 
-              width: '50%', 
-              height: '50%', 
+              width: '40%', 
+              height: '40%', 
               objectFit: 'contain',
-              filter: 'brightness(0) saturate(100%) invert(47%)', // #888 gray
+              filter: 'brightness(0) saturate(100%) invert(47%)',
               opacity: 1,
               transition: 'filter 0.2s ease, transform 0.2s ease',
-              marginTop: '-2px',
+              flexShrink: 0,
             }}
           />
-            </button>
+        </button>
 
         {/* Arrows */}
         <div
           style={{
             position: 'absolute',
             left: `${innerLeft + (layout.inner.width - 256) / 2}px`,
-            bottom: '0',
+            bottom: '10px',
             width: '256px',
             display: 'flex',
             alignItems: 'center',
@@ -2135,7 +2139,7 @@ function EchoCocktailSubpage2({
         </div>
 
         {/* Right menu button - centered between arrow right and screen right */}
-          <button
+        <button
           onMouseEnter={(e) => {
             e.currentTarget.style.color = '#222';
             const svg = e.currentTarget.querySelector('svg');
@@ -2146,35 +2150,38 @@ function EchoCocktailSubpage2({
             const svg = e.currentTarget.querySelector('svg');
             if (svg) svg.style.transform = 'scale(1)';
           }}
-            style={{
+          style={{
             position: 'absolute',
             left: `${innerLeft + (layout.inner.width - 256) / 2 + 256 + (layout.inner.width - 256) / 4 - 28 - layout.inner.width / 12}px`,
-            bottom: '2px',
-            width: 56,
-            height: 56,
-              borderRadius: 8,
-              background: 'transparent',
+            bottom: '12px',
+            width: '56px',
+            height: '56px',
+            borderRadius: 8,
+            background: 'transparent',
             border: 'none',
-              cursor: 'pointer',
+            padding: 0,
+            margin: 0,
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#888',
             transition: 'all 0.2s ease',
             zIndex: 9999,
+            flexShrink: 0,
+            minWidth: '56px',
+            minHeight: '56px',
           }}
         >
           <svg 
-            width="24" 
-            height="24" 
             viewBox="0 0 24 24" 
             fill="none" 
             xmlns="http://www.w3.org/2000/svg" 
-            style={{ display: 'block', transition: 'transform 0.2s ease', marginTop: '4px' }}
+            style={{ display: 'block', width: '40%', height: '40%', transition: 'transform 0.2s ease', flexShrink: 0 }}
           >
             <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          </button>
+        </button>
 
         {/* Sidebar */}
         <div
@@ -2298,7 +2305,7 @@ function EchoCocktailSubpage2({
     >
       {/* Video background fills entire outer container/viewport */}
       {isCloudinaryUrl(videoSrc) ? (
-        <VideoBackground videoSrc={videoSrc} />
+        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} />
       ) : (
         <div style={{
           position: 'absolute',

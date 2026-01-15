@@ -498,9 +498,16 @@ const InventoryManager = () => {
 
   const activeColumns = useMemo(() => {
     if (!sheetPayload?.columns) return [];
-    const columns = showHiddenColumns
-      ? sheetPayload.columns
-      : sheetPayload.columns.filter((column) => !column.hidden);
+    // Columns to hide/show with the "Show hidden columns" button
+    const hideableColumnKeys = ['itemNumber', 'ingredients', 'concept', 'page'];
+    let columns = sheetPayload.columns;
+    
+    // Filter out hideable columns when showHiddenColumns is false
+    if (!showHiddenColumns) {
+      columns = columns.filter((column) => !hideableColumnKeys.includes(column.key));
+    }
+    
+    // Apply dryStock specific transformation
     if (sheetPayload.sheetKey !== 'dryStock') return columns;
     return columns.map((column) =>
       column.key === 'gramCost' ? { ...column, label: '$ / oz' } : column
@@ -1335,10 +1342,9 @@ const commitBeerNumUnitsValue = (rowId) => {
                         type="button"
                         onClick={() => setShowHiddenColumns((v) => !v)}
                         className="sort-btn"
-                        style={{ minWidth: '120px' }}
-                        title="Toggle hidden columns"
+                        title={showHiddenColumns ? 'Hide hidden columns' : 'Show hidden columns'}
                       >
-                        {showHiddenColumns ? 'Hide hidden columns' : 'Show hidden columns'}
+                        •••
                       </button>
                     </div>
                   ) : null}
@@ -1731,143 +1737,39 @@ const commitBeerNumUnitsValue = (rowId) => {
                                       />
                                     </div>
                                   ) : isRegionColumn ? (
-                                    <div className="region-dropdown-container inventory-select-wrapper" style={{ position: 'relative' }}>
-                                      <div
-                                        onClick={(e) => openRegionSelector(row._id, e)}
-                                        className="inventory-country-input text-sm cursor-pointer"
-                                        style={{
-                                          minHeight: '24px',
-                                          padding: '4px 8px',
-                                          paddingRight: '1.5rem',
-                                          border: '1px solid transparent',
-                                          borderRadius: '0',
-                                          backgroundColor: 'transparent',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                                          whiteSpace: 'nowrap'
-                                        }}
-                                        title={selectedRegions[row._id] && selectedRegions[row._id].length > 0 ? selectedRegions[row._id].join(', ') : ''}
-                                      >
-                                        {selectedRegions[row._id] && selectedRegions[row._id].length > 0 ? (
-                                          <>
-                                            {selectedRegions[row._id].slice(0, 3).join(', ')}
-                                            {selectedRegions[row._id].length > 3 && '...'}
-                                          </>
-                                        ) : null}
-                                      </div>
-                                      <span
-                                        style={{
-                                          position: 'absolute',
-                                          right: '0.5rem',
-                                          top: '50%',
-                                          transform: 'translateY(-50%)',
-                                          pointerEvents: 'none',
-                                          color: '#555',
-                                          fontSize: '0.75rem'
-                                        }}
-                                      >
-                                        ▾
-                                      </span>
-                                      {openRegionDropdown === row._id && (
-                                        <div
-                                          className="region-dropdown-container"
-                                          style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            zIndex: 1000,
-                                            backgroundColor: '#fff',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                            padding: '8px',
-                                            minWidth: '250px',
-                                            maxWidth: '350px',
-                                            marginTop: '4px'
-                                          }}
-                                          onMouseDown={(e) => e.preventDefault()}
-                                        >
+                                    <div className="inventory-size-input text-sm">
+                                      {(() => {
+                                        // Get region value from row (could be string or array)
+                                        const valuesMap = row.values instanceof Map 
+                                          ? row.values 
+                                          : new Map(Object.entries(row.values || {}));
+                                        let regionValue = valuesMap.get('region') || valuesMap.get('regions');
+                                        
+                                        // Format as comma-separated country codes
+                                        let regionDisplay = '';
+                                        if (regionValue) {
+                                          if (Array.isArray(regionValue)) {
+                                            regionDisplay = regionValue.map(r => String(r).trim().toUpperCase()).filter(Boolean).join(', ');
+                                          } else {
+                                            // Handle comma-separated string
+                                            regionDisplay = String(regionValue)
+                                              .split(',')
+                                              .map(r => r.trim().toUpperCase())
+                                              .filter(Boolean)
+                                              .join(', ');
+                                          }
+                                        }
+                                        
+                                        return (
                                           <input
                                             type="text"
-                                            value={regionSearchQuery[row._id] || ''}
-                                            onChange={(e) => setRegionSearchQuery(prev => ({ ...prev, [row._id]: e.target.value }))}
-                                            placeholder="Search countries..."
-                                            style={{
-                                              width: '100%',
-                                              padding: '6px 8px',
-                                              marginBottom: '8px',
-                                              border: '1px solid #d1d5db',
-                                              borderRadius: '4px',
-                                              fontSize: '12px'
-                                            }}
-                                            autoFocus
+                                            value={regionDisplay}
+                                            readOnly
+                                            className="size-input-field"
+                                            style={{ textAlign: 'left', cursor: 'default' }}
                                           />
-                                          <div
-                                            style={{
-                                              maxHeight: '200px',
-                                              overflowY: 'auto',
-                                              fontSize: '12px'
-                                            }}
-                                          >
-                                            {countries
-                                              .filter(country => {
-                                                const query = (regionSearchQuery[row._id] || '').toLowerCase();
-                                                if (!query) return true;
-                                                return country.name?.toLowerCase().includes(query) ||
-                                                       country.code?.toLowerCase().includes(query);
-                                              })
-                                              .map(country => {
-                                                const isSelected = selectedRegions[row._id]?.includes(country.code) || false;
-                                                return (
-                                                  <label
-                                                    key={country.code}
-                                                    style={{
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      gap: '8px',
-                                                      padding: '4px 2px',
-                                                      cursor: 'pointer',
-                                                      color: isSelected ? '#111' : '#555'
-                                                    }}
-                                                  >
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={isSelected}
-                                                      onChange={() => toggleRegion(row._id, country.code)}
-                                                    />
-                                                    <span>{country.name} ({country.code})</span>
-                                                  </label>
-                                                );
-                                              })}
-                                            {countries.filter(country => {
-                                              const query = (regionSearchQuery[row._id] || '').toLowerCase();
-                                              if (!query) return true;
-                                              return country.name?.toLowerCase().includes(query) ||
-                                                     country.code?.toLowerCase().includes(query);
-                                            }).length === 0 && (
-                                              <div style={{ color: '#888', padding: '8px' }}>No countries found</div>
-                                            )}
-                                          </div>
-                                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                                            <button
-                                              onClick={() => commitRegionValue(row._id)}
-                                              style={{
-                                                width: '100%',
-                                                padding: '6px',
-                                                backgroundColor: '#2563eb',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                fontSize: '12px'
-                                              }}
-                                            >
-                                              Done ({selectedRegions[row._id]?.length || 0} selected)
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
+                                        );
+                                      })()}
                                     </div>
                                   ) : isSpiritsSizeColumn ? (
                                     <div className="inventory-size-input text-sm">
@@ -1961,16 +1863,9 @@ const commitBeerNumUnitsValue = (rowId) => {
                                           pendingRowUpdates[row._id]?.itemNumber ??
                                           (cellValue === null || cellValue === undefined ? '' : cellValue)
                                         }
-                                        onChange={(e) => handleItemNumberChange(row._id, e.target.value)}
-                                        onBlur={() => commitItemNumberValue(row._id)}
-                                        onKeyDown={(e) => {
-                                          // Prevent decimal point, minus, plus, and letter keys
-                                          if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
-                                            e.preventDefault();
-                                          }
-                                        }}
+                                        readOnly
                                         className="size-input-field"
-                                        style={{ textAlign: 'right' }}
+                                        style={{ textAlign: 'right', cursor: 'default' }}
                                       />
                                     </div>
                                   ) : isDropdownColumn ? (
