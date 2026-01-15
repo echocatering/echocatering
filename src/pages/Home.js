@@ -1029,7 +1029,7 @@ const Home = forwardRef((props, ref) => {
 
         {/* SECTION 2: MENU GALLERY - Cocktail Gallery */}
         <div id="mobile-menu-section" ref={galleryRef} style={{ 
-          height: 'calc(100vh - 80px)',
+          height: '100vh',
           width: '100vw',
           background: '#fff',
           padding: '0',
