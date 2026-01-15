@@ -1206,27 +1206,15 @@ function EchoCocktailSubpage2({
             .split(',')
             .map((item) => item.trim())
             .filter(Boolean)
-            .map((item, idx, arr) => (
-              <React.Fragment key={`${item}-${idx}`}>
-                <span
-                  style={{
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item}
-                </span>
-                {idx < arr.length - 1 && (
-                  <span
-                    style={{
-                      whiteSpace: 'nowrap',
-                      display: 'inline-block',
-                    }}
-                    className="ingredient-separator"
-                  >
-                    {' -'}
-                  </span>
-                )}
-              </React.Fragment>
+            .map((item, idx) => (
+              <span
+                key={`${item}-${idx}`}
+                style={{
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {idx === 0 ? item : ` - ${item}`}
+              </span>
             ))}
         </div>
       </div>
@@ -1360,8 +1348,8 @@ function EchoCocktailSubpage2({
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        paddingLeft: '18px',
-        paddingRight: '42px',
+        paddingLeft: 'calc(100vh / 50)',
+        paddingRight: 'calc(100vh / 20)',
         boxSizing: 'border-box',
       }}
     >
@@ -2110,7 +2098,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + layout.inner.width / 6}px`,
-            top: showConceptInfo ? '90px' : '140px',
+            top: showConceptInfo ? '80px' : '140px',
             width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
             boxSizing: 'border-box',
             zIndex: 16,
