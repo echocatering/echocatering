@@ -13,6 +13,15 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
    return isIOSDevice || isIPadOS;
  };
 
+ const isProbablyMobileDevice = () => {
+   if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+   const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile;
+   if (typeof uaDataMobile === 'boolean') return uaDataMobile;
+   const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+   const touchPoints = Number(navigator.maxTouchPoints || 0) > 1;
+   return coarse || touchPoints;
+ };
+
 /**
  * Computes sizes and positions for OuterContainer, InnerContainer, and Video.
  * Maintains fixed aspect ratios and inverse fit rules for the 1:1 video.
@@ -62,14 +71,19 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
   const ref = useRef(null);
   // Store the initial stable size in a ref so it never changes
   const stableSizeRef = useRef(null);
+  const maxViewportRef = useRef({ width: null, height: null });
   
   const [size, setSize] = useState(() => {
     if (outerWidthOverride && outerHeightOverride) {
       return { width: outerWidthOverride, height: outerHeightOverride };
     }
+
+    const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const initialHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const isVerticalMobile = isProbablyMobileDevice() && initialHeight > initialWidth;
     
     // In web mode, capture initial viewport size once and never update
-    if (viewMode === 'web' && typeof window !== 'undefined') {
+    if (viewMode === 'web' && typeof window !== 'undefined' && !isVerticalMobile) {
       // Capture initial size (lock it in - won't respond to browser UI changes)
       const initialSize = {
         width: window.innerWidth,
@@ -79,6 +93,10 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       return initialSize;
     }
     
+    if (typeof window !== 'undefined') {
+      return { width: window.innerWidth, height: window.innerHeight };
+    }
+    
     return { width: 1280, height: 720 };
   });
 
@@ -86,19 +104,62 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
     if (outerWidthOverride && outerHeightOverride) return;
     
     // In web mode without overrides, use the stable size from ref (never update)
-    if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride) {
+    const isVerticalMobile =
+      typeof window !== 'undefined' &&
+      isProbablyMobileDevice() &&
+      window.innerHeight > window.innerWidth;
+
+    if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride && !isVerticalMobile) {
       // Size is already set in useState initializer
       // Don't listen to resize events - this prevents resizing when browser UI shows/hides
       return;
     }
     
+    const handleViewport = () => {
+      const vv = window.visualViewport;
+      const width = vv?.width ?? window.innerWidth;
+      const height = vv?.height ?? window.innerHeight;
+
+      const shouldUseMaxViewport = isProbablyMobileDevice() && height > width;
+
+      if (shouldUseMaxViewport) {
+        const prev = maxViewportRef.current;
+
+        // Reset max tracking when width changes materially (e.g., rotation)
+        const shouldReset =
+          typeof prev.width === 'number' &&
+          Math.abs(width - prev.width) > 50;
+
+        const nextMaxHeight = shouldReset
+          ? height
+          : Math.max(typeof prev.height === 'number' ? prev.height : 0, height);
+
+        maxViewportRef.current = { width, height: nextMaxHeight };
+        setSize({ width, height: nextMaxHeight });
+        return;
+      }
+
+      setSize({ width, height });
+    };
+
+    // On mobile devices, visualViewport is the most reliable signal for address bar / browser UI changes.
+    // Always attach these listeners so we don't get gaps when the browser chrome expands/collapses.
+    const shouldUseVisualViewport = isProbablyMobileDevice() && !!window.visualViewport && window.innerHeight > window.innerWidth;
+    if (shouldUseVisualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewport);
+      window.visualViewport.addEventListener('scroll', handleViewport);
+    }
+
     const node = ref.current;
     if (!node || !window.ResizeObserver) {
-      const handle = () => {
-        setSize({ width: window.innerWidth, height: window.innerHeight });
+      window.addEventListener('resize', handleViewport);
+      return () => {
+        window.removeEventListener('resize', handleViewport);
+        if (shouldUseVisualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewport);
+          window.visualViewport.removeEventListener('scroll', handleViewport);
+        }
       };
-      window.addEventListener('resize', handle);
-      return () => window.removeEventListener('resize', handle);
     }
 
     const observer = new ResizeObserver((entries) => {
@@ -108,7 +169,13 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       }
     });
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (shouldUseVisualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewport);
+        window.visualViewport.removeEventListener('scroll', handleViewport);
+      }
+    };
   }, [outerWidthOverride, outerHeightOverride, viewMode]);
 
   useEffect(() => {
