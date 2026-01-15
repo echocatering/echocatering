@@ -1250,8 +1250,8 @@ function EchoCocktailSubpage2({
         opacity: mapVisible ? 1 : 0,
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100%',
-            paddingLeft: layout?.inner?.width ? `${(layout.inner.width / 24).toFixed(1)}px` : '0.75rem',
-            paddingRight: layout?.inner?.width ? `${(layout.inner.width / 12).toFixed(1)}px` : '0.75rem',
+            paddingLeft: 0,
+            paddingRight: '12px',
             boxSizing: 'border-box',
       }}
     >
@@ -2015,12 +2015,12 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            bottom: '56px',
+            top: `calc(100% - ${(layout.inner.height * 20) / 64}px)`,
             height: '200px',
             width: `${layout.inner.width}px`,
             paddingLeft: `${layout.inner.width / 12}px`,
             paddingRight: `${layout.inner.width / 12}px`,
-            paddingBottom: '12px',
+            paddingBottom: 0,
             boxSizing: 'border-box',
             overflow: 'hidden',
           }}
@@ -2113,7 +2113,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft + layout.inner.width / 12 + (layout.inner.width - 256) / 4 - 28}px`,
-            bottom: '12px',
+            bottom: '28px',
             width: '56px',
             height: '56px',
             borderRadius: 8,
@@ -2152,7 +2152,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft + (layout.inner.width - 256) / 2}px`,
-            bottom: '10px',
+            bottom: '26px',
             width: '256px',
             display: 'flex',
             alignItems: 'center',
@@ -2181,7 +2181,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft + (layout.inner.width - 256) / 2 + 256 + (layout.inner.width - 256) / 4 - 28 - layout.inner.width / 12}px`,
-            bottom: '12px',
+            bottom: '28px',
             width: '56px',
             height: '56px',
             borderRadius: 8,
