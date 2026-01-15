@@ -64,12 +64,12 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
       if (isMobile) {
         // Calculate grid size to always fit exactly 5 squares across
         const screenWidth = window.innerWidth;
-        const availableWidth = screenWidth - 32; // Account for padding (16px on each side)
+        const availableWidth = screenWidth;
         
         // Calculate grid size: (availableWidth - 4 gaps) / 5 squares
         // This ensures exactly 5 squares fit across with equal gaps
-        const newGridSize = Math.floor((availableWidth - 16) / 5); // 16px total for 4 gaps
         const newGap = 4; // Fixed 4px gap for consistent spacing
+        const newGridSize = Math.floor((availableWidth - (newGap * 4)) / 5);
         
         setMobileGridSize(newGridSize);
         setMobileGap(newGap);
@@ -109,11 +109,11 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     
     // Always calculate to fit exactly 5 squares across
     const screenWidth = window.innerWidth;
-    const availableWidth = screenWidth - 32; // Account for padding (16px on each side)
+    const availableWidth = screenWidth;
     
     // Calculate grid size: (availableWidth - 4 gaps) / 5 squares
-    const gridSize = Math.floor((availableWidth - 16) / 5); // 16px total for 4 gaps
     const gap = 4; // Fixed 4px gap for consistent spacing
+    const gridSize = Math.floor((availableWidth - (gap * 4)) / 5);
     
     return { gridSize, gap };
   }, [isMobile]);
@@ -230,213 +230,186 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     // Mobile-specific 5x48 grid layout with 12 alternating sequences
     // Always maintains exactly 5 columns across, scaling with viewport width
     const createMobileGrid = () => {
-      const mobileGridItems = [];
-      const totalSequences = 12;
-      
-      for (let sequenceIndex = 0; sequenceIndex < totalSequences; sequenceIndex++) {
-        // Alternate between two sequence patterns
-        const isEvenSequence = sequenceIndex % 2 === 0;
-        
-        if (isEvenSequence) {
-          // Sequence 0: top- 3x2, 2x2 | bottom- 5x2
-          const sequence1Items = [
-            // TOP SEGMENT (rows 1-2)
-            { size: '3x2', rowSpan: 2, colSpan: 3, gridColumn: '1 / span 3', gridRow: `${sequenceIndex * 4 + 1} / span 2` },
-            { size: '2x2', rowSpan: 2, colSpan: 2, gridColumn: '4 / span 2', gridRow: `${sequenceIndex * 4 + 1} / span 2` },
-            // BOTTOM SEGMENT (rows 3-4)
-            { size: '5x2', rowSpan: 2, colSpan: 5, gridColumn: '1 / span 5', gridRow: `${sequenceIndex * 4 + 3} / span 2` }
-          ];
-          
-          // Fill remaining grid cells in this sequence to make it square
-          // Each sequence occupies exactly 4 rows × 5 columns = 20 cells
-          // We have 3 photo items, so we need 17 placeholder cells to fill the sequence
-          // This ensures the 5-column structure is always maintained
-          for (let row = sequenceIndex * 4 + 1; row <= sequenceIndex * 4 + 4; row++) {
-            for (let col = 1; col <= 5; col++) {
-              // Check if this cell is already occupied by an item
-              const isOccupied = sequence1Items.some(item => {
-                const itemStartCol = parseInt(item.gridColumn.split(' ')[0]);
-                const itemEndCol = itemStartCol + item.colSpan - 1;
-                const itemStartRow = parseInt(item.gridRow.split(' ')[0]);
-                const itemEndRow = itemStartRow + item.rowSpan - 1;
-                return col >= itemStartCol && col <= itemEndCol && row >= itemStartRow && row <= itemEndRow;
-              });
-              
-              if (!isOccupied) {
-                // Add a placeholder item to fill this cell
-                const placeholderImage = images[Math.floor(Math.random() * images.length)];
-                const placeholderSrc = placeholderImage?.src || placeholderImage?.imagePath || (typeof placeholderImage === 'string' ? placeholderImage : `/gallery/${placeholderImage?.filename}`) || '';
-                
-                mobileGridItems.push({
-                  size: '1x1',
-                  rowSpan: 1,
-                  colSpan: 1,
-                  gridColumn: `${col} / span 1`,
-                  gridRow: `${row} / span 1`,
-                  imageSrc: placeholderSrc,
-                  sequenceIndex: sequenceIndex,
-                  itemIndex: -1, // -1 indicates placeholder
-                  uniqueKey: `mobile-seq1-placeholder-${sequenceIndex}-${row}-${col}`,
-                  isPlaceholder: true
-                });
-              }
-            }
-          }
-          
-          sequence1Items.forEach((item, itemIndex) => {
-            const actualImageIndex = (sequenceIndex * 3 + itemIndex) % images.length;
-            const image = images[actualImageIndex];
-            // Ensure we have a valid image src - prioritize Cloudinary URLs
-            // Priority 1: cloudinaryUrl directly
-            // Priority 2: src (which should already prefer Cloudinary from galleryUtils)
-            // Priority 3: imagePath virtual (which should prefer Cloudinary)
-            // Priority 4: Fallback to local path
-            let imageSrc = '';
-            if (isCloudinaryUrl(image?.cloudinaryUrl)) {
-              imageSrc = image.cloudinaryUrl;
-            } else if (isCloudinaryUrl(image?.src)) {
-              imageSrc = image.src;
-            } else if (isCloudinaryUrl(image?.imagePath)) {
-              imageSrc = image.imagePath;
-            } else if (isCloudinaryUrl(image)) {
-              imageSrc = image;
-            }
-            
-            mobileGridItems.push({
-              ...item,
-              imageSrc: imageSrc,
-              sequenceIndex: sequenceIndex,
-              itemIndex: itemIndex,
-              uniqueKey: `mobile-seq1-${sequenceIndex}-${itemIndex}`
-            });
-          });
+      const optimalSize = getOptimalMobileGridSize();
+      const totalSequences = Math.max(1, Math.ceil(images.length / 3));
+      let imageCursor = 0;
+
+      const getImageSrcAtIndex = (index) => {
+        const image = images[index];
+        let imageSrc = '';
+        if (isCloudinaryUrl(image?.cloudinaryUrl)) {
+          imageSrc = image.cloudinaryUrl;
+        } else if (isCloudinaryUrl(image?.src)) {
+          imageSrc = image.src;
+        } else if (isCloudinaryUrl(image?.imagePath)) {
+          imageSrc = image.imagePath;
+        } else if (isCloudinaryUrl(image)) {
+          imageSrc = image;
         } else {
-          // Sequence 1: top- 2x2, 3x2 | bottom- 5x2
-          const sequence2Items = [
-            // TOP SEGMENT (rows 1-2)
-            { size: '2x2', rowSpan: 2, colSpan: 2, gridColumn: '1 / span 2', gridRow: `${sequenceIndex * 4 + 1} / span 2` },
-            { size: '3x2', rowSpan: 2, colSpan: 3, gridColumn: '3 / span 3', gridRow: `${sequenceIndex * 4 + 1} / span 2` },
-            // BOTTOM SEGMENT (rows 3-4)
-            { size: '5x2', rowSpan: 2, colSpan: 5, gridColumn: '1 / span 5', gridRow: `${sequenceIndex * 4 + 3} / span 2` }
-          ];
-          
-          // Fill remaining grid cells in this sequence to make it square
-          // Each sequence occupies exactly 4 rows × 5 columns = 20 cells
-          // We have 3 photo items, so we need 17 placeholder cells to fill the sequence
-          // This ensures the 5-column structure is always maintained
-          for (let row = sequenceIndex * 4 + 1; row <= sequenceIndex * 4 + 4; row++) {
-            for (let col = 1; col <= 5; col++) {
-              // Check if this cell is already occupied by an item
-              const isOccupied = sequence2Items.some(item => {
-                const itemStartCol = parseInt(item.gridColumn.split(' ')[0]);
-                const itemEndCol = itemStartCol + item.colSpan - 1;
-                const itemStartRow = parseInt(item.gridRow.split(' ')[0]);
-                const itemEndRow = itemStartRow + item.rowSpan - 1;
-                return col >= itemStartCol && col <= itemEndCol && row >= itemStartRow && row <= itemEndRow;
-              });
-              
-              if (!isOccupied) {
-                // Add a placeholder item to fill this cell
-                const placeholderImage = images[Math.floor(Math.random() * images.length)];
-                const placeholderSrc = placeholderImage?.src || placeholderImage?.imagePath || (typeof placeholderImage === 'string' ? placeholderImage : `/gallery/${placeholderImage?.filename}`) || '';
-                
-                mobileGridItems.push({
-                  size: '1x1',
-                  rowSpan: 1,
-                  colSpan: 1,
-                  gridColumn: `${col} / span 1`,
-                  gridRow: `${row} / span 1`,
-                  imageSrc: placeholderSrc,
-                  sequenceIndex: sequenceIndex,
-                  itemIndex: -1, // -1 indicates placeholder
-                  uniqueKey: `mobile-seq2-placeholder-${sequenceIndex}-${row}-${col}`,
-                  isPlaceholder: true
-                });
-              }
-            }
-          }
-          
-          sequence2Items.forEach((item, itemIndex) => {
-            const actualImageIndex = (sequenceIndex * 3 + itemIndex) % images.length;
-            const image = images[actualImageIndex];
-            // Ensure we have a valid image src - prioritize Cloudinary URLs
-            // Priority 1: cloudinaryUrl directly
-            // Priority 2: src (which should already prefer Cloudinary from galleryUtils)
-            // Priority 3: imagePath virtual (which should prefer Cloudinary)
-            // Priority 4: Fallback to local path
-            let imageSrc = '';
-            if (isCloudinaryUrl(image?.cloudinaryUrl)) {
-              imageSrc = image.cloudinaryUrl;
-            } else if (isCloudinaryUrl(image?.src)) {
-              imageSrc = image.src;
-            } else if (isCloudinaryUrl(image?.imagePath)) {
-              imageSrc = image.imagePath;
-            } else if (isCloudinaryUrl(image)) {
-              imageSrc = image;
-            }
-            
-            mobileGridItems.push({
-              ...item,
-              imageSrc: imageSrc,
-              sequenceIndex: sequenceIndex,
-              itemIndex: itemIndex,
-              uniqueKey: `mobile-seq2-${sequenceIndex}-${itemIndex}`
-            });
-          });
+          imageSrc = image?.src || image?.imagePath || (typeof image === 'string' ? image : `/gallery/${image?.filename}`) || '';
         }
+        return imageSrc;
+      };
+
+      const getNextImage = () => {
+        const safeLen = Math.max(images.length, 1);
+        const wrappedIndex = imageCursor < safeLen ? imageCursor : ((imageCursor - safeLen) % safeLen);
+        const imageSrc = getImageSrcAtIndex(wrappedIndex);
+        const assignedIndex = imageCursor;
+        imageCursor += 1;
+        return { imageSrc, assignedIndex, wrappedIndex };
+      };
+
+      const sequences = [];
+      for (let sequenceIndex = 0; sequenceIndex < totalSequences; sequenceIndex++) {
+        const isEvenSequence = sequenceIndex % 2 === 0;
+        const baseItems = isEvenSequence
+          ? [
+              { size: '3x2', rowSpan: 2, colSpan: 3, gridColumn: '1 / span 3', gridRow: '1 / span 2' },
+              { size: '2x2', rowSpan: 2, colSpan: 2, gridColumn: '4 / span 2', gridRow: '1 / span 2' },
+              { size: '5x2', rowSpan: 2, colSpan: 5, gridColumn: '1 / span 5', gridRow: '3 / span 2' }
+            ]
+          : [
+              { size: '2x2', rowSpan: 2, colSpan: 2, gridColumn: '1 / span 2', gridRow: '1 / span 2' },
+              { size: '3x2', rowSpan: 2, colSpan: 3, gridColumn: '3 / span 3', gridRow: '1 / span 2' },
+              { size: '5x2', rowSpan: 2, colSpan: 5, gridColumn: '1 / span 5', gridRow: '3 / span 2' }
+            ];
+
+        const gridItems = baseItems.map((item, itemIndex) => {
+          const { imageSrc, assignedIndex } = getNextImage();
+          return {
+            ...item,
+            imageSrc,
+            sequenceIndex,
+            itemIndex: assignedIndex,
+            uniqueKey: `mobile-seq-${sequenceIndex}-${itemIndex}`
+          };
+        });
+
+        sequences.push({
+          sequenceIndex,
+          gridItems,
+          width: '100%',
+          optimalGridSize: optimalSize.gridSize,
+          optimalGap: optimalSize.gap
+        });
       }
-      
-      return mobileGridItems;
+
+      return sequences;
     };
     
     // Use mobile grid layout if on mobile, otherwise use desktop layout
     if (isMobile) {
       console.log('📱 Creating mobile grid layout');
-      const mobileGridItems = createMobileGrid();
-      const optimalSize = getOptimalMobileGridSize();
-      console.log('📱 Mobile grid items:', mobileGridItems.length, 'Optimal size:', optimalSize);
-      
-      // Mobile grid always maintains exactly 5 columns across, scaling with viewport width
-      return [{
-        sequenceIndex: 0,
-        gridItems: mobileGridItems,
-        width: '100%', // Full width for mobile
-        optimalGridSize: optimalSize.gridSize,
-        optimalGap: optimalSize.gap
-      }];
+      const mobileSequences = createMobileGrid();
+      const totalMobileItems = mobileSequences.reduce((sum, s) => sum + (s.gridItems?.length || 0), 0);
+      console.log('📱 Mobile grid items:', totalMobileItems, 'Sequences:', mobileSequences.length);
+      return mobileSequences;
     } else {
       console.log('🖥️ Creating desktop grid layout');
       // Desktop layout - add all items from the grid layout
-        gridLayout.forEach((item, itemIndex) => {
-        const actualImageIndex = itemIndex % images.length;
-        const image = images[actualImageIndex];
-        // Ensure we have a valid image src - check multiple possible properties
-        const imageSrc = image?.src || image?.imagePath || (typeof image === 'string' ? image : `/gallery/${image?.filename}`) || '';
-        
-        if (!imageSrc) {
-          console.warn(`⚠️ No valid image source for item ${itemIndex}, image:`, image);
+      const imageCount = images.length;
+
+      const getImageSrcAtIndex = (index) => {
+        const image = images[index];
+        let imageSrc = '';
+        if (isCloudinaryUrl(image?.cloudinaryUrl)) {
+          imageSrc = image.cloudinaryUrl;
+        } else if (isCloudinaryUrl(image?.src)) {
+          imageSrc = image.src;
+        } else if (isCloudinaryUrl(image?.imagePath)) {
+          imageSrc = image.imagePath;
+        } else if (isCloudinaryUrl(image)) {
+          imageSrc = image;
+        } else {
+          imageSrc = image?.src || image?.imagePath || (typeof image === 'string' ? image : `/gallery/${image?.filename}`) || '';
         }
-        
-        gridItems.push({
+        return imageSrc;
+      };
+
+      const parseGridPlacement = (placement) => {
+        const parts = String(placement || '').split('/').map(s => s.trim());
+        const start = Number.parseInt(parts[0], 10);
+        const span = parts[1]?.startsWith('span') ? Number.parseInt(parts[1].replace('span', '').trim(), 10) : 1;
+        return {
+          start: Number.isFinite(start) ? start : 1,
+          span: Number.isFinite(span) ? span : 1
+        };
+      };
+
+      const desktopSequenceWidthColumns = 9;
+      const baseSequenceCount = 5;
+
+      const sequenceTemplates = Array.from({ length: baseSequenceCount }, () => []);
+      gridLayout.forEach((item) => {
+        const { start: colStart } = parseGridPlacement(item.gridColumn);
+        const seqIndex = Math.floor((colStart - 1) / desktopSequenceWidthColumns);
+        if (seqIndex < 0 || seqIndex >= baseSequenceCount) return;
+
+        const seqStartCol = (seqIndex * desktopSequenceWidthColumns) + 1;
+        const relativeStartCol = colStart - seqStartCol + 1;
+        sequenceTemplates[seqIndex].push({
           ...item,
-          imageSrc: imageSrc,
-          sequenceIndex: Math.floor(itemIndex / 7), // 7 items per sequence (3 top + 4 bottom)
-          itemIndex: itemIndex,
-          uniqueKey: `grid-${itemIndex}`
+          _relativeStartCol: relativeStartCol
         });
       });
+
+      let desktopSequenceCount = 0;
+      let desktopSlots = 0;
+      while (desktopSlots < imageCount) {
+        const template = sequenceTemplates[desktopSequenceCount % sequenceTemplates.length];
+        desktopSlots += template.length;
+        desktopSequenceCount += 1;
+      }
+      desktopSequenceCount = Math.max(desktopSequenceCount, 1);
+      const desktopTotalColumns = desktopSequenceCount * desktopSequenceWidthColumns;
+
+      let imageCursor = 0;
+      for (let seq = 0; seq < desktopSequenceCount; seq++) {
+        const template = sequenceTemplates[seq % sequenceTemplates.length];
+        for (let t = 0; t < template.length; t++) {
+          const templateItem = template[t];
+          const colSpan = templateItem.colSpan;
+          const absStartCol = (seq * desktopSequenceWidthColumns) + templateItem._relativeStartCol;
+
+          const wrappedIndex = imageCursor < imageCount
+            ? imageCursor
+            : (imageCursor - imageCount < imageCount ? (imageCursor - imageCount) : (imageCursor % imageCount));
+
+          const imageSrc = getImageSrcAtIndex(wrappedIndex);
+          gridItems.push({
+            ...templateItem,
+            gridColumn: `${absStartCol} / span ${colSpan}`,
+            imageSrc,
+            sequenceIndex: seq,
+            itemIndex: imageCursor,
+            uniqueKey: `desktop-seq-${seq}-${t}`
+          });
+
+          imageCursor += 1;
+        }
+      }
       
       // Return one large grid instead of separate sequences
       const responsiveSize = getResponsiveDesktopGridSize();
       return [{
         sequenceIndex: 0,
         gridItems: gridItems,
-        width: (45 * responsiveSize.gridSize) + (44 * responsiveSize.gap), // 45 columns × columnWidth + 44 gaps × columnGap
+        width: (desktopTotalColumns * responsiveSize.gridSize) + ((desktopTotalColumns - 1) * responsiveSize.gap),
+        totalColumns: desktopTotalColumns,
         optimalGridSize: responsiveSize.gridSize,
         optimalGap: responsiveSize.gap
       }];
     }
   }, [images, isMobile, getOptimalMobileGridSize, getResponsiveDesktopGridSize]);
+
+  // Memoize content to prevent unnecessary re-renders
+  const infiniteContent = useMemo(() => createInfiniteContent(), [createInfiniteContent]);
+
+  const desktopTotalColumns = useMemo(() => {
+    if (isMobile) return 0;
+    return infiniteContent?.[0]?.totalColumns || 45;
+  }, [infiniteContent, isMobile]);
 
   // Set initial scroll position once when images load
   useEffect(() => {
@@ -469,33 +442,41 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
   const handleKeyDown = useCallback((e) => {
     if (isAnimating) return;
     
-    const responsiveSize = getResponsiveDesktopGridSize();
-    const columnWidth = responsiveSize.gridSize;
-    const columnGap = responsiveSize.gap;
-    const sequenceWidth = 5 * columnWidth + 4 * columnGap; // 5 columns × columnWidth + 4 gaps × columnGap
-    
     switch (e.key) {
       case 'ArrowLeft':
+      {
         e.preventDefault();
+        const responsiveSize = getResponsiveDesktopGridSize();
+        const columnWidth = responsiveSize.gridSize;
+        const columnGap = responsiveSize.gap;
+        const navColumns = 9;
+        const navigationWidthFor = (cols) => (cols * columnWidth) + (Math.max(cols - 1, 0) * columnGap);
+        const sequenceWidth = navigationWidthFor(navColumns);
         if (hasNavigatedRight) { // Only allow left navigation after right navigation has occurred
           // Simple check - if we're at the beginning, don't go further left
           if (scrollPosition === initialScrollPosition) {
             return; // Already at the first sequence, can't go further left
           }
-          
-          const newLeftPosition = scrollPosition + sequenceWidth;
+
+          const totalGridWidth = (desktopTotalColumns * columnWidth) + ((desktopTotalColumns - 1) * columnGap);
+          const containerWidth = containerRef.current?.offsetWidth || 0;
+          const minScrollLeft = containerWidth > 0 ? -(totalGridWidth - containerWidth) : -Infinity;
+          const maxScrollLeft = 0;
+          const newLeftPosition = Math.min(maxScrollLeft, Math.max(minScrollLeft, scrollPosition + sequenceWidth));
           updateScrollPosition(newLeftPosition);
         }
         break;
+      }
       case 'ArrowRight':
+      {
         e.preventDefault();
         setHasNavigatedRight(true); // Enable left navigation after first right navigation
-        
-        // Calculate how many columns are left to navigate on the 45-column grid
         const responsiveSize = getResponsiveDesktopGridSize();
         const columnWidth = responsiveSize.gridSize;
         const columnGap = responsiveSize.gap;
-        const totalGridWidth = (45 * columnWidth) + (44 * columnGap); // 45 columns × columnWidth + 44 gaps × columnGap
+        const navColumns = 9;
+        const navigationWidthFor = (cols) => (cols * columnWidth) + (Math.max(cols - 1, 0) * columnGap);
+        const totalGridWidth = (desktopTotalColumns * columnWidth) + ((desktopTotalColumns - 1) * columnGap);
         const currentPosition = Math.abs(scrollPosition);
         const remainingColumns = Math.ceil((totalGridWidth - currentPosition) / (columnWidth + columnGap)); // Calculate remaining columns
         
@@ -504,15 +485,14 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           return; // Already at the end, can't go further right
         }
         
-        // Smart navigation: if >=5 columns remain, move 5; if <5 remain, move exact remaining
         let navigationWidth;
-        if (remainingColumns >= 5) {
-          navigationWidth = 5 * columnWidth + 4 * columnGap; // 5 columns (columnWidth + gaps)
-        } else {
-          navigationWidth = remainingColumns * columnWidth + (remainingColumns - 1) * columnGap; // Exact remaining columns
-        }
+        const colsToMove = Math.min(navColumns, remainingColumns);
+        navigationWidth = navigationWidthFor(colsToMove);
         
-        const newRightPosition = scrollPosition - navigationWidth;
+        const containerWidth = containerRef.current?.offsetWidth || 0;
+        const minScrollLeft = containerWidth > 0 ? -(totalGridWidth - containerWidth) : -Infinity;
+        const maxScrollLeft = 0;
+        const newRightPosition = Math.min(maxScrollLeft, Math.max(minScrollLeft, scrollPosition - navigationWidth));
         
         // Track the leftmost position reached
         if (newRightPosition < leftmostPosition) {
@@ -520,10 +500,11 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
         }
         updateScrollPosition(newRightPosition);
         break;
+      }
       default:
         break;
     }
-  }, [isAnimating, scrollPosition, updateScrollPosition, hasNavigatedRight, leftmostPosition, initialScrollPosition, getResponsiveDesktopGridSize]);
+  }, [isAnimating, scrollPosition, updateScrollPosition, hasNavigatedRight, leftmostPosition, initialScrollPosition, getResponsiveDesktopGridSize, desktopTotalColumns]);
 
   // Cleanup animation frame
   useEffect(() => {
@@ -594,21 +575,22 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     const responsiveSize = getResponsiveDesktopGridSize();
     const columnWidth = responsiveSize.gridSize; // Width of each column
     const columnGap = responsiveSize.gap; // Gap between columns
+    const navColumns = 9;
     
     // Calculate how far we can move left (towards 0)
     const distanceToBeginning = Math.abs(scrollPosition - initialScrollPosition);
     const maxColumnsToMove = Math.ceil(distanceToBeginning / (columnWidth + columnGap));
     
-    // If we can move 5 or more columns, move 5; otherwise move the exact amount needed
+    // If we can move navColumns or more columns, move navColumns; otherwise move the exact amount needed
     let columnsToMove;
-    if (maxColumnsToMove >= 5) {
-      columnsToMove = 5;
+    if (maxColumnsToMove >= navColumns) {
+      columnsToMove = navColumns;
     } else {
       columnsToMove = maxColumnsToMove;
     }
     
     // Calculate the navigation width
-    let navigationWidth = columnsToMove * columnWidth + (columnsToMove - 1) * columnGap;
+    let navigationWidth = columnsToMove * columnWidth + (Math.max(columnsToMove - 1, 0) * columnGap);
     
     // Calculate the new position (moving towards 0)
     const newPosition = scrollPosition + navigationWidth;
@@ -710,7 +692,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     const responsiveSize = getResponsiveDesktopGridSize();
     const columnWidth = responsiveSize.gridSize;
     const columnGap = responsiveSize.gap;
-    const totalGridWidth = (45 * columnWidth) + (44 * columnGap); // 45 columns × columnWidth + 44 gaps × columnGap
+    const totalGridWidth = (desktopTotalColumns * columnWidth) + ((desktopTotalColumns - 1) * columnGap);
     const currentPosition = Math.abs(scrollPosition);
     const remainingColumns = Math.ceil((totalGridWidth - currentPosition) / (columnWidth + columnGap)); // Calculate remaining columns
     
@@ -720,18 +702,9 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
       return; // Already at the end, can't go further right
     }
     
-    // Smart navigation: if >9 columns remain, scroll 5 columns (or as many as possible to leave exactly 9)
-    let navigationWidth;
-    if (remainingColumns > 9) {
-      // Calculate how many columns to move to leave exactly 9 columns
-      const columnsToMove = remainingColumns - 9;
-      // If we can move 5 or more columns, move 5; otherwise move the exact amount needed
-      const moveAmount = Math.min(5, columnsToMove);
-      navigationWidth = moveAmount * columnWidth + (moveAmount - 1) * columnGap; // columns × columnWidth + gaps
-    } else {
-      // If 9 or fewer columns remain, move the exact remaining columns
-      navigationWidth = remainingColumns * columnWidth + (remainingColumns - 1) * columnGap;
-    }
+    const navColumns = 9;
+    const colsToMove = Math.min(navColumns, remainingColumns);
+    let navigationWidth = colsToMove * columnWidth + (Math.max(colsToMove - 1, 0) * columnGap);
     
     const newPosition = scrollPosition - navigationWidth;
     
@@ -828,13 +801,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     };
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, scrollPosition, updateScrollPosition, leftmostPosition, getResponsiveDesktopGridSize, onArrowClick]);
+  }, [isAnimating, scrollPosition, updateScrollPosition, leftmostPosition, getResponsiveDesktopGridSize, onArrowClick, desktopTotalColumns]);
 
 
   
-  // Memoize content to prevent unnecessary re-renders
-  const infiniteContent = useMemo(() => createInfiniteContent(), [createInfiniteContent]);
-
   // Create a flat list of all unique images for navigation
   const allImagesList = useMemo(() => {
     if (infiniteContent.length === 0) return [];
@@ -843,7 +813,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
     
     infiniteContent.forEach(sequence => {
       sequence.gridItems.forEach(item => {
-        if (item.imageSrc && !item.isPlaceholder && !imageSet.has(item.imageSrc)) {
+        if (item.imageSrc && !imageSet.has(item.imageSrc)) {
           imageSet.add(item.imageSrc);
           imageList.push(item.imageSrc);
         }
@@ -1090,7 +1060,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
         margin: embedded ? '0' : '0 0 60px 0', // No top margin, keep bottom margin
         fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
         width: '100%',
-        height: '100%',
+        height: isMobile ? 'auto' : '100%',
         overflow: 'hidden',
         background: 'transparent'
       }}>
@@ -1105,8 +1075,8 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100%'
+        justifyContent: isMobile ? 'flex-start' : 'center',
+        minHeight: isMobile ? 'auto' : '100%'
       }}>
         {/* Container - Horizontal scrolling for desktop, vertical scrolling for mobile */}
         <div 
@@ -1114,7 +1084,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           style={{
             width: '100%',
             maxWidth: '100%', // Ensure it doesn't exceed container width
-            overflow: isMobile ? 'auto' : 'hidden', // Hidden for desktop to contain scrolling grid
+            overflow: isMobile ? 'visible' : 'hidden', // Hidden for desktop to contain scrolling grid
             position: 'relative',
             background: 'transparent',
             pointerEvents: 'auto', // Enable pointer events for hover detection
@@ -1158,41 +1128,67 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               maxWidth: 'none', // Allow content to extend beyond container for horizontal scrolling
               opacity: isLoading ? 0 : 1, // Fade in when ready
               background: 'transparent',
-              overflow: isMobile ? 'auto' : 'hidden', // Clip content for horizontal scrolling
+              overflow: isMobile ? 'visible' : 'hidden', // Clip content for horizontal scrolling
               position: 'relative',
               zIndex: 1, // Lower z-index than arrows
-              height: 'calc(100vh * 27 / 32)', // Grid height - 27/32 browser screen height
+              height: isMobile ? 'auto' : 'calc(100vh * 27 / 32)', // Grid height - 27/32 browser screen height
               width: 'fit-content', // Fit content width (sequence width) so grid can extend beyond viewport
               minWidth: '100%', // At least viewport width
               flexShrink: 0, // Don't shrink
               alignSelf: 'stretch' // Ensure it stretches to full width
             }}
           >
-            {infiniteContent.map((sequence) => (
+            {infiniteContent.map((sequence, sequenceRenderIndex) => (
+              (() => {
+                const mobileRowsUsed = isMobile
+                  ? (() => {
+                      let maxRow = 0;
+                      for (const item of sequence.gridItems || []) {
+                        if (item?.itemIndex === -1) continue;
+                        const gridRow = typeof item?.gridRow === 'string' ? item.gridRow : '';
+                        const parts = gridRow.split('/').map(s => s.trim());
+                        const start = Number.parseInt(parts[0], 10);
+                        const span = parts[1]?.startsWith('span') ? Number.parseInt(parts[1].replace('span', '').trim(), 10) : 1;
+                        if (!Number.isFinite(start)) continue;
+                        const end = start + (Number.isFinite(span) ? span : 1) - 1;
+                        if (end > maxRow) maxRow = end;
+                      }
+                      return Math.max(maxRow, 1);
+                    })()
+                  : 0;
+
+                const mobileGridSizePx = sequence.optimalGridSize || mobileGridSize;
+                const mobileGapPx = sequence.optimalGap || mobileGap;
+                const mobileGridHeight = `${(mobileGridSizePx * mobileRowsUsed) + (Math.max(mobileRowsUsed - 1, 0) * mobileGapPx)}px`;
+                const desktopCols = sequence.totalColumns || desktopTotalColumns || 45;
+
+                return (
               <div 
                 key={`sequence-${sequence.sequenceIndex}`}
                 style={{ 
                   marginRight: isMobile ? '0' : '2rem',
-                  marginBottom: isMobile ? '2rem' : '0', // Add bottom margin for mobile stacking
+                  marginBottom: isMobile
+                    ? (sequenceRenderIndex === infiniteContent.length - 1 ? '0' : '4px')
+                    : '0', // Add bottom margin for mobile stacking
                   flexShrink: isMobile ? '1' : '0',
                   flexGrow: '0', // Don't grow
                   flexBasis: 'auto', // Use natural width
                   maxWidth: 'none', // Allow sequence to extend beyond container for horizontal scrolling
-                  width: isMobile ? 'auto' : `${(45 * (sequence.optimalGridSize || 160)) + (44 * (sequence.optimalGap || 16))}px`, // Explicit width matching grid
+                  width: isMobile ? 'auto' : `${(desktopCols * (sequence.optimalGridSize || 160)) + ((desktopCols - 1) * (sequence.optimalGap || 16))}px`, // Explicit width matching grid
                   background: 'transparent'
                 }}
               >
                 {/* Grid - 45x4 for desktop, 5x48 for mobile, responsive for small screens */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? `repeat(5, ${sequence.optimalGridSize || mobileGridSize}px)` : `repeat(45, ${sequence.optimalGridSize || 160}px)`,
-                  gridTemplateRows: isMobile ? 'repeat(48, 1fr)' : 'repeat(4, 1fr)', // Scale rows to fit container height
+                  gridTemplateColumns: isMobile ? `repeat(5, ${sequence.optimalGridSize || mobileGridSize}px)` : `repeat(${desktopCols}, ${sequence.optimalGridSize || 160}px)`,
+                  gridTemplateRows: isMobile ? `repeat(${mobileRowsUsed}, 1fr)` : 'repeat(4, 1fr)', // Scale rows to fit container height
                   gap: isMobile ? `${sequence.optimalGap || mobileGap}px` : `${sequence.optimalGap || 16}px`, // Responsive gap for desktop
-                  width: isMobile ? '100%' : `${(45 * (sequence.optimalGridSize || 160)) + (44 * (sequence.optimalGap || 16))}px`, // Explicit width: 45 columns + 44 gaps
+                  width: isMobile ? '100%' : `${(desktopCols * (sequence.optimalGridSize || 160)) + ((desktopCols - 1) * (sequence.optimalGap || 16))}px`,
                   maxWidth: 'none', // Allow grid to extend beyond container for horizontal scrolling
-                  height: isMobile ? `${(sequence.optimalGridSize || mobileGridSize) * 48 + (47 * (sequence.optimalGap || mobileGap))}px` : 'calc(100vh * 27 / 32)', // 27/32 browser height for desktop
+                  height: isMobile ? mobileGridHeight : 'calc(100vh * 27 / 32)', // 27/32 browser height for desktop
                   margin: '0', // Remove auto margin that might constrain width
-                  padding: isMobile ? '0 0.5rem 0.5rem 0.5rem' : '0', // No padding for desktop
+                  padding: isMobile ? '0' : '0', // No padding for desktop
                   lineHeight: '0', // Remove any line height spacing
                   fontSize: '0', // Remove any font size spacing
                   boxSizing: 'border-box', // Ensure padding and borders are included in dimensions
@@ -1253,9 +1249,9 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                       }}
                       onClick={() => handleImageClick(item.imageSrc)}
                     >
-                      {isCloudinaryUrl(item.imageSrc) && (
+                      {item.imageSrc && (
                         <img
-                          src={getEventOptimizedUrl(item.imageSrc)}
+                          src={isCloudinaryUrl(item.imageSrc) ? getEventOptimizedUrl(item.imageSrc) : item.imageSrc}
                           loading="lazy"
                           decoding="async"
                           alt={`Gallery ${item.sequenceIndex}-${item.itemIndex}`}
@@ -1303,8 +1299,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
                   ))}
                 </div>
               </div>
+                );
+              })()
             ))}
-        </div>
+          </div>
 
           {/* Gallery navigation arrows - positioned directly under the gallery grid (hidden for mobile and when modal/fullscreen is open) */}
           {!isMobile && !selectedImage && !isFullscreen && (

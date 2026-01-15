@@ -1107,9 +1107,9 @@ const Home = forwardRef((props, ref) => {
 
         {/* SECTION 3: EVENT GALLERY */}
         <div id="mobile-events-section" ref={eventsRef} style={{ 
-          minHeight: '100vh',
+          minHeight: isMobile ? 'auto' : '100vh',
           background: '#fff',
-          padding: '2rem 1rem',
+          padding: '4px 4px 4px 4px',
           position: 'relative'
         }}>
           <EventGallery embedded={true} isMobile={isMobile} isSmallScreen={isSmallScreen} />
@@ -2860,14 +2860,13 @@ const Home = forwardRef((props, ref) => {
 
         {/* Mobile Event Gallery Section */}
         <div style={{
-          padding: '0 1rem 1rem 1rem', // No top padding, keep other sides
+          padding: '0 4px 0 4px', // No side padding
           background: '#fff',
           minHeight: 'calc(100vh - 80px)', // Account for header height only
           marginTop: '100px', // Start below the fixed header with extra space
-          paddingTop: '0', // Ensure no top padding
-          paddingBottom: '80px', // Reduced bottom padding to minimize space above socials container
-          overflowY: 'auto', // Make it scrollable
-          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+          paddingTop: '4px',
+          paddingBottom: '4px',
+          overflowY: 'visible',
           position: 'relative', // Ensure proper positioning
           zIndex: 1 // Below header z-index
         }}>
