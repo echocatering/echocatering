@@ -86,7 +86,9 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       const vv = window.visualViewport;
       const vw = vv?.width ?? window.innerWidth;
       const vh = vv?.height ?? window.innerHeight;
-      return { width: vw, height: vh };
+      const initialSize = { width: vw, height: vh };
+      stableSizeRef.current = initialSize;
+      return initialSize;
     }
     
     // In web mode, capture initial viewport size once and never update
@@ -128,7 +130,13 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       const height = vv?.height ?? window.innerHeight;
 
       if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride && isProbablyMobileDevice() && height > width) {
-        setSize({ width, height });
+        const stable = stableSizeRef.current;
+        if (stable && typeof stable.width === 'number' && Math.abs(width - stable.width) < 50) {
+          return;
+        }
+        const nextStable = { width, height };
+        stableSizeRef.current = nextStable;
+        setSize(nextStable);
         return;
       }
 
