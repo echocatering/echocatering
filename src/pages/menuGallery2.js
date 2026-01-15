@@ -293,7 +293,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical ? 'scale(1.2)' : 'scale(1)',
+        transform: isVertical ? 'scale(1.32)' : 'scale(1)',
       }}
     >
       <source src={videoSrc} type="video/mp4" />
@@ -1341,12 +1341,13 @@ function EchoCocktailSubpage2({
       return (
     <div
       style={{
-        opacity: mapVisible ? 1 : 0,
+        position: 'relative',
+        zIndex: 11,
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        paddingLeft: 'calc(100vh / 50)',
-        paddingRight: 'calc(100vh / 20)',
+        paddingLeft: 'calc(100vh / 44)',
+        paddingRight: 'calc(100vh / 16)',
         boxSizing: 'border-box',
       }}
     >
@@ -2095,7 +2096,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + layout.inner.width / 6}px`,
-            top: showConceptInfo ? '80px' : '140px',
+            top: showConceptInfo ? '80px' : '100px',
             width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
             boxSizing: 'border-box',
             zIndex: 16,
