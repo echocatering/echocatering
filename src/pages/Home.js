@@ -1040,16 +1040,18 @@ const Home = forwardRef((props, ref) => {
           borderTop: '1px solid #fff'
         }}>
           {/* White to transparent gradient at top */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 'calc(100vh / 4)',
-            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%)',
-            pointerEvents: 'none',
-            zIndex: 5
-          }} />
+          {false && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 'calc(100vh / 4)',
+              background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%)',
+              pointerEvents: 'none',
+              zIndex: 5
+            }} />
+          )}
           {/* White vignette overlay at edges for menu gallery */}
           <div style={{
             position: 'absolute',
