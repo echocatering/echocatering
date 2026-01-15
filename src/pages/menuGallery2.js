@@ -81,6 +81,18 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
     const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
     const initialHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
     const isVerticalMobile = isProbablyMobileDevice() && initialHeight > initialWidth;
+
+    if (typeof window !== 'undefined' && isVerticalMobile && viewMode === 'web') {
+      const vv = window.visualViewport;
+      const vw = vv?.width ?? window.innerWidth;
+      const sw = window.screen?.width;
+      const sh = window.screen?.height;
+      const screenAspect =
+        typeof sw === 'number' && typeof sh === 'number' && sw > 0 && sh > 0
+          ? Math.max(sw, sh) / Math.min(sw, sh)
+          : window.innerHeight / Math.max(window.innerWidth, 1);
+      return { width: vw, height: vw * screenAspect };
+    }
     
     // In web mode, capture initial viewport size once and never update
     if (viewMode === 'web' && typeof window !== 'undefined' && !isVerticalMobile) {
@@ -119,6 +131,17 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       const vv = window.visualViewport;
       const width = vv?.width ?? window.innerWidth;
       const height = vv?.height ?? window.innerHeight;
+
+      if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride && isProbablyMobileDevice() && height > width) {
+        const sw = window.screen?.width;
+        const sh = window.screen?.height;
+        const screenAspect =
+          typeof sw === 'number' && typeof sh === 'number' && sw > 0 && sh > 0
+            ? Math.max(sw, sh) / Math.min(sw, sh)
+            : window.innerHeight / Math.max(window.innerWidth, 1);
+        setSize({ width, height: width * screenAspect });
+        return;
+      }
 
       const shouldUseMaxViewport = isProbablyMobileDevice() && height > width;
 
