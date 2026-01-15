@@ -187,7 +187,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical ? 'scale(1.32)' : 'scale(1)',
+        transform: isVertical ? 'scale(1.2)' : 'scale(1)',
       }}
     >
       <source src={videoSrc} type="video/mp4" />
@@ -1711,123 +1711,125 @@ function EchoCocktailSubpage2({
         />
 
         {/* Header */}
-        <div
-          style={{
-            position: 'absolute',
-            left: `${innerLeft}px`,
-            top: `${innerTop}px`,
-            width: `${layout.inner.width}px`,
-            height: `${headerHeight}px`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
-            {viewMode === 'pos' && (
-              <button
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#222';
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.borderColor = '#888';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #888',
-                  color: '#888',
-                  padding: '6px 8px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  position: 'relative',
-                  opacity: isVertical && sidebarOpen ? 0 : 1,
-                  transition: isVertical ? 'opacity 0.3s ease-out, all 0.2s ease' : 'all 0.2s ease',
-                }}
-              >
-                Add Item
-              </button>
-            )}
-            {viewMode === 'pos' && (
-              <button
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#222';
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.borderColor = '#888';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #888',
-                  color: '#888',
-                  padding: '6px 8px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  position: 'relative',
-                }}
-              >
-                All Items
-              </button>
-            )}
-            {viewMode === 'menu' && (
-              <button
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#222';
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.borderColor = '#888';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #888',
-                  color: '#888',
-                  padding: '6px 8px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  position: 'relative',
-                }}
-              >
-                All Items
-              </button>
-            )}
+        {false && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${innerLeft}px`,
+              top: `${innerTop}px`,
+              width: `${layout.inner.width}px`,
+              height: `${headerHeight}px`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 16px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
+              {viewMode === 'pos' && (
+                <button
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#222';
+                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#888';
+                    e.currentTarget.style.borderColor = '#888';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #888',
+                    color: '#888',
+                    padding: '6px 8px',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    position: 'relative',
+                    opacity: isVertical && sidebarOpen ? 0 : 1,
+                    transition: isVertical ? 'opacity 0.3s ease-out, all 0.2s ease' : 'all 0.2s ease',
+                  }}
+                >
+                  Add Item
+                </button>
+              )}
+              {viewMode === 'pos' && (
+                <button
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#222';
+                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#888';
+                    e.currentTarget.style.borderColor = '#888';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #888',
+                    color: '#888',
+                    padding: '6px 8px',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    position: 'relative',
+                  }}
+                >
+                  All Items
+                </button>
+              )}
+              {viewMode === 'menu' && (
+                <button
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#222';
+                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#888';
+                    e.currentTarget.style.borderColor = '#888';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #888',
+                    color: '#888',
+                    padding: '6px 8px',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    position: 'relative',
+                  }}
+                >
+                  All Items
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Information button - attached to right screen */}
         {info?.concept && (
