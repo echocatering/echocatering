@@ -1291,30 +1291,30 @@ function EchoCocktailSubpage2({
         <div
           style={{
             marginTop: 0,
-          opacity: conceptVisible ? 1 : 0,
-          transform: conceptVisible ? 'translateX(0)' : 'translateX(-20px)',
-          transition: conceptVisible ? 'opacity 0.9s ease, transform 0.9s ease' : 'none',
-          color: '#555',
-          lineHeight: 1.4,
+            opacity: conceptVisible ? 1 : 0,
+            transform: conceptVisible ? 'translateX(0)' : 'translateX(-20px)',
+            transition: conceptVisible ? 'opacity 0.9s ease, transform 0.9s ease' : 'none',
+            color: '#555',
+            lineHeight: 1.4,
             paddingLeft: conceptPaddingLeft,
             paddingRight: conceptPaddingRight,
             boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            textTransform: 'uppercase',
-            fontWeight: 300,
-              fontSize: getFontSize(50, 0.9, 1.4),
-            marginBottom: '0.4rem',
-            color: '#222',
           }}
         >
-          Concept
-        </div>
+          <div
+            style={{
+              textTransform: 'uppercase',
+              fontWeight: 300,
+              fontSize: getFontSize(50, 0.9, 1.4),
+              marginBottom: '0.4rem',
+              color: '#222',
+            }}
+          >
+            Concept
+          </div>
           <div style={{ fontSize: getFontSize(55, 0.85, 1.3) }}>{info.concept}</div>
-      </div>
-    );
+        </div>
+      );
     }
   };
 
@@ -1337,6 +1337,17 @@ function EchoCocktailSubpage2({
     // If no valid Cloudinary URL, use default SVG (don't use local paths)
     
     if (isVertical) {
+      const vw = typeof size?.width === 'number' ? size.width : (typeof window !== 'undefined' ? window.innerWidth : 0);
+      const vh = typeof size?.height === 'number' ? size.height : (typeof window !== 'undefined' ? window.innerHeight : 1);
+      const aspect = vw / Math.max(vh, 1);
+      const minAspect = 9 / 19;
+      const maxAspect = 2 / 3;
+      const t = Math.max(0, Math.min(1, (aspect - minAspect) / (maxAspect - minAspect)));
+      const leftDivisor = 16 + t * (8 - 16);
+      const rightDivisor = 44 + t * (22 - 44);
+      const leftPaddingPx = vh / Math.max(leftDivisor, 1);
+      const rightPaddingPx = vh / Math.max(rightDivisor, 1);
+
       // Vertical layout styling
       return (
     <div
@@ -1346,8 +1357,8 @@ function EchoCocktailSubpage2({
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        paddingLeft: 'calc(100vh / 44)',
-        paddingRight: 'calc(100vh / 16)',
+        paddingLeft: `${rightPaddingPx}px`,
+        paddingRight: `${leftPaddingPx}px`,
         boxSizing: 'border-box',
       }}
     >
