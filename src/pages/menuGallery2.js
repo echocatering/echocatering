@@ -1343,8 +1343,8 @@ function EchoCocktailSubpage2({
       const minAspect = 9 / 19;
       const maxAspect = 2 / 3;
       const t = Math.max(0, Math.min(1, (aspect - minAspect) / (maxAspect - minAspect)));
-      const leftDivisor = 16 + t * (8 - 16);
-      const rightDivisor = 44 + t * (22 - 44);
+      const leftDivisor = 12 + t * (8 - 12);
+      const rightDivisor = 40 + t * (22 - 40);
       const leftPaddingPx = vh / Math.max(leftDivisor, 1);
       const rightPaddingPx = vh / Math.max(rightDivisor, 1);
 
