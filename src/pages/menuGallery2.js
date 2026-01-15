@@ -1361,7 +1361,7 @@ function EchoCocktailSubpage2({
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
         paddingLeft: '18px',
-        paddingRight: '18px',
+        paddingRight: '42px',
         boxSizing: 'border-box',
       }}
     >
@@ -1801,6 +1801,7 @@ function EchoCocktailSubpage2({
   const renderVerticalLayout = () => {
     const headerHeight = layout.inner.height / 12; // fraction
     const arrowsWidth = layout.inner.width / 3;
+    const topFadeHeight = size?.height ? `${size.height / 3}px` : `${layout.inner.height / 3}px`;
     return (
       <>
         <VideoStage videoSrc={videoSrc} layout={layout} />
@@ -1817,6 +1818,20 @@ function EchoCocktailSubpage2({
             filter: 'blur(20px)',
             pointerEvents: 'none',
             zIndex: 5,
+          }}
+        />
+
+        <div
+          style={{
+            position: 'absolute',
+            top: `${innerTop}px`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100vw',
+            height: topFadeHeight,
+            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0px, rgba(255, 255, 255, 1) 80px, rgba(255, 255, 255, 0) 100%)',
+            pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
 
@@ -2098,7 +2113,7 @@ function EchoCocktailSubpage2({
             top: showConceptInfo ? '90px' : '140px',
             width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
             boxSizing: 'border-box',
-            zIndex: showConceptInfo ? 16 : undefined,
+            zIndex: 16,
           }}
         >
           {showConceptInfo ? renderMap() : renderTitleBlock()}
