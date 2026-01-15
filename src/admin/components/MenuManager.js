@@ -7,6 +7,15 @@ import RecipeBuilder from './recipes/RecipeBuilder';
 import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
+ const isProbablyIOS = () => {
+   if (typeof navigator === 'undefined') return false;
+   const ua = navigator.userAgent || '';
+   const platform = navigator.platform || '';
+   const isIOSDevice = /iPad|iPhone|iPod/i.test(ua);
+   const isIPadOS = platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+   return isIOSDevice || isIPadOS;
+ };
+
 const getCodeFromAttributes = (pathEl) => {
   if (!pathEl) return null;
   const idAttr = pathEl.getAttribute('id');
@@ -215,7 +224,39 @@ function useContainerSize(containerRef) {
  * Video background component for viewer (based on menugallery2.js VideoBackground)
  */
 function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl }) {
-  if (!isCloudinaryUrl(videoSrc)) {
+  const shouldRender = isCloudinaryUrl(videoSrc);
+
+  useEffect(() => {
+    if (!shouldRender) return;
+    const video = videoRef?.current;
+    if (!video) return;
+
+    const playVideo = () => {
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+    };
+
+    const resumeOnGesture = () => {
+      playVideo();
+    };
+
+    video.addEventListener('canplay', playVideo);
+    video.addEventListener('loadeddata', playVideo);
+    document.addEventListener('touchstart', resumeOnGesture, { passive: true, once: true });
+    document.addEventListener('click', resumeOnGesture, { passive: true, once: true });
+
+    playVideo();
+
+    return () => {
+      video.removeEventListener('canplay', playVideo);
+      video.removeEventListener('loadeddata', playVideo);
+      document.removeEventListener('touchstart', resumeOnGesture);
+      document.removeEventListener('click', resumeOnGesture);
+    };
+  }, [shouldRender, videoSrc, videoRef]);
+
+  if (!shouldRender) {
     return null;
   }
 
@@ -227,8 +268,9 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
       muted
       loop
       playsInline
+      webkit-playsinline="true"
       preload="auto"
-      crossOrigin="anonymous"
+      crossOrigin={isProbablyIOS() ? undefined : 'anonymous'}
       onError={onError}
       onLoadedData={onLoadedData}
       onLoadedMetadata={() => {

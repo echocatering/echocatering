@@ -388,6 +388,7 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
                                     muted
                                     loop
                                     playsInline
+                                    webkit-playsinline="true"
                                     style={{ 
                                       width: '100%',
                                       height: '100%',
@@ -523,6 +524,7 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
                             muted
                             loop
                             playsInline
+                            webkit-playsinline="true"
                             style={{ 
                               width: '100%',
                               height: '100%',

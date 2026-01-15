@@ -4,6 +4,15 @@ import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
+ const isProbablyIOS = () => {
+   if (typeof navigator === 'undefined') return false;
+   const ua = navigator.userAgent || '';
+   const platform = navigator.platform || '';
+   const isIOSDevice = /iPad|iPhone|iPod/i.test(ua);
+   const isIPadOS = platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+   return isIOSDevice || isIPadOS;
+ };
+
 /**
  * Computes sizes and positions for OuterContainer, InnerContainer, and Video.
  * Maintains fixed aspect ratios and inverse fit rules for the 1:1 video.
@@ -134,12 +143,21 @@ function VideoBackground({ videoSrc, isVertical = false }) {
     video.addEventListener('canplay', playVideo);
     video.addEventListener('loadeddata', playVideo);
 
+     const resumeOnGesture = () => {
+       playVideo();
+     };
+
+     document.addEventListener('touchstart', resumeOnGesture, { passive: true, once: true });
+     document.addEventListener('click', resumeOnGesture, { passive: true, once: true });
+
     // Initial attempt
     playVideo();
 
     return () => {
       video.removeEventListener('canplay', playVideo);
       video.removeEventListener('loadeddata', playVideo);
+      document.removeEventListener('touchstart', resumeOnGesture);
+      document.removeEventListener('click', resumeOnGesture);
     };
   }, [videoSrc]);
 
@@ -149,14 +167,16 @@ function VideoBackground({ videoSrc, isVertical = false }) {
 
   return (
     <video
+      data-role="menu-background-video"
       ref={videoRef}
       key={videoSrc}
       autoPlay
       muted
       loop
       playsInline
+      webkit-playsinline="true"
       preload="auto"
-      crossOrigin="anonymous"
+      crossOrigin={isProbablyIOS() ? undefined : 'anonymous'}
       style={{
         position: 'absolute',
         top: 0,
@@ -912,41 +932,48 @@ function EchoCocktailSubpage2({
     
     const samplePixels = () => {
       // Find the video element
-      const video = document.querySelector('video');
+      const video = document.querySelector('video[data-role="menu-background-video"]');
       if (!video || video.readyState < 2) return; // Video not ready
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      const ctx = canvas.getContext('2d');
-      
-      // Sample top-left pixel (x = 0, y = 0)
-      ctx.drawImage(video, 0, 0, 1, 1, 0, 0, 1, 1);
-      const topData = ctx.getImageData(0, 0, 1, 1);
-      const [topR, topG, topB] = topData.data;
-      setTopRgb({ r: topR, g: topG, b: topB });
-      
-      // Sample middle-left pixel (x = 0, y = center)
-      const middleY = video.videoHeight / 2;
-      ctx.drawImage(video, 0, middleY, 1, 1, 0, 0, 1, 1);
-      const middleData = ctx.getImageData(0, 0, 1, 1);
-      const [middleR, middleG, middleB] = middleData.data;
-      setMiddleRgb({ r: middleR, g: middleG, b: middleB });
-      
-      // Sample bottom-left pixel (x = 0, y = bottom)
-      const bottomY = video.videoHeight - 1;
-      ctx.drawImage(video, 0, bottomY, 1, 1, 0, 0, 1, 1);
-      const bottomData = ctx.getImageData(0, 0, 1, 1);
-      const [bottomR, bottomG, bottomB] = bottomData.data;
-      setBottomRgb({ r: bottomR, g: bottomG, b: bottomB });
-      
-      // Keep middle for backward compatibility
-      setEdgeColor(`rgba(${middleR}, ${middleG}, ${middleB}, 1)`);
-      setEdgeRgb({ r: middleR, g: middleG, b: middleB });
+
+      if (isProbablyIOS()) return;
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Sample top-left pixel (x = 0, y = 0)
+        ctx.drawImage(video, 0, 0, 1, 1, 0, 0, 1, 1);
+        const topData = ctx.getImageData(0, 0, 1, 1);
+        const [topR, topG, topB] = topData.data;
+        setTopRgb({ r: topR, g: topG, b: topB });
+
+        // Sample middle-left pixel (x = 0, y = center)
+        const middleY = video.videoHeight / 2;
+        ctx.drawImage(video, 0, middleY, 1, 1, 0, 0, 1, 1);
+        const middleData = ctx.getImageData(0, 0, 1, 1);
+        const [middleR, middleG, middleB] = middleData.data;
+        setMiddleRgb({ r: middleR, g: middleG, b: middleB });
+
+        // Sample bottom-left pixel (x = 0, y = bottom)
+        const bottomY = video.videoHeight - 1;
+        ctx.drawImage(video, 0, bottomY, 1, 1, 0, 0, 1, 1);
+        const bottomData = ctx.getImageData(0, 0, 1, 1);
+        const [bottomR, bottomG, bottomB] = bottomData.data;
+        setBottomRgb({ r: bottomR, g: bottomG, b: bottomB });
+
+        // Keep middle for backward compatibility
+        setEdgeColor(`rgba(${middleR}, ${middleG}, ${middleB}, 1)`);
+        setEdgeRgb({ r: middleR, g: middleG, b: middleB });
+      } catch {
+        return;
+      }
     };
     
     // Try to sample when video is ready
-    const video = document.querySelector('video');
+    const video = document.querySelector('video[data-role="menu-background-video"]');
     if (video) {
       if (video.readyState >= 2) {
         samplePixels();
