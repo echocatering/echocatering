@@ -1956,7 +1956,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + layout.inner.width / 6}px`,
-            top: showConceptInfo ? `${innerTop + layout.inner.height / 20}px` : `${innerTop + layout.inner.height / 5}px`,
+            top: showConceptInfo ? `${innerTop + layout.inner.height / 20}px` : `${innerTop + layout.inner.height / 8}px`,
             width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
             boxSizing: 'border-box',
             zIndex: showConceptInfo ? 16 : undefined,
@@ -1988,11 +1988,12 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            top: `${size.height * 2 / 3}px`,
+            top: `${size.height * 2 / 3 - layout.inner.width / 12}px`,
             bottom: '56px',
             width: `${layout.inner.width}px`,
             paddingLeft: `${layout.inner.width / 12}px`,
             paddingRight: `${layout.inner.width / 12}px`,
+            paddingBottom: `${layout.inner.width / 12}px`,
             boxSizing: 'border-box',
             overflow: 'hidden',
           }}
