@@ -1358,13 +1358,14 @@ function EchoCocktailSubpage2({
       style={{
         opacity: mapVisible ? 1 : 0,
         transition: mapVisible ? 'opacity 1s ease' : 'none',
-        width: '100%',
-            paddingLeft: 0,
-            paddingRight: '12px',
-            boxSizing: 'border-box',
+        width: '100vw',
+        marginLeft: 'calc(50% - 50vw)',
+        paddingLeft: '18px',
+        paddingRight: '18px',
+        boxSizing: 'border-box',
       }}
     >
-          <img src={mapSrc} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+          <img src={mapSrc} alt="World Map" style={{ width: '100%', height: 'auto', objectFit: 'contain', mixBlendMode: 'multiply', display: 'block' }} />
     </div>
   );
     } else {
