@@ -142,6 +142,25 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
       setSize({ width, height });
     };
 
+    if (viewMode === 'web' && !outerWidthOverride && !outerHeightOverride && isVerticalMobile) {
+      const shouldUseVisualViewport = !!window.visualViewport;
+      if (shouldUseVisualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewport);
+        window.visualViewport.addEventListener('scroll', handleViewport);
+      }
+
+      window.addEventListener('resize', handleViewport);
+      handleViewport();
+
+      return () => {
+        window.removeEventListener('resize', handleViewport);
+        if (shouldUseVisualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewport);
+          window.visualViewport.removeEventListener('scroll', handleViewport);
+        }
+      };
+    }
+
     // On mobile devices, visualViewport is the most reliable signal for address bar / browser UI changes.
     // Always attach these listeners so we don't get gaps when the browser chrome expands/collapses.
     const shouldUseVisualViewport = isProbablyMobileDevice() && !!window.visualViewport && window.innerHeight > window.innerWidth;
