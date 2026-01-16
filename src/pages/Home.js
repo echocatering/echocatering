@@ -790,7 +790,7 @@ const Home = forwardRef((props, ref) => {
               {/* Social Media Icons - Positioned at bottom, doesn't affect menu centering */}
               <div style={{
                 position: 'absolute',
-                bottom: 'clamp(40px, 10vw, 60px)',
+                bottom: 'clamp(60px, 12vw, 90px)',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',

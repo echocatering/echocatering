@@ -1357,8 +1357,8 @@ function EchoCocktailSubpage2({
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        paddingLeft: '30px',
-        paddingRight: '60px',
+        paddingLeft: '46px',
+        paddingRight: '82px',
         paddingBottom: 0,
         boxSizing: 'border-box',
       }}
