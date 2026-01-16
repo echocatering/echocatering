@@ -413,30 +413,128 @@ const Home = forwardRef((props, ref) => {
           padding: '0 1rem',
           zIndex: 1000
         }}>
-          {/* Logo */}
-          <div 
-            style={{
-              width: '120px',
-              height: '70px',
-              cursor: 'pointer',
-              paddingLeft: '8px'
-            }}
-            onClick={() => {
-              const homeSection = document.getElementById('mobile-home-section');
-              if (homeSection) {
-                homeSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-          >
-            <DynamicLogo
-              alt="ECHO Catering Logo"
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            {/* Logo */}
+            <div 
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain'
+                width: '120px',
+                height: '70px',
+                cursor: 'pointer',
+                paddingLeft: '8px'
               }}
-            />
-      </div>
+              onClick={() => {
+                const homeSection = document.getElementById('mobile-home-section');
+                if (homeSection) {
+                  homeSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
+              <DynamicLogo
+                alt="ECHO Catering Logo"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
+
+            {/* Social Media Icons - same style as desktop header */}
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center'
+            }}>
+              <button className="social-button" aria-label="Instagram" style={{
+                background: '#d0d0d0',
+                border: 'none',
+                padding: '0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '36px',
+                height: '36px',
+                minWidth: '36px',
+                minHeight: '36px',
+                boxSizing: 'border-box',
+                WebkitMaskImage: 'url(/assets/socials/instagram.svg)',
+                maskImage: 'url(/assets/socials/instagram.svg)',
+                WebkitMaskSize: '28px 28px',
+                maskSize: '28px 28px',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
+                transition: 'background 0.2s ease'
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#666666';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#d0d0d0';
+              }}>
+              </button>
+              <button className="social-button" aria-label="Facebook" style={{
+                background: '#d0d0d0',
+                border: 'none',
+                padding: '0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '36px',
+                height: '36px',
+                minWidth: '36px',
+                minHeight: '36px',
+                boxSizing: 'border-box',
+                WebkitMaskImage: 'url(/assets/socials/facebook.svg)',
+                maskImage: 'url(/assets/socials/facebook.svg)',
+                WebkitMaskSize: '28px 28px',
+                maskSize: '28px 28px',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
+                transition: 'background 0.2s ease'
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#666666';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#d0d0d0';
+              }}>
+              </button>
+              <button className="social-button" aria-label="Pinterest" style={{
+                background: '#d0d0d0',
+                border: 'none',
+                padding: '0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '36px',
+                height: '36px',
+                minWidth: '36px',
+                minHeight: '36px',
+                boxSizing: 'border-box',
+                WebkitMaskImage: 'url(/assets/socials/pinterest.svg)',
+                maskImage: 'url(/assets/socials/pinterest.svg)',
+                WebkitMaskSize: '28px 28px',
+                maskSize: '28px 28px',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
+                transition: 'background 0.2s ease'
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#666666';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#d0d0d0';
+              }}>
+              </button>
+            </div>
+          </div>
 
           {/* Dropdown Menu Button */}
           <div
@@ -1118,8 +1216,8 @@ const Home = forwardRef((props, ref) => {
         {/* SECTION 4: ABOUT */}
         <div id="mobile-about-section" ref={aboutRef} style={{ 
           minHeight: '100vh',
-          backgroundColor: '#3a3a3a',
-          padding: '2rem 1rem',
+          backgroundColor: '#111111',
+          padding: 0,
           position: 'relative'
         }}>
           {/* Darker gradient overlay in the middle - matching desktop */}
@@ -1135,88 +1233,157 @@ const Home = forwardRef((props, ref) => {
           }} />
           {/* About Content */}
           <div style={{
-            maxWidth: '600px',
-            margin: '0 auto',
-            padding: '1rem',
             position: 'relative',
             zIndex: 1
           }}>
             {/* Render all sections if provided; fallback to legacy fields */}
-            {(aboutContent.sections && aboutContent.sections.length > 0
-              ? aboutContent.sections
-              : [
-                  {
-                    title: aboutContent.storyTitle,
-                    content: aboutContent.story,
-                    image: aboutContent.images?.story,
-                    imageVisibility: aboutContent.imageVisibility?.story
-                  },
-                  {
-                    title: aboutContent.missionTitle,
-                    content: aboutContent.mission,
-                    image: aboutContent.images?.mission,
-                    imageVisibility: aboutContent.imageVisibility?.mission
-                  },
-                  {
-                    title: aboutContent.teamTitle,
-                    content: aboutContent.team,
-                    image: aboutContent.images?.team,
-                    imageVisibility: aboutContent.imageVisibility?.team
-                  }
-                ].filter(s => s.title || s.content || s.image)
-            ).map((section, idx) => (
-              <div key={`about-section-${idx}`} style={{ marginBottom: '2rem' }}>
-                {section.title && (
-                  <h3 style={{ 
-                    color: '#ffffff', 
-                    marginBottom: '1rem',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                    fontSize: '1.4rem',
-                    fontWeight: 600
-                  }}>{section.title}</h3>
-                )}
-                {section.content && (
-                  <p style={{ 
-                    color: '#ffffff', 
-                    lineHeight: '1.6',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                    fontSize: '0.85rem'
-                  }}>{section.content}</p>
-                )}
-                {section.image && section.imageVisibility !== false && (
-                  <div style={{
-                    marginTop: '1.5rem',
-                    borderRadius: '12px',
+            {buildAboutSections().map((section, idx) => {
+              const alignRight = idx % 2 === 0;
+              const textAlignLeft = idx % 2 === 0;
+              const sectionImage = section.image
+                ? (isCloudinaryUrl(section.image) ? getAboutOptimizedUrl(section.image) : section.image)
+                : '';
+
+              return (
+                <div
+                  key={`about-section-${section.id || idx}`}
+                  style={{
+                    position: 'relative',
+                    width: '100vw',
+                    height: '125vh',
                     overflow: 'hidden',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}>
-                    <img
-                      src={isCloudinaryUrl(section.image) ? getAboutOptimizedUrl(section.image) : section.image}
-                      alt={section.title || 'About image'}
-                      style={{
-                        width: '100%',
-                        height: '250px',
-                        objectFit: 'cover',
-                        display: 'block'
-                      }}
-                    />
+                    backgroundColor: '#111111'
+                  }}
+                >
+                  {sectionImage && (
+                    <>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '75vh',
+                          backgroundImage: `url(${sectionImage})`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: 'auto 100%',
+                          backgroundPosition: alignRight ? 'right center' : 'left center',
+                          zIndex: 0
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '62.5vh',
+                          left: 0,
+                          right: 0,
+                          height: '12.5vh',
+                          background: 'linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,0.95) 100%)',
+                          pointerEvents: 'none',
+                          zIndex: 2
+                        }}
+                      />
+                    </>
+                  )}
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: alignRight
+                        ? 'linear-gradient(to right, rgba(17,17,17,0.85) 0%, rgba(17,17,17,0.35) 55%, rgba(17,17,17,0) 100%)'
+                        : 'linear-gradient(to left, rgba(17,17,17,0.85) 0%, rgba(17,17,17,0.35) 55%, rgba(17,17,17,0) 100%)',
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '12.5vw',
+                      left: textAlignLeft ? 0 : 'auto',
+                      right: textAlignLeft ? 'auto' : 0,
+                      width: '87.5vw',
+                      height: '66.666vh',
+                      background: 'rgba(255,255,255,0.9)',
+                      padding: '1.75rem 2.25rem',
+                      boxShadow: '0 16px 36px rgba(0,0,0,0.2)',
+                      borderRadius: '0px',
+                      color: '#222',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.85rem',
+                      zIndex: 3,
+                      boxSizing: 'border-box',
+                      fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                      overflowY: 'auto',
+                      WebkitOverflowScrolling: 'touch'
+                    }}
+                  >
+                    {section.title && (
+                      <h2
+                        style={{
+                          color: '#222',
+                          margin: 0,
+                          fontSize: 'clamp(1.05rem, 5vw, 1.6rem)',
+                          fontWeight: 600,
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%'
+                        }}
+                      >
+                        {section.title}
+                      </h2>
+                    )}
+                    {section.content && (
+                      <p
+                        style={{
+                          color: '#444',
+                          margin: 0,
+                          lineHeight: 1.6,
+                          fontSize: 'clamp(0.85rem, 3.25vw, 1rem)',
+                          whiteSpace: 'pre-wrap',
+                          overflow: 'hidden',
+                          wordWrap: 'break-word',
+                          maxWidth: '100%'
+                        }}
+                      >
+                        {section.content}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* SECTION 5: REQUEST/INQUIRE */}
         <div id="mobile-contact-section" ref={contactRef} style={{ 
           minHeight: '100vh',
-          background: '#f9f9f9',
+          background: '#fff',
           padding: '2rem 1rem',
           position: 'relative'
         }}>
+          {/* Gradient overlay from #d0d0d0 (top) to white (bottom), full opacity */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '100%',
+            background: 'linear-gradient(to bottom, #e6e6e6 0%, #ffffff 100%)',
+            pointerEvents: 'none',
+            zIndex: 0
+          }} />
           <div style={{
             maxWidth: '600px',
             margin: '0 auto'
+            ,
+            position: 'relative',
+            zIndex: 1
           }}>
             <EventRequestForm />
           </div>
@@ -3746,7 +3913,7 @@ const Home = forwardRef((props, ref) => {
                   left: 0,
                   width: '400px',
                   height: '50px',
-                  backgroundColor: '#d0d0d0',
+                  backgroundColor: '#e6e6e6',
                   zIndex: 20,
                   display: 'flex',
                   alignItems: 'center',
@@ -3776,7 +3943,7 @@ const Home = forwardRef((props, ref) => {
                 left: '400px',
                 width: '50px',
                 height: '50px',
-                backgroundColor: '#d0d0d0',
+                backgroundColor: '#e6e6e6',
                 clipPath: 'polygon(0 0, 0 100%, 100% 100%)',
                 zIndex: 20,
               }} />
@@ -3805,7 +3972,7 @@ const Home = forwardRef((props, ref) => {
             left: 0,
             right: 0,
             height: '100%',
-            background: 'linear-gradient(to bottom, #d0d0d0 0%, #ffffff 100%)',
+            background: 'linear-gradient(to bottom, #e6e6e6 0%, #ffffff 100%)',
             pointerEvents: 'none',
             zIndex: 0
           }} />
