@@ -532,6 +532,10 @@ function EchoCocktailSubpage2({
   const [countriesSidebarVisible, setCountriesSidebarVisible] = useState(true);
   const [conceptVisible, setConceptVisible] = useState(false);
 
+  const currentFile = videoFiles[currentIndex];
+  const info = currentFile ? cocktailInfo[currentFile] : null;
+  const countryDisplayList = info ? getCountryDisplayList(info) : [];
+
   // Helpers
   const resetAnimations = useCallback(() => {
     setTitleVisible(false);
@@ -567,10 +571,6 @@ function EchoCocktailSubpage2({
     return () => cancelAnimationFrame(raf);
   }, [isVertical, showConceptInfo, conceptVisible, ingredientsVisible, garnishVisible, verticalInfoFontScale, info?.ingredients, info?.garnish, info?.concept]);
 
-  const currentFile = videoFiles[currentIndex];
-  const info = currentFile ? cocktailInfo[currentFile] : null;
-  const countryDisplayList = info ? getCountryDisplayList(info) : [];
-  
   // ONLY use Cloudinary URLs - NO FALLBACK to local paths
   // Prioritize cloudinaryVideoUrl first, then videoUrl (if it's a Cloudinary URL)
   let videoSrc = '';
