@@ -1201,17 +1201,28 @@ function EchoCocktailSubpage2({
         >
           {(info.ingredients || '')
             .split(',')
-            .map((item) => item.trim())
+            .map((item) => item.trim().replace(/^[-\s]+|[-\s]+$/g, ''))
             .filter(Boolean)
             .map((item, idx) => (
-              <span
-                key={`${item}-${idx}`}
-                style={{
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {idx === 0 ? item : ` - ${item}`}
-              </span>
+              <React.Fragment key={`${item}-${idx}`}>
+                {idx > 0 && (
+                  <span
+                    className="ingredient-separator"
+                    style={{
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {' - '}
+                  </span>
+                )}
+                <span
+                  style={{
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item}
+                </span>
+              </React.Fragment>
             ))}
         </div>
       </div>
@@ -1337,17 +1348,6 @@ function EchoCocktailSubpage2({
     // If no valid Cloudinary URL, use default SVG (don't use local paths)
     
     if (isVertical) {
-      const vw = typeof size?.width === 'number' ? size.width : (typeof window !== 'undefined' ? window.innerWidth : 0);
-      const vh = typeof size?.height === 'number' ? size.height : (typeof window !== 'undefined' ? window.innerHeight : 1);
-      const aspect = vw / Math.max(vh, 1);
-      const minAspect = 9 / 19;
-      const maxAspect = 2 / 3;
-      const t = Math.max(0, Math.min(1, (aspect - minAspect) / (maxAspect - minAspect)));
-      const leftDivisor = 20 + t * (5 - 20);
-      const rightDivisor = 35 + t * (20 - 35);
-      const leftPaddingPx = vh / Math.max(leftDivisor, 1);
-      const rightPaddingPx = vh / Math.max(rightDivisor, 1);
-
       // Vertical layout styling
       return (
     <div
@@ -1357,8 +1357,9 @@ function EchoCocktailSubpage2({
         transition: mapVisible ? 'opacity 1s ease' : 'none',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        paddingLeft: `${rightPaddingPx}px`,
-        paddingRight: `${leftPaddingPx}px`,
+        paddingLeft: '30px',
+        paddingRight: '60px',
+        paddingBottom: 0,
         boxSizing: 'border-box',
       }}
     >
