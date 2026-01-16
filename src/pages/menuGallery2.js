@@ -22,6 +22,45 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
    return coarse || touchPoints;
  };
 
+ const getIosSafeCloudinaryVideoUrl = (url) => {
+   if (!isCloudinaryUrl(url)) return url;
+
+   const [baseUrl, queryString] = String(url).split('?');
+   const marker = '/video/upload/';
+   const idx = baseUrl.indexOf(marker);
+   if (idx === -1) return url;
+
+   const prefix = baseUrl.slice(0, idx + marker.length);
+   const rest = baseUrl.slice(idx + marker.length);
+
+   let transformsPart = '';
+   let versionAndPath = '';
+
+   const directVersionMatch = rest.match(/^(v\d+\/.*)$/);
+   if (directVersionMatch) {
+     versionAndPath = directVersionMatch[1];
+   } else {
+     const versionPos = rest.search(/\/v\d+\//);
+     if (versionPos === -1) return url;
+
+     transformsPart = rest.slice(0, versionPos);
+     versionAndPath = rest.slice(versionPos + 1);
+   }
+
+   const cleanedTransformsPart = transformsPart
+     .split('/')
+     .map((segment) => segment
+       .split(',')
+       .filter((t) => t && !/^f_/.test(t) && !/^vc_/.test(t) && t !== 'sp_auto' && t !== 'q_auto')
+       .join(','))
+     .filter(Boolean)
+     .join('/');
+
+   const forced = 'sp_auto,q_auto,f_mp4,vc_h264';
+   const transformed = `${prefix}${forced}/${cleanedTransformsPart ? `${cleanedTransformsPart}/` : ''}${versionAndPath}`;
+   return queryString ? `${transformed}?${queryString}` : transformed;
+ };
+
 /**
  * Computes sizes and positions for OuterContainer, InnerContainer, and Video.
  * Maintains fixed aspect ratios and inverse fit rules for the 1:1 video.
@@ -232,6 +271,8 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
 function VideoBackground({ videoSrc, isVertical = false }) {
   const videoRef = useRef(null);
 
+  const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -265,9 +306,9 @@ function VideoBackground({ videoSrc, isVertical = false }) {
       document.removeEventListener('touchstart', resumeOnGesture);
       document.removeEventListener('click', resumeOnGesture);
     };
-  }, [videoSrc]);
+  }, [safeVideoSrc]);
 
-  if (!isCloudinaryUrl(videoSrc)) {
+  if (!isCloudinaryUrl(safeVideoSrc)) {
     return null;
   }
 
@@ -275,13 +316,13 @@ function VideoBackground({ videoSrc, isVertical = false }) {
     <video
       data-role="menu-background-video"
       ref={videoRef}
-      key={videoSrc}
+      key={safeVideoSrc}
       autoPlay
       muted
       loop
       playsInline
       webkit-playsinline="true"
-      preload="auto"
+      preload="metadata"
       crossOrigin={isProbablyIOS() ? undefined : 'anonymous'}
       style={{
         position: 'absolute',
@@ -296,7 +337,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
         transform: isVertical ? 'scale(1.32)' : 'scale(1)',
       }}
     >
-      <source src={videoSrc} type="video/mp4" />
+      <source src={safeVideoSrc} type="video/mp4" />
     </video>
   );
 }
@@ -510,10 +551,10 @@ function EchoCocktailSubpage2({
   
   if (isCloudinaryUrl(info?.cloudinaryVideoUrl)) {
     // Primary: Use cloudinaryVideoUrl if it's a valid Cloudinary URL
-    videoSrc = info.cloudinaryVideoUrl;
+    videoSrc = getIosSafeCloudinaryVideoUrl(info.cloudinaryVideoUrl);
   } else if (isCloudinaryUrl(info?.videoUrl)) {
     // Fallback: Use videoUrl only if it's also a valid Cloudinary URL
-    videoSrc = info.videoUrl;
+    videoSrc = getIosSafeCloudinaryVideoUrl(info.videoUrl);
   } else {
     // No valid Cloudinary URL found - return empty string so VideoBackground doesn't render
     videoSrc = '';
@@ -991,22 +1032,39 @@ function EchoCocktailSubpage2({
     
     const hideTrailingSeparators = () => {
       const separators = container.querySelectorAll('.ingredient-separator');
+
+      // Reset first so measurement isn't affected by a previously-hidden separator
+      separators.forEach((sep) => {
+        sep.style.display = 'inline-block';
+      });
+
       separators.forEach((sep) => {
         const sepRect = sep.getBoundingClientRect();
+        const prevSibling = sep.previousElementSibling;
         const nextSibling = sep.nextElementSibling;
-        
+
+        // If the separator wrapped onto a new line by itself, it becomes a leading dash.
+        if (prevSibling) {
+          const prevRect = prevSibling.getBoundingClientRect();
+          if (Math.abs(sepRect.top - prevRect.top) > 5) {
+            sep.style.display = 'none';
+            return;
+          }
+        }
+
+        // If the next ingredient is on a new line, this separator is a trailing dash.
         if (nextSibling) {
           const nextRect = nextSibling.getBoundingClientRect();
-          // If next element is on a new line (different top position), hide separator
           if (Math.abs(nextRect.top - sepRect.top) > 5) {
             sep.style.display = 'none';
-          } else {
-            sep.style.display = 'inline-block';
+            return;
           }
-        } else {
-          // Last separator should always be hidden
-          sep.style.display = 'none';
+          sep.style.display = 'inline-block';
+          return;
         }
+
+        // Last separator should always be hidden
+        sep.style.display = 'none';
       });
     };
     
@@ -1358,7 +1416,7 @@ function EchoCocktailSubpage2({
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
         paddingLeft: '46px',
-        paddingRight: '82px',
+        paddingRight: '78px',
         paddingBottom: 0,
         boxSizing: 'border-box',
       }}
