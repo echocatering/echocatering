@@ -795,129 +795,96 @@ const Home = forwardRef((props, ref) => {
                 transform: 'translateX(-50%)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '24px',
+                gap: '42px',
                 justifyContent: 'center',
                 paddingTop: 'clamp(24px, 6vw, 32px)',
                 borderTop: '1px solid rgba(0, 0, 0, 0.1)',
                 width: '100%',
                 maxWidth: '300px'
               }}>
-                <button 
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '8px',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    minHeight: '44px',
-                    minWidth: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'transform 0.2s ease',
-                    WebkitTapHighlightColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  onTouchStart={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onTouchEnd={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  aria-label="Instagram"
-                >
-                  <img 
-                    src="/assets/socials/instagram.svg" 
-                    alt="Instagram" 
-                    style={{ 
-                      width: '28px', 
-                      height: '28px', 
-                      filter: 'brightness(0) saturate(0) opacity(0.6)'
-                    }} 
-                  />
+                <button className="social-button" aria-label="Instagram" style={{
+                  background: '#d0d0d0',
+                  border: 'none',
+                  padding: '0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  boxSizing: 'border-box',
+                  WebkitMaskImage: 'url(/assets/socials/instagram.svg)',
+                  maskImage: 'url(/assets/socials/instagram.svg)',
+                  WebkitMaskSize: '28px 28px',
+                  maskSize: '28px 28px',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                  transition: 'background 0.2s ease'
+                }} onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#666666';
+                }} onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#d0d0d0';
+                }}>
                 </button>
-                <button 
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '8px',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    minHeight: '44px',
-                    minWidth: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'transform 0.2s ease',
-                    WebkitTapHighlightColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  onTouchStart={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onTouchEnd={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  aria-label="Facebook"
-                >
-                  <img 
-                    src="/assets/socials/facebook.svg" 
-                    alt="Facebook" 
-                    style={{ 
-                      width: '28px', 
-                      height: '28px', 
-                      filter: 'brightness(0) saturate(0) opacity(0.6)'
-                    }} 
-                  />
+                <button className="social-button" aria-label="Facebook" style={{
+                  background: '#d0d0d0',
+                  border: 'none',
+                  padding: '0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  boxSizing: 'border-box',
+                  WebkitMaskImage: 'url(/assets/socials/facebook.svg)',
+                  maskImage: 'url(/assets/socials/facebook.svg)',
+                  WebkitMaskSize: '28px 28px',
+                  maskSize: '28px 28px',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                  transition: 'background 0.2s ease'
+                }} onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#666666';
+                }} onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#d0d0d0';
+                }}>
                 </button>
-                <button 
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '8px',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    minHeight: '44px',
-                    minWidth: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'transform 0.2s ease',
-                    WebkitTapHighlightColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  onTouchStart={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onTouchEnd={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  aria-label="Pinterest"
-                >
-                  <img 
-                    src="/assets/socials/pinterest.svg" 
-                    alt="Pinterest" 
-                    style={{ 
-                      width: '28px', 
-                      height: '28px', 
-                      filter: 'brightness(0) saturate(0) opacity(0.6)'
-                    }} 
-                  />
+                <button className="social-button" aria-label="Pinterest" style={{
+                  background: '#d0d0d0',
+                  border: 'none',
+                  padding: '0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  boxSizing: 'border-box',
+                  WebkitMaskImage: 'url(/assets/socials/pinterest.svg)',
+                  maskImage: 'url(/assets/socials/pinterest.svg)',
+                  WebkitMaskSize: '28px 28px',
+                  maskSize: '28px 28px',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                  transition: 'background 0.2s ease'
+                }} onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#666666';
+                }} onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#d0d0d0';
+                }}>
                 </button>
               </div>
             </div>
@@ -929,7 +896,7 @@ const Home = forwardRef((props, ref) => {
         {/* SECTION 1: HOME - Hero */}
         <div id="mobile-home-section" style={{ 
           width: '100vw',
-          height: '75vh',
+          height: 'calc(100vh - 120px)',
           background: '#fff',
           position: 'relative',
           display: 'flex',
@@ -1018,7 +985,7 @@ const Home = forwardRef((props, ref) => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px'
+            gap: 0
           }}>
             <div
               style={{
@@ -1047,7 +1014,7 @@ const Home = forwardRef((props, ref) => {
               alignItems: 'center',
               justifyContent: 'center',
               height: 'auto',
-              marginTop: '-10px'
+              marginTop: '-4px'
             }}>
               +
             </div>
@@ -1061,7 +1028,8 @@ const Home = forwardRef((props, ref) => {
               whiteSpace: 'nowrap',
               fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: '1.2',
-              textShadow: '0 4px 8px rgba(0,0,0,0.5)'
+              textShadow: '0 4px 8px rgba(0,0,0,0.5)',
+              marginTop: '6px'
             }}>
               EVENT CATERING
             </div>
