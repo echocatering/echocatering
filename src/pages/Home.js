@@ -1273,7 +1273,7 @@ const Home = forwardRef((props, ref) => {
                       left: textAlignLeft ? 0 : 'auto',
                       right: textAlignLeft ? 'auto' : 0,
                       width: '87.5vw',
-                      height: '66.666vh',
+                      height: '600px',
                       background: 'rgba(255,255,255,0.9)',
                       padding: '1.75rem 2.25rem',
                       boxShadow: '0 16px 36px rgba(0,0,0,0.2)',

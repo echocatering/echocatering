@@ -464,8 +464,10 @@ function EchoCocktailSubpage2({
   const animationTimeoutsRef = useRef([]);
   const titleRef = useRef(null);
   const ingredientsContainerRef = useRef(null);
+  const infoConceptContainerRef = useRef(null);
   const navBarRef = useRef(null);
   const innerContainerRef = useRef(null);
+  const [verticalInfoFontScale, setVerticalInfoFontScale] = useState(1);
 
   const [ref, size] = useContainerSize(outerWidthOverride, outerHeightOverride, viewMode);
   const [forceRecalc, setForceRecalc] = useState(0);
@@ -540,6 +542,30 @@ function EchoCocktailSubpage2({
     setCountriesSidebarVisible(false);
     setConceptVisible(false);
   }, []);
+
+  useEffect(() => {
+    setVerticalInfoFontScale(1);
+  }, [currentIndex, showConceptInfo]);
+
+  useEffect(() => {
+    if (!isVertical) return;
+
+    const container = infoConceptContainerRef.current;
+    if (!container) return;
+
+    const shouldMeasure = showConceptInfo ? conceptVisible : (ingredientsVisible || garnishVisible);
+    if (!shouldMeasure) return;
+
+    const measure = () => {
+      const overflow = container.scrollHeight > container.clientHeight + 1;
+      if (overflow && verticalInfoFontScale > 0.75) {
+        setVerticalInfoFontScale((prev) => Math.max(0.75, Number((prev - 0.05).toFixed(2))));
+      }
+    };
+
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
+    return () => cancelAnimationFrame(raf);
+  }, [isVertical, showConceptInfo, conceptVisible, ingredientsVisible, garnishVisible, verticalInfoFontScale, info?.ingredients, info?.garnish, info?.concept]);
 
   const currentFile = videoFiles[currentIndex];
   const info = currentFile ? cocktailInfo[currentFile] : null;
@@ -1228,7 +1254,8 @@ function EchoCocktailSubpage2({
         style={{
           paddingTop: ingredientsPaddingTop,
           paddingBottom: ingredientsBottomPadding,
-          paddingLeft: layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem',
+          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
+          paddingRight: isVertical ? 0 : 0,
           opacity: ingredientsVisible ? 1 : 0,
           transition: ingredientsVisible ? 'opacity 1.5s ease-out' : 'none',
           color: '#555',
@@ -1249,7 +1276,7 @@ function EchoCocktailSubpage2({
         <div
           ref={ingredientsContainerRef}
           style={{
-            fontSize: isVertical ? getFontSize(58, 0.85, 1.3) : getFontSize(40, 1.0, 1.6),
+            fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})` : getFontSize(40, 1.0, 1.6),
             marginBottom: 0,
             display: 'flex',
             flexWrap: 'wrap',
@@ -1293,7 +1320,7 @@ function EchoCocktailSubpage2({
       <div
         style={{
           marginTop: 0,
-          paddingLeft: layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem',
+          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
           opacity: garnishVisible ? 1 : 0,
           transition: garnishVisible ? 'opacity 1.5s ease-out' : 'none',
           color: '#555',
@@ -1311,7 +1338,7 @@ function EchoCocktailSubpage2({
         >
           Garnish
         </div>
-        <div style={{ fontSize: isVertical ? getFontSize(58, 0.85, 1.3) : getFontSize(45, 0.85, 1.3) }}>{info.garnish}</div>
+        <div style={{ fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})` : getFontSize(45, 0.85, 1.3) }}>{info.garnish}</div>
       </div>
     );
   };
@@ -1327,7 +1354,7 @@ function EchoCocktailSubpage2({
         style={{
             paddingTop: conceptPaddingTop,
             paddingBottom: conceptBottomPadding,
-            paddingLeft: layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem',
+            paddingLeft: 0,
             opacity: conceptVisible ? 1 : 0,
             transition: conceptVisible ? 'opacity 1.5s ease-out' : 'none',
             color: '#555',
@@ -1345,7 +1372,7 @@ function EchoCocktailSubpage2({
           >
             Concept
           </div>
-          <div style={{ fontSize: getFontSize(58, 0.85, 1.3), marginBottom: '1rem' }}>{info.concept}</div>
+          <div style={{ fontSize: `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})`, marginBottom: '1rem' }}>{info.concept}</div>
         </div>
       );
     } else {
@@ -2195,14 +2222,15 @@ function EchoCocktailSubpage2({
 
         {/* Info/Concept container */}
         <div
+          ref={infoConceptContainerRef}
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            top: `calc(100% - ${(layout.inner.height * 20) / 64}px)`,
+            bottom: '98px',
             height: '200px',
             width: `${layout.inner.width}px`,
-            paddingLeft: `${layout.inner.width / 12}px`,
-            paddingRight: `${layout.inner.width / 12}px`,
+            paddingLeft: '24px',
+            paddingRight: '24px',
             paddingBottom: 0,
             boxSizing: 'border-box',
             overflow: 'hidden',
