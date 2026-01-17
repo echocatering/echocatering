@@ -319,6 +319,10 @@ function VideoBackground({ videoSrc, isVertical = false }) {
       playsInline
       webkit-playsinline="true"
       preload="auto"
+      onLoadedMetadata={(e) => {
+        e.currentTarget.muted = true;
+        e.currentTarget.play().catch(() => {});
+      }}
       style={{
         position: 'absolute',
         top: 0,
