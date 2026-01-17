@@ -1313,7 +1313,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             position: 'relative',
             width: '100%',
             height: 'calc(100vh / 16)', // 1/16 browser screen height
-            paddingTop: '0',
+            paddingTop: '14px',
             paddingBottom: '0',
             paddingLeft: '0',
             paddingRight: '0',
