@@ -1108,9 +1108,8 @@ const MenuManager = () => {
     // Poll every 2 seconds
     processingPollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`/api/video-jobs/${itemNumber}/status`);
-        if (response.ok) {
-          const status = await response.json();
+        const status = await apiCall(`/video-jobs/${itemNumber}/status`);
+        if (status) {
           // If a job is active but worker is offline, surface it explicitly.
           const hydrated =
             status?.active && status?.workerOnline === false
@@ -1191,8 +1190,6 @@ const MenuManager = () => {
               });
             }
           }
-        } else {
-          console.warn('[MenuManager] Status poll failed:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Status poll error:', error);
@@ -1241,18 +1238,14 @@ const MenuManager = () => {
       // Check if this item is processing on the server
       const checkStatus = async () => {
         try {
-          const response = await fetch(`/api/video-jobs/${currentItemNumber}/status`);
+          const status = await apiCall(`/video-jobs/${currentItemNumber}/status`);
           
-          if (response.ok) {
-            const status = await response.json();
-            if (status.active) {
+          if (status && status.active) {
               // Item is still processing - restore status and start polling
               setProcessingStatus(status);
               if (!processingPollIntervalRef.current) {
                 startProcessingPoll(currentItemNumber);
               }
-            }
-            // If not active, don't set status (it will remain null)
           }
         } catch (error) {
           console.error('Error checking processing status:', error);
