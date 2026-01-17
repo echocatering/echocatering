@@ -33,31 +33,21 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
    const prefix = baseUrl.slice(0, idx + marker.length);
    const rest = baseUrl.slice(idx + marker.length);
 
-   let transformsPart = '';
-   let versionAndPath = '';
+   // Check if required iOS-safe directives are already present
+   const hasQAuto = /(^|[\/, ])q_auto($|[\/, ])/.test(rest);
+   const hasFMp4 = /(^|[\/, ])f_mp4($|[\/, ])/.test(rest);
+   const hasVcH264 = /(^|[\/, ])vc_h264($|[\/, ])/.test(rest);
 
-   const directVersionMatch = rest.match(/^(v\d+\/.*)$/);
-   if (directVersionMatch) {
-     versionAndPath = directVersionMatch[1];
-   } else {
-     const versionPos = rest.search(/\/v\d+\//);
-     if (versionPos === -1) return url;
+   // If all required directives exist, return as-is
+   if (hasQAuto && hasFMp4 && hasVcH264) return url;
 
-     transformsPart = rest.slice(0, versionPos);
-     versionAndPath = rest.slice(versionPos + 1);
-   }
+   // Build missing directives (no sp_auto - not supported for .mp4 files)
+   const missing = [];
+   if (!hasQAuto) missing.push('q_auto');
+   if (!hasFMp4) missing.push('f_mp4');
+   if (!hasVcH264) missing.push('vc_h264');
 
-   const cleanedTransformsPart = transformsPart
-     .split('/')
-     .map((segment) => segment
-       .split(',')
-       .filter((t) => t && !/^f_/.test(t) && !/^vc_/.test(t) && t !== 'sp_auto' && t !== 'q_auto')
-       .join(','))
-     .filter(Boolean)
-     .join('/');
-
-   const forced = 'sp_auto,q_auto,f_mp4,vc_h264';
-   const transformed = `${prefix}${forced}/${cleanedTransformsPart ? `${cleanedTransformsPart}/` : ''}${versionAndPath}`;
+   const transformed = `${prefix}${missing.join(',')}/${rest}`;
    return queryString ? `${transformed}?${queryString}` : transformed;
  };
 
@@ -272,6 +262,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
   const videoRef = useRef(null);
 
   const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
+  const isCloudinaryVideo = useMemo(() => isCloudinaryUrl(safeVideoSrc), [safeVideoSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -308,10 +299,6 @@ function VideoBackground({ videoSrc, isVertical = false }) {
     };
   }, [safeVideoSrc]);
 
-  if (!isCloudinaryUrl(safeVideoSrc)) {
-    return null;
-  }
-
   return (
     <video
       data-role="menu-background-video"
@@ -323,7 +310,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
       playsInline
       webkit-playsinline="true"
       preload="metadata"
-      crossOrigin={isProbablyIOS() ? undefined : 'anonymous'}
+      crossOrigin={isCloudinaryVideo && !isProbablyIOS() ? 'anonymous' : undefined}
       style={{
         position: 'absolute',
         top: 0,
@@ -571,20 +558,8 @@ function EchoCocktailSubpage2({
     return () => cancelAnimationFrame(raf);
   }, [isVertical, showConceptInfo, conceptVisible, ingredientsVisible, garnishVisible, verticalInfoFontScale, info?.ingredients, info?.garnish, info?.concept]);
 
-  // ONLY use Cloudinary URLs - NO FALLBACK to local paths
-  // Prioritize cloudinaryVideoUrl first, then videoUrl (if it's a Cloudinary URL)
-  let videoSrc = '';
-  
-  if (isCloudinaryUrl(info?.cloudinaryVideoUrl)) {
-    // Primary: Use cloudinaryVideoUrl if it's a valid Cloudinary URL
-    videoSrc = getIosSafeCloudinaryVideoUrl(info.cloudinaryVideoUrl);
-  } else if (isCloudinaryUrl(info?.videoUrl)) {
-    // Fallback: Use videoUrl only if it's also a valid Cloudinary URL
-    videoSrc = getIosSafeCloudinaryVideoUrl(info.videoUrl);
-  } else {
-    // No valid Cloudinary URL found - return empty string so VideoBackground doesn't render
-    videoSrc = '';
-  }
+  // Prefer cloudinaryVideoUrl, fallback to videoUrl; only transform if it's Cloudinary
+  const videoSrc = info?.cloudinaryVideoUrl || info?.videoUrl || '';
   
 
   // Function to scroll gallery container so BOTTOM aligns with viewport bottom (match Home MENU button behavior)
@@ -2226,8 +2201,8 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            bottom: '98px',
-            height: '200px',
+            bottom: '82px',
+            height: '160px',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
@@ -2543,7 +2518,7 @@ function EchoCocktailSubpage2({
       }}
     >
       {/* Video background fills entire outer container/viewport */}
-      {isCloudinaryUrl(videoSrc) ? (
+      {videoSrc ? (
         <VideoBackground videoSrc={videoSrc} isVertical={isVertical} />
       ) : (
         <div style={{
