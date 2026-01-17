@@ -1034,6 +1034,35 @@ const Home = forwardRef((props, ref) => {
               EVENT CATERING
             </div>
 
+            <div style={{
+              marginTop: 'clamp(10px, 2.2vh, 18px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 'clamp(2px, 0.6vh, 6px)',
+              color: '#ffffff',
+              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              letterSpacing: '0.08em',
+              textShadow: '0 4px 8px rgba(0,0,0,0.5)'
+            }}>
+              <div style={{
+                fontSize: 'clamp(0.85rem, 2.4vw, 1.15rem)',
+                fontWeight: 400,
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap'
+              }}>
+                Curated Cocktail.
+              </div>
+              <div style={{
+                fontSize: 'clamp(0.85rem, 2.4vw, 1.15rem)',
+                fontWeight: 400,
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap'
+              }}>
+                Thoughtful Hospitality
+              </div>
+            </div>
+
             {/* BOOK NOW Button */}
             <div 
               onClick={() => {
