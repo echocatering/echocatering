@@ -22,7 +22,10 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
    return coarse || touchPoints;
  };
 
- const getIosSafeCloudinaryVideoUrl = (url) => {
+ // Track if we've applied the audio-test transform to the first video
+let audioTestApplied = false;
+
+const getIosSafeCloudinaryVideoUrl = (url, isFirstVideo = false) => {
    if (!isCloudinaryUrl(url)) return url;
 
    const [baseUrl, queryString] = String(url).split('?');
@@ -32,6 +35,14 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 
    const prefix = baseUrl.slice(0, idx + marker.length);
    const rest = baseUrl.slice(idx + marker.length);
+
+   // iOS audio test: for first video only, use ac_none to strip audio
+   if (isFirstVideo && !audioTestApplied) {
+     audioTestApplied = true;
+     const iosTransform = 'sp_auto,f_mp4,vc_h264,ac_none';
+     const transformed = `${prefix}${iosTransform}/${rest}`;
+     return queryString ? `${transformed}?${queryString}` : transformed;
+   }
 
    // Check if required iOS-safe directives are already present
    const hasQAuto = /(^|[\/, ])q_auto($|[\/, ])/.test(rest);
@@ -258,10 +269,10 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
 /**
  * Video background that fills the outer container (viewport).
  */
-function VideoBackground({ videoSrc, isVertical = false }) {
+function VideoBackground({ videoSrc, isVertical = false, isFirstVideo = false }) {
   const videoRef = useRef(null);
 
-  const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
+  const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc, isFirstVideo), [videoSrc, isFirstVideo]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -320,8 +331,11 @@ function VideoBackground({ videoSrc, isVertical = false }) {
       webkit-playsinline="true"
       preload="auto"
       onLoadedMetadata={(e) => {
-        e.currentTarget.muted = true;
-        e.currentTarget.play().catch(() => {});
+        const video = e.currentTarget;
+        video.muted = true;
+        requestAnimationFrame(() => {
+          video.play().catch(() => {});
+        });
       }}
       style={{
         position: 'absolute',
@@ -2537,7 +2551,7 @@ function EchoCocktailSubpage2({
     >
       {/* Video background fills entire outer container/viewport */}
       {videoSrc ? (
-        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} />
+        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} isFirstVideo={true} />
       ) : (
         <div style={{
           position: 'absolute',
