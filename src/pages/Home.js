@@ -117,6 +117,25 @@ function AutoFitTextCard({
   );
 }
 
+function renderMobileAboutTitle(rawTitle) {
+  const text = (rawTitle ?? '').toString().trim();
+  if (!text) return null;
+
+  const parts = text
+    .match(/[^.]+\.?/g)
+    ?.map((p) => p.trim())
+    .filter(Boolean);
+
+  if (!parts || parts.length <= 1) return text;
+
+  return parts.map((part, idx) => (
+    <React.Fragment key={`${idx}-${part}`}>
+      {part}
+      {idx < parts.length - 1 ? <br /> : null}
+    </React.Fragment>
+  ));
+}
+
 const Home = forwardRef((props, ref) => {
   const [selected, setSelected] = useState('cocktails');
   const [subpages, setSubpages] = useState({
@@ -1390,6 +1409,7 @@ const Home = forwardRef((props, ref) => {
                         WebkitOverflowScrolling: 'touch'
                       }}
                       title={section.title}
+                      renderTitle={() => renderMobileAboutTitle(section.title)}
                       content={section.content}
                       titleStyle={{
                         color: '#222',
