@@ -2205,8 +2205,8 @@ function EchoCocktailSubpage2({
                 src="/assets/icons/originals.svg"
                 alt="Menu"
                 style={{
-                  width: '42%',
-                  height: '42%',
+                  width: '46%',
+                  height: '46%',
                   objectFit: 'contain',
                   filter: 'brightness(0) saturate(100%) invert(47%)',
                   opacity: 1,
