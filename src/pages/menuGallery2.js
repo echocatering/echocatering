@@ -22,10 +22,7 @@ import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
    return coarse || touchPoints;
  };
 
- // Track if we've applied the audio-test transform to the first video
-let audioTestApplied = false;
-
-const getIosSafeCloudinaryVideoUrl = (url, isFirstVideo = false) => {
+const getIosSafeCloudinaryVideoUrl = (url) => {
    if (!isCloudinaryUrl(url)) return url;
 
    const [baseUrl, queryString] = String(url).split('?');
@@ -35,14 +32,6 @@ const getIosSafeCloudinaryVideoUrl = (url, isFirstVideo = false) => {
 
    const prefix = baseUrl.slice(0, idx + marker.length);
    const rest = baseUrl.slice(idx + marker.length);
-
-   // iOS audio test: for first video only, use ac_none to strip audio
-   if (isFirstVideo && !audioTestApplied) {
-     audioTestApplied = true;
-     const iosTransform = 'sp_auto,f_mp4,vc_h264,ac_none';
-     const transformed = `${prefix}${iosTransform}/${rest}`;
-     return queryString ? `${transformed}?${queryString}` : transformed;
-   }
 
    // Check if required iOS-safe directives are already present
    const hasQAuto = /(^|[\/, ])q_auto($|[\/, ])/.test(rest);
@@ -269,10 +258,10 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
 /**
  * Video background that fills the outer container (viewport).
  */
-function VideoBackground({ videoSrc, isVertical = false, isFirstVideo = false }) {
+function VideoBackground({ videoSrc, isVertical = false }) {
   const videoRef = useRef(null);
 
-  const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc, isFirstVideo), [videoSrc, isFirstVideo]);
+  const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -2551,7 +2540,7 @@ function EchoCocktailSubpage2({
     >
       {/* Video background fills entire outer container/viewport */}
       {videoSrc ? (
-        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} isFirstVideo={true} />
+        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} />
       ) : (
         <div style={{
           position: 'absolute',
