@@ -741,7 +741,7 @@ router.post('/generate-background-fbf', async (req, res) => {
       const trimStartSec = trimStart || 2;
       const trimDurationSec = trimDuration || maxDuration || 16;
       
-      const preprocessCmd = `ffmpeg -y -ss ${trimStartSec} -i "${inputPath}" -t ${trimDurationSec} -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -c:a copy "${tempPreprocessedPath}"`;
+      const preprocessCmd = `ffmpeg -y -ss ${trimStartSec} -i "${inputPath}" -t ${trimDurationSec} -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -an "${tempPreprocessedPath}"`;
       
       await execAsync(preprocessCmd);
       console.log('[Frame-by-Frame] Preprocessing complete');
@@ -1534,7 +1534,7 @@ router.post('/upload-recording', upload.single('video'), async (req, res) => {
     console.log('Converting browser recording to MP4...');
     
     // Convert WebM to MP4
-    const convertCmd = `ffmpeg -y -i "${inputPath}" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -movflags +faststart "${outputPath}"`;
+    const convertCmd = `ffmpeg -y -i "${inputPath}" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -an -movflags +faststart "${outputPath}"`;
     await execAsync(convertCmd);
     
     // Cleanup input file
@@ -1608,7 +1608,7 @@ router.post('/preprocess-video', async (req, res) => {
     // -c:v prores_ks -profile:v 3: ProRes 4444 (lossless, works with MOV)
     // -c:a copy: copy audio if present
     // Note: Can't use copy codec with filters, so using ProRes 4444 (lossless) for MOV format
-    const preprocessCmd = `ffmpeg -y -ss 2 -i "${inputPath}" -t 16 -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -c:a copy "${outputPath}"`;
+    const preprocessCmd = `ffmpeg -y -ss 2 -i "${inputPath}" -t 16 -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -an "${outputPath}"`;
     
     console.log(`[Preprocess] Running: ${preprocessCmd}`);
     await execAsync(preprocessCmd);
@@ -2218,7 +2218,7 @@ router.post('/composite-on-black', async (req, res) => {
     // Using FFmpeg: create bright green background, then overlay the input video with alpha channel
     // The input video's alpha channel will show through as green where transparent
     // Use format=yuva444p to ensure alpha is preserved, then overlay with alpha blending
-    const compositeCmd = `ffmpeg -y -f lavfi -i "color=c=0x00FF00:s=${width}x${height}:d=${duration.toFixed(3)}:r=${fps.toFixed(3)}" -i "${inputPath}" -filter_complex "[0:v]format=yuva444p[bg];[bg][1:v]overlay=0:0:format=yuva444p:shortest=1" -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -movflags +faststart "${outputPath}"`;
+    const compositeCmd = `ffmpeg -y -f lavfi -i "color=c=0x00FF00:s=${width}x${height}:d=${duration.toFixed(3)}:r=${fps.toFixed(3)}" -i "${inputPath}" -filter_complex "[0:v]format=yuva444p[bg];[bg][1:v]overlay=0:0:format=yuva444p:shortest=1" -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -an -movflags +faststart "${outputPath}"`;
     
     console.log(`[Green Background] Compositing ${inputPathParam} over bright green background...`);
     await execAsync(compositeCmd);
@@ -2292,7 +2292,7 @@ const sampleTopRowWhiteBalanceScale = async (inputPath) => {
 // Helper: apply uniform RGB gain while preserving hue
 const applyUniformGain = async (inputPath, outputPath, scale) => {
   const scaleStr = scale.toFixed(6);
-  const cmd = `ffmpeg -y -i "${inputPath}" -vf "colorchannelmixer=rr=${scaleStr}:gg=${scaleStr}:bb=${scaleStr}" -c:v prores_ks -profile:v 3 -c:a copy "${outputPath}"`;
+  const cmd = `ffmpeg -y -i "${inputPath}" -vf "colorchannelmixer=rr=${scaleStr}:gg=${scaleStr}:bb=${scaleStr}" -c:v prores_ks -profile:v 3 -an "${outputPath}"`;
   await execAsync(cmd);
 };
 
@@ -2338,7 +2338,7 @@ const generateIconVideo = async (inputPath, outputPath, itemNumber) => {
     console.log(`[generateIconVideo] Trying quality setting ${i + 1}/${qualitySettings.length}: CRF ${setting.crf}, scale ${setting.scale}`);
     
     const tempOutput = outputPath.replace('.mp4', '_temp.mp4');
-    const cmd = `ffmpeg -y -i "${inputPath}" -vf "scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf ${setting.crf} -preset slow -movflags +faststart "${tempOutput}"`;
+    const cmd = `ffmpeg -y -i "${inputPath}" -vf "scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -crf ${setting.crf} -preset slow -an -movflags +faststart "${tempOutput}"`;
     
     try {
     await execAsync(cmd);
@@ -2617,7 +2617,7 @@ const processVideoForItem = async (itemNumber) => {
     const cropX = Math.floor((originalWidth - cropSize) / 2);
     
     const preprocessedPath = path.join(tempDir, `${itemNumber}_preprocessed.mov`);
-    const preprocessCmd = `ffmpeg -y -ss 2 -i "${inputPath}" -t 15.58 -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -c:a copy "${preprocessedPath}"`;
+    const preprocessCmd = `ffmpeg -y -ss 2 -i "${inputPath}" -t 15.58 -vf "crop=${cropSize}:${cropSize}:${cropX}:0" -c:v prores_ks -profile:v 3 -an "${preprocessedPath}"`;
     
     await execAsync(preprocessCmd);
     status.progress = 10;

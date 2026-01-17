@@ -1824,7 +1824,7 @@ router.post('/:id/preview', [authenticateToken, requireEditor], async (req, res)
     const filterFlag = filterGraph === 'null' ? '' : (usesComplexFilters ? `-filter_complex "${filterGraph}" -map "[out]"` : `-vf "${filterGraph}"`);
     
     // Use MP4 format for preview (H.264, near-lossless quality - slightly lower CRF for speed)
-    const previewCmd = `ffmpeg -y -i "${rootStage1}" -t 3 ${filterFlag} -c:v libx264 -preset slow -crf 14 -profile:v high -level 4.1 -c:a aac -movflags +faststart "${previewFile}"`.trim().replace(/\s+/g, ' ');
+    const previewCmd = `ffmpeg -y -i "${rootStage1}" -t 3 ${filterFlag} -c:v libx264 -preset slow -crf 14 -profile:v high -level 4.1 -an -movflags +faststart "${previewFile}"`.trim().replace(/\s+/g, ' ');
     
     console.log(`🎬 Generating preview: ${previewCmd}`);
     console.log(`📁 Preview file path: ${previewFile}`);

@@ -84,7 +84,7 @@ async function optimizeVideo(videoPath) {
     // -vf "scale=480:-2": Scale to 480px width, maintain aspect ratio
     // -c:a copy: Copy audio stream (no re-encoding)
     // -movflags +faststart: Move metadata to beginning for web streaming
-    const optimizeCommand = `ffmpeg -i "${videoPath}" -c:v libx264 -preset medium -crf 23 -vf "scale=480:-2" -c:a copy -movflags +faststart -y "${tempOptimized}"`;
+    const optimizeCommand = `ffmpeg -i "${videoPath}" -c:v libx264 -preset medium -crf 23 -vf "scale=480:-2" -an -movflags +faststart -y "${tempOptimized}"`;
 
     console.log(`🔄 Optimizing video: ${path.basename(videoPath)}`);
     console.log(`   Command: ${optimizeCommand.replace(videoPath, 'INPUT').replace(tempOptimized, 'OUTPUT')}`);
