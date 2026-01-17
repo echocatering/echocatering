@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useCallback } from 'react';
 import { EchoCocktailSubpage } from './menuGallery2';
 import DynamicHero from '../components/DynamicHero';
 import DynamicLogo from '../components/DynamicLogo';
@@ -18,6 +18,104 @@ const subpageOrder = [
   { key: 'mocktails', label: 'Mocktails' },
   { key: 'spirits', label: 'Spirits' },
 ];
+
+function AutoFitTextCard({
+  containerStyle,
+  title,
+  renderTitle,
+  content,
+  titleStyle,
+  bodyStyle,
+}) {
+  const containerRef = useRef(null);
+  const contentRef = useRef(null);
+  const [baseFontSizePx, setBaseFontSizePx] = useState(null);
+  const [allowScroll, setAllowScroll] = useState(false);
+
+  const fitNow = useCallback(() => {
+    const container = containerRef.current;
+    const inner = contentRef.current;
+    if (!container || !inner) return;
+
+    const minPx = 11;
+    const maxPx = 18;
+    const containerStyle = window.getComputedStyle(container);
+    const paddingTop = parseFloat(containerStyle.paddingTop) || 0;
+    const paddingBottom = parseFloat(containerStyle.paddingBottom) || 0;
+    const available = container.clientHeight - paddingTop - paddingBottom;
+    if (!available) return;
+
+    const original = container.style.fontSize;
+
+    const fitsAt = (px) => {
+      container.style.fontSize = `${px}px`;
+      return inner.scrollHeight <= available;
+    };
+
+    let lo = minPx;
+    let hi = maxPx;
+    let best = minPx;
+
+    if (!fitsAt(minPx)) {
+      setBaseFontSizePx(minPx);
+      setAllowScroll(true);
+      container.style.fontSize = original;
+      return;
+    }
+
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (fitsAt(mid)) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    setBaseFontSizePx(best);
+    setAllowScroll(false);
+    container.style.fontSize = original;
+  }, []);
+
+  useLayoutEffect(() => {
+    fitNow();
+  }, [fitNow, title, content]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      fitNow();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitNow]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        ...containerStyle,
+        fontSize: baseFontSizePx ? `${baseFontSizePx}px` : containerStyle?.fontSize,
+        overflowY: allowScroll ? 'auto' : 'hidden',
+      }}
+    >
+      <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', gap: 'inherit' }}>
+        {title ? (
+          <h2 style={titleStyle}>
+            {typeof renderTitle === 'function' ? renderTitle() : title}
+          </h2>
+        ) : null}
+        {content ? (
+          <p style={bodyStyle}>
+            {content}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 const Home = forwardRef((props, ref) => {
   const [selected, setSelected] = useState('cocktails');
@@ -1034,35 +1132,6 @@ const Home = forwardRef((props, ref) => {
               EVENT CATERING
             </div>
 
-            <div style={{
-              marginTop: 'clamp(10px, 2.2vh, 18px)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 'clamp(2px, 0.6vh, 6px)',
-              color: '#ffffff',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-              letterSpacing: '0.08em',
-              textShadow: '0 4px 8px rgba(0,0,0,0.5)'
-            }}>
-              <div style={{
-                fontSize: 'clamp(0.85rem, 2.4vw, 1.15rem)',
-                fontWeight: 400,
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap'
-              }}>
-                Curated Cocktail.
-              </div>
-              <div style={{
-                fontSize: 'clamp(0.85rem, 2.4vw, 1.15rem)',
-                fontWeight: 400,
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap'
-              }}>
-                Thoughtful Hospitality
-              </div>
-            </div>
-
             {/* BOOK NOW Button */}
             <div 
               onClick={() => {
@@ -1296,61 +1365,53 @@ const Home = forwardRef((props, ref) => {
                   />
 
                   <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '12.5vw',
-                      left: textAlignLeft ? 0 : 'auto',
-                      right: textAlignLeft ? 'auto' : 0,
-                      width: '87.5vw',
-                      height: 'min(600px, 70vh)',
-                      background: 'rgba(255,255,255,0.9)',
-                      padding: 'clamp(1.1rem, 3.2vh, 1.75rem) clamp(1.25rem, 5vw, 2.25rem)',
-                      boxShadow: '0 16px 36px rgba(0,0,0,0.2)',
-                      borderRadius: '0px',
-                      color: '#222',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 'clamp(0.55rem, 1.5vh, 0.85rem)',
-                      zIndex: 3,
-                      boxSizing: 'border-box',
-                      fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                      fontSize: 'clamp(13px, 1.6vh, 16px)',
-                      overflowY: 'auto',
-                      WebkitOverflowScrolling: 'touch'
-                    }}
+                    style={{ display: 'contents' }}
                   >
-                    {section.title && (
-                      <h2
-                        style={{
-                          color: '#222',
-                          margin: 0,
-                          fontSize: '1.45em',
-                          fontWeight: 600,
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '100%'
-                        }}
-                      >
-                        {section.title}
-                      </h2>
-                    )}
-                    {section.content && (
-                      <p
-                        style={{
-                          color: '#444',
-                          margin: 0,
-                          lineHeight: 1.6,
-                          fontSize: '1em',
-                          whiteSpace: 'pre-wrap',
-                          overflow: 'hidden',
-                          wordWrap: 'break-word',
-                          maxWidth: '100%'
-                        }}
-                      >
-                        {section.content}
-                      </p>
-                    )}
+                    <AutoFitTextCard
+                      containerStyle={{
+                        position: 'absolute',
+                        bottom: '12.5vw',
+                        left: textAlignLeft ? 0 : 'auto',
+                        right: textAlignLeft ? 'auto' : 0,
+                        width: '87.5vw',
+                        height: 'min(600px, 70vh)',
+                        background: 'rgba(255,255,255,0.9)',
+                        padding: 'clamp(1.1rem, 3.2vh, 1.75rem) clamp(1.25rem, 5vw, 2.25rem)',
+                        boxShadow: '0 16px 36px rgba(0,0,0,0.2)',
+                        borderRadius: '0px',
+                        color: '#222',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 'clamp(0.55rem, 1.5vh, 0.85rem)',
+                        zIndex: 3,
+                        boxSizing: 'border-box',
+                        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: 'clamp(13px, 1.6vh, 16px)',
+                        WebkitOverflowScrolling: 'touch'
+                      }}
+                      title={section.title}
+                      content={section.content}
+                      titleStyle={{
+                        color: '#222',
+                        margin: 0,
+                        fontSize: '1.45em',
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
+                      }}
+                      bodyStyle={{
+                        color: '#444',
+                        margin: 0,
+                        lineHeight: 1.6,
+                        fontSize: '1em',
+                        whiteSpace: 'pre-wrap',
+                        overflow: 'hidden',
+                        wordWrap: 'break-word',
+                        maxWidth: '100%'
+                      }}
+                    />
                   </div>
                 </div>
               );

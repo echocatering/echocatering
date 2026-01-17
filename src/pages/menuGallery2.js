@@ -262,7 +262,6 @@ function VideoBackground({ videoSrc, isVertical = false }) {
   const videoRef = useRef(null);
 
   const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
-  const isCloudinaryVideo = useMemo(() => isCloudinaryUrl(safeVideoSrc), [safeVideoSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -271,6 +270,8 @@ function VideoBackground({ videoSrc, isVertical = false }) {
     // iOS requires programmatic play() call even with autoplay
     const playVideo = () => {
       if (video.paused) {
+        // Ensure muted is set before play (iOS requirement)
+        video.muted = true;
         video.play().catch(() => {
           // Silently handle play() errors (common on iOS)
         });
@@ -280,22 +281,30 @@ function VideoBackground({ videoSrc, isVertical = false }) {
     // Try to play when video can play
     video.addEventListener('canplay', playVideo);
     video.addEventListener('loadeddata', playVideo);
+    video.addEventListener('loadedmetadata', playVideo);
 
-     const resumeOnGesture = () => {
-       playVideo();
-     };
+    // Resume on any user gesture (iOS often needs this)
+    const resumeOnGesture = () => {
+      playVideo();
+    };
 
-     document.addEventListener('touchstart', resumeOnGesture, { passive: true, once: true });
-     document.addEventListener('click', resumeOnGesture, { passive: true, once: true });
+    document.addEventListener('touchstart', resumeOnGesture, { passive: true });
+    document.addEventListener('touchend', resumeOnGesture, { passive: true });
+    document.addEventListener('click', resumeOnGesture, { passive: true });
+    document.addEventListener('scroll', resumeOnGesture, { passive: true, once: true });
 
-    // Initial attempt
-    playVideo();
+    // Initial attempt after a small delay (helps iOS)
+    setTimeout(playVideo, 100);
+    setTimeout(playVideo, 500);
 
     return () => {
       video.removeEventListener('canplay', playVideo);
       video.removeEventListener('loadeddata', playVideo);
+      video.removeEventListener('loadedmetadata', playVideo);
       document.removeEventListener('touchstart', resumeOnGesture);
+      document.removeEventListener('touchend', resumeOnGesture);
       document.removeEventListener('click', resumeOnGesture);
+      document.removeEventListener('scroll', resumeOnGesture);
     };
   }, [safeVideoSrc]);
 
@@ -309,8 +318,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
       loop
       playsInline
       webkit-playsinline="true"
-      preload="metadata"
-      crossOrigin={isCloudinaryVideo && !isProbablyIOS() ? 'anonymous' : undefined}
+      preload="auto"
       style={{
         position: 'absolute',
         top: 0,
@@ -443,11 +451,11 @@ function EchoCocktailSubpage2({
   const [hasCheckmark, setHasCheckmark] = useState(false);
   const [allowCheckmarkFade, setAllowCheckmarkFade] = useState(false);
   const [currentCocktailName, setCurrentCocktailName] = useState('');
-  const [edgeColor, setEdgeColor] = useState('rgba(0, 0, 0, 1)');
-  const [edgeRgb, setEdgeRgb] = useState({ r: 0, g: 0, b: 0 });
-  const [topRgb, setTopRgb] = useState({ r: 0, g: 0, b: 0 });
-  const [middleRgb, setMiddleRgb] = useState({ r: 0, g: 0, b: 0 });
-  const [bottomRgb, setBottomRgb] = useState({ r: 0, g: 0, b: 0 });
+  const [edgeColor, setEdgeColor] = useState('rgba(210, 210, 210, 1)');
+  const [edgeRgb, setEdgeRgb] = useState({ r: 210, g: 210, b: 210 });
+  const [topRgb, setTopRgb] = useState({ r: 255, g: 255, b: 255 });
+  const [middleRgb, setMiddleRgb] = useState({ r: 235, g: 235, b: 235 });
+  const [bottomRgb, setBottomRgb] = useState({ r: 210, g: 210, b: 210 });
   const animationTimeoutsRef = useRef([]);
   const titleRef = useRef(null);
   const ingredientsContainerRef = useRef(null);
@@ -1100,7 +1108,14 @@ function EchoCocktailSubpage2({
       const video = document.querySelector('video[data-role="menu-background-video"]');
       if (!video || video.readyState < 2) return; // Video not ready
 
-      if (isProbablyIOS()) return;
+      if (isProbablyIOS()) {
+        setTopRgb({ r: 255, g: 255, b: 255 });
+        setMiddleRgb({ r: 235, g: 235, b: 235 });
+        setBottomRgb({ r: 210, g: 210, b: 210 });
+        setEdgeColor('rgba(210, 210, 210, 1)');
+        setEdgeRgb({ r: 210, g: 210, b: 210 });
+        return;
+      }
 
       try {
         const canvas = document.createElement('canvas');
@@ -2014,155 +2029,6 @@ function EchoCocktailSubpage2({
           </div>
         )}
 
-        {/* Information button - attached to right screen */}
-        {info?.concept && (
-          <button
-            onClick={() => {
-              if (sidebarOpen) {
-                // Close the sidebar when X is clicked
-                setSidebarOpen?.(false);
-                if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-                // Scroll to align bottom with viewport
-                setTimeout(scrollToBottomAlign, 100);
-                return;
-              }
-              
-              // Normal information button functionality
-              // Clear any existing animation timeouts
-              animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
-              animationTimeoutsRef.current = [];
-              
-              const newValue = !showConceptInfo;
-              setShowConceptInfo(newValue);
-              setShowCategories(false);
-              if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-              // Scroll to align bottom with viewport
-              setTimeout(scrollToBottomAlign, 100);
-              
-              if (newValue) {
-                // Show concept, map, and countries with animations
-                const count = countryDisplayList.length;
-                setCountriesVisible(new Array(count).fill(false));
-                
-                // Hide title, ingredients, and garnish immediately
-                setTitleVisible(false);
-                setIngredientsVisible(false);
-                setGarnishVisible(false);
-                
-                // Show concept and map with animation
-                const conceptMapTimeout = setTimeout(() => {
-                  setConceptVisible(true);
-                  setMapVisible(true);
-                  setCountriesSidebarVisible(true);
-                }, 400);
-                animationTimeoutsRef.current.push(conceptMapTimeout);
-                
-                // Show countries with staggered animation
-                for (let i = 0; i < count; i++) {
-                  const countryTimeout = setTimeout(() => {
-                    setCountriesVisible((prev) => {
-                      if (prev.length !== count) return prev;
-                      const next = [...prev];
-                      next[i] = true;
-                      return next;
-                    });
-                  }, 1000 + i * 500);
-                  animationTimeoutsRef.current.push(countryTimeout);
-                }
-              } else {
-                // Hide concept, map, and countries immediately
-                setConceptVisible(false);
-                setMapVisible(false);
-                setCountriesSidebarVisible(false);
-                setCountriesVisible(new Array(countryDisplayList.length).fill(false));
-                
-                // Show title, ingredients, and garnish with animations
-                const titleTimeout = setTimeout(() => {
-                  setTitleVisible(true);
-                  const ingredientsTimeout = setTimeout(() => {
-                    setIngredientsVisible(true);
-                    const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
-                    animationTimeoutsRef.current.push(garnishTimeout);
-                  }, 400);
-                  animationTimeoutsRef.current.push(ingredientsTimeout);
-                }, 500);
-                animationTimeoutsRef.current.push(titleTimeout);
-              }
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              if (sidebarOpen) {
-                const span = e.currentTarget.querySelector('span');
-                if (span) {
-                  span.style.color = '#222';
-                }
-              } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #222 (rgb(34,34,34)) - darker, almost black
-                  img.style.filter = 'brightness(0) saturate(100%)';
-                }
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              if (sidebarOpen) {
-                const span = e.currentTarget.querySelector('span');
-                if (span) {
-                  span.style.color = '#888';
-                }
-              } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #888 (rgb(136,136,136)) - medium gray
-                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
-                }
-              }
-            }}
-            style={{
-              position: 'absolute',
-              left: `${innerLeft + layout.inner.width - (layout.inner.width / 38) - 56}px`,
-              bottom: `${layout.inner.height * 20 / 64}px`,
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0,
-              margin: 0,
-              transition: 'all 0.2s ease',
-              zIndex: 20,
-            }}
-          >
-            {sidebarOpen ? (
-              <span style={{
-                fontSize: '32px',
-                color: '#888',
-                fontWeight: 300,
-                lineHeight: 1,
-                transition: 'color 0.2s ease',
-              }}>×</span>
-            ) : (
-              <img 
-                src="/assets/icons/information-button.png" 
-                alt="Information" 
-                style={{ 
-                  width: '40%', 
-                  height: '40%', 
-                  objectFit: 'contain',
-                  filter: 'brightness(0) saturate(100%) invert(47%)', // #888 gray
-                  opacity: 1,
-                  transition: 'filter 0.2s ease',
-                }}
-              />
-            )}
-          </button>
-        )}
-
         {/* Title */}
         <div
           style={{
@@ -2219,189 +2085,338 @@ function EchoCocktailSubpage2({
           )}
         </div>
 
-        {/* Left menu button - centered between screen left and arrow left */}
-        <button
-          onClick={() => {
-            const newSidebarOpen = !sidebarOpen;
-            setSidebarOpen?.(newSidebarOpen);
-            
-            // Clear any existing animation timeouts
-            animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
-            animationTimeoutsRef.current = [];
-            
-            // Scroll to align bottom with viewport
-            setTimeout(scrollToBottomAlign, 100);
-            
-            if (newSidebarOpen) {
-              // Fade out all elements when opening sidebar
-              setTitleVisible(false);
-              setIngredientsVisible(false);
-              setGarnishVisible(false);
-              setConceptVisible(false);
-              setMapVisible(false);
-              setCountriesSidebarVisible(false);
-            } else {
-              // Fade in with normal animations when closing sidebar (vertical view only)
-              if (isVertical) {
-                if (showConceptInfo) {
-                  // Show concept, map, and countries with normal animation
-                  const conceptMapTimeout = setTimeout(() => {
-                    setConceptVisible(true);
-                    setMapVisible(true);
-                    setCountriesSidebarVisible(true);
-                  }, 400);
-                  animationTimeoutsRef.current.push(conceptMapTimeout);
-                  
-                  // Countries normal staggered animation
-                  const count = countryDisplayList.length;
-                  setCountriesVisible(new Array(count).fill(false));
-                  for (let i = 0; i < count; i++) {
-                    const countryTimeout = setTimeout(() => {
-                      setCountriesVisible((prev) => {
-                        if (prev.length !== count) return prev;
-                        const next = [...prev];
-                        next[i] = true;
-                        return next;
-                      });
-                    }, 1000 + i * 500);
-                    animationTimeoutsRef.current.push(countryTimeout);
-                  }
-                } else {
-                  // Show title, ingredients, and garnish
-                  const titleTimeout = setTimeout(() => {
-                    setTitleVisible(true);
-                    const ingredientsTimeout = setTimeout(() => {
-                      setIngredientsVisible(true);
-                      const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
-                      animationTimeoutsRef.current.push(garnishTimeout);
-                    }, 400);
-                    animationTimeoutsRef.current.push(ingredientsTimeout);
-                  }, 500);
-                  animationTimeoutsRef.current.push(titleTimeout);
-                }
-              }
-            }
-          }}
-          onMouseEnter={(e) => {
-            const img = e.currentTarget.querySelector('img');
-            if (img) {
-              img.style.filter = 'brightness(0) saturate(100%)';
-              img.style.transform = 'scale(1.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            const img = e.currentTarget.querySelector('img');
-            if (img) {
-              img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
-              img.style.transform = 'scale(1)';
-            }
-          }}
-          style={{
-            position: 'absolute',
-            left: `${innerLeft + layout.inner.width / 12 + (layout.inner.width - 256) / 4 - 28}px`,
-            bottom: '28px',
-            width: '56px',
-            height: '56px',
-            borderRadius: 8,
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            margin: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            zIndex: 9999,
-            flexShrink: 0,
-            minWidth: '56px',
-            minHeight: '56px',
-          }}
-        >
-          <img 
-            src="/assets/icons/originals.svg" 
-            alt="Menu" 
-            style={{ 
-              width: '40%', 
-              height: '40%', 
-              objectFit: 'contain',
-              filter: 'brightness(0) saturate(100%) invert(47%)',
-              opacity: 1,
-              transition: 'filter 0.2s ease, transform 0.2s ease',
-              flexShrink: 0,
-            }}
-          />
-        </button>
-
-        {/* Arrows */}
+        {/* Bottom controls container */}
         <div
           style={{
             position: 'absolute',
-            left: `${innerLeft + (layout.inner.width - 256) / 2}px`,
-            bottom: '26px',
-            width: '256px',
+            left: `${innerLeft + layout.inner.width / 2}px`,
+            bottom: '28px',
+            transform: 'translateX(-50%)',
+            width: 'auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: 0,
             pointerEvents: 'none',
             zIndex: 9999,
           }}
         >
+          {/* Left menu button */}
+          <div style={{ pointerEvents: 'auto', marginRight: '6.25vw' }}>
+            <button
+              onClick={() => {
+                const newSidebarOpen = !sidebarOpen;
+                setSidebarOpen?.(newSidebarOpen);
+
+                // Clear any existing animation timeouts
+                animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
+                animationTimeoutsRef.current = [];
+
+                // Scroll to align bottom with viewport
+                setTimeout(scrollToBottomAlign, 100);
+
+                if (newSidebarOpen) {
+                  // Fade out all elements when opening sidebar
+                  setTitleVisible(false);
+                  setIngredientsVisible(false);
+                  setGarnishVisible(false);
+                  setConceptVisible(false);
+                  setMapVisible(false);
+                  setCountriesSidebarVisible(false);
+                } else {
+                  // Fade in with normal animations when closing sidebar (vertical view only)
+                  if (isVertical) {
+                    if (showConceptInfo) {
+                      // Show concept, map, and countries with normal animation
+                      const conceptMapTimeout = setTimeout(() => {
+                        setConceptVisible(true);
+                        setMapVisible(true);
+                        setCountriesSidebarVisible(true);
+                      }, 400);
+                      animationTimeoutsRef.current.push(conceptMapTimeout);
+
+                      // Countries normal staggered animation
+                      const count = countryDisplayList.length;
+                      setCountriesVisible(new Array(count).fill(false));
+                      for (let i = 0; i < count; i++) {
+                        const countryTimeout = setTimeout(() => {
+                          setCountriesVisible((prev) => {
+                            if (prev.length !== count) return prev;
+                            const next = [...prev];
+                            next[i] = true;
+                            return next;
+                          });
+                        }, 1000 + i * 500);
+                        animationTimeoutsRef.current.push(countryTimeout);
+                      }
+                    } else {
+                      // Show title, ingredients, and garnish
+                      const titleTimeout = setTimeout(() => {
+                        setTitleVisible(true);
+                        const ingredientsTimeout = setTimeout(() => {
+                          setIngredientsVisible(true);
+                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                          animationTimeoutsRef.current.push(garnishTimeout);
+                        }, 400);
+                        animationTimeoutsRef.current.push(ingredientsTimeout);
+                      }, 500);
+                      animationTimeoutsRef.current.push(titleTimeout);
+                    }
+                  }
+                }
+              }}
+              onMouseEnter={(e) => {
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  img.style.filter = 'brightness(0) saturate(100%)';
+                  img.style.transform = 'scale(1.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                  img.style.transform = 'scale(1)';
+                }
+              }}
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: 8,
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+                minWidth: '60px',
+                minHeight: '60px',
+              }}
+            >
+              <img
+                src="/assets/icons/originals.svg"
+                alt="Menu"
+                style={{
+                  width: '42%',
+                  height: '42%',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) saturate(100%) invert(47%)',
+                  opacity: 1,
+                  transition: 'filter 0.2s ease, transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Arrows */}
           <div style={{ pointerEvents: 'auto' }}>
             <ArrowButtons onPrev={handlePrev} onNext={handleNext} />
           </div>
-        </div>
 
-        {/* Right menu button - centered between arrow right and screen right */}
-        <button
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#222';
-            const svg = e.currentTarget.querySelector('svg');
-            if (svg) svg.style.transform = 'scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#888';
-            const svg = e.currentTarget.querySelector('svg');
-            if (svg) svg.style.transform = 'scale(1)';
-          }}
-          style={{
-            position: 'absolute',
-            left: `${innerLeft + (layout.inner.width - 256) / 2 + 256 + (layout.inner.width - 256) / 4 - 28 - layout.inner.width / 12}px`,
-            bottom: '28px',
-            width: '56px',
-            height: '56px',
-            borderRadius: 8,
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            margin: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#888',
-            transition: 'all 0.2s ease',
-            zIndex: 9999,
-            flexShrink: 0,
-            minWidth: '56px',
-            minHeight: '56px',
-          }}
-        >
-          <svg 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg" 
-            style={{ display: 'block', width: '40%', height: '40%', transition: 'transform 0.2s ease', flexShrink: 0 }}
+          {/* Right info button */}
+          <div style={{ pointerEvents: 'auto', marginLeft: '6.25vw' }}>
+            {(info?.concept ? (
+              <button
+            onClick={() => {
+              if (sidebarOpen) {
+                // Close the sidebar when X is clicked
+                setSidebarOpen?.(false);
+                if (viewMode === 'web') setForceRecalc(prev => prev + 1);
+                // Scroll to align bottom with viewport
+                setTimeout(scrollToBottomAlign, 100);
+                return;
+              }
+
+              // Normal information button functionality
+              // Clear any existing animation timeouts
+              animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
+              animationTimeoutsRef.current = [];
+
+              const newValue = !showConceptInfo;
+              setShowConceptInfo(newValue);
+              setShowCategories(false);
+              if (viewMode === 'web') setForceRecalc(prev => prev + 1);
+              // Scroll to align bottom with viewport
+              setTimeout(scrollToBottomAlign, 100);
+
+              if (newValue) {
+                // Show concept, map, and countries with animations
+                const count = countryDisplayList.length;
+                setCountriesVisible(new Array(count).fill(false));
+
+                // Hide title, ingredients, and garnish immediately
+                setTitleVisible(false);
+                setIngredientsVisible(false);
+                setGarnishVisible(false);
+
+                // Show concept and map with animation
+                const conceptMapTimeout = setTimeout(() => {
+                  setConceptVisible(true);
+                  setMapVisible(true);
+                  setCountriesSidebarVisible(true);
+                }, 400);
+                animationTimeoutsRef.current.push(conceptMapTimeout);
+
+                // Show countries with staggered animation
+                for (let i = 0; i < count; i++) {
+                  const countryTimeout = setTimeout(() => {
+                    setCountriesVisible((prev) => {
+                      if (prev.length !== count) return prev;
+                      const next = [...prev];
+                      next[i] = true;
+                      return next;
+                    });
+                  }, 1000 + i * 500);
+                  animationTimeoutsRef.current.push(countryTimeout);
+                }
+              } else {
+                // Hide concept, map, and countries immediately
+                setConceptVisible(false);
+                setMapVisible(false);
+                setCountriesSidebarVisible(false);
+                setCountriesVisible(new Array(countryDisplayList.length).fill(false));
+
+                // Show title, ingredients, and garnish with animations
+                const titleTimeout = setTimeout(() => {
+                  setTitleVisible(true);
+                  const ingredientsTimeout = setTimeout(() => {
+                    setIngredientsVisible(true);
+                    const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                    animationTimeoutsRef.current.push(garnishTimeout);
+                  }, 400);
+                  animationTimeoutsRef.current.push(ingredientsTimeout);
+                }, 500);
+                animationTimeoutsRef.current.push(titleTimeout);
+              }
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+              if (sidebarOpen) {
+                const span = e.currentTarget.querySelector('span');
+                if (span) {
+                  span.style.color = '#222';
+                }
+              } else {
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  // #222 (rgb(34,34,34)) - darker, almost black
+                  img.style.filter = 'brightness(0) saturate(100%)';
+                }
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              if (sidebarOpen) {
+                const span = e.currentTarget.querySelector('span');
+                if (span) {
+                  span.style.color = '#888';
+                }
+              } else {
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  // #888 (rgb(136,136,136)) - medium gray
+                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                }
+              }
+            }}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              margin: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              flexShrink: 0,
+              minWidth: '56px',
+              minHeight: '56px',
+            }}
           >
-            <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+            {sidebarOpen ? (
+              <span style={{
+                fontSize: '32px',
+                color: '#888',
+                fontWeight: 300,
+                lineHeight: 1,
+                transition: 'color 0.2s ease',
+              }}>×</span>
+            ) : (
+              <img
+                src="/assets/icons/information-button.png"
+                alt="Information"
+                style={{
+                  width: '40%',
+                  height: '40%',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) saturate(100%) invert(47%)',
+                  opacity: 1,
+                  transition: 'filter 0.2s ease',
+                  flexShrink: 0,
+                }}
+              />
+            )}
+              </button>
+            ) : (
+              <button
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#222';
+              const svg = e.currentTarget.querySelector('svg');
+              if (svg) svg.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#888';
+              const svg = e.currentTarget.querySelector('svg');
+              if (svg) svg.style.transform = 'scale(1)';
+            }}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              margin: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#888',
+              transition: 'all 0.2s ease',
+              flexShrink: 0,
+              minWidth: '56px',
+              minHeight: '56px',
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ display: 'block', width: '40%', height: '40%', transition: 'transform 0.2s ease', flexShrink: 0 }}
+            >
+              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Sidebar */}
         <div
           style={{
             position: 'absolute',
-            left: `${sidebarOpen ? innerLeft : innerLeft - layout.inner.width}px`,
+            left: isVertical
+              ? `${sidebarOpen ? 0 : -layout.inner.width}px`
+              : `${sidebarOpen ? innerLeft : innerLeft - layout.inner.width}px`,
             ...(isVertical 
               ? { 
                   top: `${innerTop}px`,
@@ -2423,7 +2438,6 @@ function EchoCocktailSubpage2({
             boxSizing: 'border-box',
             transition: 'left 0.3s ease',
             pointerEvents: sidebarOpen ? 'auto' : 'none',
-            position: 'relative',
           }}
         >
           {/* Fade overlay underneath navigation */}
