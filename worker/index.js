@@ -57,7 +57,15 @@ cloudinary.config({
 
 app.use(
   cors({
-    origin: ALLOWED_ORIGIN,
+    origin: (origin, callback) => {
+      // Allow multiple origins from ALLOWED_ORIGIN (comma-separated)
+      const allowedOrigins = ALLOWED_ORIGIN.split(',').map(o => o.trim());
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS not allowed for origin: ${origin}`));
+      }
+    },
     credentials: false,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Upload-Token'],

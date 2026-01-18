@@ -969,38 +969,67 @@ const MenuManager = () => {
 
       // Add timeout for large file uploads (5 minutes = 300 seconds for large files)
       const uploadTimeoutMs = 5 * 60 * 1000; // 5 minutes
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.error('[MenuManager] Upload timeout after', uploadTimeoutMs / 1000, 'seconds');
-        abortController.abort();
-      }, uploadTimeoutMs);
+      const uploadToWorkerWithProgress = (url, token, body, onProgress) =>
+        new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', url);
+          xhr.setRequestHeader('X-Upload-Token', token);
+          xhr.timeout = uploadTimeoutMs;
 
-      try {
-        const workerResp = await fetch(workerUploadUrl, {
-          method: 'POST',
-          headers: {
-            'X-Upload-Token': uploadToken,
-          },
-          body: formData,
-          signal: abortController.signal,
+          xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+            onProgress?.(event.loaded, event.total);
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve(xhr.responseText ? JSON.parse(xhr.responseText) : {});
+              } catch (e) {
+                resolve({});
+              }
+              return;
+            }
+            reject(
+              new Error(
+                `Worker upload failed: ${xhr.status} ${xhr.statusText} ${xhr.responseText || ''}`.trim()
+              )
+            );
+          };
+
+          xhr.onerror = () => reject(new Error('Worker upload failed: network error'));
+          xhr.ontimeout = () =>
+            reject(
+              new Error(
+                `Upload timeout after ${uploadTimeoutMs / 1000} seconds. The file may be too large or the worker may be unreachable.`
+              )
+            );
+
+          xhr.send(body);
         });
 
-        clearTimeout(timeoutId);
-
-        if (!workerResp.ok) {
-          const text = await workerResp.text();
-          throw new Error(`Worker upload failed: ${workerResp.status} ${workerResp.statusText} ${text || ''}`.trim());
+      let lastUploadPct = -1;
+      const workerResult = await uploadToWorkerWithProgress(
+        workerUploadUrl,
+        uploadToken,
+        formData,
+        (loaded, total) => {
+          const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          if (pct === lastUploadPct) return;
+          lastUploadPct = pct;
+          setProcessingStatus((prev) => ({
+            ...(prev || {}),
+            active: true,
+            stage: 'uploading-to-worker',
+            progress: pct,
+            total: 100,
+            message: `Uploading to local worker... ${pct}%`,
+            error: null,
+            itemNumber,
+          }));
         }
-
-        const workerResult = await workerResp.json();
-        console.log('[MenuManager] Upload to worker successful:', workerResult);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          throw new Error(`Upload timeout after ${uploadTimeoutMs / 1000} seconds. The file may be too large or the worker may be unreachable.`);
-        }
-        throw fetchError;
-      }
+      );
+      console.log('[MenuManager] Upload to worker successful:', workerResult);
 
       // Begin polling job status from Render backend (DB-backed)
       startProcessingPoll(itemNumber);
