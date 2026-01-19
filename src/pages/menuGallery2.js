@@ -2075,7 +2075,7 @@ function EchoCocktailSubpage2({
             position: 'absolute',
             left: `${innerLeft}px`,
             bottom: '82px',
-            height: '160px',
+            height: 'calc(100vh / 7)',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
