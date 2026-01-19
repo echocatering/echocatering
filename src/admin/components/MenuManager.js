@@ -318,6 +318,7 @@ const MenuManager = () => {
   const [unsavedChangesModal, setUnsavedChangesModal] = useState({ show: false, direction: null });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const prevEditingCocktailIdRef = useRef(null);
+  const activeCocktailIdRef = useRef(null);
   const recipeRef = useRef(null);
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
@@ -484,9 +485,14 @@ const MenuManager = () => {
     const id = editingCocktail?._id || null;
     if (prevEditingCocktailIdRef.current !== id) {
       prevEditingCocktailIdRef.current = id;
+      activeCocktailIdRef.current = id;
       setHasUnsavedChanges(false);
       recipeBuilderInteractedRef.current = false;
     }
+  }, [editingCocktail?._id]);
+
+  useEffect(() => {
+    activeCocktailIdRef.current = editingCocktail?._id || null;
   }, [editingCocktail?._id]);
 
   useEffect(() => {
@@ -1707,12 +1713,27 @@ const MenuManager = () => {
   // Navigation functions
   const navigateBy = (direction) => {
     if (filteredCocktails.length <= 0) return;
-    if (direction === 'next') {
-      setCurrentIndex((prev) => (prev + 1) % filteredCocktails.length);
-      return;
-    }
-    if (direction === 'prev') {
-      setCurrentIndex((prev) => (prev - 1 + filteredCocktails.length) % filteredCocktails.length);
+    const computeIndex = (prev) => {
+      if (direction === 'next') return (prev + 1) % filteredCocktails.length;
+      if (direction === 'prev') return (prev - 1 + filteredCocktails.length) % filteredCocktails.length;
+      return prev;
+    };
+    const nextIndex = computeIndex(currentIndex);
+    setCurrentIndex(nextIndex);
+
+    // Immediately switch the editing cocktail (keeps RecipeBuilder + form in sync)
+    // Do not override a new draft.
+    if (!isNewDraft) {
+      const nextCocktail = filteredCocktails[nextIndex];
+      if (nextCocktail) {
+        // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
+        // Otherwise the previous request can finish and overwrite `recipe`, leaving RecipeBuilder stale.
+        recipeRequestIdRef.current += 1;
+        activeCocktailIdRef.current = nextCocktail?._id || null;
+        setRecipeLoading(false);
+        setEditingCocktail({ ...nextCocktail });
+        setRecipe(null);
+      }
     }
   };
 
@@ -2212,7 +2233,7 @@ const MenuManager = () => {
     const targetCocktailId = cocktail?._id || null;
     const setHydratedRecipe = (nextRecipe) => {
       if (recipeRequestIdRef.current !== requestId) return;
-      if (targetCocktailId && prevEditingCocktailIdRef.current !== targetCocktailId) return;
+      if (targetCocktailId && activeCocktailIdRef.current && activeCocktailIdRef.current !== targetCocktailId) return;
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
       setRecipe(nextRecipe);
@@ -3745,7 +3766,7 @@ const MenuManager = () => {
               onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
             >
               <RecipeBuilder
-                key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
+                key={`${editingCocktail?._id || ''}`}
                 recipe={{
                   ...recipe,
                   title: editingCocktail.name || recipe.title // Keep MM name as initial title
@@ -3794,7 +3815,7 @@ const MenuManager = () => {
               onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
             >
               <RecipeBuilder
-                key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
+                key={`${editingCocktail?._id || ''}`}
                 recipe={{
                   ...recipe,
                   title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
