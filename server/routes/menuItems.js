@@ -409,26 +409,31 @@ const findCocktailByAnyId = async (id) => {
 const getMenuGalleryBuckets = () => ({
   cocktails: {
     title: 'Echo Cocktails',
+    menuNavEnabled: true,
     videoFiles: [],
     cocktailInfo: {}
   },
   mocktails: {
     title: 'Echo Mocktails',
+    menuNavEnabled: true,
     videoFiles: [],
     cocktailInfo: {}
   },
   beer: {
     title: 'Beer',
+    menuNavEnabled: true,
     videoFiles: [],
     cocktailInfo: {}
   },
   wine: {
     title: 'Wine',
+    menuNavEnabled: true,
     videoFiles: [],
     cocktailInfo: {}
   },
   spirits: {
     title: 'Echo Spirits',
+    menuNavEnabled: true,
     videoFiles: [],
     cocktailInfo: {}
   },
