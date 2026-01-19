@@ -425,7 +425,7 @@ async function generateBackgroundFbf({
     stage: 'extracting',
     progress: 0,
     total: framesToProcess,
-    message: `Extracting frames (0/${framesToProcess})...`,
+    message: `${framesToProcess} frames to extract...`,
   });
 
   const batchOutputPattern = path.join(videoFramesDir, 'frame_%06d.png');
@@ -480,16 +480,14 @@ async function generateBackgroundFbf({
         ],
         { signal, onChild }
       );
-      if ((frameNum + 1) % 10 === 0 || frameNum + 1 === framesToProcess) {
-        // eslint-disable-next-line no-await-in-loop
-        await postJobProgress(jobId, {
-          status: 'processing',
-          stage: 'extracting',
-          progress: frameNum + 1,
-          total: framesToProcess,
-          message: `Extracting frames (${frameNum + 1}/${framesToProcess})...`,
-        });
-      }
+      // Report every frame for detailed progress
+      await postJobProgress(jobId, {
+        status: 'processing',
+        stage: 'extracting',
+        progress: frameNum + 1,
+        total: framesToProcess,
+        message: `Frame ${frameNum + 1} of ${framesToProcess}`,
+      });
     }
     extracted = framesToProcess;
   }
@@ -499,7 +497,7 @@ async function generateBackgroundFbf({
     stage: 'extracting',
     progress: extracted,
     total: framesToProcess,
-    message: `Extracting frames (${extracted}/${framesToProcess})...`,
+    message: `${extracted} frames extracted`,
   });
 
   await postJobProgress(jobId, {
@@ -507,7 +505,7 @@ async function generateBackgroundFbf({
     stage: 'preprocessing',
     progress: 0,
     total: framesToProcess,
-    message: `Preprocessing frames (0/${framesToProcess})...`,
+    message: `${framesToProcess} frames to process...`,
   });
   const whiteThreshold = 150;
   const centerX = innerSize / 2;
@@ -619,16 +617,14 @@ async function generateBackgroundFbf({
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toFile(outPath);
 
-    if ((i + 1) % 5 === 0 || i + 1 === framesToProcess) {
-      // eslint-disable-next-line no-await-in-loop
-      await postJobProgress(jobId, {
-        status: 'processing',
-        stage: 'preprocessing',
-        progress: i + 1,
-        total: framesToProcess,
-        message: `Preprocessing frames (${i + 1}/${framesToProcess})...`,
-      });
-    }
+    // Report every frame for detailed progress
+    await postJobProgress(jobId, {
+      status: 'processing',
+      stage: 'preprocessing',
+      progress: i + 1,
+      total: framesToProcess,
+      message: `Frame ${i + 1} of ${framesToProcess}`,
+    });
   }
 
   // Big perf win: build blurred background via sharp.extend({ extendWith: 'copy' }) instead of per-pixel JS loops.
@@ -637,7 +633,7 @@ async function generateBackgroundFbf({
     stage: 'compositing',
     progress: 0,
     total: framesToProcess,
-    message: `Compositing frames (0/${framesToProcess})...`,
+    message: `${framesToProcess} frames to composite...`,
   });
 
   const pad = innerLeft; // 1080
@@ -671,16 +667,14 @@ async function generateBackgroundFbf({
       .png()
       .toFile(finalPath);
 
-    if ((i + 1) % 2 === 0 || i + 1 === framesToProcess) {
-      // eslint-disable-next-line no-await-in-loop
-      await postJobProgress(jobId, {
-        status: 'processing',
-        stage: 'compositing',
-        progress: i + 1,
-        total: framesToProcess,
-        message: `Compositing frames (${i + 1}/${framesToProcess})...`,
-      });
-    }
+    // Report every frame for detailed progress
+    await postJobProgress(jobId, {
+      status: 'processing',
+      stage: 'compositing',
+      progress: i + 1,
+      total: framesToProcess,
+      message: `Frame ${i + 1} of ${framesToProcess}`,
+    });
   }
 
   await postJobProgress(jobId, { status: 'processing', stage: 'encoding', progress: 0, total: framesToProcess, message: 'Encoding frames to mp4...' });
@@ -719,15 +713,14 @@ async function generateBackgroundFbf({
         const frame = Number(m[1]);
         if (!Number.isFinite(frame)) return;
         // Best-effort progress updates; keep them throttled.
-        if (frame % 30 === 0 || frame >= finalFrameCount) {
-          postJobProgress(jobId, {
-            status: 'processing',
-            stage: 'encoding',
-            progress: Math.min(frame, finalFrameCount),
-            total: finalFrameCount,
-            message: `Encoding (${Math.min(frame, finalFrameCount)}/${finalFrameCount})...`,
-          }).catch(() => {});
-        }
+        // Report every frame for detailed encoding progress
+        postJobProgress(jobId, {
+          status: 'processing',
+          stage: 'encoding',
+          progress: Math.min(frame, finalFrameCount),
+          total: finalFrameCount,
+          message: `Frame ${Math.min(frame, finalFrameCount)} of ${finalFrameCount}`,
+        }).catch(() => {});
       },
     }
   );

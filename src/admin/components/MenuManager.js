@@ -1283,8 +1283,13 @@ const MenuManager = () => {
       
       checkStatus();
     } else if (processingStatus.active) {
-      // We have status for this item and it's active - ensure polling is running
-      if (!processingPollIntervalRef.current) {
+      // We have status for this item and it's active - ensure polling is running.
+      // Avoid starting polling while the browser is still uploading to the worker,
+      // otherwise polling will overwrite the upload progress UI with backend status.
+      const shouldPoll =
+        processingStatus.stage !== 'creating-job' &&
+        processingStatus.stage !== 'uploading-to-worker';
+      if (shouldPoll && !processingPollIntervalRef.current) {
         startProcessingPoll(currentItemNumber);
       }
     } else {
@@ -1300,7 +1305,10 @@ const MenuManager = () => {
   useEffect(() => {
     const currentItemNumber = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
     if (processingStatus && processingStatus.active && processingStatus.itemNumber === currentItemNumber) {
-      if (!processingPollIntervalRef.current) {
+      const shouldPoll =
+        processingStatus.stage !== 'creating-job' &&
+        processingStatus.stage !== 'uploading-to-worker';
+      if (shouldPoll && !processingPollIntervalRef.current) {
         startProcessingPoll(currentItemNumber);
       }
     } else if (processingStatus && (!processingStatus.active || processingStatus.itemNumber !== currentItemNumber)) {
@@ -2603,9 +2611,34 @@ const MenuManager = () => {
                           Error: {processingStatus.error}
                         </div>
                       )}
-                      {processingStatus.progress > 0 && processingStatus.total > 0 && (
+                      {processingStatus.stage && (
                         <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#888' }}>
-                          {Math.floor((processingStatus.progress / processingStatus.total) * 100)}%
+                          {(() => {
+                            // Calculate overall progress across all stages
+                            // Stages: preprocessing (5%), extracting (15%), preprocessing-frames (25%), compositing (35%), encoding (15%), cloudinary-upload (5%)
+                            const stageWeights = {
+                              'creating-job': { start: 0, weight: 1 },
+                              'uploading-to-worker': { start: 1, weight: 4 },
+                              'awaiting-upload': { start: 1, weight: 0 },
+                              'uploaded': { start: 5, weight: 0 },
+                              'preprocessing': { start: 5, weight: 5 },
+                              'white-balance': { start: 10, weight: 2 },
+                              'icon-generation': { start: 12, weight: 3 },
+                              'extracting': { start: 15, weight: 15 },
+                              'preprocessing-frames': { start: 30, weight: 25 },
+                              'compositing': { start: 55, weight: 30 },
+                              'encoding': { start: 85, weight: 10 },
+                              'cloudinary-upload': { start: 95, weight: 5 },
+                              'complete': { start: 100, weight: 0 },
+                            };
+                            const stage = processingStatus.stage;
+                            const config = stageWeights[stage] || { start: 0, weight: 0 };
+                            const stageProgress = processingStatus.total > 0 
+                              ? (processingStatus.progress / processingStatus.total) 
+                              : 0;
+                            const overallPercent = Math.min(100, Math.floor(config.start + (config.weight * stageProgress)));
+                            return `${overallPercent}% complete`;
+                          })()}
                         </div>
                       )}
                     </div>

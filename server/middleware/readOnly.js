@@ -12,11 +12,26 @@ function isReadOnlyEnabled() {
   return v === '1' || v === 'true' || v === 'yes' || v === 'on';
 }
 
+// Routes that are allowed even in read-only mode (video processing workflow)
+const READ_ONLY_EXEMPT_PATTERNS = [
+  /^\/api\/video-jobs\//,      // job start, status, progress, complete, fail, verify
+  /^\/api\/video-worker\//,    // worker heartbeat, status
+];
+
+function isExemptFromReadOnly(path) {
+  return READ_ONLY_EXEMPT_PATTERNS.some((pattern) => pattern.test(path));
+}
+
 function readOnlyMiddleware(req, res, next) {
   if (!isReadOnlyEnabled()) return next();
 
   const method = String(req.method || '').toUpperCase();
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    return next();
+  }
+
+  // Allow video processing routes even in read-only mode
+  if (isExemptFromReadOnly(req.originalUrl)) {
     return next();
   }
 
