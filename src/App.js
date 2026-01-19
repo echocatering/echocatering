@@ -50,6 +50,14 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileCurrentPage, setMobileCurrentPage] = useState('home');
   const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.add('app-mounted');
+    return () => {
+      document.documentElement.classList.remove('app-mounted');
+    };
+  }, []);
   
   // Check screen size for responsive design
   useEffect(() => {

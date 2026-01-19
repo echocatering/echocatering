@@ -9,6 +9,41 @@
       name="description"
       content="ECHO Catering - Experience-driven hospitality in Rochester, NY. Craft cocktails, hors d'oeuvres, and immersive events that celebrate connection and creativity."
     />
+
+    <link rel="preload" as="image" href="%PUBLIC_URL%/assets/images/logo512.png" fetchpriority="high" />
+
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        color: #111;
+        font-family: Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+
+      #root {
+        min-height: 100vh;
+      }
+
+      .hide-until-mounted {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      html.app-mounted .hide-until-mounted {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 180ms ease;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html.app-mounted .hide-until-mounted {
+          transition: none;
+        }
+      }
+    </style>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/assets/images/logo192.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a

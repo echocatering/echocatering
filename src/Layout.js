@@ -109,7 +109,7 @@ export default function Layout({
             marginLeft: 'calc((100vh / 16) / 2)',
             alignSelf: 'center'
           }}>
-            <button className="social-button" aria-label="Instagram" style={{
+            <button className="social-button hide-until-mounted" aria-label="Instagram" style={{
               background: '#d0d0d0',
               border: 'none',
               padding: '0',
@@ -137,7 +137,7 @@ export default function Layout({
               e.currentTarget.style.background = '#d0d0d0';
             }}>
             </button>
-            <button className="social-button" aria-label="Facebook" style={{
+            <button className="social-button hide-until-mounted" aria-label="Facebook" style={{
               background: '#d0d0d0',
               border: 'none',
               padding: '0',
@@ -165,7 +165,7 @@ export default function Layout({
               e.currentTarget.style.background = '#d0d0d0';
             }}>
             </button>
-            <button className="social-button" aria-label="Pinterest" style={{
+            <button className="social-button hide-until-mounted" aria-label="Pinterest" style={{
               background: '#d0d0d0',
               border: 'none',
               padding: '0',
@@ -346,10 +346,22 @@ export default function Layout({
               className="mobile-dropdown-button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
-              <img 
-                alt="Menu" 
-                src="/assets/icons/dropdown.svg" 
-              />
+              <svg
+                className="hide-until-mounted"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  display: 'block',
+                  color: 'rgba(0,0,0,0.6)'
+                }}
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
           </div>
         </>

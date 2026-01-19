@@ -1315,11 +1315,22 @@ const commitBeerNumUnitsValue = (rowId) => {
                     {title}
                   </button>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      fontFamily: 'Montserrat, sans-serif',
+                      color: enabled ? '#111' : '#555'
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={enabled}
                       onChange={(e) => persistMenuNavSettingForSheet(key, e.target.checked)}
+                      style={{ accentColor: '#d0d0d0' }}
                     />
                     <span style={{ fontSize: '0.7rem', color: '#6b7280', letterSpacing: '0.04em' }}>
                       MENU NAV
