@@ -304,8 +304,7 @@ async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, on
   const qualitySettings = [
     { crf: 30, scale: '480:480' },
   ];
-  const maxSizeMB = 1;
-  const maxDurationSeconds = 6;
+  const maxSizeMB = 2;
   const iconFps = 15;
 
   for (let i = 0; i < qualitySettings.length; i++) {
@@ -317,8 +316,6 @@ async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, on
         '-y',
         '-i',
         inputPath,
-        '-t',
-        String(maxDurationSeconds),
         '-an',
         '-vf',
         `fps=${iconFps},scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2`,

@@ -315,6 +315,9 @@ const MenuManager = () => {
   const [selectedCategory, setSelectedCategory] = useState('cocktails');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editingCocktail, setEditingCocktail] = useState(null);
+  const [unsavedChangesModal, setUnsavedChangesModal] = useState({ show: false, direction: null });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const prevEditingCocktailIdRef = useRef(null);
   const [newCocktail, setNewCocktail] = useState({
     name: '',
     concept: '',
@@ -473,6 +476,14 @@ const MenuManager = () => {
     return categoryMap[key] || key;
   };
 
+  useEffect(() => {
+    const id = editingCocktail?._id || null;
+    if (prevEditingCocktailIdRef.current !== id) {
+      prevEditingCocktailIdRef.current = id;
+      setHasUnsavedChanges(false);
+    }
+  }, [editingCocktail?._id]);
+
 
   // Fetch all cocktails - use ref to prevent race conditions with rapid refreshes
   const fetchCocktails = useCallback(async () => {
@@ -592,6 +603,7 @@ const MenuManager = () => {
 
   const setSelectedRegions = useCallback((next) => {
     setEditingCocktail(prev => (prev ? { ...prev, regions: next } : prev));
+    setHasUnsavedChanges(true);
   }, []);
 
   const toggleRegion = useCallback((code) => {
@@ -863,6 +875,7 @@ const MenuManager = () => {
 
   const handleVideoSelection = (file) => {
     if (!file) return;
+    setHasUnsavedChanges(true);
     
     // Get itemNumber for processing
     const itemNumber = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
@@ -1653,17 +1666,31 @@ const MenuManager = () => {
   // Sync flipped video with main video
 
   // Navigation functions
-  const handleNext = () => {
-    if (filteredCocktails.length > 0) {
+  const navigateBy = (direction) => {
+    if (filteredCocktails.length <= 0) return;
+    if (direction === 'next') {
       setCurrentIndex((prev) => (prev + 1) % filteredCocktails.length);
+      return;
     }
-  };
-
-  const handlePrev = () => {
-    if (filteredCocktails.length > 0) {
+    if (direction === 'prev') {
       setCurrentIndex((prev) => (prev - 1 + filteredCocktails.length) % filteredCocktails.length);
     }
   };
+
+  const requestNavigateBy = (direction) => {
+    if (hasUnsavedChanges) {
+      setUnsavedChangesModal({ show: true, direction });
+      return;
+    }
+    navigateBy(direction);
+  };
+
+  const handleNext = () => requestNavigateBy('next');
+  const handlePrev = () => requestNavigateBy('prev');
+
+  const showVideoArrows = ['cocktails', 'mocktails', 'spirits', 'wine', 'beer'].includes(
+    normalizeCategoryKey(selectedCategory)
+  ) && filteredCocktails.length > 1;
 
   // Reset index when category changes
   useEffect(() => {
@@ -2009,6 +2036,7 @@ const MenuManager = () => {
       }
       
       alert(`Cocktail ${isNew ? 'created' : 'updated'} successfully!`);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error saving cocktail:', error);
       alert(`Error saving cocktail: ${error.message}`);
@@ -2019,6 +2047,7 @@ const MenuManager = () => {
 
   const handleFieldChange = (field, value) => {
     setEditingCocktail(prev => (prev ? { ...prev, [field]: value } : prev));
+    setHasUnsavedChanges(true);
     // Keep name in sync with recipe title while typing
     if (field === 'name') {
       setRecipe(prev => {
@@ -2086,6 +2115,7 @@ const MenuManager = () => {
 
   const handleRevertChanges = () => {
     if (!editingCocktail) return;
+    setHasUnsavedChanges(false);
     if (isNewDraft) {
       setEditingCocktail(prev => prev ? {
         ...prev,
@@ -2435,6 +2465,77 @@ const MenuManager = () => {
                   padding: '0.35rem 0.9rem',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {unsavedChangesModal.show && (
+        <div className="delete-modal">
+          <div className="delete-modal-content">
+            <p className="delete-warning">Unsaved Changes</p>
+            <p className="delete-question">Would you like to save changes?</p>
+            <div className="delete-modal-actions" style={{ flexDirection: 'column', gap: '0.5rem', width: '100%', alignItems: 'stretch' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const dir = unsavedChangesModal.direction;
+                  setUnsavedChangesModal({ show: false, direction: null });
+                  if (editingCocktail) {
+                    await handleSave(editingCocktail);
+                  }
+                  if (dir) navigateBy(dir);
+                }}
+                style={{
+                  width: '100%',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.35rem 0.9rem',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const dir = unsavedChangesModal.direction;
+                  setUnsavedChangesModal({ show: false, direction: null });
+                  handleRevertChanges();
+                  if (dir) navigateBy(dir);
+                }}
+                style={{
+                  width: '100%',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.35rem 0.9rem',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnsavedChangesModal({ show: false, direction: null })}
+                style={{
+                  width: '100%',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.35rem 0.9rem',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -2893,101 +2994,91 @@ const MenuManager = () => {
               </div>
 
               {/* CENTER COLUMN - Arrows positioned at 1/3 height */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '33.33%',
-                  top: '33.33%',
-                  width: '33.33%',
-                  height: '33.33%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'auto',
-                  zIndex: 10,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', pointerEvents: 'auto' }}>
-                <button
-                    aria-label="Previous"
-                  onClick={handlePrev}
+              {showVideoArrows && (
+                <div
                   style={{
-                    background: 'transparent',
-                      color: '#666666',
-                    border: 'none',
-                      width: `${viewerSize.height / 3}px`,
-                      height: `${viewerSize.height / 3}px`,
-                      fontSize: `${(viewerSize.height / 3) * 0.4}px`,
-                    fontWeight: 700,
-                    cursor: 'pointer',
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    bottom: viewerSize?.height ? `${viewerSize.height / 5 + 200}px` : '200px',
+                    width: '256px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: 0,
-                    margin: 0,
-                      transition: 'all 0.2s ease',
+                    pointerEvents: 'none',
+                    zIndex: 9999,
                   }}
-                  onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#000';
-                      e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#666666';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    <svg 
-                      width={`${(viewerSize.height / 3) * 0.571}px`}
-                      height={`${(viewerSize.height / 3) * 0.571}px`}
-                      viewBox="0 0 32 32"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      style={{ display: 'block' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 32, pointerEvents: 'auto' }}>
+                    <button
+                      aria-label="Previous"
+                      onClick={handlePrev}
+                      style={{
+                        background: 'transparent',
+                        color: '#888',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 56,
+                        height: 56,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        margin: 0,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#222';
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#888';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
                     >
-                    <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <button
-                    aria-label="Next"
-                  onClick={handleNext}
-                  style={{
-                    background: 'transparent',
-                      color: '#666666',
-                    border: 'none',
-                      width: `${viewerSize.height / 3}px`,
-                      height: `${viewerSize.height / 3}px`,
-                      fontSize: `${(viewerSize.height / 3) * 0.4}px`,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                    margin: 0,
-                      transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#000';
-                      e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#666666';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    <svg 
-                      width={`${(viewerSize.height / 3) * 0.571}px`}
-                      height={`${(viewerSize.height / 3) * 0.571}px`}
-                      viewBox="0 0 32 32"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      style={{ display: 'block' }}
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Next"
+                      onClick={handleNext}
+                      style={{
+                        background: 'transparent',
+                        color: '#888',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 56,
+                        height: 56,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        margin: 0,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#222';
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#888';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
                     >
-                    <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
                   </div>
+                </div>
+              )}
 
               {/* RIGHT COLUMN - Map, Countries - positioned absolutely on top */}
               <div
@@ -3604,6 +3695,7 @@ const MenuManager = () => {
               onChange={(updatedRecipe) => {
                 // Allow title edits and keep MM name in sync with RecipeBuilder
                 setRecipe(updatedRecipe);
+                setHasUnsavedChanges(true);
                 if (updatedRecipe?.title !== undefined) {
                   setEditingCocktail(prev => {
                     if (!prev) return prev;
@@ -3637,6 +3729,7 @@ const MenuManager = () => {
               onChange={(updatedRecipe) => {
                 // For PRE-MIX, allow title editing and sync it back to cocktail name
                 setRecipe(updatedRecipe);
+                setHasUnsavedChanges(true);
                 // Update cocktail name to match recipe title (always uppercase)
                 setEditingCocktail(prev => ({
                   ...prev,
@@ -3656,6 +3749,77 @@ const MenuManager = () => {
               hideActions={true} // Hide SAVE and DELETE buttons
               forceUppercaseTitle={true} // Force uppercase for PRE-MIX
             />
+          </div>
+        )}
+
+        {normalizeCategoryKey(selectedCategory) === 'premix' && filteredCocktails.length > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: '1rem', position: 'relative', zIndex: 50 }}>
+            <button
+              aria-label="Previous"
+              onClick={handlePrev}
+              style={{
+                background: 'transparent',
+                color: '#888',
+                border: 'none',
+                borderRadius: '50%',
+                width: 56,
+                height: 56,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#222';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#888';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              aria-label="Next"
+              onClick={handleNext}
+              style={{
+                background: 'transparent',
+                color: '#888',
+                border: 'none',
+                borderRadius: '50%',
+                width: 56,
+                height: 56,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#222';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#888';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         )}
 
