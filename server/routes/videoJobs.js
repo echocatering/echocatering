@@ -81,6 +81,10 @@ router.post('/:itemNumber/start', [authenticateToken, requireEditor], async (req
     return res.status(400).json({ message: 'Invalid itemNumber' });
   }
 
+  if (process.env.RENDER) {
+    return res.status(403).json({ message: 'Video processing on local site only' });
+  }
+
   if (!process.env.VIDEO_WORKER_URL) {
     return res.status(501).json({ message: 'VIDEO_WORKER_URL is not configured on the backend' });
   }

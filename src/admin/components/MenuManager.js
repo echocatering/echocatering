@@ -304,6 +304,12 @@ const MenuManager = () => {
   const { apiCall, isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+  const isRenderSite = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const host = String(window.location?.hostname || '');
+    const base = String(API_BASE_URL || '');
+    return host.includes('onrender.com') || base.includes('onrender.com');
+  }, [API_BASE_URL]);
   const [cocktails, setCocktails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('cocktails');
@@ -888,6 +894,10 @@ const MenuManager = () => {
     
     switch (option) {
       case 'process':
+        if (isRenderSite) {
+          alert('Video processing on local site only');
+          return;
+        }
         if (!workerStatus?.online) {
           alert('Local worker is offline. Start the worker + tunnel first, then try again.');
           return;
@@ -2336,6 +2346,11 @@ const MenuManager = () => {
           <div className="delete-modal-content">
             <p className="delete-warning">Video Options</p>
             <p className="delete-question">Choose how to handle this video:</p>
+            {isRenderSite && (
+              <p className="delete-question" style={{ marginTop: '0.5rem', color: '#dc2626' }}>
+                Video processing on local site only
+              </p>
+            )}
             <div
               style={{
                 display: 'flex',
@@ -2369,10 +2384,10 @@ const MenuManager = () => {
                   borderRadius: '9999px',
                   padding: '0.35rem 0.9rem',
                   fontSize: '0.85rem',
-                  cursor: workerStatus?.online ? 'pointer' : 'not-allowed',
-                  opacity: workerStatus?.online ? 1 : 0.5
+                  cursor: !isRenderSite && workerStatus?.online ? 'pointer' : 'not-allowed',
+                  opacity: !isRenderSite && workerStatus?.online ? 1 : 0.5
                 }}
-                disabled={!workerStatus?.online}
+                disabled={isRenderSite || !workerStatus?.online}
               >
                 Process Video
               </button>
