@@ -1335,7 +1335,7 @@ function EchoCocktailSubpage2({
           }}
         >
           {(info.ingredients || '')
-            .split(/,\s*/)
+            .split(/,|\r?\n/)
             .map((item) => item.trim().replace(/^[-\s]+|[-\s]+$/g, ''))
             .filter(Boolean)
             .map((item, idx) => (
