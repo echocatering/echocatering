@@ -879,7 +879,7 @@ router.use(async (req, res, next) => {
 router.get('/sheets', async (req, res, next) => {
   try {
     const sheets = await InventorySheet.find({})
-      .select('sheetKey name description version updatedAt rows')
+      .select('sheetKey name description version updatedAt rows settings')
       .lean();
     const payload = sheets.map((sheet) => ({
       sheetKey: sheet.sheetKey,
@@ -887,7 +887,8 @@ router.get('/sheets', async (req, res, next) => {
       description: sheet.description,
       version: sheet.version,
       updatedAt: sheet.updatedAt,
-      rowCount: sheet.rows?.length || 0
+      rowCount: sheet.rows?.length || 0,
+      menuNavEnabled: sheet?.settings?.menuNavEnabled !== false
     }));
     res.json({ sheets: payload });
   } catch (error) {
@@ -2619,6 +2620,30 @@ router.post('/:sheetKey/rows', async (req, res, next) => {
   } catch (error) {
     console.error('Error in POST /:sheetKey/rows:', error);
     console.error('Error stack:', error.stack);
+    next(error);
+  }
+});
+
+router.patch('/:sheetKey/settings', async (req, res, next) => {
+  try {
+    const { settings = {}, updatedBy } = req.body || {};
+    const sheet = req.sheet;
+
+    sheet.settings = {
+      ...(sheet.settings || {}),
+      ...(settings || {})
+    };
+
+    sheet.version += 1;
+    sheet.updatedBy = updatedBy || 'system';
+    await sheet.save();
+
+    const datasets = await fetchDatasets(req.datasetIds);
+    res.json({
+      sheet: formatSheet(sheet),
+      datasets
+    });
+  } catch (error) {
     next(error);
   }
 });

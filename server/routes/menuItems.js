@@ -933,6 +933,18 @@ router.get('/menu-gallery', async (req, res) => {
     const sheets = await InventorySheet.find({ sheetKey: { $in: sheetKeys } }).lean();
     const menuGalleryData = getMenuGalleryBuckets();
 
+    const menuNavBySheetKey = new Map();
+    sheets.forEach((sheet) => {
+      const enabled = sheet?.settings?.menuNavEnabled;
+      menuNavBySheetKey.set(sheet.sheetKey, enabled !== false);
+    });
+
+    sheetKeys.forEach((sheetKey) => {
+      const category = normalizeCategory(sheetKey);
+      if (!category || !menuGalleryData[category]) return;
+      menuGalleryData[category].menuNavEnabled = (menuNavBySheetKey.get(sheetKey) !== false);
+    });
+
     const sheetsByKey = new Map();
     sheets.forEach((s) => sheetsByKey.set(s.sheetKey, s));
 

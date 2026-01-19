@@ -32,6 +32,9 @@ const InventorySheetSchema = new mongoose.Schema({
   sheetKey: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   description: { type: String },
+  settings: {
+    menuNavEnabled: { type: Boolean, default: true }
+  },
   columns: { type: [ColumnSchema], default: [] },
   rows: { type: [RowSchema], default: [] },
   version: { type: Number, default: 1 },

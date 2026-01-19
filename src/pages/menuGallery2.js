@@ -1587,13 +1587,9 @@ function EchoCocktailSubpage2({
     );
   };
 
-  const categoryList = useMemo(() => [
-    { key: 'cocktails', label: 'Cocktails' },
-    { key: 'mocktails', label: 'Mocktails' },
-    { key: 'beer', label: 'Beer' },
-    { key: 'wine', label: 'Wine' },
-    { key: 'spirits', label: 'Spirits' },
-  ], []);
+  const categoryList = useMemo(() => {
+    return Array.isArray(subpageOrder) ? subpageOrder : [];
+  }, [subpageOrder]);
 
   const renderHorizontalLayout = () => {
     const buttonTextColor = '#111';
@@ -2228,18 +2224,18 @@ function EchoCocktailSubpage2({
                 }
               }}
               onMouseEnter={(e) => {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  img.style.filter = 'brightness(0) saturate(100%)';
-                  img.style.transform = 'scale(1.1)';
+                const svg = e.currentTarget.querySelector('svg');
+                if (svg) {
+                  svg.style.transform = 'scale(1.1)';
                 }
+                e.currentTarget.style.color = '#222';
               }}
               onMouseLeave={(e) => {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
-                  img.style.transform = 'scale(1)';
+                const svg = e.currentTarget.querySelector('svg');
+                if (svg) {
+                  svg.style.transform = 'scale(1)';
                 }
+                e.currentTarget.style.color = '#888';
               }}
               style={{
                 width: '60px',
@@ -2253,23 +2249,23 @@ function EchoCocktailSubpage2({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: '#888',
                 transition: 'all 0.2s ease',
                 flexShrink: 0,
                 minWidth: '60px',
                 minHeight: '60px',
               }}
             >
-              <img
-                src="/assets/icons/originals.svg"
-                alt="Menu"
+              <IconComponent
+                iconName="originals"
+                className="hide-until-mounted"
                 style={{
                   width: '46%',
                   height: '46%',
-                  objectFit: 'contain',
-                  filter: 'brightness(0) saturate(100%) invert(47%)',
-                  opacity: 1,
-                  transition: 'filter 0.2s ease, transform 0.2s ease',
+                  color: 'currentColor',
+                  display: 'block',
                   flexShrink: 0,
+                  transition: 'transform 0.2s ease',
                 }}
               />
             </button>
@@ -2364,11 +2360,11 @@ function EchoCocktailSubpage2({
                   span.style.color = '#222';
                 }
               } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #222 (rgb(34,34,34)) - darker, almost black
-                  img.style.filter = 'brightness(0) saturate(100%)';
+                const svg = e.currentTarget.querySelector('svg');
+                if (svg) {
+                  svg.style.transform = 'scale(1.05)';
                 }
+                e.currentTarget.style.color = '#222';
               }
             }}
             onMouseLeave={(e) => {
@@ -2379,11 +2375,11 @@ function EchoCocktailSubpage2({
                   span.style.color = '#888';
                 }
               } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #888 (rgb(136,136,136)) - medium gray
-                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                const svg = e.currentTarget.querySelector('svg');
+                if (svg) {
+                  svg.style.transform = 'scale(1)';
                 }
+                e.currentTarget.style.color = '#888';
               }
             }}
             style={{
@@ -2398,6 +2394,7 @@ function EchoCocktailSubpage2({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: '#888',
               transition: 'all 0.2s ease',
               flexShrink: 0,
               minWidth: '56px',
@@ -2413,19 +2410,25 @@ function EchoCocktailSubpage2({
                 transition: 'color 0.2s ease',
               }}>×</span>
             ) : (
-              <img
-                src="/assets/icons/information-button.png"
-                alt="Information"
+              <svg
+                className="hide-until-mounted"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 64 64"
                 style={{
+                  display: 'block',
                   width: '40%',
                   height: '40%',
-                  objectFit: 'contain',
-                  filter: 'brightness(0) saturate(100%) invert(47%)',
-                  opacity: 1,
-                  transition: 'filter 0.2s ease',
+                  transition: 'transform 0.2s ease',
                   flexShrink: 0,
                 }}
-              />
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  fill="currentColor"
+                  d="M32,10c12.15,0,22,9.85,22,22s-9.85,22-22,22s-22-9.85-22-22S19.85,10,32,10z M34,42c0-0.601,0-9.399,0-10\tc0-1.104-0.895-2-2-2c-1.105,0-2,0.896-2,2c0,0.601,0,9.399,0,10c0,1.104,0.895,2,2,2C33.105,44,34,43.104,34,42z M32,27\tc1.657,0,3-1.343,3-3s-1.343-3-3-3s-3,1.343-3,3S30.343,27,32,27z"
+                />
+              </svg>
             )}
               </button>
             ) : (
@@ -2656,6 +2659,19 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     { key: 'spirits', label: 'Spirits' },
   ], []);
 
+  const enabledSubpageOrder = useMemo(() => {
+    const filtered = subpageOrder.filter(({ key }) => subpages?.[key]?.menuNavEnabled !== false);
+    return filtered.length ? filtered : subpageOrder;
+  }, [subpageOrder, subpages]);
+
+  useEffect(() => {
+    const enabledKeys = enabledSubpageOrder.map((entry) => entry.key);
+    if (!enabledKeys.length) return;
+    if (!enabledKeys.includes(selected)) {
+      setSelected(enabledKeys[0]);
+    }
+  }, [enabledSubpageOrder, selected]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -2737,7 +2753,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       title={title}
       selected={selected}
       setSelected={setSelected}
-      subpageOrder={subpageOrder}
+      subpageOrder={enabledSubpageOrder}
       sidebarOpen={sidebarOpen}
       setSidebarOpen={setSidebarOpen}
       viewMode={viewMode}

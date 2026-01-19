@@ -968,13 +968,85 @@ const commitBeerNumUnitsValue = (rowId) => {
   }, [apiCall, resolvedSheetKey, user?.email]);
 
   const refreshSheetData = (response) => {
-    if (response?.sheet) {
-      setSheetPayload(response.sheet);
+    const sheet = response?.sheet;
+    const datasets = response?.datasets;
+    if (sheet) {
+      setSheetPayload(sheet);
     }
-    if (response?.datasets) {
-      setDatasets(response.datasets);
+    if (Array.isArray(datasets)) {
+      setDatasets(datasets);
     }
   };
+
+  const menuNavSheetKeys = useMemo(() => {
+    return ['cocktails', 'mocktails', 'wine', 'beer', 'spirits'];
+  }, []);
+
+  const persistMenuNavSettingForSheet = useCallback(
+    async (targetSheetKey, nextEnabled) => {
+      if (!targetSheetKey) return;
+
+      const prevEnabled = sheetList.find((s) => s.sheetKey === targetSheetKey)?.menuNavEnabled;
+      setSheetList((prev) =>
+        prev.map((s) =>
+          s.sheetKey === targetSheetKey
+            ? { ...s, menuNavEnabled: Boolean(nextEnabled) }
+            : s
+        )
+      );
+
+      if (resolvedSheetKey === targetSheetKey) {
+        setSheetPayload((prev) =>
+          prev
+            ? {
+                ...prev,
+                settings: {
+                  ...(prev.settings || {}),
+                  menuNavEnabled: Boolean(nextEnabled)
+                }
+              }
+            : prev
+        );
+      }
+
+      setError('');
+      try {
+        const response = await apiCall(`/inventory/${targetSheetKey}/settings`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            settings: {
+              menuNavEnabled: Boolean(nextEnabled)
+            },
+            updatedBy: user?.email || 'admin'
+          })
+        });
+
+        const updated = response?.sheet;
+        if (updated?.sheetKey) {
+          setSheetList((prev) =>
+            prev.map((s) =>
+              s.sheetKey === updated.sheetKey
+                ? { ...s, menuNavEnabled: updated?.settings?.menuNavEnabled !== false }
+                : s
+            )
+          );
+        }
+        if (resolvedSheetKey === targetSheetKey) {
+          refreshSheetData(response);
+        }
+      } catch (err) {
+        setSheetList((prev) =>
+          prev.map((s) =>
+            s.sheetKey === targetSheetKey
+              ? { ...s, menuNavEnabled: prevEnabled !== false }
+              : s
+          )
+        );
+        setError(err.message || 'Failed to save settings.');
+      }
+    },
+    [apiCall, resolvedSheetKey, sheetList, user?.email]
+  );
 
   const handleAddRow = async () => {
     if (!resolvedSheetKey) {
@@ -1214,6 +1286,48 @@ const commitBeerNumUnitsValue = (rowId) => {
             <h1 className="text-3xl tracking-wide uppercase" style={{ fontWeight: 4 }}>
               {resolvedSheetKey === 'mocktails' ? 'MOCKTAILS' : (activeSheetMeta?.name || 'Inventory').toUpperCase()}
             </h1>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', alignItems: 'center' }}>
+            {menuNavSheetKeys.map((key) => {
+              const meta = sheetList.find((s) => s.sheetKey === key);
+              if (!meta) return null;
+              const isActive = resolvedSheetKey === key;
+              const enabled = meta.menuNavEnabled !== false;
+              const title = (meta.name || key).toUpperCase();
+              return (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/admin/inventory/${key}`)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat, sans-serif',
+                      letterSpacing: '0.06em',
+                      fontSize: '0.85rem',
+                      color: isActive ? '#111827' : '#6b7280',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {title}
+                  </button>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={(e) => persistMenuNavSettingForSheet(key, e.target.checked)}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: '#6b7280', letterSpacing: '0.04em' }}>
+                      MENU NAV
+                    </span>
+                  </label>
+                </div>
+              );
+            })}
           </div>
         </header>
 
