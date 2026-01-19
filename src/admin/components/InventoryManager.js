@@ -978,40 +978,44 @@ const commitBeerNumUnitsValue = (rowId) => {
     }
   };
 
-  const menuNavSheetKeys = useMemo(() => {
-    return ['cocktails', 'mocktails', 'wine', 'beer', 'spirits'];
-  }, []);
+  const canConfigureMenuNav = useMemo(() => {
+    return ['cocktails', 'mocktails', 'wine', 'beer', 'spirits'].includes(resolvedSheetKey);
+  }, [resolvedSheetKey]);
 
-  const persistMenuNavSettingForSheet = useCallback(
-    async (targetSheetKey, nextEnabled) => {
-      if (!targetSheetKey) return;
+  const menuNavEnabled = useMemo(() => {
+    if (!canConfigureMenuNav) return null;
+    const enabled = sheetPayload?.settings?.menuNavEnabled;
+    return enabled !== false;
+  }, [canConfigureMenuNav, sheetPayload?.settings?.menuNavEnabled]);
 
-      const prevEnabled = sheetList.find((s) => s.sheetKey === targetSheetKey)?.menuNavEnabled;
+  const persistMenuNavSetting = useCallback(
+    async (nextEnabled) => {
+      if (!resolvedSheetKey) return;
+
+      const prevEnabled = sheetList.find((s) => s.sheetKey === resolvedSheetKey)?.menuNavEnabled;
       setSheetList((prev) =>
         prev.map((s) =>
-          s.sheetKey === targetSheetKey
+          s.sheetKey === resolvedSheetKey
             ? { ...s, menuNavEnabled: Boolean(nextEnabled) }
             : s
         )
       );
 
-      if (resolvedSheetKey === targetSheetKey) {
-        setSheetPayload((prev) =>
-          prev
-            ? {
-                ...prev,
-                settings: {
-                  ...(prev.settings || {}),
-                  menuNavEnabled: Boolean(nextEnabled)
-                }
+      setSheetPayload((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: {
+                ...(prev.settings || {}),
+                menuNavEnabled: Boolean(nextEnabled)
               }
-            : prev
-        );
-      }
+            }
+          : prev
+      );
 
       setError('');
       try {
-        const response = await apiCall(`/inventory/${targetSheetKey}/settings`, {
+        const response = await apiCall(`/inventory/${resolvedSheetKey}/settings`, {
           method: 'PATCH',
           body: JSON.stringify({
             settings: {
@@ -1020,24 +1024,11 @@ const commitBeerNumUnitsValue = (rowId) => {
             updatedBy: user?.email || 'admin'
           })
         });
-
-        const updated = response?.sheet;
-        if (updated?.sheetKey) {
-          setSheetList((prev) =>
-            prev.map((s) =>
-              s.sheetKey === updated.sheetKey
-                ? { ...s, menuNavEnabled: updated?.settings?.menuNavEnabled !== false }
-                : s
-            )
-          );
-        }
-        if (resolvedSheetKey === targetSheetKey) {
-          refreshSheetData(response);
-        }
+        refreshSheetData(response);
       } catch (err) {
         setSheetList((prev) =>
           prev.map((s) =>
-            s.sheetKey === targetSheetKey
+            s.sheetKey === resolvedSheetKey
               ? { ...s, menuNavEnabled: prevEnabled !== false }
               : s
           )
@@ -1286,59 +1277,30 @@ const commitBeerNumUnitsValue = (rowId) => {
             <h1 className="text-3xl tracking-wide uppercase" style={{ fontWeight: 4 }}>
               {resolvedSheetKey === 'mocktails' ? 'MOCKTAILS' : (activeSheetMeta?.name || 'Inventory').toUpperCase()}
             </h1>
-          </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', alignItems: 'center' }}>
-            {menuNavSheetKeys.map((key) => {
-              const meta = sheetList.find((s) => s.sheetKey === key);
-              if (!meta) return null;
-              const isActive = resolvedSheetKey === key;
-              const enabled = meta.menuNavEnabled !== false;
-              const title = (meta.name || key).toUpperCase();
-              return (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/admin/inventory/${key}`)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      fontFamily: 'Montserrat, sans-serif',
-                      letterSpacing: '0.06em',
-                      fontSize: '0.85rem',
-                      color: isActive ? '#111827' : '#6b7280',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    {title}
-                  </button>
-
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      fontFamily: 'Montserrat, sans-serif',
-                      color: enabled ? '#111' : '#555'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) => persistMenuNavSettingForSheet(key, e.target.checked)}
-                      style={{ accentColor: '#d0d0d0' }}
-                    />
-                    <span style={{ fontSize: '0.7rem', color: '#6b7280', letterSpacing: '0.04em' }}>
-                      MENU NAV
-                    </span>
-                  </label>
-                </div>
-              );
-            })}
+            {canConfigureMenuNav && (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  fontFamily: 'Montserrat, sans-serif',
+                  color: menuNavEnabled ? '#111' : '#555'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={!!menuNavEnabled}
+                  onChange={(e) => persistMenuNavSetting(e.target.checked)}
+                  style={{ accentColor: '#d0d0d0' }}
+                />
+                <span style={{ fontSize: '0.7rem', color: '#6b7280', letterSpacing: '0.04em' }}>
+                  MENU NAV
+                </span>
+              </label>
+            )}
           </div>
         </header>
 
