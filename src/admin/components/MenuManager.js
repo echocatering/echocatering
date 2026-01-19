@@ -420,10 +420,11 @@ const MenuManager = () => {
       });
       
       let targetIndex = -1;
-      if (urlItemNumber && Number.isFinite(Number(urlItemNumber))) {
+      const urlItemNumberNum = Number(urlItemNumber);
+      if (urlItemNumber && Number.isFinite(urlItemNumberNum)) {
         // Find by itemNumber (most reliable)
         targetIndex = categoryFiltered.findIndex(c => 
-          c.itemNumber === Number(urlItemNumber)
+          Number(c.itemNumber) === urlItemNumberNum
         );
       } else if (urlItemId) {
         // Fallback: find by itemId or name (legacy support)
