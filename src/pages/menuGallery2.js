@@ -1335,7 +1335,7 @@ function EchoCocktailSubpage2({
           }}
         >
           {(info.ingredients || '')
-            .split(',')
+            .split(/,\s*/)
             .map((item) => item.trim().replace(/^[-\s]+|[-\s]+$/g, ''))
             .filter(Boolean)
             .map((item, idx) => (
@@ -1422,7 +1422,7 @@ function EchoCocktailSubpage2({
           >
             Concept
           </div>
-          <div style={{ fontSize: `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))`, marginBottom: '1rem' }}>{info.concept}</div>
+          <div style={{ fontSize: `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))`, marginBottom: 0 }}>{info.concept}</div>
         </div>
       );
     } else {
@@ -2360,11 +2360,11 @@ function EchoCocktailSubpage2({
                   span.style.color = '#222';
                 }
               } else {
-                const svg = e.currentTarget.querySelector('svg');
-                if (svg) {
-                  svg.style.transform = 'scale(1.05)';
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  // #222 (rgb(34,34,34)) - darker, almost black
+                  img.style.filter = 'brightness(0) saturate(100%)';
                 }
-                e.currentTarget.style.color = '#222';
               }
             }}
             onMouseLeave={(e) => {
@@ -2375,11 +2375,11 @@ function EchoCocktailSubpage2({
                   span.style.color = '#888';
                 }
               } else {
-                const svg = e.currentTarget.querySelector('svg');
-                if (svg) {
-                  svg.style.transform = 'scale(1)';
+                const img = e.currentTarget.querySelector('img');
+                if (img) {
+                  // #888 (rgb(136,136,136)) - medium gray
+                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
                 }
-                e.currentTarget.style.color = '#888';
               }
             }}
             style={{
@@ -2394,7 +2394,6 @@ function EchoCocktailSubpage2({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#888',
               transition: 'all 0.2s ease',
               flexShrink: 0,
               minWidth: '56px',
@@ -2410,25 +2409,20 @@ function EchoCocktailSubpage2({
                 transition: 'color 0.2s ease',
               }}>×</span>
             ) : (
-              <svg
+              <img
                 className="hide-until-mounted"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 64 64"
+                src="/assets/icons/information-button.png"
+                alt="Information"
                 style={{
-                  display: 'block',
                   width: '40%',
                   height: '40%',
-                  transition: 'transform 0.2s ease',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) saturate(100%) invert(47%)',
+                  opacity: 1,
+                  transition: 'filter 0.2s ease',
                   flexShrink: 0,
                 }}
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  fill="currentColor"
-                  d="M32,10c12.15,0,22,9.85,22,22s-9.85,22-22,22s-22-9.85-22-22S19.85,10,32,10z M34,42c0-0.601,0-9.399,0-10\tc0-1.104-0.895-2-2-2c-1.105,0-2,0.896-2,2c0,0.601,0,9.399,0,10c0,1.104,0.895,2,2,2C33.105,44,34,43.104,34,42z M32,27\tc1.657,0,3-1.343,3-3s-1.343-3-3-3s-3,1.343-3,3S30.343,27,32,27z"
-                />
-              </svg>
+              />
             )}
               </button>
             ) : (

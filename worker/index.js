@@ -302,7 +302,7 @@ async function applyUniformGain(inputPath, outputPath, scale, { signal, onChild 
 async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, onChild } = {}) {
   // Match old backend: 480x480 padded, target under 2MB.
   const qualitySettings = [
-    { crf: 30, scale: '480:480' },
+    { crf: 23, scale: '480:480' },
   ];
   const maxSizeMB = 2;
   const iconFps = 15;
