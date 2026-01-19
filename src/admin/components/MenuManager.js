@@ -318,6 +318,9 @@ const MenuManager = () => {
   const [unsavedChangesModal, setUnsavedChangesModal] = useState({ show: false, direction: null });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const prevEditingCocktailIdRef = useRef(null);
+  const recipeRef = useRef(null);
+  const lastRecipeHydrateAtRef = useRef(0);
+  const recipeBuilderInteractedRef = useRef(false);
   const [newCocktail, setNewCocktail] = useState({
     name: '',
     concept: '',
@@ -481,8 +484,43 @@ const MenuManager = () => {
     if (prevEditingCocktailIdRef.current !== id) {
       prevEditingCocktailIdRef.current = id;
       setHasUnsavedChanges(false);
+      recipeBuilderInteractedRef.current = false;
     }
   }, [editingCocktail?._id]);
+
+  useEffect(() => {
+    recipeRef.current = recipe;
+  }, [recipe]);
+
+  const recipeDidChange = useCallback((prev, next) => {
+    try {
+      if (prev === next) return false;
+      if (!prev && !next) return false;
+      if (!prev || !next) return true;
+      const stable = (value) => {
+        const seen = new WeakSet();
+        const normalize = (v) => {
+          if (v === null || v === undefined) return v;
+          if (typeof v !== 'object') return v;
+          if (v instanceof Date) return v.toISOString();
+          if (Array.isArray(v)) return v.map(normalize);
+          if (seen.has(v)) return null;
+          seen.add(v);
+          const out = {};
+          Object.keys(v)
+            .sort()
+            .forEach((k) => {
+              out[k] = normalize(v[k]);
+            });
+          return out;
+        };
+        return JSON.stringify(normalize(value));
+      };
+      return stable(prev) !== stable(next);
+    } catch (e) {
+      return true;
+    }
+  }, []);
 
 
   // Fetch all cocktails - use ref to prevent race conditions with rapid refreshes
@@ -2169,6 +2207,11 @@ const MenuManager = () => {
 
   // Fetch recipe for a cocktail
   const fetchRecipeForCocktail = useCallback(async (cocktail) => {
+    const setHydratedRecipe = (nextRecipe) => {
+      lastRecipeHydrateAtRef.current = Date.now();
+      recipeBuilderInteractedRef.current = false;
+      setRecipe(nextRecipe);
+    };
     if (!cocktail || !cocktail._id || String(cocktail._id).startsWith('new-')) {
       // New item - create blank recipe with itemNumber if available
       const recipeType = getRecipeType(cocktail?.category || selectedCategory);
@@ -2177,16 +2220,16 @@ const MenuManager = () => {
         if (cocktail?.itemNumber) {
           blankRecipe.itemNumber = cocktail.itemNumber;
         }
-        setRecipe(blankRecipe);
+        setHydratedRecipe(blankRecipe);
       } else {
-        setRecipe(null);
+        setHydratedRecipe(null);
       }
       return;
     }
 
     const recipeType = getRecipeType(cocktail.category);
     if (!recipeType) {
-      setRecipe(null);
+      setHydratedRecipe(null);
       return;
     }
 
@@ -2203,7 +2246,7 @@ const MenuManager = () => {
           
           const matchingRecipe = itemNumberRecipes.find(r => r.itemNumber === cocktail.itemNumber);
           if (matchingRecipe) {
-            setRecipe(matchingRecipe);
+            setHydratedRecipe(matchingRecipe);
             return;
           }
         } catch (itemNumberError) {
@@ -2233,14 +2276,14 @@ const MenuManager = () => {
         if (cocktail.itemNumber && !matchingRecipe.itemNumber) {
           matchingRecipe.itemNumber = cocktail.itemNumber;
         }
-        setRecipe(matchingRecipe);
+        setHydratedRecipe(matchingRecipe);
       } else {
         // Create blank recipe if none exists, with itemNumber if available
         const blankRecipe = createBlankRecipe(recipeType);
         if (cocktail.itemNumber) {
           blankRecipe.itemNumber = cocktail.itemNumber;
         }
-        setRecipe(blankRecipe);
+        setHydratedRecipe(blankRecipe);
       }
     } catch (error) {
       console.error('Error fetching recipe:', error);
@@ -2250,9 +2293,9 @@ const MenuManager = () => {
         if (cocktail.itemNumber) {
           blankRecipe.itemNumber = cocktail.itemNumber;
         }
-        setRecipe(blankRecipe);
+        setHydratedRecipe(blankRecipe);
       } else {
-        setRecipe(null);
+        setHydratedRecipe(null);
       }
     } finally {
       setRecipeLoading(false);
@@ -3688,70 +3731,98 @@ const MenuManager = () => {
         {/* Recipe Builder - Show for COCKTAILS and MOCKTAILS only (not PRE-MIX) */}
         {editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && recipe && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
           <div className="rounded-lg p-6" style={{ position: 'relative', backgroundColor: 'transparent', border: 'none', background: 'transparent' }}>
-            <RecipeBuilder
-              key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
-              recipe={{
-                ...recipe,
-                title: editingCocktail.name || recipe.title // Keep MM name as initial title
-              }}
-              onChange={(updatedRecipe) => {
-                // Allow title edits and keep MM name in sync with RecipeBuilder
-                setRecipe(updatedRecipe);
-                setHasUnsavedChanges(true);
-                if (updatedRecipe?.title !== undefined) {
-                  setEditingCocktail(prev => {
-                    if (!prev) return prev;
-                    return { ...prev, name: updatedRecipe.title };
-                  });
-                }
-              }}
-              type={getRecipeType(editingCocktail.category)}
-              saving={savingRecipe}
-              onSave={async () => {
-                // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
-                if (editingCocktail) {
-                  handleSave(editingCocktail);
-                }
-              }}
-              onDelete={null}
-              disableTitleEdit={false} // Allow typing; MM name stays synced via onChange
-              hideActions={true} // Hide SAVE and DELETE buttons - saving is handled by MenuManager's "Save Changes" button
-            />
+            <div
+              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
+              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
+            >
+              <RecipeBuilder
+                key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
+                recipe={{
+                  ...recipe,
+                  title: editingCocktail.name || recipe.title // Keep MM name as initial title
+                }}
+                onChange={(updatedRecipe) => {
+                  // Allow title edits and keep MM name in sync with RecipeBuilder
+                  const prev = recipeRef.current;
+                  const isHydrationUpdate = !hasUnsavedChanges &&
+                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
+                    prev &&
+                    updatedRecipe &&
+                    updatedRecipe.itemNumber === prev.itemNumber &&
+                    updatedRecipe.title === prev.title;
+                  setRecipe(updatedRecipe);
+                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
+                    setHasUnsavedChanges(true);
+                  }
+                  if (updatedRecipe?.title !== undefined) {
+                    setEditingCocktail(prev => {
+                      if (!prev) return prev;
+                      return { ...prev, name: updatedRecipe.title };
+                    });
+                  }
+                }}
+                type={getRecipeType(editingCocktail.category)}
+                saving={savingRecipe}
+                onSave={async () => {
+                  // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
+                  if (editingCocktail) {
+                    handleSave(editingCocktail);
+                  }
+                }}
+                onDelete={null}
+                disableTitleEdit={false} // Allow typing; MM name stays synced via onChange
+                hideActions={true} // Hide SAVE and DELETE buttons - saving is handled by MenuManager's "Save Changes" button
+              />
+            </div>
           </div>
         )}
 
         {/* Recipe Builder for PRE-MIX - Show only recipe name field (editable, always CAPS) */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
           <div className="rounded-lg p-6 mt-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
-            <RecipeBuilder
-              key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
-              recipe={{
-                ...recipe,
-                title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
-              }}
-              onChange={(updatedRecipe) => {
-                // For PRE-MIX, allow title editing and sync it back to cocktail name
-                setRecipe(updatedRecipe);
-                setHasUnsavedChanges(true);
-                // Update cocktail name to match recipe title (always uppercase)
-                setEditingCocktail(prev => ({
-                  ...prev,
-                  name: updatedRecipe.title?.toUpperCase() || prev.name
-                }));
-              }}
-              type={getRecipeType(editingCocktail.category)}
-              saving={savingRecipe}
-              onSave={async () => {
-                // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
-                if (editingCocktail) {
-                  handleSave(editingCocktail);
-                }
-              }}
-              onDelete={null}
-              disableTitleEdit={false} // Allow title editing for PRE-MIX
-              hideActions={true} // Hide SAVE and DELETE buttons
-              forceUppercaseTitle={true} // Force uppercase for PRE-MIX
-            />
+            <div
+              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
+              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
+            >
+              <RecipeBuilder
+                key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
+                recipe={{
+                  ...recipe,
+                  title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
+                }}
+                onChange={(updatedRecipe) => {
+                  // For PRE-MIX, allow title editing and sync it back to cocktail name
+                  const prev = recipeRef.current;
+                  const isHydrationUpdate = !hasUnsavedChanges &&
+                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
+                    prev &&
+                    updatedRecipe &&
+                    updatedRecipe.itemNumber === prev.itemNumber &&
+                    updatedRecipe.title === prev.title;
+                  setRecipe(updatedRecipe);
+                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
+                    setHasUnsavedChanges(true);
+                  }
+                  // Update cocktail name to match recipe title (always uppercase)
+                  setEditingCocktail(prev => ({
+                    ...prev,
+                    name: updatedRecipe.title?.toUpperCase() || prev.name
+                  }));
+                }}
+                type={getRecipeType(editingCocktail.category)}
+                saving={savingRecipe}
+                onSave={async () => {
+                  // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
+                  if (editingCocktail) {
+                    handleSave(editingCocktail);
+                  }
+                }}
+                onDelete={null}
+                disableTitleEdit={false} // Allow title editing for PRE-MIX
+                hideActions={true} // Hide SAVE and DELETE buttons
+                forceUppercaseTitle={true} // Force uppercase for PRE-MIX
+              />
+            </div>
           </div>
         )}
 
