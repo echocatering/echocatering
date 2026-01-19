@@ -467,9 +467,11 @@ function EchoCocktailSubpage2({
   const titleRef = useRef(null);
   const ingredientsContainerRef = useRef(null);
   const infoConceptContainerRef = useRef(null);
+  const bottomControlsRef = useRef(null);
   const navBarRef = useRef(null);
   const innerContainerRef = useRef(null);
   const [verticalInfoFontScale, setVerticalInfoFontScale] = useState(1);
+  const [bottomControlsHeight, setBottomControlsHeight] = useState(60);
 
   const [ref, size] = useContainerSize(outerWidthOverride, outerHeightOverride, viewMode);
   const [forceRecalc, setForceRecalc] = useState(0);
@@ -605,6 +607,24 @@ function EchoCocktailSubpage2({
     const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
     return () => cancelAnimationFrame(raf);
   }, [isVertical, showConceptInfo, conceptVisible, ingredientsVisible, garnishVisible, verticalInfoFontScale, info?.ingredients, info?.garnish, info?.concept]);
+
+  useEffect(() => {
+    if (!isVertical) return;
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const el = bottomControlsRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const next = Math.round(el.getBoundingClientRect().height || 0);
+      if (next > 0) setBottomControlsHeight(next);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isVertical]);
 
   // Prefer cloudinaryVideoUrl, fallback to videoUrl; only transform if it's Cloudinary
   const videoSrc = info?.cloudinaryVideoUrl || info?.videoUrl || '';
@@ -2107,8 +2127,8 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            bottom: '82px',
-            height: 'calc(100vh / 7.5)',
+            bottom: `${18 + bottomControlsHeight}px`,
+            height: 'calc(100vh / 6.5)',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
@@ -2128,10 +2148,11 @@ function EchoCocktailSubpage2({
 
         {/* Bottom controls container */}
         <div
+          ref={bottomControlsRef}
           style={{
             position: 'absolute',
             left: `${innerLeft + layout.inner.width / 2}px`,
-            bottom: '28px',
+            bottom: '18px',
             transform: 'translateX(-50%)',
             width: 'auto',
             display: 'flex',
