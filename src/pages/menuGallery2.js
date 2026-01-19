@@ -563,10 +563,43 @@ function EchoCocktailSubpage2({
     if (!shouldMeasure) return;
 
     const measure = () => {
-      const overflow = container.scrollHeight > container.clientHeight + 1;
-      if (overflow && verticalInfoFontScale > 0.75) {
-        setVerticalInfoFontScale((prev) => Math.max(0.75, Number((prev - 0.05).toFixed(2))));
+      const minScale = 0.75;
+      const maxScale = 1.45;
+      const epsilon = 1;
+      const iters = 12;
+
+      const prev = container.style.getPropertyValue('--verticalInfoFontScale');
+
+      const fitsAt = (scale) => {
+        container.style.setProperty('--verticalInfoFontScale', String(scale));
+        return container.scrollHeight <= container.clientHeight + epsilon;
+      };
+
+      if (!fitsAt(minScale)) {
+        setVerticalInfoFontScale(minScale);
+        if (prev) container.style.setProperty('--verticalInfoFontScale', prev);
+        else container.style.removeProperty('--verticalInfoFontScale');
+        return;
       }
+
+      let lo = minScale;
+      let hi = maxScale;
+      let best = minScale;
+
+      for (let i = 0; i < iters; i += 1) {
+        const mid = Number(((lo + hi) / 2).toFixed(3));
+        if (fitsAt(mid)) {
+          best = mid;
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+
+      setVerticalInfoFontScale(best);
+
+      if (prev) container.style.setProperty('--verticalInfoFontScale', prev);
+      else container.style.removeProperty('--verticalInfoFontScale');
     };
 
     const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
@@ -1273,7 +1306,7 @@ function EchoCocktailSubpage2({
         <div
           ref={ingredientsContainerRef}
           style={{
-            fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})` : getFontSize(40, 1.0, 1.6),
+            fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(40, 1.0, 1.6),
             marginBottom: 0,
             display: 'flex',
             flexWrap: 'wrap',
@@ -1335,7 +1368,7 @@ function EchoCocktailSubpage2({
         >
           Garnish
         </div>
-        <div style={{ fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})` : getFontSize(45, 0.85, 1.3) }}>{info.garnish}</div>
+        <div style={{ fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(45, 0.85, 1.3) }}>{info.garnish}</div>
       </div>
     );
   };
@@ -1369,7 +1402,7 @@ function EchoCocktailSubpage2({
           >
             Concept
           </div>
-          <div style={{ fontSize: `calc(${getFontSize(58, 0.85, 1.3)} * ${verticalInfoFontScale})`, marginBottom: '1rem' }}>{info.concept}</div>
+          <div style={{ fontSize: `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))`, marginBottom: '1rem' }}>{info.concept}</div>
         </div>
       );
     } else {
@@ -2075,13 +2108,14 @@ function EchoCocktailSubpage2({
             position: 'absolute',
             left: `${innerLeft}px`,
             bottom: '82px',
-            height: 'calc(100vh / 7)',
+            height: 'calc(100vh / 7.5)',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
             paddingBottom: 0,
             boxSizing: 'border-box',
             overflow: 'hidden',
+            '--verticalInfoFontScale': verticalInfoFontScale,
           }}
         >
           {showConceptInfo ? renderConcept() : (
