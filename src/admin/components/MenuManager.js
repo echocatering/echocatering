@@ -321,6 +321,7 @@ const MenuManager = () => {
   const recipeRef = useRef(null);
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
+  const recipeRequestIdRef = useRef(0);
   const [newCocktail, setNewCocktail] = useState({
     name: '',
     concept: '',
@@ -2207,7 +2208,11 @@ const MenuManager = () => {
 
   // Fetch recipe for a cocktail
   const fetchRecipeForCocktail = useCallback(async (cocktail) => {
+    const requestId = ++recipeRequestIdRef.current;
+    const targetCocktailId = cocktail?._id || null;
     const setHydratedRecipe = (nextRecipe) => {
+      if (recipeRequestIdRef.current !== requestId) return;
+      if (targetCocktailId && prevEditingCocktailIdRef.current !== targetCocktailId) return;
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
       setRecipe(nextRecipe);
@@ -2234,7 +2239,9 @@ const MenuManager = () => {
     }
 
     try {
-      setRecipeLoading(true);
+      if (recipeRequestIdRef.current === requestId) {
+        setRecipeLoading(true);
+      }
       
       // NEW: Try to find recipe by itemNumber first (primary method)
       if (cocktail.itemNumber) {
@@ -2298,7 +2305,9 @@ const MenuManager = () => {
         setHydratedRecipe(null);
       }
     } finally {
-      setRecipeLoading(false);
+      if (recipeRequestIdRef.current === requestId) {
+        setRecipeLoading(false);
+      }
     }
   }, [apiCall, selectedCategory]);
 
