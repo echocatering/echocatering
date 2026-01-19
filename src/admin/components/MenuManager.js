@@ -2615,20 +2615,19 @@ const MenuManager = () => {
                         <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#888' }}>
                           {(() => {
                             // Calculate overall progress across all stages
-                            // Stages: preprocessing (5%), extracting (15%), preprocessing-frames (25%), compositing (35%), encoding (15%), cloudinary-upload (5%)
+                            // Worker stages: preprocessing (crop/trim + frame processing), extracting, compositing, encoding, cloudinary-upload
                             const stageWeights = {
                               'creating-job': { start: 0, weight: 1 },
                               'uploading-to-worker': { start: 1, weight: 4 },
                               'awaiting-upload': { start: 1, weight: 0 },
                               'uploaded': { start: 5, weight: 0 },
-                              'preprocessing': { start: 5, weight: 5 },
-                              'white-balance': { start: 10, weight: 2 },
-                              'icon-generation': { start: 12, weight: 3 },
-                              'extracting': { start: 15, weight: 15 },
-                              'preprocessing-frames': { start: 30, weight: 25 },
-                              'compositing': { start: 55, weight: 30 },
-                              'encoding': { start: 85, weight: 10 },
-                              'cloudinary-upload': { start: 95, weight: 5 },
+                              'preprocessing': { start: 5, weight: 25 },
+                              'white-balance': { start: 5, weight: 2 },
+                              'icon-generation': { start: 7, weight: 3 },
+                              'extracting': { start: 10, weight: 10 },
+                              'compositing': { start: 30, weight: 40 },
+                              'encoding': { start: 70, weight: 20 },
+                              'cloudinary-upload': { start: 90, weight: 10 },
                               'complete': { start: 100, weight: 0 },
                             };
                             const stage = processingStatus.stage;

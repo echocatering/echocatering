@@ -300,14 +300,15 @@ async function applyUniformGain(inputPath, outputPath, scale, { signal, onChild 
 }
 
 async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, onChild } = {}) {
-  // Match old backend: 480x480 padded, target under 2MB.
+  // Icon video at 720x720 to match the 720px inner size of the 2160x2160 main video
   const qualitySettings = [
-    { crf: 18, scale: '480:480' },
-    { crf: 20, scale: '480:480' },
-    { crf: 22, scale: '480:480' },
-    { crf: 24, scale: '480:480' },
+    { crf: 18, scale: '720:720' },
+    { crf: 20, scale: '720:720' },
+    { crf: 22, scale: '720:720' },
+    { crf: 24, scale: '720:720' },
+    { crf: 26, scale: '720:720' },
   ];
-  const maxSizeMB = 2;
+  const maxSizeMB = 4;
 
   for (let i = 0; i < qualitySettings.length; i++) {
     const setting = qualitySettings[i];
@@ -394,13 +395,13 @@ async function generateBackgroundFbf({
   let actualFrameCount = null;
   if (s.nb_read_frames) actualFrameCount = parseInt(s.nb_read_frames);
 
-  const outerSize = 3240;
-  const innerSize = 1080;
+  const outerSize = 2160;
+  const innerSize = 720;
   const innerLeft = Math.floor((outerSize - innerSize) / 2);
   const innerTop = Math.floor((outerSize - innerSize) / 2);
   const innerRight = innerLeft + innerSize;
   const innerBottom = innerTop + innerSize;
-  const extractSize = Math.max(originalSize, innerSize * 3); // 3240+
+  const extractSize = Math.max(originalSize, innerSize * 3); // 2160+
 
   const framesToProcess = actualFrameCount
     ? Math.min(actualFrameCount, Math.ceil(maxDuration * fps))
