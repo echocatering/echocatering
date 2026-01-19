@@ -302,12 +302,11 @@ async function applyUniformGain(inputPath, outputPath, scale, { signal, onChild 
 async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, onChild } = {}) {
   // Match old backend: 480x480 padded, target under 2MB.
   const qualitySettings = [
-    { crf: 18, scale: '480:480' },
-    { crf: 20, scale: '480:480' },
-    { crf: 22, scale: '480:480' },
-    { crf: 24, scale: '480:480' },
+    { crf: 30, scale: '480:480' },
   ];
-  const maxSizeMB = 2;
+  const maxSizeMB = 1;
+  const maxDurationSeconds = 6;
+  const iconFps = 15;
 
   for (let i = 0; i < qualitySettings.length; i++) {
     const setting = qualitySettings[i];
@@ -318,14 +317,19 @@ async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, on
         '-y',
         '-i',
         inputPath,
+        '-t',
+        String(maxDurationSeconds),
+        '-an',
         '-vf',
-        `scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2`,
+        `fps=${iconFps},scale=${setting.scale}:force_original_aspect_ratio=decrease,pad=${setting.scale}:(ow-iw)/2:(oh-ih)/2`,
         '-c:v',
         'libx264',
         '-crf',
         String(setting.crf),
         '-preset',
-        'slow',
+        'medium',
+        '-pix_fmt',
+        'yuv420p',
         '-movflags',
         '+faststart',
         tempOutput,
