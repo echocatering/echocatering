@@ -2262,6 +2262,7 @@ const MenuManager = () => {
   // Update recipe when editingCocktail changes
   useEffect(() => {
     if (editingCocktail && shouldShowRecipeBuilder(editingCocktail.category)) {
+      setRecipe(null);
       fetchRecipeForCocktail(editingCocktail);
     } else {
       setRecipe(null);
@@ -3688,6 +3689,7 @@ const MenuManager = () => {
         {editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && recipe && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
           <div className="rounded-lg p-6" style={{ position: 'relative', backgroundColor: 'transparent', border: 'none', background: 'transparent' }}>
             <RecipeBuilder
+              key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
               recipe={{
                 ...recipe,
                 title: editingCocktail.name || recipe.title // Keep MM name as initial title
@@ -3722,6 +3724,7 @@ const MenuManager = () => {
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
           <div className="rounded-lg p-6 mt-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
             <RecipeBuilder
+              key={`${editingCocktail?._id || ''}-${editingCocktail?.itemNumber || ''}-${normalizeCategoryKey(editingCocktail?.category)}`}
               recipe={{
                 ...recipe,
                 title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
