@@ -1130,6 +1130,11 @@ function EchoCocktailSubpage2({
       separators.forEach((sep) => {
         sep.style.display = 'inline';
         sep.style.visibility = 'visible';
+        const dash = sep.querySelector('.sep-dash');
+        if (dash) {
+          dash.style.display = 'inline';
+          dash.style.visibility = 'visible';
+        }
       });
 
       // Group separators by row (based on their top position)
@@ -1183,11 +1188,14 @@ function EchoCocktailSubpage2({
             }
           }
 
-          // Trailing check
+          // Trailing check - only hide the "- " part, keep the leading space
           if (next) {
             const nextRect = next.getBoundingClientRect();
             if (nextRect.top > sepRect.top + 5) {
-              sep.style.visibility = 'hidden';
+              const dash = sep.querySelector('.sep-dash');
+              if (dash) {
+                dash.style.visibility = 'hidden';
+              }
             }
           }
         });
@@ -1443,7 +1451,12 @@ function EchoCocktailSubpage2({
           {items.map((item, idx) => (
             <React.Fragment key={idx}>
               <span style={{ whiteSpace: 'nowrap' }}>{item}</span>
-              {idx < items.length - 1 && <span className="ingredient-separator"> - </span>}
+              {idx < items.length - 1 && (
+                <span className="ingredient-separator">
+                  <span className="sep-space"> </span>
+                  <span className="sep-dash">- </span>
+                </span>
+              )}
             </React.Fragment>
           ))}
         </div>
