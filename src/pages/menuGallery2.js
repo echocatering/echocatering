@@ -2089,7 +2089,7 @@ function EchoCocktailSubpage2({
             position: 'absolute',
             left: `${innerLeft}px`,
             bottom: `${18 + bottomControlsHeight}px`,
-            height: 'calc(100vh / 6.5)',
+            height: isProbablyMobileDevice() ? 'calc(100vh / 6)' : 'calc(100vh / 6)',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
