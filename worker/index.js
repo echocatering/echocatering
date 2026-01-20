@@ -134,7 +134,12 @@ async function fetchJson(url, options = {}) {
 
 function runCmd(cmd, args, { onLine, signal, onChild } = {}) {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    // Ensure homebrew paths are in PATH for ffmpeg/ffprobe
+    const env = {
+      ...process.env,
+      PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`,
+    };
+    const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], env });
     if (onChild) onChild(p);
     let stderr = '';
     let stdout = '';
