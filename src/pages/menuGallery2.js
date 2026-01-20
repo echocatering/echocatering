@@ -1037,15 +1037,18 @@ function EchoCocktailSubpage2({
           const ingredientsTimeout = setTimeout(() => {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                // Scale font to 80% fit, then adjust separators
+                // 1) Scale font to 80% fit
                 scaleFontToFitRef.current?.();
-                requestAnimationFrame(() => {
+                // 2) Brief hesitation, then adjust separators
+                const separatorTimeout = setTimeout(() => {
                   adjustSeparatorsRef.current?.();
+                  // 3) Fade in
                   setIngredientsVisible(true);
-                });
+                }, 50);
+                animationTimeoutsRef.current.push(separatorTimeout);
               });
             });
-            const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+            const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
             animationTimeoutsRef.current.push(garnishTimeout);
           }, 400);
           animationTimeoutsRef.current.push(ingredientsTimeout);
@@ -1115,32 +1118,39 @@ function EchoCocktailSubpage2({
     const separators = container.querySelectorAll('.ingredient-separator');
     if (separators.length === 0) return;
 
+    // Reset all separators first
     separators.forEach((sep) => {
       sep.style.display = 'inline';
       sep.style.visibility = 'visible';
     });
 
+    // First pass: hide trailing separators (next item on new line)
     separators.forEach((sep) => {
       const sepRect = sep.getBoundingClientRect();
-      const prev = sep.previousElementSibling;
       const next = sep.nextElementSibling;
 
-      // Remove if separator wrapped to new line (leading dash) - use display:none
-      if (prev) {
-        const prevRect = prev.getBoundingClientRect();
-        if (sepRect.top > prevRect.top + 5) {
-          sep.style.display = 'none';
-          return;
-        }
-      }
-
-      // Hide if next item is on new line (trailing dash) - use visibility:hidden
       if (next) {
         const nextRect = next.getBoundingClientRect();
         if (nextRect.top > sepRect.top + 5) {
           sep.style.visibility = 'hidden';
         }
       }
+    });
+
+    // Second pass: remove leading separators (separator wrapped to new line)
+    // This runs after trailing are hidden, so layout may have shifted
+    requestAnimationFrame(() => {
+      separators.forEach((sep) => {
+        const sepRect = sep.getBoundingClientRect();
+        const prev = sep.previousElementSibling;
+
+        if (prev) {
+          const prevRect = prev.getBoundingClientRect();
+          if (sepRect.top > prevRect.top + 5) {
+            sep.style.display = 'none';
+          }
+        }
+      });
     });
   }, []);
 
@@ -2246,15 +2256,18 @@ function EchoCocktailSubpage2({
                         const ingredientsTimeout = setTimeout(() => {
                           requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                              // Scale font to 80% fit, then adjust separators
+                              // 1) Scale font to 80% fit
                               scaleFontToFitRef.current?.();
-                              requestAnimationFrame(() => {
+                              // 2) Brief hesitation, then adjust separators
+                              const separatorTimeout = setTimeout(() => {
                                 adjustSeparatorsRef.current?.();
+                                // 3) Fade in
                                 setIngredientsVisible(true);
-                              });
+                              }, 50);
+                              animationTimeoutsRef.current.push(separatorTimeout);
                             });
                           });
-                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
                           animationTimeoutsRef.current.push(garnishTimeout);
                         }, 400);
                         animationTimeoutsRef.current.push(ingredientsTimeout);
@@ -2386,15 +2399,18 @@ function EchoCocktailSubpage2({
                   const ingredientsTimeout = setTimeout(() => {
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
-                        // Scale font to 80% fit, then adjust separators
+                        // 1) Scale font to 80% fit
                         scaleFontToFitRef.current?.();
-                        requestAnimationFrame(() => {
+                        // 2) Brief hesitation, then adjust separators
+                        const separatorTimeout = setTimeout(() => {
                           adjustSeparatorsRef.current?.();
+                          // 3) Fade in
                           setIngredientsVisible(true);
-                        });
+                        }, 50);
+                        animationTimeoutsRef.current.push(separatorTimeout);
                       });
                     });
-                    const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                    const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
                     animationTimeoutsRef.current.push(garnishTimeout);
                   }, 400);
                   animationTimeoutsRef.current.push(ingredientsTimeout);
