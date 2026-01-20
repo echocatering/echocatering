@@ -1182,9 +1182,25 @@ function EchoCocktailSubpage2({
           // Leading check (not for first row)
           if (!isFirstRow && prev) {
             const prevRect = prev.getBoundingClientRect();
-            if (sepRect.top > prevRect.top + 5) {
-              sep.style.display = 'none';
-              return; // Skip trailing check if removed
+            const space = sep.querySelector('.sep-space');
+            const dash = sep.querySelector('.sep-dash');
+            
+            if (space && dash) {
+              const spaceRect = space.getBoundingClientRect();
+              const dashRect = dash.getBoundingClientRect();
+              
+              // If space is on previous line but dash wrapped to new line
+              // Only remove the dash, keep the space
+              if (spaceRect.top <= prevRect.top + 5 && dashRect.top > prevRect.top + 5) {
+                dash.style.display = 'none';
+                return; // Skip trailing check
+              }
+              
+              // If whole separator wrapped to new line, remove it all
+              if (spaceRect.top > prevRect.top + 5) {
+                sep.style.display = 'none';
+                return; // Skip trailing check if removed
+              }
             }
           }
 
