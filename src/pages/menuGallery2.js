@@ -1038,6 +1038,7 @@ function EchoCocktailSubpage2({
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
                 adjustSeparatorsRef.current?.();
+                scaleFontToFitRef.current?.();
                 setIngredientsVisible(true);
               });
             });
@@ -1139,6 +1140,46 @@ function EchoCocktailSubpage2({
       }
     });
   }, []);
+
+  // Scale font to fit container - runs BEFORE fade-in (vertical only)
+  const scaleFontToFitRef = useRef(null);
+  
+  scaleFontToFitRef.current = useCallback(() => {
+    if (!isVertical) return;
+    const container = infoConceptContainerRef.current;
+    if (!container) return;
+
+    const minScale = 0.75;
+    const maxScale = 1.45;
+    const epsilon = 1;
+    const iters = 12;
+
+    const fitsAt = (scale) => {
+      container.style.setProperty('--verticalInfoFontScale', String(scale));
+      return container.scrollHeight <= container.clientHeight + epsilon;
+    };
+
+    if (!fitsAt(minScale)) {
+      setVerticalInfoFontScale(minScale);
+      return;
+    }
+
+    let lo = minScale;
+    let hi = maxScale;
+    let best = minScale;
+
+    for (let i = 0; i < iters; i += 1) {
+      const mid = Number(((lo + hi) / 2).toFixed(3));
+      if (fitsAt(mid)) {
+        best = mid;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    setVerticalInfoFontScale(best);
+  }, [isVertical]);
 
   // Run separator adjustment on layout changes and resize
   useEffect(() => {
@@ -2202,6 +2243,7 @@ function EchoCocktailSubpage2({
                           requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
                               adjustSeparatorsRef.current?.();
+                              scaleFontToFitRef.current?.();
                               setIngredientsVisible(true);
                             });
                           });
@@ -2338,6 +2380,7 @@ function EchoCocktailSubpage2({
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
                         adjustSeparatorsRef.current?.();
+                        scaleFontToFitRef.current?.();
                         setIngredientsVisible(true);
                       });
                     });
