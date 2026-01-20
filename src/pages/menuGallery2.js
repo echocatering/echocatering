@@ -1037,9 +1037,17 @@ function EchoCocktailSubpage2({
           const ingredientsTimeout = setTimeout(() => {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                adjustSeparatorsRef.current?.();
+                // 1) Scale font to get approximate fit
                 scaleFontToFitRef.current?.();
-                setIngredientsVisible(true);
+                requestAnimationFrame(() => {
+                  // 2) Adjust separators (may change line count)
+                  adjustSeparatorsRef.current?.();
+                  requestAnimationFrame(() => {
+                    // 3) Re-scale font after separator adjustment
+                    scaleFontToFitRef.current?.();
+                    setIngredientsVisible(true);
+                  });
+                });
               });
             });
             const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
@@ -2242,9 +2250,17 @@ function EchoCocktailSubpage2({
                         const ingredientsTimeout = setTimeout(() => {
                           requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                              adjustSeparatorsRef.current?.();
+                              // 1) Scale font to get approximate fit
                               scaleFontToFitRef.current?.();
-                              setIngredientsVisible(true);
+                              requestAnimationFrame(() => {
+                                // 2) Adjust separators (may change line count)
+                                adjustSeparatorsRef.current?.();
+                                requestAnimationFrame(() => {
+                                  // 3) Re-scale font after separator adjustment
+                                  scaleFontToFitRef.current?.();
+                                  setIngredientsVisible(true);
+                                });
+                              });
                             });
                           });
                           const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
@@ -2379,9 +2395,17 @@ function EchoCocktailSubpage2({
                   const ingredientsTimeout = setTimeout(() => {
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
-                        adjustSeparatorsRef.current?.();
+                        // 1) Scale font to get approximate fit
                         scaleFontToFitRef.current?.();
-                        setIngredientsVisible(true);
+                        requestAnimationFrame(() => {
+                          // 2) Adjust separators (may change line count)
+                          adjustSeparatorsRef.current?.();
+                          requestAnimationFrame(() => {
+                            // 3) Re-scale font after separator adjustment
+                            scaleFontToFitRef.current?.();
+                            setIngredientsVisible(true);
+                          });
+                        });
                       });
                     });
                     const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
