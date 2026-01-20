@@ -2779,8 +2779,8 @@ const MenuManager = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    zIndex: 5, // Above video (zIndex: 0) and vignette (zIndex: 1), but below arrows (zIndex: 10) and form fields (zIndex: 25)
+                    background: 'rgba(255, 255, 255, 1)',
+                    zIndex: 50, // Above everything including video, arrows, form fields
                     pointerEvents: 'none', // Don't block interaction with arrows and form fields
                   }}>
                     <div className="loading-spinner" style={{ marginBottom: '1rem', width: '50px', height: '50px' }}></div>
