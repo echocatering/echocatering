@@ -1100,6 +1100,18 @@ const MenuManager = () => {
       );
       console.log('[MenuManager] Upload to worker successful:', workerResult);
 
+      // Set status to "uploaded, waiting for worker to process"
+      setProcessingStatus(prev => ({
+        ...(prev || {}),
+        active: true,
+        stage: 'uploaded',
+        progress: 100,
+        total: 100,
+        message: 'Uploaded. Waiting for worker to start processing...',
+        error: null,
+        itemNumber,
+      }));
+
       // Begin polling job status from Render backend (DB-backed)
       startProcessingPoll(itemNumber);
       
