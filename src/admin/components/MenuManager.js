@@ -2728,17 +2728,7 @@ const MenuManager = () => {
                   currentCocktail={currentCocktail}
                   videoPreviewUrl={videoPreviewUrl}
                   API_BASE_URL={API_BASE_URL}
-                  isProcessing={(() => {
-                    const currentItem = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
-                    const isProc = processingStatus?.active && Number(processingStatus.itemNumber) === Number(currentItem);
-                    console.log('[MenuManager] isProcessing check:', {
-                      processingStatusActive: processingStatus?.active,
-                      processingStatusItemNumber: processingStatus?.itemNumber,
-                      currentItem,
-                      isProcessing: isProc
-                    });
-                    return isProc;
-                  })()}
+                  isProcessing={!!processingStatus?.active}
                   onLoadedData={() => {
                     if (videoRef.current) {
                       const video = videoRef.current;
@@ -2767,10 +2757,9 @@ const MenuManager = () => {
               {/* Processing status overlay - appears in center of viewer behind arrows and form fields */}
               {(() => {
                 const currentItem = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
-                const shouldShow =
-                  !!processingStatus &&
-                  !!processingStatus.active &&
-                  Number(processingStatus.itemNumber) === Number(currentItem);
+                // Show overlay if processing is active, regardless of itemNumber match
+                // This ensures feedback is always visible during any processing
+                const shouldShow = !!processingStatus && !!processingStatus.active;
                 if (processingStatus && processingStatus.active) {
                   console.log('[MenuManager] Processing status check:', {
                     hasProcessingStatus: !!processingStatus,
