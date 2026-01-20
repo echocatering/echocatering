@@ -3,7 +3,7 @@ import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
-import { formatIngredientRow } from '../utils/ingredientUtils';
+import { normalizeIngredients } from '../utils/ingredientUtils';
 
 const isProbablyIOS = () => {
   if (typeof navigator === 'undefined') return false;
@@ -1091,67 +1091,40 @@ function EchoCocktailSubpage2({
     };
   }, [currentIndex, videoFiles.length, countryDisplayList.length, resetAnimations, isVertical]);
 
-  // Hide trailing separators at end of lines
+  // Hide trailing separators at end of lines (visibility hidden preserves layout)
   useEffect(() => {
     if (!ingredientsContainerRef.current) return;
-    
-    // In vertical view, only run when ingredients are visible (not showing concept info)
     if (isVertical && showConceptInfo) return;
     
     const container = ingredientsContainerRef.current;
-    const initialSeparators = container.querySelectorAll(':scope > .ingredient-separator');
-    if (initialSeparators.length === 0) return;
     
-    const hideTrailingSeparators = () => {
-      const separators = container.querySelectorAll(':scope > .ingredient-separator');
+    const adjustSeparators = () => {
+      const separators = container.querySelectorAll('.ingredient-separator');
+      if (separators.length === 0) return;
 
-      // Reset first so measurement isn't affected by a previously-hidden separator
       separators.forEach((sep) => {
-        sep.style.display = 'inline-block';
+        sep.style.visibility = 'visible';
       });
 
       separators.forEach((sep) => {
         const sepRect = sep.getBoundingClientRect();
-        const prevSibling = sep.previousElementSibling;
-        const nextSibling = sep.nextElementSibling;
+        const next = sep.nextElementSibling;
 
-        // If the separator wrapped onto a new line by itself, it becomes a leading dash.
-        if (prevSibling) {
-          const prevRect = prevSibling.getBoundingClientRect();
-          if (Math.abs(sepRect.top - prevRect.top) > 5) {
-            sep.style.display = 'none';
-            return;
+        if (next) {
+          const nextRect = next.getBoundingClientRect();
+          if (nextRect.top > sepRect.top + 5) {
+            sep.style.visibility = 'hidden';
           }
         }
-
-        // If the next ingredient is on a new line, this separator is a trailing dash.
-        if (nextSibling) {
-          const nextRect = nextSibling.getBoundingClientRect();
-          if (Math.abs(nextRect.top - sepRect.top) > 5) {
-            sep.style.display = 'none';
-            return;
-          }
-          sep.style.display = 'inline-block';
-          return;
-        }
-
-        // Last separator should always be hidden
-        sep.style.display = 'none';
       });
     };
     
-    // Use requestAnimationFrame to ensure container is laid out
     const timeoutId = setTimeout(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(hideTrailingSeparators);
-      });
-    }, 100);
+      requestAnimationFrame(adjustSeparators);
+    }, 50);
     
-    // Recheck on resize
     const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(hideTrailingSeparators);
-      });
+      requestAnimationFrame(adjustSeparators);
     });
     resizeObserver.observe(container);
     
@@ -1160,7 +1133,6 @@ function EchoCocktailSubpage2({
       resizeObserver.disconnect();
     };
   }, [currentIndex, info?.ingredients, layout, isVertical, showConceptInfo]);
-
 
   // Sample center-left pixel color for fade overlay
   useEffect(() => {
@@ -1291,8 +1263,8 @@ function EchoCocktailSubpage2({
   };
 
   const renderIngredients = () => {
-    const formattedIngredients = formatIngredientRow(info?.ingredients);
-    if (!formattedIngredients) return null;
+    const items = normalizeIngredients(info?.ingredients);
+    if (items.length === 0) return null;
     const ingredientsPaddingTop = isVertical
       ? '0.75rem'
       : layout?.inner?.height
@@ -1333,11 +1305,14 @@ function EchoCocktailSubpage2({
             fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(40, 1.0, 1.6),
             marginBottom: 0,
             lineHeight: isVertical ? '1.2' : '1.4',
-            wordBreak: 'break-word',
-            overflowWrap: 'break-word',
           }}
         >
-          {formattedIngredients}
+          {items.map((item, idx) => (
+            <React.Fragment key={idx}>
+              <span style={{ whiteSpace: 'nowrap' }}>{item}</span>
+              {idx < items.length - 1 && <span className="ingredient-separator"> - </span>}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     );
