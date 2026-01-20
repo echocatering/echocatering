@@ -1035,7 +1035,12 @@ function EchoCocktailSubpage2({
         const titleTimeout = setTimeout(() => {
           setTitleVisible(true);
           const ingredientsTimeout = setTimeout(() => {
-            setIngredientsVisible(true);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                adjustSeparatorsRef.current?.();
+                setIngredientsVisible(true);
+              });
+            });
             const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
             animationTimeoutsRef.current.push(garnishTimeout);
           }, 400);
@@ -1048,7 +1053,12 @@ function EchoCocktailSubpage2({
     const titleTimeout = setTimeout(() => {
       setTitleVisible(true);
       const ingredientsTimeout = setTimeout(() => {
-        setIngredientsVisible(true);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            adjustSeparatorsRef.current?.();
+            setIngredientsVisible(true);
+          });
+        });
         const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
         animationTimeoutsRef.current.push(garnishTimeout);
       }, 400);
@@ -1091,57 +1101,67 @@ function EchoCocktailSubpage2({
     };
   }, [currentIndex, videoFiles.length, countryDisplayList.length, resetAnimations, isVertical]);
 
-  // Hide trailing separators at end of lines (visibility hidden preserves layout)
+  // Adjust separators at line boundaries - runs BEFORE fade-in
+  const adjustSeparatorsRef = useRef(null);
+  
+  adjustSeparatorsRef.current = useCallback(() => {
+    const container = ingredientsContainerRef.current;
+    if (!container) return;
+    
+    const separators = container.querySelectorAll('.ingredient-separator');
+    if (separators.length === 0) return;
+
+    separators.forEach((sep) => {
+      sep.style.display = 'inline';
+      sep.style.visibility = 'visible';
+    });
+
+    separators.forEach((sep) => {
+      const sepRect = sep.getBoundingClientRect();
+      const prev = sep.previousElementSibling;
+      const next = sep.nextElementSibling;
+
+      // Remove if separator wrapped to new line (leading dash) - use display:none
+      if (prev) {
+        const prevRect = prev.getBoundingClientRect();
+        if (sepRect.top > prevRect.top + 5) {
+          sep.style.display = 'none';
+          return;
+        }
+      }
+
+      // Hide if next item is on new line (trailing dash) - use visibility:hidden
+      if (next) {
+        const nextRect = next.getBoundingClientRect();
+        if (nextRect.top > sepRect.top + 5) {
+          sep.style.visibility = 'hidden';
+        }
+      }
+    });
+  }, []);
+
+  // Run separator adjustment on layout changes and resize
   useEffect(() => {
     if (!ingredientsContainerRef.current) return;
     if (isVertical && showConceptInfo) return;
     
     const container = ingredientsContainerRef.current;
     
-    const adjustSeparators = () => {
-      const separators = container.querySelectorAll('.ingredient-separator');
-      if (separators.length === 0) return;
-
-      separators.forEach((sep) => {
-        sep.style.display = 'inline';
-        sep.style.visibility = 'visible';
+    // Run immediately on mount/change
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        adjustSeparatorsRef.current?.();
       });
-
-      separators.forEach((sep) => {
-        const sepRect = sep.getBoundingClientRect();
-        const prev = sep.previousElementSibling;
-        const next = sep.nextElementSibling;
-
-        // Remove if separator wrapped to new line (leading dash) - use display:none
-        if (prev) {
-          const prevRect = prev.getBoundingClientRect();
-          if (sepRect.top > prevRect.top + 5) {
-            sep.style.display = 'none';
-            return;
-          }
-        }
-
-        // Hide if next item is on new line (trailing dash) - use visibility:hidden
-        if (next) {
-          const nextRect = next.getBoundingClientRect();
-          if (nextRect.top > sepRect.top + 5) {
-            sep.style.visibility = 'hidden';
-          }
-        }
-      });
-    };
-    
-    const timeoutId = setTimeout(() => {
-      requestAnimationFrame(adjustSeparators);
-    }, 50);
+    });
     
     const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(adjustSeparators);
+      requestAnimationFrame(() => {
+        adjustSeparatorsRef.current?.();
+      });
     });
     resizeObserver.observe(container);
     
     return () => {
-      clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
   }, [currentIndex, info?.ingredients, layout, isVertical, showConceptInfo]);
@@ -2090,7 +2110,7 @@ function EchoCocktailSubpage2({
             position: 'absolute',
             left: `${innerLeft}px`,
             bottom: `${18 + bottomControlsHeight}px`,
-            height: isProbablyMobileDevice() ? 'calc(100vh / 6)' : 'calc(100vh / 6)',
+            height: 'calc(100vh / 5)',
             width: `${layout.inner.width}px`,
             paddingLeft: '24px',
             paddingRight: '24px',
@@ -2178,7 +2198,12 @@ function EchoCocktailSubpage2({
                       const titleTimeout = setTimeout(() => {
                         setTitleVisible(true);
                         const ingredientsTimeout = setTimeout(() => {
-                          setIngredientsVisible(true);
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              adjustSeparatorsRef.current?.();
+                              setIngredientsVisible(true);
+                            });
+                          });
                           const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
                           animationTimeoutsRef.current.push(garnishTimeout);
                         }, 400);
@@ -2309,7 +2334,12 @@ function EchoCocktailSubpage2({
                 const titleTimeout = setTimeout(() => {
                   setTitleVisible(true);
                   const ingredientsTimeout = setTimeout(() => {
-                    setIngredientsVisible(true);
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        adjustSeparatorsRef.current?.();
+                        setIngredientsVisible(true);
+                      });
+                    });
                     const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
                     animationTimeoutsRef.current.push(garnishTimeout);
                   }, 400);
