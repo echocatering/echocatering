@@ -1037,19 +1037,19 @@ function EchoCocktailSubpage2({
           const ingredientsTimeout = setTimeout(() => {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                // 1) Scale font to 80% fit
+                // 1) Scale font to 100% fit
                 scaleFontToFitRef.current?.();
-                // 2) Brief hesitation, then adjust separators
-                const separatorTimeout = setTimeout(() => {
-                  adjustSeparatorsRef.current?.();
-                  // 3) Fade in
+                // 2) Brief hesitation, then adjust separators row by row
+                const separatorTimeout = setTimeout(async () => {
+                  await adjustSeparatorsRef.current?.();
+                  // 3) Fade in after all rows processed
                   setIngredientsVisible(true);
+                  const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                  animationTimeoutsRef.current.push(garnishTimeout);
                 }, 50);
                 animationTimeoutsRef.current.push(separatorTimeout);
               });
             });
-            const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
-            animationTimeoutsRef.current.push(garnishTimeout);
           }, 400);
           animationTimeoutsRef.current.push(ingredientsTimeout);
         }, 500);
@@ -1109,48 +1109,94 @@ function EchoCocktailSubpage2({
   }, [currentIndex, videoFiles.length, countryDisplayList.length, resetAnimations, isVertical]);
 
   // Adjust separators at line boundaries - runs BEFORE fade-in
+  // Returns a promise that resolves when all rows are processed
   const adjustSeparatorsRef = useRef(null);
   
   adjustSeparatorsRef.current = useCallback(() => {
-    const container = ingredientsContainerRef.current;
-    if (!container) return;
-    
-    const separators = container.querySelectorAll('.ingredient-separator');
-    if (separators.length === 0) return;
-
-    // Reset all separators first
-    separators.forEach((sep) => {
-      sep.style.display = 'inline';
-      sep.style.visibility = 'visible';
-    });
-
-    // First pass: hide trailing separators (next item on new line)
-    separators.forEach((sep) => {
-      const sepRect = sep.getBoundingClientRect();
-      const next = sep.nextElementSibling;
-
-      if (next) {
-        const nextRect = next.getBoundingClientRect();
-        if (nextRect.top > sepRect.top + 5) {
-          sep.style.visibility = 'hidden';
-        }
+    return new Promise((resolve) => {
+      const container = ingredientsContainerRef.current;
+      if (!container) {
+        resolve();
+        return;
       }
-    });
+      
+      const separators = Array.from(container.querySelectorAll('.ingredient-separator'));
+      if (separators.length === 0) {
+        resolve();
+        return;
+      }
 
-    // Second pass: remove leading separators (separator wrapped to new line)
-    // This runs after trailing are hidden, so layout may have shifted
-    requestAnimationFrame(() => {
+      // Reset all separators first
       separators.forEach((sep) => {
-        const sepRect = sep.getBoundingClientRect();
-        const prev = sep.previousElementSibling;
+        sep.style.display = 'inline';
+        sep.style.visibility = 'visible';
+      });
 
-        if (prev) {
-          const prevRect = prev.getBoundingClientRect();
-          if (sepRect.top > prevRect.top + 5) {
-            sep.style.display = 'none';
+      // Group separators by row (based on their top position)
+      const getRowTop = (el) => Math.round(el.getBoundingClientRect().top);
+      const rows = [];
+      let currentRowTop = null;
+      let currentRowSeparators = [];
+
+      separators.forEach((sep) => {
+        const sepTop = getRowTop(sep);
+        if (currentRowTop === null || Math.abs(sepTop - currentRowTop) <= 5) {
+          currentRowTop = currentRowTop ?? sepTop;
+          currentRowSeparators.push(sep);
+        } else {
+          if (currentRowSeparators.length > 0) {
+            rows.push(currentRowSeparators);
           }
+          currentRowTop = sepTop;
+          currentRowSeparators = [sep];
         }
       });
+      if (currentRowSeparators.length > 0) {
+        rows.push(currentRowSeparators);
+      }
+
+      // Process each row sequentially
+      let rowIndex = 0;
+
+      const processRow = () => {
+        if (rowIndex >= rows.length) {
+          resolve();
+          return;
+        }
+
+        const rowSeparators = rows[rowIndex];
+        const isFirstRow = rowIndex === 0;
+
+        // For first row: only check trailing
+        // For subsequent rows: first check leading, then trailing
+        rowSeparators.forEach((sep) => {
+          const sepRect = sep.getBoundingClientRect();
+          const prev = sep.previousElementSibling;
+          const next = sep.nextElementSibling;
+
+          // Leading check (not for first row)
+          if (!isFirstRow && prev) {
+            const prevRect = prev.getBoundingClientRect();
+            if (sepRect.top > prevRect.top + 5) {
+              sep.style.display = 'none';
+              return; // Skip trailing check if removed
+            }
+          }
+
+          // Trailing check
+          if (next) {
+            const nextRect = next.getBoundingClientRect();
+            if (nextRect.top > sepRect.top + 5) {
+              sep.style.visibility = 'hidden';
+            }
+          }
+        });
+
+        rowIndex++;
+        requestAnimationFrame(processRow);
+      };
+
+      requestAnimationFrame(processRow);
     });
   }, []);
 
@@ -1169,8 +1215,8 @@ function EchoCocktailSubpage2({
 
     const fitsAt = (scale) => {
       container.style.setProperty('--verticalInfoFontScale', String(scale));
-      // Use 80% of container height to leave room for separator adjustments
-      return container.scrollHeight <= container.clientHeight * 0.8 + epsilon;
+      // Use 100% of container height
+      return container.scrollHeight <= container.clientHeight + epsilon;
     };
 
     if (!fitsAt(minScale)) {
@@ -2256,19 +2302,19 @@ function EchoCocktailSubpage2({
                         const ingredientsTimeout = setTimeout(() => {
                           requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                              // 1) Scale font to 80% fit
+                              // 1) Scale font to 100% fit
                               scaleFontToFitRef.current?.();
-                              // 2) Brief hesitation, then adjust separators
-                              const separatorTimeout = setTimeout(() => {
-                                adjustSeparatorsRef.current?.();
-                                // 3) Fade in
+                              // 2) Brief hesitation, then adjust separators row by row
+                              const separatorTimeout = setTimeout(async () => {
+                                await adjustSeparatorsRef.current?.();
+                                // 3) Fade in after all rows processed
                                 setIngredientsVisible(true);
+                                const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                                animationTimeoutsRef.current.push(garnishTimeout);
                               }, 50);
                               animationTimeoutsRef.current.push(separatorTimeout);
                             });
                           });
-                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
-                          animationTimeoutsRef.current.push(garnishTimeout);
                         }, 400);
                         animationTimeoutsRef.current.push(ingredientsTimeout);
                       }, 500);
@@ -2399,19 +2445,19 @@ function EchoCocktailSubpage2({
                   const ingredientsTimeout = setTimeout(() => {
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
-                        // 1) Scale font to 80% fit
+                        // 1) Scale font to 100% fit
                         scaleFontToFitRef.current?.();
-                        // 2) Brief hesitation, then adjust separators
-                        const separatorTimeout = setTimeout(() => {
-                          adjustSeparatorsRef.current?.();
-                          // 3) Fade in
+                        // 2) Brief hesitation, then adjust separators row by row
+                        const separatorTimeout = setTimeout(async () => {
+                          await adjustSeparatorsRef.current?.();
+                          // 3) Fade in after all rows processed
                           setIngredientsVisible(true);
+                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                          animationTimeoutsRef.current.push(garnishTimeout);
                         }, 50);
                         animationTimeoutsRef.current.push(separatorTimeout);
                       });
                     });
-                    const garnishTimeout = setTimeout(() => setGarnishVisible(true), 350);
-                    animationTimeoutsRef.current.push(garnishTimeout);
                   }, 400);
                   animationTimeoutsRef.current.push(ingredientsTimeout);
                 }, 500);
