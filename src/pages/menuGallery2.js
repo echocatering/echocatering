@@ -1037,16 +1037,15 @@ function EchoCocktailSubpage2({
           const ingredientsTimeout = setTimeout(() => {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                // 1) Scale font to get approximate fit
+                // Scale font to 90% fit, then adjust separators
                 scaleFontToFitRef.current?.();
                 requestAnimationFrame(() => {
-                  // 2) Adjust separators (may change line count)
                   adjustSeparatorsRef.current?.();
-                  requestAnimationFrame(() => {
-                    // 3) Re-scale font after separator adjustment
-                    scaleFontToFitRef.current?.();
-                    setIngredientsVisible(true);
-                  });
+                  // Allow overflow after all adjustments
+                  if (infoConceptContainerRef.current) {
+                    infoConceptContainerRef.current.style.overflow = 'visible';
+                  }
+                  setIngredientsVisible(true);
                 });
               });
             });
@@ -1164,7 +1163,8 @@ function EchoCocktailSubpage2({
 
     const fitsAt = (scale) => {
       container.style.setProperty('--verticalInfoFontScale', String(scale));
-      return container.scrollHeight <= container.clientHeight + epsilon;
+      // Use 90% of container height to leave room for separator adjustments
+      return container.scrollHeight <= container.clientHeight * 0.9 + epsilon;
     };
 
     if (!fitsAt(minScale)) {
@@ -2250,16 +2250,15 @@ function EchoCocktailSubpage2({
                         const ingredientsTimeout = setTimeout(() => {
                           requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                              // 1) Scale font to get approximate fit
+                              // Scale font to 90% fit, then adjust separators
                               scaleFontToFitRef.current?.();
                               requestAnimationFrame(() => {
-                                // 2) Adjust separators (may change line count)
                                 adjustSeparatorsRef.current?.();
-                                requestAnimationFrame(() => {
-                                  // 3) Re-scale font after separator adjustment
-                                  scaleFontToFitRef.current?.();
-                                  setIngredientsVisible(true);
-                                });
+                                // Allow overflow after all adjustments
+                                if (infoConceptContainerRef.current) {
+                                  infoConceptContainerRef.current.style.overflow = 'visible';
+                                }
+                                setIngredientsVisible(true);
                               });
                             });
                           });
@@ -2395,16 +2394,15 @@ function EchoCocktailSubpage2({
                   const ingredientsTimeout = setTimeout(() => {
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
-                        // 1) Scale font to get approximate fit
+                        // Scale font to 90% fit, then adjust separators
                         scaleFontToFitRef.current?.();
                         requestAnimationFrame(() => {
-                          // 2) Adjust separators (may change line count)
                           adjustSeparatorsRef.current?.();
-                          requestAnimationFrame(() => {
-                            // 3) Re-scale font after separator adjustment
-                            scaleFontToFitRef.current?.();
-                            setIngredientsVisible(true);
-                          });
+                          // Allow overflow after all adjustments
+                          if (infoConceptContainerRef.current) {
+                            infoConceptContainerRef.current.style.overflow = 'visible';
+                          }
+                          setIngredientsVisible(true);
                         });
                       });
                     });
