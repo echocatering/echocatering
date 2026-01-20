@@ -3,7 +3,7 @@ import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
-import { normalizeIngredients } from '../utils/ingredientUtils';
+import { formatIngredientRow } from '../utils/ingredientUtils';
 
 const isProbablyIOS = () => {
   if (typeof navigator === 'undefined') return false;
@@ -1291,8 +1291,8 @@ function EchoCocktailSubpage2({
   };
 
   const renderIngredients = () => {
-    const normalizedIngredients = normalizeIngredients(info?.ingredients);
-    if (normalizedIngredients.length === 0) return null;
+    const formattedIngredients = formatIngredientRow(info?.ingredients);
+    if (!formattedIngredients) return null;
     const ingredientsPaddingTop = isVertical
       ? '0.75rem'
       : layout?.inner?.height
@@ -1332,34 +1332,12 @@ function EchoCocktailSubpage2({
           style={{
             fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(40, 1.0, 1.6),
             marginBottom: 0,
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: layout?.inner?.height ? `${(layout.inner.height / 200).toFixed(1)}px` : '3px',
             lineHeight: isVertical ? '1.2' : '1.4',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
           }}
         >
-          {normalizedIngredients.flatMap((item, idx) => {
-            const itemNode = (
-              <span
-                key={`ingredient-${idx}-${item}`}
-                style={{
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {item}
-              </span>
-            );
-
-            if (idx === normalizedIngredients.length - 1) return [itemNode];
-
-            const separatorNode = (
-              <span key={`ingredient-separator-${idx}`} className="ingredient-separator">
-                {' - '}
-              </span>
-            );
-
-            return [itemNode, separatorNode];
-          })}
+          {formattedIngredients}
         </div>
       </div>
     );

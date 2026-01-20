@@ -1,3 +1,22 @@
+const NBSP = '\u00A0';
+const NB_HYPHEN = '\u2011';
+const NB_SEPARATOR = `${NBSP}${NB_HYPHEN}${NBSP}`;
+
+export function formatIngredientRow(row) {
+  if (row === null || row === undefined) return '';
+  let str = typeof row === 'string' ? row : String(row);
+
+  str = str
+    .replace(/\s*,\s*/g, NB_SEPARATOR)
+    .replace(/\s+-\s+/g, NB_SEPARATOR)
+    .replace(/\s*\u2011\s*/g, NB_SEPARATOR)
+    .replace(new RegExp(`^(${NBSP}*${NB_HYPHEN}${NBSP}*)+`, 'g'), '')
+    .replace(new RegExp(`(${NBSP}*${NB_HYPHEN}${NBSP}*)+$`, 'g'), '')
+    .trim();
+
+  return str;
+}
+
 export function normalizeIngredients(rawIngredients) {
   if (rawIngredients === null || rawIngredients === undefined) return [];
 
