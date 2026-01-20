@@ -1213,10 +1213,14 @@ const MenuManager = () => {
             status?.active && status?.workerOnline === false
               ? {
                   ...status,
+                  itemNumber: itemNumber, // Ensure itemNumber is always set
                   stage: 'worker-disconnected',
                   message: 'Local worker disconnected',
                 }
-              : status;
+              : {
+                  ...status,
+                  itemNumber: itemNumber, // Ensure itemNumber is always set
+                };
           setProcessingStatus(hydrated);
           
           // Stop polling if not active
