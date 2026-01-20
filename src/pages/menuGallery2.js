@@ -1357,6 +1357,7 @@ function EchoCocktailSubpage2({
         style={{
           marginTop: 0,
           paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
+          paddingBottom: (isVertical && isProbablyMobileDevice()) ? '12px' : 0,
           opacity: garnishVisible ? 1 : 0,
           transition: garnishVisible ? 'opacity 1.5s ease-out' : 'none',
           color: '#555',
