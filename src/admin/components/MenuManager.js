@@ -223,8 +223,8 @@ function useContainerSize(containerRef) {
 /**
  * Video background component for viewer (based on menugallery2.js VideoBackground)
  */
-function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl }) {
-  const shouldRender = isCloudinaryUrl(videoSrc);
+function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl, isProcessing }) {
+  const shouldRender = isCloudinaryUrl(videoSrc) && !isProcessing;
 
   useEffect(() => {
     if (!shouldRender) return;
@@ -2706,6 +2706,10 @@ const MenuManager = () => {
                   currentCocktail={currentCocktail}
                   videoPreviewUrl={videoPreviewUrl}
                   API_BASE_URL={API_BASE_URL}
+                  isProcessing={(() => {
+                    const currentItem = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
+                    return processingStatus?.active && Number(processingStatus.itemNumber) === Number(currentItem);
+                  })()}
                   onLoadedData={() => {
                     if (videoRef.current) {
                       const video = videoRef.current;
