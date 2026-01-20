@@ -1103,6 +1103,7 @@ function EchoCocktailSubpage2({
       if (separators.length === 0) return;
 
       separators.forEach((sep) => {
+        sep.style.display = 'inline';
         sep.style.visibility = 'visible';
       });
 
@@ -1111,16 +1112,16 @@ function EchoCocktailSubpage2({
         const prev = sep.previousElementSibling;
         const next = sep.nextElementSibling;
 
-        // Hide if separator wrapped to new line (leading dash)
+        // Remove if separator wrapped to new line (leading dash) - use display:none
         if (prev) {
           const prevRect = prev.getBoundingClientRect();
           if (sepRect.top > prevRect.top + 5) {
-            sep.style.visibility = 'hidden';
+            sep.style.display = 'none';
             return;
           }
         }
 
-        // Hide if next item is on new line (trailing dash)
+        // Hide if next item is on new line (trailing dash) - use visibility:hidden
         if (next) {
           const nextRect = next.getBoundingClientRect();
           if (nextRect.top > sepRect.top + 5) {
