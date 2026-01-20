@@ -1344,7 +1344,11 @@ const MenuManager = () => {
           
           if (status && status.active) {
               // Item is still processing - restore status and start polling
-              setProcessingStatus(status);
+              console.log('[MenuManager] Restoring processing status for item', currentItemNumber, status);
+              setProcessingStatus({
+                ...status,
+                itemNumber: currentItemNumber, // Ensure itemNumber is set
+              });
               if (!processingPollIntervalRef.current) {
                 startProcessingPoll(currentItemNumber);
               }
@@ -2712,7 +2716,14 @@ const MenuManager = () => {
                   API_BASE_URL={API_BASE_URL}
                   isProcessing={(() => {
                     const currentItem = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
-                    return processingStatus?.active && Number(processingStatus.itemNumber) === Number(currentItem);
+                    const isProc = processingStatus?.active && Number(processingStatus.itemNumber) === Number(currentItem);
+                    console.log('[MenuManager] isProcessing check:', {
+                      processingStatusActive: processingStatus?.active,
+                      processingStatusItemNumber: processingStatus?.itemNumber,
+                      currentItem,
+                      isProcessing: isProc
+                    });
+                    return isProc;
                   })()}
                   onLoadedData={() => {
                     if (videoRef.current) {
