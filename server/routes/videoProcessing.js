@@ -1234,7 +1234,7 @@ router.post('/generate-background-fbf', async (req, res) => {
     
     // Use provided encodingCRF for final encoding
     const encodingPreset = req.body.encodingPreset || 'medium';
-    const encodingCRF = req.body.encodingCRF || 24; // Use provided CRF or default to 24
+    const encodingCRF = req.body.encodingCRF || 18; // Use provided CRF or default to 18
     
     // Reuse dimensions already calculated above (outerSize, innerSize, innerLeft, innerTop)
     
@@ -2686,7 +2686,7 @@ const processVideoForItem = async (itemNumber) => {
       videoPath: relativePreprocessedPath,
       maxDuration: 15.58,
       preprocess: false, // Already preprocessed
-      encodingCRF: 30,
+      encodingCRF: 18,
       outputFilename: `${itemNumber}.mp4`,
       itemNumber: itemNumber, // Pass itemNumber so endpoint updates per-item status
       outputDir: 'items' // Specify output directory

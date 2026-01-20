@@ -307,7 +307,7 @@ async function applyUniformGain(inputPath, outputPath, scale, { signal, onChild 
 async function generateIconVideo(inputPath, outputPath, itemNumber, { signal, onChild } = {}) {
   // Match old backend: 480x480 padded, target under 2MB.
   const qualitySettings = [
-    { crf: 23, scale: '480:480' },
+    { crf: 18, scale: '480:480' },
   ];
   const maxSizeMB = 2;
   const iconFps = 15;
@@ -357,7 +357,7 @@ async function generateBackgroundFbf({
   inputPath,
   outputPath,
   maxDuration = 15.58,
-  encodingCRF = 30,
+  encodingCRF = 18,
   encodingPreset = 'medium',
   signal,
   onChild,
@@ -840,7 +840,7 @@ async function processAndUpload(jobId, itemNumber, inputPath) {
       inputPath: wbPath,
       outputPath: outFull,
       maxDuration: 15.58,
-      encodingCRF: 30,
+      encodingCRF: 23,
       encodingPreset: 'medium',
       signal,
       onChild: trackChild,
