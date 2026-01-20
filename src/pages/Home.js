@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import { EchoCocktailSubpage } from './menuGallery2';
 import DynamicHero from '../components/DynamicHero';
 import DynamicLogo from '../components/DynamicLogo';
@@ -13,7 +13,7 @@ import { isCloudinaryUrl, getHeroOptimizedUrl, getAboutOptimizedUrl } from '../u
 
 
 
-const subpageOrder = [
+const defaultSubpageOrder = [
   { key: 'cocktails', label: 'Cocktails' },
   { key: 'mocktails', label: 'Mocktails' },
   { key: 'spirits', label: 'Spirits' },
@@ -195,6 +195,19 @@ const Home = forwardRef((props, ref) => {
 
     loadMenuData();
   }, []);
+
+  // Filter subpageOrder based on menuNavEnabled setting from API
+  const subpageOrder = useMemo(() => {
+    return defaultSubpageOrder.filter(({ key }) => subpages?.[key]?.menuNavEnabled === true);
+  }, [subpages]);
+
+  // Update selected category if current selection becomes disabled
+  useEffect(() => {
+    const enabledKeys = subpageOrder.map(({ key }) => key);
+    if (enabledKeys.length && !enabledKeys.includes(selected)) {
+      setSelected(enabledKeys[0]);
+    }
+  }, [subpageOrder, selected]);
 
   // Load hero images for slideshow
   useEffect(() => {
