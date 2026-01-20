@@ -3,24 +3,25 @@ import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
+import { normalizeIngredients } from '../utils/ingredientUtils';
 
- const isProbablyIOS = () => {
-   if (typeof navigator === 'undefined') return false;
-   const ua = navigator.userAgent || '';
-   const platform = navigator.platform || '';
-   const isIOSDevice = /iPad|iPhone|iPod/i.test(ua);
-   const isIPadOS = platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
-   return isIOSDevice || isIPadOS;
- };
+const isProbablyIOS = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const isIOSDevice = /iPad|iPhone|iPod/i.test(ua);
+  const isIPadOS = platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+  return isIOSDevice || isIPadOS;
+};
 
- const isProbablyMobileDevice = () => {
-   if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
-   const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile;
-   if (typeof uaDataMobile === 'boolean') return uaDataMobile;
-   const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-   const touchPoints = Number(navigator.maxTouchPoints || 0) > 1;
-   return coarse || touchPoints;
- };
+const isProbablyMobileDevice = () => {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+  const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile;
+  if (typeof uaDataMobile === 'boolean') return uaDataMobile;
+  const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  const touchPoints = Number(navigator.maxTouchPoints || 0) > 1;
+  return coarse || touchPoints;
+};
 
 const getIosSafeCloudinaryVideoUrl = (url) => {
    if (!isCloudinaryUrl(url)) return url;
@@ -1098,9 +1099,11 @@ function EchoCocktailSubpage2({
     if (isVertical && showConceptInfo) return;
     
     const container = ingredientsContainerRef.current;
+    const initialSeparators = container.querySelectorAll(':scope > .ingredient-separator');
+    if (initialSeparators.length === 0) return;
     
     const hideTrailingSeparators = () => {
-      const separators = container.querySelectorAll('.ingredient-separator');
+      const separators = container.querySelectorAll(':scope > .ingredient-separator');
 
       // Reset first so measurement isn't affected by a previously-hidden separator
       separators.forEach((sep) => {
@@ -1288,7 +1291,8 @@ function EchoCocktailSubpage2({
   };
 
   const renderIngredients = () => {
-    if (!info?.ingredients) return null;
+    const normalizedIngredients = normalizeIngredients(info?.ingredients);
+    if (normalizedIngredients.length === 0) return null;
     const ingredientsPaddingTop = isVertical
       ? '0.75rem'
       : layout?.inner?.height
@@ -1334,31 +1338,28 @@ function EchoCocktailSubpage2({
             lineHeight: isVertical ? '1.2' : '1.4',
           }}
         >
-          {(info.ingredients || '')
-            .split(/,|\r?\n/)
-            .map((item) => item.trim().replace(/^[-\s]+|[-\s]+$/g, ''))
-            .filter(Boolean)
-            .map((item, idx) => (
-              <React.Fragment key={`${item}-${idx}`}>
-                {idx > 0 && (
-                  <span
-                    className="ingredient-separator"
-                    style={{
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {' - '}
-                  </span>
-                )}
-                <span
-                  style={{
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item}
-                </span>
-              </React.Fragment>
-            ))}
+          {normalizedIngredients.flatMap((item, idx) => {
+            const itemNode = (
+              <span
+                key={`ingredient-${idx}-${item}`}
+                style={{
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item}
+              </span>
+            );
+
+            if (idx === normalizedIngredients.length - 1) return [itemNode];
+
+            const separatorNode = (
+              <span key={`ingredient-separator-${idx}`} className="ingredient-separator">
+                {' - '}
+              </span>
+            );
+
+            return [itemNode, separatorNode];
+          })}
         </div>
       </div>
     );
@@ -2654,8 +2655,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   ], []);
 
   const enabledSubpageOrder = useMemo(() => {
-    const filtered = subpageOrder.filter(({ key }) => subpages?.[key]?.menuNavEnabled !== false);
-    return filtered.length ? filtered : subpageOrder;
+    return subpageOrder.filter(({ key }) => subpages?.[key]?.menuNavEnabled === true);
   }, [subpageOrder, subpages]);
 
   useEffect(() => {
@@ -2736,6 +2736,14 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#666' }}>
         Loading menu data...
+      </div>
+    );
+  }
+
+  if (!enabledSubpageOrder.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#666' }}>
+        No menu categories are enabled for navigation.
       </div>
     );
   }

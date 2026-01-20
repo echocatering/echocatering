@@ -985,7 +985,7 @@ const commitBeerNumUnitsValue = (rowId) => {
   const menuNavEnabled = useMemo(() => {
     if (!canConfigureMenuNav) return null;
     const enabled = sheetPayload?.settings?.menuNavEnabled;
-    return enabled !== false;
+    return enabled === true;
   }, [canConfigureMenuNav, sheetPayload?.settings?.menuNavEnabled]);
 
   const persistMenuNavSetting = useCallback(
@@ -1029,7 +1029,7 @@ const commitBeerNumUnitsValue = (rowId) => {
         setSheetList((prev) =>
           prev.map((s) =>
             s.sheetKey === resolvedSheetKey
-              ? { ...s, menuNavEnabled: prevEnabled !== false }
+              ? { ...s, menuNavEnabled: prevEnabled === true }
               : s
           )
         );

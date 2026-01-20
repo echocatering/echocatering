@@ -409,31 +409,31 @@ const findCocktailByAnyId = async (id) => {
 const getMenuGalleryBuckets = () => ({
   cocktails: {
     title: 'Echo Cocktails',
-    menuNavEnabled: true,
+    menuNavEnabled: false,
     videoFiles: [],
     cocktailInfo: {}
   },
   mocktails: {
     title: 'Echo Mocktails',
-    menuNavEnabled: true,
+    menuNavEnabled: false,
     videoFiles: [],
     cocktailInfo: {}
   },
   beer: {
     title: 'Beer',
-    menuNavEnabled: true,
+    menuNavEnabled: false,
     videoFiles: [],
     cocktailInfo: {}
   },
   wine: {
     title: 'Wine',
-    menuNavEnabled: true,
+    menuNavEnabled: false,
     videoFiles: [],
     cocktailInfo: {}
   },
   spirits: {
     title: 'Echo Spirits',
-    menuNavEnabled: true,
+    menuNavEnabled: false,
     videoFiles: [],
     cocktailInfo: {}
   },
@@ -941,13 +941,13 @@ router.get('/menu-gallery', async (req, res) => {
     const menuNavBySheetKey = new Map();
     sheets.forEach((sheet) => {
       const enabled = sheet?.settings?.menuNavEnabled;
-      menuNavBySheetKey.set(sheet.sheetKey, enabled !== false);
+      menuNavBySheetKey.set(sheet.sheetKey, enabled === true);
     });
 
     sheetKeys.forEach((sheetKey) => {
       const category = normalizeCategory(sheetKey);
       if (!category || !menuGalleryData[category]) return;
-      menuGalleryData[category].menuNavEnabled = (menuNavBySheetKey.get(sheetKey) !== false);
+      menuGalleryData[category].menuNavEnabled = (menuNavBySheetKey.get(sheetKey) === true);
     });
 
     const sheetsByKey = new Map();

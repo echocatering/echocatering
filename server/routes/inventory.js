@@ -888,7 +888,7 @@ router.get('/sheets', async (req, res, next) => {
       version: sheet.version,
       updatedAt: sheet.updatedAt,
       rowCount: sheet.rows?.length || 0,
-      menuNavEnabled: sheet?.settings?.menuNavEnabled !== false
+      menuNavEnabled: sheet?.settings?.menuNavEnabled === true
     }));
     res.json({ sheets: payload });
   } catch (error) {
