@@ -1471,92 +1471,138 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
         {/* Right side - Social media icons */}
         <div style={{
           display: 'flex',
-          gap: '50px',
+          gap: '40px',
           alignItems: 'center'
         }}>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            padding: '8px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            color: '#666',
-            transition: 'all 0.2s ease',
-          }} onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.currentTarget.style.color = '#222';
-          }} onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.currentTarget.style.color = '#666';
-          }}>
-            <svg
-              className="hide-until-mounted"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ width: '32px', height: '32px', display: 'block', color: 'currentColor' }}
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z" stroke="currentColor" strokeWidth="2" />
-              <path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2" />
-              <path d="M17.5 6.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          </button>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            padding: '8px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            color: '#666',
-            transition: 'all 0.2s ease',
-          }} onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.currentTarget.style.color = '#222';
-          }} onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.currentTarget.style.color = '#666';
-          }}>
-            <svg
-              className="hide-until-mounted"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ width: '32px', height: '32px', display: 'block', color: 'currentColor' }}
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v3H8v3h2v5h3v-5h3l1-3h-4v-3c0-.55.45-1 1-1Z" fill="currentColor" />
-            </svg>
-          </button>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            padding: '8px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            color: '#666',
-            transition: 'all 0.2s ease',
-          }} onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.currentTarget.style.color = '#222';
-          }} onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.currentTarget.style.color = '#666';
-          }}>
-            <svg
-              className="hide-until-mounted"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ width: '32px', height: '32px', display: 'block', color: 'currentColor' }}
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M12 2a10 10 0 0 0-3.6 19.33l.95-3.84-.6-2.18c-.2-.78-.2-1.52 0-2.22.6-2.08 2.3-3.55 4.34-3.55 2.39 0 3.64 1.73 3.64 3.81 0 2.93-1.85 5.12-4.6 5.12-.9 0-1.74-.48-2.03-1.04l-.55 2.11c-.2.78-.72 1.76-1.08 2.35.81.25 1.66.38 2.53.38A10 10 0 0 0 12 2Z" fill="currentColor" />
-            </svg>
-          </button>
+          <button
+            className="social-button hide-until-mounted"
+            aria-label="Instagram"
+            style={{
+              background: '#888888',
+              border: 'none',
+              padding: '0',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              minWidth: '40px',
+              minHeight: '40px',
+              boxSizing: 'border-box',
+              WebkitMaskImage: 'url(/assets/socials/instagram.svg)',
+              maskImage: 'url(/assets/socials/instagram.svg)',
+              WebkitMaskSize: '32px 32px',
+              maskSize: '32px 32px',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#888888';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+          />
+          <button
+            className="social-button hide-until-mounted"
+            aria-label="Facebook"
+            style={{
+              background: '#888888',
+              border: 'none',
+              padding: '0',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              minWidth: '40px',
+              minHeight: '40px',
+              boxSizing: 'border-box',
+              WebkitMaskImage: 'url(/assets/socials/facebook.svg)',
+              maskImage: 'url(/assets/socials/facebook.svg)',
+              WebkitMaskSize: '32px 32px',
+              maskSize: '32px 32px',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#888888';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+          />
+          <button
+            className="social-button hide-until-mounted"
+            aria-label="Pinterest"
+            style={{
+              background: '#888888',
+              border: 'none',
+              padding: '0',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              minWidth: '40px',
+              minHeight: '40px',
+              boxSizing: 'border-box',
+              WebkitMaskImage: 'url(/assets/socials/pinterest.svg)',
+              maskImage: 'url(/assets/socials/pinterest.svg)',
+              WebkitMaskSize: '32px 32px',
+              maskSize: '32px 32px',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#888888';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+          />
         </div>
       </div>
       )}
