@@ -1219,6 +1219,7 @@ const MenuManager = () => {
     processingPollIntervalRef.current = setInterval(async () => {
       try {
         const status = await apiCall(`/video-jobs/${itemNumber}/status`);
+        console.log('[MenuManager] Poll response for item', itemNumber, ':', status);
         if (status) {
           // If a job is active but worker is offline, surface it explicitly.
           const hydrated =
@@ -1233,6 +1234,7 @@ const MenuManager = () => {
                   ...status,
                   itemNumber: itemNumber, // Ensure itemNumber is always set
                 };
+          console.log('[MenuManager] Setting processingStatus:', hydrated);
           setProcessingStatus(hydrated);
           
           // Stop polling if not active
