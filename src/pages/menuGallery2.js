@@ -1108,8 +1108,19 @@ function EchoCocktailSubpage2({
 
       separators.forEach((sep) => {
         const sepRect = sep.getBoundingClientRect();
+        const prev = sep.previousElementSibling;
         const next = sep.nextElementSibling;
 
+        // Hide if separator wrapped to new line (leading dash)
+        if (prev) {
+          const prevRect = prev.getBoundingClientRect();
+          if (sepRect.top > prevRect.top + 5) {
+            sep.style.visibility = 'hidden';
+            return;
+          }
+        }
+
+        // Hide if next item is on new line (trailing dash)
         if (next) {
           const nextRect = next.getBoundingClientRect();
           if (nextRect.top > sepRect.top + 5) {
