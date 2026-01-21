@@ -1497,7 +1497,7 @@ div[class*="sidebar-no-fade"] {
   justify-content: flex-start;
   padding: 0 0 0 12px;
   position: absolute;
-  top: 4px;
+  top: 2px;
   left: 20px;
   z-index: 200;
   margin: 0;
