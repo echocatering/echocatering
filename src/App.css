@@ -1520,6 +1520,7 @@ div[class*="sidebar-no-fade"] {
   height: calc(100vh / 16);
   display: block;
   object-fit: contain;
+  transform: translateY(calc(-0.15625vh));
 }
 
 /* Navigation center container */
