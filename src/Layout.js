@@ -88,7 +88,7 @@ export default function Layout({
                   className="logo-image"
                   style={{
                     width: 'auto',
-                    height: 'calc(100vh / 16)',
+                    height: 'calc(100vh / 20)',
                     display: 'block',
                     objectFit: 'contain'
                   }}

@@ -1498,7 +1498,7 @@ div[class*="sidebar-no-fade"] {
   padding: 0;
   position: absolute;
   top: 0;
-  left: calc(100vh / 32);
+  left: 20px;
   z-index: 200;
   margin: 0;
   width: auto;
@@ -1517,7 +1517,7 @@ div[class*="sidebar-no-fade"] {
 
 .logo-image {
   width: auto;
-  height: calc(100vh / 16);
+  height: calc(100vh / 20);
   display: block;
   object-fit: contain;
 }
@@ -1726,9 +1726,9 @@ div[class*="sidebar-no-fade"] {
   height: calc(100vh / 16 + 100vh / 32);
   max-width: 100%;
   margin: 0;
-  padding-left: calc(100vh / 32);
+  padding-left: 0;
   padding-right: calc((100vh / 16) / 4);
-  padding-top: calc(100vh / 32);
+  padding-top: 0;
   padding-bottom: 0;
   background: transparent;
   display: flex;
