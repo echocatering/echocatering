@@ -2353,17 +2353,21 @@ function EchoCocktailSubpage2({
                 }
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-                const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
-                if (div) {
-                  div.style.filter = 'brightness(0) saturate(100%)';
+                if (!isVertical) {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
+                  if (div) {
+                    div.style.filter = 'brightness(0) saturate(100%)';
+                  }
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
-                if (div) {
-                  div.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                if (!isVertical) {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
+                  if (div) {
+                    div.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                  }
                 }
               }}
               style={{
@@ -2494,32 +2498,36 @@ function EchoCocktailSubpage2({
               }
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              if (sidebarOpen) {
-                const span = e.currentTarget.querySelector('span');
-                if (span) {
-                  span.style.color = '#222';
-                }
-              } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #222 (rgb(34,34,34)) - darker, almost black
-                  img.style.filter = 'brightness(0) saturate(100%)';
+              if (!isVertical) {
+                e.currentTarget.style.transform = 'scale(1.1)';
+                if (sidebarOpen) {
+                  const span = e.currentTarget.querySelector('span');
+                  if (span) {
+                    span.style.color = '#222';
+                  }
+                } else {
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    // #222 (rgb(34,34,34)) - darker, almost black
+                    img.style.filter = 'brightness(0) saturate(100%)';
+                  }
                 }
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              if (sidebarOpen) {
-                const span = e.currentTarget.querySelector('span');
-                if (span) {
-                  span.style.color = '#888';
-                }
-              } else {
-                const img = e.currentTarget.querySelector('img');
-                if (img) {
-                  // #888 (rgb(136,136,136)) - medium gray
-                  img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+              if (!isVertical) {
+                e.currentTarget.style.transform = 'scale(1)';
+                if (sidebarOpen) {
+                  const span = e.currentTarget.querySelector('span');
+                  if (span) {
+                    span.style.color = '#888';
+                  }
+                } else {
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    // #888 (rgb(136,136,136)) - medium gray
+                    img.style.filter = 'brightness(0) saturate(100%) invert(47%)';
+                  }
                 }
               }
             }}
@@ -2683,10 +2691,14 @@ function EchoCocktailSubpage2({
                 zIndex: 1,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#222';
+                if (!isVertical) {
+                  e.currentTarget.style.color = '#222';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = selected === key ? '#222' : '#555';
+                if (!isVertical) {
+                  e.currentTarget.style.color = selected === key ? '#222' : '#555';
+                }
               }}
             >
               {label}
