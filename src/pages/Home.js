@@ -1021,6 +1021,27 @@ const Home = forwardRef((props, ref) => {
             pointerEvents: 'none'
           }} />
 
+          {/* Originals Icon SVG - positioned above the cocktail SVG */}
+          <IconComponent
+            iconName="originals"
+            style={{
+              width: '6vw',
+              minWidth: '40px',
+              maxWidth: '80px',
+              height: 'auto',
+              filter: 'brightness(0) invert(1)',
+              backgroundColor: 'transparent',
+              display: 'block',
+              WebkitBackfaceVisibility: 'hidden',
+              WebkitPerspective: 1000,
+              WebkitTransform: 'translate3d(0, 0, 0)',
+              isolation: 'isolate',
+              position: 'relative',
+              zIndex: 10,
+              marginBottom: '3px'
+            }}
+          />
+          
           {/* COCKTAILS SVG, Plus, and EVENT CATERING */}
           <div style={{
             textAlign: 'center',
@@ -1048,9 +1069,9 @@ const Home = forwardRef((props, ref) => {
               COCKTAILS
             </div>
             <div style={{
-              fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+              fontSize: 'clamp(1.2rem, 3.2vw, 2rem)',
               color: '#ffffff',
-              fontWeight: 700,
+              fontWeight: 500,
               textAlign: 'center',
               fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: '1',
@@ -1059,7 +1080,7 @@ const Home = forwardRef((props, ref) => {
               alignItems: 'center',
               justifyContent: 'center',
               height: 'auto',
-              marginTop: '-4px'
+              marginTop: '-10px'
             }}>
               +
             </div>
@@ -1074,7 +1095,7 @@ const Home = forwardRef((props, ref) => {
               fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: '1.2',
               textShadow: '0 4px 8px rgba(0,0,0,0.5)',
-              marginTop: '6px'
+              marginTop: '0px'
             }}>
               EVENT CATERING
             </div>

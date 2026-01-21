@@ -349,7 +349,28 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               width: '100%',
               zIndex: 2
             }}>
-              {/* COCKTAILS / Plus / EVENT CATERING grouped */}
+              {/* Originals Icon SVG - positioned above the cocktail SVG */}
+                <IconComponent
+                  iconName="originals"
+                  style={{
+                    width: '6vw',
+                    minWidth: '40px',
+                    maxWidth: '80px',
+                    height: 'auto',
+                    filter: 'brightness(0) invert(1)',
+                    backgroundColor: 'transparent',
+                    display: 'block',
+                    WebkitBackfaceVisibility: 'hidden',
+                    WebkitPerspective: 1000,
+                    WebkitTransform: 'translate3d(0, 0, 0)',
+                    isolation: 'isolate',
+                    position: 'relative',
+                    zIndex: 10,
+                    marginBottom: '3px'
+                  }}
+                />
+                
+                {/* COCKTAILS / Plus / EVENT CATERING grouped */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -377,9 +398,9 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
                   COCKTAILS
                 </div>
                 <div style={{
-                  fontSize: 'clamp(1.5rem, 4vw, 3rem)',
+                  fontSize: 'clamp(1.2rem, 3.2vw, 2.4rem)',
                   color: '#ffffff',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   textAlign: 'center',
                   backgroundColor: 'transparent',
                   display: 'flex',
@@ -389,7 +410,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
                   lineHeight: '1',
                   height: '5px',
                   overflow: 'visible',
-                  marginTop: '-10px'
+                  marginTop: '-16px'
                 }}>
                   +
                 </div>
@@ -403,7 +424,8 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
                   display: 'block',
                   whiteSpace: 'nowrap',
                   fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  marginTop: '0px'
                 }}>
                   EVENT CATERING
                 </div>
@@ -1276,7 +1298,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             isolation: 'isolate',
             position: 'relative',
             zIndex: 2,
-            marginBottom: '15px'
+            marginBottom: '3px'
           }}
         />
         
