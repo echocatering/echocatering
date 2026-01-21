@@ -1495,9 +1495,9 @@ div[class*="sidebar-no-fade"] {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0;
+  padding: 0 0 0 12px;
   position: absolute;
-  top: 0;
+  top: 4px;
   left: 20px;
   z-index: 200;
   margin: 0;
@@ -1517,7 +1517,7 @@ div[class*="sidebar-no-fade"] {
 
 .logo-image {
   width: auto;
-  height: calc(100vh / 20);
+  height: calc(100vh / 18);
   display: block;
   object-fit: contain;
 }
@@ -1682,6 +1682,8 @@ div[class*="sidebar-no-fade"] {
   transition: 0.2s;
   min-height: 44px;
   min-width: 44px;
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1709,8 +1711,8 @@ div[class*="sidebar-no-fade"] {
 
 /* Mobile logo image - 10% larger than original, centered */
 .mobile-logo-image {
-  width: 105.6px;
-  height: 105.6px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -1791,6 +1793,7 @@ div[class*="sidebar-no-fade"] {
 /* Navigation bar */
 .nav-bar-no-margin {
   margin-bottom: 0;
+  padding-bottom: 4px;
 }
 
 /* Navigation list with responsive gap */
