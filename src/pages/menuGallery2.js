@@ -2353,22 +2353,22 @@ function EchoCocktailSubpage2({
                 }
               }}
               onMouseEnter={(e) => {
-                const svg = e.currentTarget.querySelector('svg');
-                if (svg) {
-                  svg.style.transform = 'scale(1.1)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+                const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
+                if (div) {
+                  div.style.filter = 'brightness(0) saturate(100%)';
                 }
-                e.currentTarget.style.color = '#222';
               }}
               onMouseLeave={(e) => {
-                const svg = e.currentTarget.querySelector('svg');
-                if (svg) {
-                  svg.style.transform = 'scale(1)';
+                e.currentTarget.style.transform = 'scale(1)';
+                const div = e.currentTarget.querySelector('div'); // IconComponent renders as div
+                if (div) {
+                  div.style.filter = 'brightness(0) saturate(100%) invert(47%)';
                 }
-                e.currentTarget.style.color = '#888';
               }}
               style={{
-                width: '60px',
-                height: '60px',
+                width: '56px',
+                height: '56px',
                 borderRadius: 8,
                 background: 'transparent',
                 border: 'none',
@@ -2378,23 +2378,23 @@ function EchoCocktailSubpage2({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#888',
                 transition: 'all 0.2s ease',
                 flexShrink: 0,
-                minWidth: '60px',
-                minHeight: '60px',
+                minWidth: '56px',
+                minHeight: '56px',
               }}
             >
               <IconComponent
-                iconName="originals"
+                iconName="categories"
                 className="hide-until-mounted"
                 style={{
-                  width: '46%',
-                  height: '46%',
-                  color: 'currentColor',
+                  width: '40%',
+                  height: '40%',
                   display: 'block',
+                  filter: 'brightness(0) saturate(100%) invert(47%)',
+                  opacity: 1,
+                  transition: 'filter 0.2s ease',
                   flexShrink: 0,
-                  transition: 'transform 0.2s ease',
                 }}
               />
             </button>
@@ -2826,8 +2826,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       const normalizeCategoryKey = (value = '') => {
         const key = String(value).toLowerCase();
         const categoryMap = {
-          'classics': 'cocktails',
-          'originals': 'mocktails'
+          'classics': 'cocktails'
         };
         return categoryMap[key] || key;
       };
