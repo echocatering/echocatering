@@ -1490,20 +1490,20 @@ div[class*="sidebar-no-fade"] {
   filter: brightness(0) saturate(100%) invert(13%) sepia(0%) saturate(0%) hue-rotate(0deg);
 }
 
-/* Logo container styles */
+/* Logo container styles - centered in full header height */
 .logo-container {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: flex-start;
   padding: 0;
-  position: relative;
-  z-index: 10;
+  position: absolute;
+  top: 0;
+  left: calc(100vh / 32);
+  z-index: 200;
   margin: 0;
   width: auto;
-  height: calc(100vh / 16);
+  height: 100%;
   flex-shrink: 0;
-  order: -1;
-  align-self: flex-end;
 }
 
 .logo-button {
@@ -1520,7 +1520,6 @@ div[class*="sidebar-no-fade"] {
   height: calc(100vh / 16);
   display: block;
   object-fit: contain;
-  transform: translateY(calc(-0.15625vh));
 }
 
 /* Navigation center container */
@@ -1708,10 +1707,10 @@ div[class*="sidebar-no-fade"] {
   filter: brightness(0) saturate(0) opacity(0.6);
 }
 
-/* Mobile logo image */
+/* Mobile logo image - 10% larger than original, centered */
 .mobile-logo-image {
-  width: 96px;
-  height: 96px;
+  width: 105.6px;
+  height: 105.6px;
   object-fit: contain;
 }
 
@@ -1720,16 +1719,16 @@ div[class*="sidebar-no-fade"] {
   margin-top: 116px; /* 96px logo height + 20px padding */
 }
 
-/* App container styles - Header above hero */
+/* App container styles - Header above hero (includes former top spacer) */
 .app-container {
   position: relative;
   width: 100%;
-  height: calc(100vh / 16);
+  height: calc(100vh / 16 + 100vh / 32);
   max-width: 100%;
   margin: 0;
   padding-left: calc(100vh / 32);
   padding-right: calc((100vh / 16) / 4);
-  padding-top: 0;
+  padding-top: calc(100vh / 32);
   padding-bottom: 0;
   background: transparent;
   display: flex;

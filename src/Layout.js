@@ -101,100 +101,6 @@ export default function Layout({
             </div>
           </div>
 
-          {/* Social Media Icons - To the right of logo */}
-          <div style={{
-            display: 'flex',
-            gap: '40px',
-            alignItems: 'center',
-            marginLeft: 'calc((100vh / 16) / 2)',
-            alignSelf: 'center'
-          }}>
-            <button className="social-button hide-until-mounted" aria-label="Instagram" style={{
-              background: '#d0d0d0',
-              border: 'none',
-              padding: '0',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              minWidth: '40px',
-              minHeight: '40px',
-              boxSizing: 'border-box',
-              WebkitMaskImage: 'url(/assets/socials/instagram.svg)',
-              maskImage: 'url(/assets/socials/instagram.svg)',
-              WebkitMaskSize: '32px 32px',
-              maskSize: '32px 32px',
-              WebkitMaskRepeat: 'no-repeat',
-              maskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              maskPosition: 'center',
-              transition: 'background 0.2s ease'
-            }} onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#666666';
-            }} onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#d0d0d0';
-            }}>
-            </button>
-            <button className="social-button hide-until-mounted" aria-label="Facebook" style={{
-              background: '#d0d0d0',
-              border: 'none',
-              padding: '0',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              minWidth: '40px',
-              minHeight: '40px',
-              boxSizing: 'border-box',
-              WebkitMaskImage: 'url(/assets/socials/facebook.svg)',
-              maskImage: 'url(/assets/socials/facebook.svg)',
-              WebkitMaskSize: '32px 32px',
-              maskSize: '32px 32px',
-              WebkitMaskRepeat: 'no-repeat',
-              maskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              maskPosition: 'center',
-              transition: 'background 0.2s ease'
-            }} onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#666666';
-            }} onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#d0d0d0';
-            }}>
-            </button>
-            <button className="social-button hide-until-mounted" aria-label="Pinterest" style={{
-              background: '#d0d0d0',
-              border: 'none',
-              padding: '0',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              minWidth: '40px',
-              minHeight: '40px',
-              boxSizing: 'border-box',
-              WebkitMaskImage: 'url(/assets/socials/pinterest.svg)',
-              maskImage: 'url(/assets/socials/pinterest.svg)',
-              WebkitMaskSize: '32px 32px',
-              maskSize: '32px 32px',
-              WebkitMaskRepeat: 'no-repeat',
-              maskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              maskPosition: 'center',
-              transition: 'background 0.2s ease'
-            }} onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#666666';
-            }} onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#d0d0d0';
-            }}>
-            </button>
-          </div>
-
           {/* Center Column - Navigation */}
           <nav className="nav-bar nav-bar-no-margin">
             <ul className={`nav-list ${isSmallScreen ? 'nav-list-gap' : 'nav-list-no-gap'}`}>
@@ -237,17 +143,7 @@ export default function Layout({
 
     return (
     <div className="app-root">
-      {/* White spacer above header - 1/32 browser height */}
-      {!finalIsMobile && (
-        <div style={{
-          width: '100%',
-          height: 'calc(100vh / 32)',
-          backgroundColor: '#fff',
-          position: 'relative',
-          zIndex: 100
-        }} />
-      )}
-      {/* Desktop header - only show on desktop */}
+      {/* Desktop header - only show on desktop (includes former top spacer) */}
       {!finalIsMobile && desktopHeaderNav}
       
       {/* Dropdown Menu - Rendered at root level for both desktop and mobile */}
