@@ -671,9 +671,16 @@ const InventoryManager = () => {
     const sharedFields = getSharedFields(sheetKeyToUse);
     if (sharedFields.includes(columnKey) && columnKey !== 'region' && value && typeof value === 'string') {
       const titleCaseValue = toTitleCase(value);
-      queueRowUpdate(rowId, columnKey, titleCaseValue);
+      const row = sheetPayload?.rows?.find(r => r._id === rowId);
+      const currentValue = row?.values instanceof Map ? row.values.get(columnKey) : row?.values?.[columnKey];
+      
+      // Only update if the value is actually different
+      if (currentValue !== titleCaseValue) {
+        queueRowUpdate(rowId, columnKey, titleCaseValue);
+        persistRow(rowId);
+      }
     }
-  }, [sheetKey]);
+  }, [sheetKey, sheetPayload]);
 
   const clearCountryInput = (rowId) => {
     setCountryInputs((prev) => {
@@ -802,18 +809,38 @@ const handleCurrencyChange = (rowId, columnKey, rawValue) => {
 
 const commitCurrencyValue = (rowId, columnKey) => {
   const pendingValue = pendingRowUpdatesRef.current[rowId]?.[columnKey];
-  if (pendingValue == null || pendingValue === '') {
-    queueRowUpdate(rowId, columnKey, null);
-    persistRow(rowId);
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get(columnKey) : row?.values?.[columnKey];
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, columnKey, null);
+      persistRow(rowId);
+    }
     return;
   }
+  
   const numericValue = Number(pendingValue);
   if (Number.isNaN(numericValue)) {
-    queueRowUpdate(rowId, columnKey, null);
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, columnKey, null);
+      persistRow(rowId);
+    }
   } else {
-    queueRowUpdate(rowId, columnKey, Number(numericValue.toFixed(2)));
+    const formattedValue = Number(numericValue.toFixed(2));
+    // Only update if the value is actually different
+    if (currentValue !== formattedValue) {
+      queueRowUpdate(rowId, columnKey, formattedValue);
+      persistRow(rowId);
+    }
   }
-  persistRow(rowId);
 };
 
 const handleSpiritsSizeChange = (rowId, rawValue) => {
@@ -822,18 +849,37 @@ const handleSpiritsSizeChange = (rowId, rawValue) => {
 
 const commitSpiritsSizeValue = (rowId) => {
   const pendingValue = pendingRowUpdatesRef.current[rowId]?.sizeOz;
-  if (pendingValue == null || pendingValue === '') {
-    queueRowUpdate(rowId, 'sizeOz', null);
-    persistRow(rowId);
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get('sizeOz') : row?.values?.sizeOz;
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeOz', null);
+      persistRow(rowId);
+    }
     return;
   }
+  
   const numericValue = Number(pendingValue);
   if (!Number.isInteger(numericValue) || numericValue < 0) {
-    queueRowUpdate(rowId, 'sizeOz', null);
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeOz', null);
+      persistRow(rowId);
+    }
   } else {
-    queueRowUpdate(rowId, 'sizeOz', numericValue);
+    // Only update if the value is actually different
+    if (currentValue !== numericValue) {
+      queueRowUpdate(rowId, 'sizeOz', numericValue);
+      persistRow(rowId);
+    }
   }
-  persistRow(rowId);
 };
 
 const handleWineSizeChange = (rowId, rawValue) => {
@@ -842,18 +888,38 @@ const handleWineSizeChange = (rowId, rawValue) => {
 
 const commitWineSizeValue = (rowId) => {
   const pendingValue = pendingRowUpdatesRef.current[rowId]?.sizeMl;
-  if (pendingValue == null || pendingValue === '') {
-    queueRowUpdate(rowId, 'sizeMl', null);
-    persistRow(rowId);
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get('sizeMl') : row?.values?.sizeMl;
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeMl', null);
+      persistRow(rowId);
+    }
     return;
   }
+  
   const numericValue = Number(pendingValue);
   if (!Number.isFinite(numericValue) || numericValue < 0) {
-    queueRowUpdate(rowId, 'sizeMl', null);
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeMl', null);
+      persistRow(rowId);
+    }
   } else {
-    queueRowUpdate(rowId, 'sizeMl', Math.round(numericValue));
+    const roundedValue = Math.round(numericValue);
+    // Only update if the value is actually different
+    if (currentValue !== roundedValue) {
+      queueRowUpdate(rowId, 'sizeMl', roundedValue);
+      persistRow(rowId);
+    }
   }
-  persistRow(rowId);
 };
 
 const handleDryStockSizeChange = (rowId, rawValue) => {
@@ -862,18 +928,38 @@ const handleDryStockSizeChange = (rowId, rawValue) => {
 
 const commitDryStockSizeValue = (rowId) => {
   const pendingValue = pendingRowUpdatesRef.current[rowId]?.sizeG;
-  if (pendingValue == null || pendingValue === '') {
-    queueRowUpdate(rowId, 'sizeG', null);
-    persistRow(rowId);
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get('sizeG') : row?.values?.sizeG;
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeG', null);
+      persistRow(rowId);
+    }
     return;
   }
+  
   const numericValue = Number(pendingValue);
   if (!Number.isFinite(numericValue) || numericValue < 0) {
-    queueRowUpdate(rowId, 'sizeG', null);
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'sizeG', null);
+      persistRow(rowId);
+    }
   } else {
-    queueRowUpdate(rowId, 'sizeG', Number(numericValue.toFixed(2)));
+    const formattedValue = Number(numericValue.toFixed(2));
+    // Only update if the value is actually different
+    if (currentValue !== formattedValue) {
+      queueRowUpdate(rowId, 'sizeG', formattedValue);
+      persistRow(rowId);
+    }
   }
-  persistRow(rowId);
 };
 
 const handleBeerNumUnitsChange = (rowId, rawValue) => {
@@ -885,18 +971,37 @@ const handleBeerNumUnitsChange = (rowId, rawValue) => {
 
 const commitBeerNumUnitsValue = (rowId) => {
   const pendingValue = pendingRowUpdatesRef.current[rowId]?.numUnits;
-  if (pendingValue == null || pendingValue === '') {
-    queueRowUpdate(rowId, 'numUnits', null);
-    persistRow(rowId);
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get('numUnits') : row?.values?.numUnits;
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'numUnits', null);
+      persistRow(rowId);
+    }
     return;
   }
+  
   const numericValue = Number(pendingValue);
   if (!Number.isInteger(numericValue) || numericValue < 0) {
-    queueRowUpdate(rowId, 'numUnits', null);
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
+      queueRowUpdate(rowId, 'numUnits', null);
+      persistRow(rowId);
+    }
   } else {
-    queueRowUpdate(rowId, 'numUnits', numericValue);
+    // Only update if the value is actually different
+    if (currentValue !== numericValue) {
+      queueRowUpdate(rowId, 'numUnits', numericValue);
+      persistRow(rowId);
+    }
   }
-  persistRow(rowId);
 };
 
   const handleBeerNumUnitsIncrement = (rowId, delta) => {
@@ -917,20 +1022,39 @@ const commitBeerNumUnitsValue = (rowId) => {
   };
 
   const commitItemNumberValue = (rowId) => {
-    const pendingValue = pendingRowUpdatesRef.current[rowId]?.itemNumber;
-    if (pendingValue == null || pendingValue === '') {
+  const pendingValue = pendingRowUpdatesRef.current[rowId]?.itemNumber;
+  const row = sheetPayload?.rows?.find(r => r._id === rowId);
+  const currentValue = row?.values instanceof Map ? row.values.get('itemNumber') : row?.values?.itemNumber;
+  
+  // Only update if there's actually a pending value that's different from current
+  if (pendingValue === undefined || pendingValue === null) {
+    return; // No change, don't update
+  }
+  
+  if (pendingValue === '') {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
       queueRowUpdate(rowId, 'itemNumber', null);
       persistRow(rowId);
-      return;
     }
-    const numericValue = Number(pendingValue);
-    if (!Number.isInteger(numericValue) || numericValue < 0) {
+    return;
+  }
+  
+  const numericValue = Number(pendingValue);
+  if (!Number.isInteger(numericValue) || numericValue < 0) {
+    // Only set to null if current value is not already null/undefined
+    if (currentValue != null) {
       queueRowUpdate(rowId, 'itemNumber', null);
-    } else {
-      queueRowUpdate(rowId, 'itemNumber', numericValue);
+      persistRow(rowId);
     }
-    persistRow(rowId);
-  };
+  } else {
+    // Only update if the value is actually different
+    if (currentValue !== numericValue) {
+      queueRowUpdate(rowId, 'itemNumber', numericValue);
+      persistRow(rowId);
+    }
+  }
+};
 
   const persistRow = useCallback(async (rowId) => {
     const payload = pendingRowUpdatesRef.current[rowId];
@@ -1733,6 +1857,19 @@ const commitBeerNumUnitsValue = (rowId) => {
                                 row.values && Object.prototype.hasOwnProperty.call(row.values, column.key);
                               let cellValue = hasOriginalValue ? row.values[column.key] : null;
                               
+                              // Format display value for PREMIX Name column - always Title Case
+                              const formatDisplayValue = (value) => {
+                                if (value === null || value === undefined || value === '') return '';
+                                
+                                // For PREMIX Name column, always apply Title Case
+                                if (resolvedSheetKey === 'preMix' && isNameColumn) {
+                                  return toTitleCase(String(value));
+                                }
+                                
+                                // For other columns, return as-is
+                                return value;
+                              };
+                              
                               // Don't apply title case when displaying - let user type freely, apply on blur
                               const formatCurrencyDisplay = (value) => {
                                 if (value === null || value === undefined) return '';
@@ -1762,7 +1899,6 @@ const commitBeerNumUnitsValue = (rowId) => {
                                       onChange={(e) => {
                                         const nextValue = e.target.value;
                                         handleNameChange(row._id, column.key, nextValue, resolvedSheetKey);
-                                        persistRow(row._id);
                                       }}
                                       className="inventory-name-input w-full text-sm px-1 py-1"
                                     >
@@ -1777,11 +1913,10 @@ const commitBeerNumUnitsValue = (rowId) => {
                                   ) : isFreeTextColumn ? (
                                     <input
                                       type="text"
-                                      value={pendingRowUpdates[row._id]?.[column.key] ?? cellValue ?? ''}
+                                      value={formatDisplayValue(pendingRowUpdates[row._id]?.[column.key] ?? cellValue)}
                                       onChange={(e) => handleNameChange(row._id, column.key, e.target.value, resolvedSheetKey)}
                                       onBlur={(e) => {
                                         handleNameBlur(row._id, column.key, e.target.value, resolvedSheetKey);
-                                        persistRow(row._id);
                                       }}
                                       className="inventory-name-input w-full text-sm px-1 py-1"
                                     />

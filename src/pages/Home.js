@@ -551,8 +551,8 @@ const Home = forwardRef((props, ref) => {
             {/* Logo */}
             <div 
               style={{
-                width: '140px',
-                height: '70px',
+                width: '120px',
+                height: '60px',
                 cursor: 'pointer',
                 paddingLeft: '8px'
               }}

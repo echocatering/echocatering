@@ -2660,6 +2660,64 @@ const MenuManager = () => {
             ))}
           </div>
         </header>
+        
+        {/* Recipe Builder for PRE-MIX - Display below header */}
+        {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
+          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', marginTop: '120px' }}>
+            <div
+              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
+              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
+            >
+              <RecipeBuilder
+                key={`${editingCocktail?._id || ''}`}
+                recipe={{
+                  ...recipe,
+                  title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
+                }}
+                onChange={(updatedRecipe) => {
+                  // For PRE-MIX, allow title editing and sync it back to cocktail name
+                  const prev = recipeRef.current;
+                  const isHydrationUpdate = !hasUnsavedChanges &&
+                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
+                    prev &&
+                    updatedRecipe &&
+                    updatedRecipe.itemNumber === prev.itemNumber &&
+                    updatedRecipe.title === prev.title;
+                  setRecipe(updatedRecipe);
+                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
+                    setHasUnsavedChanges(true);
+                  }
+                  // Update cocktail name to match recipe title (always uppercase)
+                  if (updatedRecipe?.title !== undefined) {
+                    setEditingCocktail(prev => ({
+                      ...prev,
+                      name: updatedRecipe.title ? updatedRecipe.title.toUpperCase() : prev.name
+                    }));
+                  }
+                }}
+                type="premix"
+                saving={savingRecipe}
+                onSave={async () => {
+                  // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
+                  if (editingCocktail) {
+                    handleSave(editingCocktail);
+                  }
+                }}
+                onDelete={async () => {
+                  // Delete Recipe button - calls handleDelete
+                  if (editingCocktail) {
+                    handleDelete(editingCocktail._id);
+                  }
+                }}
+                disableTitleEdit={false}
+                hideActions={false}
+                forceUppercaseTitle={true}
+                showOnlyName={true}
+              />
+            </div>
+          </div>
+        )}
+        
         {filteredCocktails.length > 0 || editingCocktail ? (
           normalizeCategoryKey(selectedCategory) !== 'premix' ? (
             /* Viewer container wrapper with vignette */
@@ -3825,55 +3883,6 @@ const MenuManager = () => {
                 onDelete={null}
                 disableTitleEdit={false} // Allow typing; MM name stays synced via onChange
                 hideActions={true} // Hide SAVE and DELETE buttons - saving is handled by MenuManager's "Save Changes" button
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Recipe Builder for PRE-MIX - Show only recipe name field (editable, always CAPS) */}
-        {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
-          <div className="rounded-lg p-6 mt-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
-            <div
-              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
-              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
-            >
-              <RecipeBuilder
-                key={`${editingCocktail?._id || ''}`}
-                recipe={{
-                  ...recipe,
-                  title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
-                }}
-                onChange={(updatedRecipe) => {
-                  // For PRE-MIX, allow title editing and sync it back to cocktail name
-                  const prev = recipeRef.current;
-                  const isHydrationUpdate = !hasUnsavedChanges &&
-                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
-                    prev &&
-                    updatedRecipe &&
-                    updatedRecipe.itemNumber === prev.itemNumber &&
-                    updatedRecipe.title === prev.title;
-                  setRecipe(updatedRecipe);
-                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
-                    setHasUnsavedChanges(true);
-                  }
-                  // Update cocktail name to match recipe title (always uppercase)
-                  setEditingCocktail(prev => ({
-                    ...prev,
-                    name: updatedRecipe.title?.toUpperCase() || prev.name
-                  }));
-                }}
-                type={getRecipeType(editingCocktail.category)}
-                saving={savingRecipe}
-                onSave={async () => {
-                  // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
-                  if (editingCocktail) {
-                    handleSave(editingCocktail);
-                  }
-                }}
-                onDelete={null}
-                disableTitleEdit={false} // Allow title editing for PRE-MIX
-                hideActions={true} // Hide SAVE and DELETE buttons
-                forceUppercaseTitle={true} // Force uppercase for PRE-MIX
               />
             </div>
           </div>
