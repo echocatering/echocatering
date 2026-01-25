@@ -33,6 +33,11 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
 
   // Check screen size for responsive design
   useEffect(() => {
+    // Store initial dimensions to detect changes
+    const initialWidth = window.innerWidth;
+    const initialHeight = window.innerHeight;
+    const initialIsLandscape = initialWidth > initialHeight;
+    
     const checkScreenSize = () => {
       // More flexible mobile detection - consider both width and height
       const width = window.innerWidth;
@@ -49,10 +54,46 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
       setIsSmallScreen(smallScreen);
     };
     
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
+    // Handle resize with full page refresh on orientation or significant size change
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isLandscape = width > height;
+      
+      // Refresh if orientation changed
+      if (isLandscape !== initialIsLandscape) {
+        console.log('📱 DynamicHero - Orientation changed - refreshing page');
+        window.location.reload();
+        return;
+      }
+      
+      // Refresh if significant size change (more than 100px in either dimension)
+      const widthChange = Math.abs(width - initialWidth);
+      const heightChange = Math.abs(height - initialHeight);
+      if (widthChange > 100 || heightChange > 100) {
+        console.log('📱 DynamicHero - Significant size change - refreshing page');
+        window.location.reload();
+        return;
+      }
+      
+      // Otherwise just update state
+      checkScreenSize();
+    };
     
-    return () => window.removeEventListener('resize', checkScreenSize);
+    checkScreenSize();
+    window.addEventListener('resize', handleResize);
+    
+    // Also listen for orientation change event (more reliable on mobile)
+    const handleOrientationChange = () => {
+      console.log('📱 DynamicHero - Orientation change event - refreshing page');
+      window.location.reload();
+    };
+    window.addEventListener('orientationchange', handleOrientationChange);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
   }, []);
 
 
