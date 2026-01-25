@@ -1870,25 +1870,45 @@ const MenuManager = () => {
           // For new items, we only need name - other fields can be empty
           if (sharedFields && sharedFields.name) {
             if (isNew) {
-              // Create new inventory row
-              const inventoryResponse = await apiCall(`/inventory/${sheetKey}/rows`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  values: sharedFields,
-                  updatedBy: 'menumanager'
-                }),
-                headers: {
-                  'Content-Type': 'application/json'
+              // First, check if an inventory row with this name already exists
+              // This prevents duplicates if the first save failed after creating inventory row
+              let existingInventoryRow = null;
+              try {
+                const inventorySheet = await apiCall(`/inventory/${sheetKey}`);
+                if (inventorySheet?.rows) {
+                  existingInventoryRow = inventorySheet.rows.find(r => 
+                    r.values?.name && r.values.name.toLowerCase() === sharedFields.name.toLowerCase()
+                  );
                 }
-              });
+              } catch (checkErr) {
+                console.warn('Could not check for existing inventory row:', checkErr);
+              }
               
-              // Get the itemNumber from the created inventory row
-              if (inventoryResponse?.sheet?.rows) {
-                const newRow = inventoryResponse.sheet.rows.find(r => 
-                  r.values?.name === sharedFields.name
-                );
-                if (newRow?.values?.itemNumber) {
-                  cocktailData.itemNumber = Number(newRow.values.itemNumber);
+              if (existingInventoryRow?.values?.itemNumber) {
+                // Use existing inventory row - don't create duplicate
+                cocktailData.itemNumber = Number(existingInventoryRow.values.itemNumber);
+                console.log('Found existing inventory row with itemNumber:', cocktailData.itemNumber);
+              } else {
+                // Create new inventory row
+                const inventoryResponse = await apiCall(`/inventory/${sheetKey}/rows`, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    values: sharedFields,
+                    updatedBy: 'menumanager'
+                  }),
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                // Get the itemNumber from the created inventory row
+                if (inventoryResponse?.sheet?.rows) {
+                  const newRow = inventoryResponse.sheet.rows.find(r => 
+                    r.values?.name === sharedFields.name
+                  );
+                  if (newRow?.values?.itemNumber) {
+                    cocktailData.itemNumber = Number(newRow.values.itemNumber);
+                  }
                 }
               }
             } else {
