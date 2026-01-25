@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { useSearchParams } from 'react-router-dom';
 import { buildCountryList, buildCountryMap, ISO_CODE_REGEX } from '../../shared/countryUtils';
 import countryAliasMap from '../../shared/countryAliasMap.json';
+import { US_STATES, STATE_NAME_TO_CODE, buildStateList, buildStateMap } from '../../shared/usStatesData';
 import { useAuth } from '../contexts/AuthContext';
 import RecipeBuilder from './recipes/RecipeBuilder';
 import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
@@ -36,8 +37,9 @@ const getCodeFromAttributes = (pathEl) => {
 // Map container that renders SVG ONCE outside React's render cycle
 // The SVG is mounted directly to the DOM and never re-rendered
 // Only highlights are updated via direct DOM manipulation
-const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady }) => {
+const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, mapType }) => {
   const svgMountedRef = useRef(false);
+  const lastMapTypeRef = useRef(mapType);
   const statusRef = useRef(null);
   const onMapReadyRef = useRef(onMapReady);
 
@@ -46,7 +48,21 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady }) =
     onMapReadyRef.current = onMapReady;
   }, [onMapReady]);
 
-  // Mount SVG directly to DOM ONCE - never re-render (optimized for speed)
+  // Reset when mapType changes
+  useEffect(() => {
+    if (lastMapTypeRef.current !== mapType) {
+      svgMountedRef.current = false;
+      lastMapTypeRef.current = mapType;
+      if (mapRef.current) {
+        mapRef.current.innerHTML = '';
+      }
+      if (svgRef) {
+        svgRef.current = null;
+      }
+    }
+  }, [mapType, mapRef, svgRef]);
+
+  // Mount SVG directly to DOM - re-mount when mapType changes
   useEffect(() => {
     if (!mapRef.current || svgMountedRef.current) return;
     if (!mapSvgContent || mapError) return;
@@ -68,10 +84,11 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady }) =
       }
 
       // Configure SVG attributes (minimal setup)
-      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      if (!svg.getAttribute('viewBox')) {
-        svg.setAttribute('viewBox', '0 0 2000 857');
-      }
+      // Use xMidYMin meet to scale SVG to fit container height, centered horizontally
+      svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+      // Always use world map viewBox dimensions (2000x857) so container is same size
+      // The US map content will be centered within this larger viewBox
+      svg.setAttribute('viewBox', '0 0 2000 857');
       svg.removeAttribute('width');
       svg.removeAttribute('height');
       svg.style.width = '100%';
@@ -173,16 +190,18 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady }) =
   return (
     <div
       ref={mapRef}
-      style={{ width: '100%', minHeight: '260px', borderRadius: '8px', paddingTop: 0, paddingRight: '40px', paddingBottom: 0, paddingLeft: 0, background: 'transparent', position: 'relative', marginLeft: '-60px' }}
+      style={{ width: '100%', minHeight: '260px', borderRadius: '8px', paddingTop: 0, paddingRight: '40px', paddingBottom: 0, paddingLeft: 0, background: 'transparent', position: 'relative', marginLeft: '-60px', overflow: 'hidden' }}
     />
   );
 };
 
 // Wrap in memo to prevent re-renders when parent re-renders
 // The component itself can re-render, but the SVG inside is protected by svgMountedRef
-const MemoizedMapContainer = memo(MapContainer, () => {
-  // Always return true - props are "equal" so React won't re-render
-  // The SVG is protected by the svgMountedRef check inside
+const MemoizedMapContainer = memo(MapContainer, (prevProps, nextProps) => {
+  // Re-render when mapType or mapSvgContent changes
+  if (prevProps.mapType !== nextProps.mapType) return false;
+  if (prevProps.mapSvgContent !== nextProps.mapSvgContent) return false;
+  // Otherwise, don't re-render - the SVG is protected by the svgMountedRef check inside
   return true;
 });
 
@@ -358,6 +377,7 @@ const MenuManager = () => {
   const viewerSize = useContainerSize(viewerContainerRef);
   const [countries, setCountries] = useState([]);
   const [countryQuery, setCountryQuery] = useState('');
+  const [mapType, setMapType] = useState('world'); // 'world' or 'us'
   const mapRef = useRef(null);
   const svgRef = useRef(null); // Direct ref to the SVG element
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -710,6 +730,12 @@ const MenuManager = () => {
           }
           return { ...fallback };
         });
+        // Sync mapType from loaded cocktail data
+        if (fallback.mapType) {
+          setMapType(fallback.mapType);
+        } else {
+          setMapType('world'); // Default to world map
+        }
         setVideoUpload(null);
         setVideoPreviewUrl(prev => {
           if (prev) {
@@ -831,8 +857,10 @@ const MenuManager = () => {
     clone.style.backgroundColor = 'transparent';
     clone.style.background = 'transparent';
     
+    // Use appropriate viewBox based on map type
     if (!clone.getAttribute('viewBox')) {
-      clone.setAttribute('viewBox', '0 0 2000 857');
+      const defaultViewBox = mapType === 'us' ? '0 0 959 593' : '0 0 2000 857';
+      clone.setAttribute('viewBox', defaultViewBox);
     }
     clone.setAttribute('width', '1200');
     clone.setAttribute('height', '600');
@@ -1473,34 +1501,55 @@ const MenuManager = () => {
     );
   };
 
+  // US States list for the US map
+  const usStates = useMemo(() => buildStateList(), []);
+  const stateLookup = useMemo(() => buildStateMap(), []);
+
+  // Filtered list based on mapType
   const filteredCountries = countries.filter(c => {
     if (!countryQuery) return true;
     const q = countryQuery.toLowerCase();
     return (c.name && c.name.toLowerCase().includes(q)) || (c.code && c.code.toLowerCase().includes(q));
   });
 
+  const filteredStates = usStates.filter(s => {
+    if (!countryQuery) return true;
+    const q = countryQuery.toLowerCase();
+    return (s.name && s.name.toLowerCase().includes(q)) || (s.code && s.code.toLowerCase().includes(q));
+  });
+
+  // Use the appropriate list based on mapType
+  const filteredRegionsList = mapType === 'us' ? filteredStates : filteredCountries;
+
   const countryLookup = useMemo(() => buildCountryMap(countries), [countries]);
+  
+  // Combined lookup for both countries and states
+  const regionLookup = useMemo(() => {
+    return mapType === 'us' ? stateLookup : countryLookup;
+  }, [mapType, stateLookup, countryLookup]);
+
   const selectedCountryDetails = useMemo(() => {
     return selectedRegions
       .map((code) => {
         const upper = String(code || '').toUpperCase();
         if (!upper) return null;
-        const entry = countryLookup[upper];
+        const entry = regionLookup[upper];
         return {
           code: upper,
           name: entry?.name || upper
         };
       })
       .filter(Boolean);
-  }, [selectedRegions, countryLookup]);
+  }, [selectedRegions, regionLookup]);
 
-  // Load SVG map asset once - optimized for speed
+  // Load SVG map asset based on mapType - reload when mapType changes
   useEffect(() => {
     let cancelled = false;
     
     const loadSvg = async () => {
       try {
-        const svgUrl = `${process.env.PUBLIC_URL || ''}/assets/images/worldmap.svg`;
+        const svgFile = mapType === 'us' ? 'BLANK_US_MAP.svg' : 'worldmap.svg';
+        const svgUrl = `${process.env.PUBLIC_URL || ''}/assets/images/${svgFile}`;
         // Use default cache to allow browser caching for faster subsequent loads
         const res = await fetch(svgUrl);
         if (!res.ok) {
@@ -1511,12 +1560,19 @@ const MenuManager = () => {
           throw new Error('SVG content is empty');
         }
         if (!cancelled) {
+          // Reset map state to force re-mount of SVG
+          setMapLoaded(false);
           setMapSvgContent(svgText);
           setMapError('');
-          setMapLoaded(true);
+          // Small delay to ensure DOM updates
+          setTimeout(() => {
+            if (!cancelled) {
+              setMapLoaded(true);
+            }
+          }, 50);
         }
       } catch (err) {
-        console.warn('Failed to load world map SVG', err);
+        console.warn(`Failed to load ${mapType} map SVG`, err);
         if (!cancelled) {
           setMapSvgContent('');
           setMapError('Map failed to load. Please refresh the page.');
@@ -1529,7 +1585,7 @@ const MenuManager = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mapType]);
 
   // Update highlights via direct DOM manipulation - never re-render SVG
   const refreshMapHighlights = useCallback(() => {
@@ -1928,7 +1984,8 @@ const MenuManager = () => {
         order: Number.isFinite(normalizedOrder) ? normalizedOrder : 0,
         category: targetCategory,
         name: cocktailData.name, // Name is needed for the form
-        regions: cocktailData.regions || selectedRegions || [] // Regions - empty array is fine for new items
+        regions: cocktailData.regions || selectedRegions || [], // Regions - empty array is fine for new items
+        mapType: mapType // Save map type (world or us) with the cocktail
       }, { videoFile: videoUpload });
 
       // Ensure we never create a duplicate - if we have a valid _id, we MUST update
@@ -3263,18 +3320,45 @@ const MenuManager = () => {
                   mapRef={mapRef}
                   svgRef={svgRef}
                   onMapReady={handleMapReady}
+                  mapType={mapType}
                 />
               </div>
 
               <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '-60px', pointerEvents: 'auto', position: 'relative', zIndex: 1 }}>
-                  <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '6px' }}>Countries</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '0' }}>
+                      {mapType === 'us' ? 'States' : 'Countries'}
+                    </label>
+                    <select
+                      value={mapType}
+                      onChange={(e) => {
+                        setMapType(e.target.value);
+                        setCountryQuery('');
+                        setSelectedRegions([]);
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '0.85rem',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #d1d5db',
+                        background: 'white',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="world">World Map</option>
+                      <option value="us">US Map</option>
+                    </select>
+                  </div>
                   <input
                     type="text"
                     value={countryQuery}
                     onChange={(e) => setCountryQuery(e.target.value)}
                     onFocus={() => setFocusedField('countrySearch')}
                     onBlur={() => setFocusedField(null)}
-                    placeholder="Search countries..."
+                    placeholder={mapType === 'us' ? 'Search states...' : 'Search countries...'}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ 
                     fontFamily: 'Montserrat, sans-serif', 
@@ -3285,7 +3369,7 @@ const MenuManager = () => {
                   }}
                   />
                 <div style={{ maxHeight: '200px', overflow: 'auto', borderRadius: '8px', padding: '8px' }}>
-                  {filteredCountries.map((c) => {
+                  {filteredRegionsList.map((c) => {
                       const selected = selectedRegions.includes(c.code);
                       return (
                       <label
@@ -3310,8 +3394,10 @@ const MenuManager = () => {
                         </label>
                       );
                     })}
-                    {filteredCountries.length === 0 && (
-                      <div style={{ color: '#888', fontFamily: 'Montserrat, sans-serif' }}>No countries found</div>
+                    {filteredRegionsList.length === 0 && (
+                      <div style={{ color: '#888', fontFamily: 'Montserrat, sans-serif' }}>
+                        {mapType === 'us' ? 'No states found' : 'No countries found'}
+                      </div>
                     )}
                   </div>
                 <div style={{ 
@@ -3339,7 +3425,9 @@ const MenuManager = () => {
                       </span>
                     ))
                   ) : (
-                    <span style={{ color: '#000' }}>No countries selected</span>
+                    <span style={{ color: '#000' }}>
+                      {mapType === 'us' ? 'No states selected' : 'No countries selected'}
+                    </span>
                   )}
                   </div>
                   </div>
