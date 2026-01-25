@@ -67,8 +67,10 @@ function App() {
       const height = window.innerHeight;
       const aspectRatio = width / height;
       
-      // Mobile if width is small OR if it's a tablet/iPad (768px-1024px range)
-      const mobile = width <= 1024;
+      // Mobile if width is small AND in portrait orientation (height > width)
+      // Landscape mode (width > height) always uses desktop layout
+      const isLandscape = width > height;
+      const mobile = !isLandscape && width <= 1024;
       const smallScreen = width <= 1400;
       console.log('📱 App - Screen width:', width, 'height:', height, 'aspectRatio:', aspectRatio, 'Mobile:', mobile, 'SmallScreen:', smallScreen);
       setIsMobile(mobile);

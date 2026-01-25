@@ -39,8 +39,10 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
       const height = window.innerHeight;
       const aspectRatio = width / height;
       
-      // Mobile if width is small OR if it's a portrait phone with small width
-      const mobile = width <= 768 || (width <= 1024 && aspectRatio < 1.2);
+      // Mobile if width is small AND in portrait orientation (height > width)
+      // Landscape mode (width > height) always uses desktop layout
+      const isLandscape = width > height;
+      const mobile = !isLandscape && (width <= 768 || (width <= 1024 && aspectRatio < 1.2));
       const smallScreen = width <= 1400;
       console.log('📱 Screen width:', width, 'height:', height, 'aspectRatio:', aspectRatio, 'Mobile:', mobile, 'SmallScreen:', smallScreen);
       setIsMobile(mobile);

@@ -625,6 +625,42 @@ const Home = forwardRef((props, ref) => {
             }}
             onClick={() => setDropdownOpen(false)}
           >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(false);
+              }}
+              style={{
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                width: '56px',
+                height: '56px',
+                borderRadius: 8,
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                minWidth: '56px',
+                minHeight: '56px',
+                zIndex: 1002,
+              }}
+              aria-label="Close navigation"
+            >
+              <span style={{
+                fontSize: '32px',
+                color: '#888',
+                fontWeight: 300,
+                lineHeight: 1,
+                transition: 'color 0.2s ease',
+              }}>×</span>
+            </button>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
