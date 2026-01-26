@@ -369,6 +369,12 @@ const MenuManager = () => {
     file: null,
     itemNumber: null
   });
+  const [notificationModal, setNotificationModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    type: 'info' // 'info', 'success', 'warning', 'error'
+  });
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -918,6 +924,22 @@ const MenuManager = () => {
     }
   };
 
+  // Helper function to show notification modal instead of browser alert
+  const showNotification = (message, type = 'info', title = '') => {
+    const defaultTitles = {
+      success: 'Success',
+      error: 'Error',
+      warning: 'Warning',
+      info: 'Notice'
+    };
+    setNotificationModal({
+      show: true,
+      title: title || defaultTitles[type] || 'Notice',
+      message,
+      type
+    });
+  };
+
   const buildCocktailFormData = async (data, options = {}) => {
     const formData = new FormData();
     formData.append('name', data.name);
@@ -954,7 +976,7 @@ const MenuManager = () => {
     // Get itemNumber for processing
     const itemNumber = editingCocktail?.itemNumber || currentCocktail?.itemNumber;
     if (!itemNumber) {
-      alert('Please save the item first to get an item number.');
+      showNotification('Please save the item first to get an item number.', 'warning');
       return;
     }
     
@@ -982,11 +1004,11 @@ const MenuManager = () => {
     switch (option) {
       case 'process':
         if (isRenderSite) {
-          alert('Video processing on local site only');
+          showNotification('Video processing on local site only', 'warning');
           return;
         }
         if (!workerStatus?.online) {
-          alert('Local worker is offline. Start the worker + tunnel first, then try again.');
+          showNotification('Local worker is offline. Start the worker + tunnel first, then try again.', 'warning');
           return;
         }
         await handleProcessVideo(file, itemNumber);
@@ -1845,7 +1867,7 @@ const MenuManager = () => {
 
     // Only require name for all categories - other fields can be added later
     if (!cocktailData.name || !cocktailData.name.trim()) {
-      alert('Please enter a name for the item.');
+      showNotification('Please enter a name for the item.', 'warning');
       return;
     }
 
@@ -1948,7 +1970,7 @@ const MenuManager = () => {
                     itemNumber: cocktailData.itemNumber,
                     sheetKey: sheetKey
                   });
-                  alert(`Warning: Could not find inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`);
+                  showNotification(`Could not find inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
                 }
               }
                 
@@ -1986,7 +2008,7 @@ const MenuManager = () => {
         } catch (inventoryError) {
           console.error('Error saving to inventory:', inventoryError);
           // Don't fail the whole save if inventory save fails, but warn user
-          alert(`Warning: Could not save to inventory: ${inventoryError.message}. Cocktail will still be saved.`);
+          showNotification(`Could not save to inventory: ${inventoryError.message}. Cocktail will still be saved.`, 'warning');
         }
       }
       
@@ -2051,7 +2073,7 @@ const MenuManager = () => {
             : typeof error === 'string' 
               ? error 
               : error?.message || String(error);
-          alert(`Map snapshot could not be saved: ${errorMessage}. The item was saved successfully.`);
+          showNotification(`Map snapshot could not be saved: ${errorMessage}. The item was saved successfully.`, 'warning');
         }
       } else if (!isPremix) {
         // Warn if we couldn't save map due to missing itemNumber
@@ -2142,7 +2164,7 @@ const MenuManager = () => {
         } catch (recipeError) {
           console.error('Error saving recipe:', recipeError);
           // Don't fail the whole save if recipe save fails
-          alert(`Cocktail saved, but recipe save failed: ${recipeError.message}`);
+          showNotification(`Cocktail saved, but recipe save failed: ${recipeError.message}`, 'warning');
         } finally {
           setSavingRecipe(false);
         }
@@ -2195,11 +2217,11 @@ const MenuManager = () => {
         setCurrentIndex(0);
       }
       
-      alert(`Cocktail ${isNew ? 'created' : 'updated'} successfully!`);
+      showNotification(`Cocktail ${isNew ? 'created' : 'updated'} successfully!`, 'success');
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error saving cocktail:', error);
-      alert(`Error saving cocktail: ${error.message}`);
+      showNotification(`Error saving cocktail: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -2253,10 +2275,10 @@ const MenuManager = () => {
         setEditingCocktail(null);
       }
       fetchCocktails();
-      alert(`${cocktail.name} archived. It can be restored from the Archived section.`);
+      showNotification(`${cocktail.name} archived. It can be restored from the Archived section.`, 'success');
     } catch (error) {
       console.error('Error archiving cocktail:', error);
-      alert(`Error archiving item: ${error.message}`);
+      showNotification(`Error archiving item: ${error.message}`, 'error');
     }
   };
 
@@ -2266,10 +2288,10 @@ const MenuManager = () => {
     try {
       await apiCall(`/menu-items/${cocktail._id}/restore`, { method: 'POST' });
       fetchCocktails();
-      alert(`${cocktail.name} restored to the ${cocktail.category?.toUpperCase()} section.`);
+      showNotification(`${cocktail.name} restored to the ${cocktail.category?.toUpperCase()} section.`, 'success');
     } catch (error) {
       console.error('Error restoring cocktail:', error);
-      alert(`Error restoring item: ${error.message}`);
+      showNotification(`Error restoring item: ${error.message}`, 'error');
     }
   };
 
@@ -2642,6 +2664,34 @@ const MenuManager = () => {
                 }}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {notificationModal.show && (
+        <div className="delete-modal">
+          <div className="delete-modal-content">
+            <p className="delete-warning">{notificationModal.title}</p>
+            <p className="delete-question">{notificationModal.message}</p>
+            <div className="delete-modal-actions" style={{ flexDirection: 'column', gap: '0.5rem', width: '100%', alignItems: 'stretch' }}>
+              <button
+                type="button"
+                onClick={() => setNotificationModal({ show: false, title: '', message: '', type: 'info' })}
+                style={{
+                  width: '100%',
+                  background: notificationModal.type === 'error' ? '#dc2626' : notificationModal.type === 'success' ? '#16a34a' : notificationModal.type === 'warning' ? '#d97706' : '#374151',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.35rem 0.9rem',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                OK
               </button>
             </div>
           </div>
@@ -3362,10 +3412,11 @@ const MenuManager = () => {
                         fontSize: '0.85rem',
                         padding: '4px 8px',
                         borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        background: 'white',
+                        border: 'none',
+                        background: 'transparent',
                         cursor: 'pointer',
-                        outline: 'none'
+                        outline: 'none',
+                        marginLeft: '46px'
                       }}
                     >
                       <option value="world">World Map</option>
