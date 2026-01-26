@@ -1706,7 +1706,7 @@ function EchoCocktailSubpage2({
           <div
             style={{
               display: 'flex',
-              justifyContent: isVertical ? 'flex-end' : 'center',
+              justifyContent: 'flex-end',
               alignItems: 'center',
               opacity: countriesVisible[4] ? 1 : 0,
               transition: countriesVisible[4] ? 'opacity 1.2s ease-out' : 'none',
