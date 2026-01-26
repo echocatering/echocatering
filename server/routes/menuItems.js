@@ -1298,6 +1298,102 @@ router.post('/map/:itemNumber',
   }
 );
 
+// Helper function to handle cocktail updates (shared between POST redirect and PUT)
+const handleCocktailUpdate = async (req, res, cocktail) => {
+  try {
+    const itemId = req.body.itemId || req.itemId || cocktail.itemId;
+    const payload = buildCocktailPayload(req.body);
+    
+    // Merge payload with existing cocktail data
+    const merged = {
+      name: payload.name || cocktail.name,
+      concept: payload.concept || cocktail.concept,
+      ingredients: cocktail.ingredients || '',
+      globalIngredients: cocktail.globalIngredients || '',
+      garnish: cocktail.garnish || '',
+      category: payload.category || normalizeCategory(cocktail.category) || cocktail.category,
+      regions: payload.regions?.length ? payload.regions : cocktail.regions,
+      featured: typeof payload.featured === 'boolean' ? payload.featured : cocktail.featured,
+      order: payload.order ?? cocktail.order
+    };
+
+    const validationErrors = validatePayload(merged, { 
+      requireRegions: false, 
+      requireConcept: false, 
+      requireIngredients: false 
+    });
+    if (validationErrors.length) {
+      cleanupUploadedFiles(req.files);
+      return res.status(400).json({ message: 'Validation failed', errors: validationErrors });
+    }
+
+    const videoFile = req.files?.video?.[0];
+
+    // Update itemId if missing
+    if (!cocktail.itemId && itemId) {
+      cocktail.itemId = itemId;
+    }
+    
+    const resolvedItemNumber = Number.isFinite(req.body.itemNumber)
+      ? req.body.itemNumber
+      : parseItemNumber(itemId);
+    if (Number.isFinite(resolvedItemNumber) && cocktail.itemNumber !== resolvedItemNumber) {
+      cocktail.itemNumber = resolvedItemNumber;
+    }
+
+    cocktail.name = merged.name;
+    cocktail.concept = merged.concept;
+    cocktail.ingredients = merged.ingredients;
+    cocktail.globalIngredients = merged.globalIngredients;
+    cocktail.garnish = merged.garnish;
+    cocktail.category = merged.category;
+    cocktail.regions = merged.regions;
+    cocktail.featured = merged.featured;
+    cocktail.order = merged.order;
+
+    // Handle video file if uploaded
+    if (videoFile) {
+      const uploadedFilePath = path.join(videoDir, videoFile.filename);
+      if (fs.existsSync(uploadedFilePath)) {
+        try {
+          const optimizationResult = await optimizeVideo(uploadedFilePath);
+          if (optimizationResult.success && !optimizationResult.skipped) {
+            console.log(`   🎬 Video optimized: ${optimizationResult.message}`);
+          }
+        } catch (optError) {
+          console.warn(`   ⚠️  Video optimization failed (continuing anyway):`, optError.message);
+        }
+        
+        // Delete old video if different
+        if (cocktail.videoFile && cocktail.videoFile !== videoFile.filename) {
+          const oldVideoPath = path.join(videoDir, cocktail.videoFile);
+          try {
+            if (fs.existsSync(oldVideoPath)) {
+              fs.unlinkSync(oldVideoPath);
+            }
+          } catch (err) {
+            console.warn(`   ⚠️  Failed to delete old video:`, err.message);
+          }
+        }
+        cocktail.videoFile = videoFile.filename;
+      }
+    }
+
+    await cocktail.save();
+    console.log(`✅ Updated cocktail with itemId: ${itemId}, itemNumber: ${cocktail.itemNumber}`);
+    res.json(cocktail);
+  } catch (error) {
+    console.error('Update cocktail error:', error);
+    cleanupUploadedFiles(req.files);
+    const errorMessage = error.code === 11000 
+      ? 'Duplicate item - an item with this name or ID already exists'
+      : error.name === 'ValidationError'
+        ? `Validation error: ${Object.values(error.errors || {}).map(e => e.message).join(', ')}`
+        : error.message || 'Server error';
+    res.status(500).json({ message: errorMessage });
+  }
+};
+
 // @route   POST /api/menu-items
 // @desc    Create new menu item
 // @access  Private (Editor)
@@ -1314,6 +1410,24 @@ router.post('/',
       const itemNumber = Number.isFinite(req.body.itemNumber)
         ? req.body.itemNumber
         : parseItemNumber(itemId);
+      
+      // Check if a cocktail with this itemNumber already exists
+      // This can happen if a previous save failed after creating the inventory row
+      if (itemNumber && Number.isFinite(itemNumber)) {
+        const existingCocktail = await Cocktail.findOne({ itemNumber });
+        if (existingCocktail) {
+          console.log(`⚠️ Found existing cocktail with itemNumber ${itemNumber}, redirecting to update`);
+          // Redirect to PUT endpoint logic - update instead of create
+          req.params = { id: existingCocktail._id.toString() };
+          req.existingCocktail = existingCocktail;
+          req.body.itemId = existingCocktail.itemId || itemId;
+          req.body.itemNumber = itemNumber;
+          req.itemId = existingCocktail.itemId || itemId;
+          req.itemNumber = itemNumber;
+          // Continue to update logic below
+          return handleCocktailUpdate(req, res, existingCocktail);
+        }
+      }
       
       // Delete any existing files for this itemId/itemNumber (shouldn't happen, but safety check)
       deleteItemFiles(itemId, itemNumber);
@@ -1401,7 +1515,13 @@ router.post('/',
         const errorItemNumber = Number.isFinite(req.body.itemNumber) ? req.body.itemNumber : parseItemNumber(errorItemId);
         deleteItemFiles(errorItemId, errorItemNumber);
       }
-      res.status(500).json({ message: 'Server error' });
+      // Return more specific error message for debugging
+      const errorMessage = error.code === 11000 
+        ? 'Duplicate item - an item with this name or ID already exists'
+        : error.name === 'ValidationError'
+          ? `Validation error: ${Object.values(error.errors || {}).map(e => e.message).join(', ')}`
+          : error.message || 'Server error';
+      res.status(500).json({ message: errorMessage });
     }
   }
 );
