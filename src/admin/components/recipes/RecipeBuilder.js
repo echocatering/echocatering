@@ -1047,7 +1047,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
   const handleTitleChange = (value) => {
     // Use the ref to get the latest recipe to avoid stale closures
     const currentRecipe = recipeRef.current || recipe;
-    updateRecipe({ ...currentRecipe, title: value });
+    // Apply title case formatting
+    const formattedTitle = toTitleCase(value);
+    updateRecipe({ ...currentRecipe, title: formattedTitle });
   };
 
   const handleVideoChange = (field, value) => {

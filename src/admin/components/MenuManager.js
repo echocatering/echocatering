@@ -1570,7 +1570,7 @@ const MenuManager = () => {
     
     const loadSvg = async () => {
       try {
-        const svgFile = mapType === 'us' ? 'BLANK_US_MAP.svg' : 'worldmap.svg';
+        const svgFile = mapType === 'us' ? 'Blank_US_Map.svg' : 'worldmap.svg';
         const svgUrl = `${process.env.PUBLIC_URL || ''}/assets/images/${svgFile}`;
         // Use default cache to allow browser caching for faster subsequent loads
         const res = await fetch(svgUrl);
