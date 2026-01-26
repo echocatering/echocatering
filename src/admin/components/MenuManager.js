@@ -960,6 +960,10 @@ const MenuManager = () => {
     if (data.itemNumber && Number.isFinite(data.itemNumber)) {
       formData.append('itemNumber', String(data.itemNumber));
     }
+    // Append mapType for world/us map selection
+    if (data.mapType) {
+      formData.append('mapType', data.mapType);
+    }
 
     if (options.videoFile instanceof File) {
       formData.append('video', options.videoFile);

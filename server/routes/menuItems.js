@@ -485,7 +485,8 @@ const buildCocktailPayload = (body = {}) => {
     garnish: sanitizeText(body.garnish, 500),
     category: normalizeCategory(body.category),
     regions: parseRegions(body.regions),
-    featured: body.featured === 'true' || body.featured === true
+    featured: body.featured === 'true' || body.featured === true,
+    mapType: body.mapType === 'us' ? 'us' : 'world'
   };
 
   if (body.order !== undefined) {
@@ -1348,6 +1349,7 @@ const handleCocktailUpdate = async (req, res, cocktail) => {
     cocktail.garnish = merged.garnish;
     cocktail.category = merged.category;
     cocktail.regions = merged.regions;
+    cocktail.mapType = payload.mapType || cocktail.mapType || 'world';
     cocktail.featured = merged.featured;
     cocktail.order = merged.order;
 
@@ -1494,6 +1496,7 @@ router.post('/',
         globalIngredients: payload.globalIngredients || '',
         garnish: payload.garnish || '',
         regions: payload.regions || [],
+        mapType: payload.mapType || 'world',
         category: payload.category,
         featured: payload.featured || false,
         order: nextOrder,
@@ -1627,6 +1630,7 @@ router.put('/:id',
       cocktail.garnish = merged.garnish;
       cocktail.category = merged.category;
       cocktail.regions = merged.regions;
+      cocktail.mapType = payload.mapType || cocktail.mapType || 'world';
       cocktail.featured = merged.featured;
       cocktail.order = merged.order;
 

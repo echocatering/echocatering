@@ -74,6 +74,11 @@ const cocktailSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
+  mapType: {
+    type: String,
+    enum: ['world', 'us'],
+    default: 'world'
+  },
   category: {
     type: String,
     enum: SECTION_OPTIONS,
