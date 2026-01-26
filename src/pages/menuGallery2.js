@@ -1006,7 +1006,9 @@ function EchoCocktailSubpage2({
     setShowCategories(false);
 
     const count = countryDisplayList.length;
-    setCountriesVisible(new Array(count).fill(false));
+    // Limit visible count to 5 (4 countries + "..." indicator)
+    const visibleCount = Math.min(count, 5);
+    setCountriesVisible(new Array(visibleCount).fill(false));
 
     if (isVertical) {
       // Vertical view: controlled by info button
@@ -1019,10 +1021,10 @@ function EchoCocktailSubpage2({
         }, 400);
         animationTimeoutsRef.current.push(conceptMapTimeout);
 
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < visibleCount; i++) {
           const countryTimeout = setTimeout(() => {
             setCountriesVisible((prev) => {
-              if (prev.length !== count) return prev;
+              if (prev.length !== visibleCount) return prev;
               const next = [...prev];
               next[i] = true;
               return next;
@@ -1086,10 +1088,10 @@ function EchoCocktailSubpage2({
       animationTimeoutsRef.current.push(conceptTimeout);
 
       // Show countries in horizontal view
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < visibleCount; i++) {
       const countryTimeout = setTimeout(() => {
         setCountriesVisible((prev) => {
-          if (prev.length !== count) return prev;
+          if (prev.length !== visibleCount) return prev;
           const next = [...prev];
           next[i] = true;
           return next;
@@ -1675,7 +1677,7 @@ function EchoCocktailSubpage2({
         paddingLeft: countriesPaddingLeft,
         boxSizing: 'border-box'
       }}>
-        {countryDisplayList.map((entry, index) => (
+        {countryDisplayList.slice(0, 4).map((entry, index) => (
           <div
             key={`${entry.code}-${entry.name}`}
             style={{
@@ -1700,6 +1702,21 @@ function EchoCocktailSubpage2({
             )}
           </div>
         ))}
+        {countryDisplayList.length > 4 && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: isVertical ? 'flex-end' : 'center',
+              alignItems: 'center',
+              opacity: countriesVisible[4] ? 1 : 0,
+              transition: countriesVisible[4] ? 'opacity 1.2s ease-out' : 'none',
+              fontSize: countryFontSize,
+              lineHeight: 1.2,
+            }}
+          >
+            <span>...</span>
+          </div>
+        )}
       </div>
     );
   };
@@ -2312,11 +2329,12 @@ function EchoCocktailSubpage2({
 
                       // Countries normal staggered animation
                       const count = countryDisplayList.length;
-                      setCountriesVisible(new Array(count).fill(false));
-                      for (let i = 0; i < count; i++) {
+                      const visibleCount = Math.min(count, 5);
+                      setCountriesVisible(new Array(visibleCount).fill(false));
+                      for (let i = 0; i < visibleCount; i++) {
                         const countryTimeout = setTimeout(() => {
                           setCountriesVisible((prev) => {
-                            if (prev.length !== count) return prev;
+                            if (prev.length !== visibleCount) return prev;
                             const next = [...prev];
                             next[i] = true;
                             return next;
@@ -2438,7 +2456,8 @@ function EchoCocktailSubpage2({
               if (newValue) {
                 // Show concept, map, and countries with animations
                 const count = countryDisplayList.length;
-                setCountriesVisible(new Array(count).fill(false));
+                const visibleCount = Math.min(count, 5);
+                setCountriesVisible(new Array(visibleCount).fill(false));
 
                 // Hide title, ingredients, and garnish immediately
                 setTitleVisible(false);
@@ -2454,10 +2473,10 @@ function EchoCocktailSubpage2({
                 animationTimeoutsRef.current.push(conceptMapTimeout);
 
                 // Show countries with staggered animation
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < visibleCount; i++) {
                   const countryTimeout = setTimeout(() => {
                     setCountriesVisible((prev) => {
-                      if (prev.length !== count) return prev;
+                      if (prev.length !== visibleCount) return prev;
                       const next = [...prev];
                       next[i] = true;
                       return next;
@@ -2470,7 +2489,7 @@ function EchoCocktailSubpage2({
                 setConceptVisible(false);
                 setMapVisible(false);
                 setCountriesSidebarVisible(false);
-                setCountriesVisible(new Array(countryDisplayList.length).fill(false));
+                setCountriesVisible(new Array(Math.min(countryDisplayList.length, 5)).fill(false));
 
                 // Show title, ingredients, and garnish with animations
                 const titleTimeout = setTimeout(() => {
