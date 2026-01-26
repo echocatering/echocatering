@@ -3,6 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { buildCountryList, buildCountryMap, ISO_CODE_REGEX } from '../../shared/countryUtils';
 import countryAliasMap from '../../shared/countryAliasMap.json';
 import { US_STATES, STATE_NAME_TO_CODE, buildStateList, buildStateMap } from '../../shared/usStatesData';
+import { useAuth } from '../contexts/AuthContext';
+import RecipeBuilder from './recipes/RecipeBuilder';
+import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
+import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 // Helper to detect if regions contain US state codes
 const US_STATE_CODES = new Set(US_STATES.map(s => s.code));
@@ -12,10 +16,6 @@ const inferMapTypeFromRegions = (regions) => {
   const hasUSStates = regions.some(r => US_STATE_CODES.has(r?.toUpperCase?.()));
   return hasUSStates ? 'us' : 'world';
 };
-import { useAuth } from '../contexts/AuthContext';
-import RecipeBuilder from './recipes/RecipeBuilder';
-import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
-import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
  const isProbablyIOS = () => {
    if (typeof navigator === 'undefined') return false;
