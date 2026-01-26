@@ -1474,7 +1474,16 @@ const MenuManager = () => {
     return (
       <tr
         key={`${cocktail._id}-${resolvedIndex}`}
-        onClick={() => resolvedIndex >= 0 && setCurrentIndex(resolvedIndex)}
+        onClick={() => {
+          if (resolvedIndex >= 0) {
+            setCurrentIndex(resolvedIndex);
+            // Sync mapType when clicking on a cocktail row
+            const clickedCocktail = filteredCocktails[resolvedIndex];
+            if (clickedCocktail) {
+              setMapType(clickedCocktail.mapType || 'world');
+            }
+          }
+        }}
         className={`border-b border-gray-100 hover:bg-gray-50 ${
           isActiveRow ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
         }`}
@@ -1837,6 +1846,8 @@ const MenuManager = () => {
         activeCocktailIdRef.current = nextCocktail?._id || null;
         setRecipeLoading(false);
         setEditingCocktail({ ...nextCocktail });
+        // Sync mapType when switching cocktails
+        setMapType(nextCocktail.mapType || 'world');
         setRecipe(null);
       }
     }
