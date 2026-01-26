@@ -499,7 +499,7 @@ const InventoryManager = () => {
   const activeColumns = useMemo(() => {
     if (!sheetPayload?.columns) return [];
     // Columns to hide/show with the "Show hidden columns" button
-    const hideableColumnKeys = ['itemNumber', 'ingredients', 'concept', 'page'];
+    const hideableColumnKeys = ['itemNumber', 'ingredients', 'concept', 'page', 'mapType'];
     let columns = sheetPayload.columns;
     
     // Filter out hideable columns when showHiddenColumns is false

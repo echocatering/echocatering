@@ -14,7 +14,8 @@ const SHEET_DEFINITIONS = [
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
-      { key: 'page', label: 'Page', type: 'text', hidden: true }
+      { key: 'page', label: 'Page', type: 'text', hidden: true },
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
     ]
   },
   {
@@ -33,7 +34,8 @@ const SHEET_DEFINITIONS = [
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
-      { key: 'page', label: 'Page', type: 'text', hidden: true }
+      { key: 'page', label: 'Page', type: 'text', hidden: true },
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
     ]
   },
   {
@@ -79,7 +81,8 @@ const SHEET_DEFINITIONS = [
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
-      { key: 'page', label: 'Page', type: 'text', hidden: true }
+      { key: 'page', label: 'Page', type: 'text', hidden: true },
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
     ]
   },
   {
@@ -111,7 +114,8 @@ const SHEET_DEFINITIONS = [
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
-      { key: 'page', label: 'Page', type: 'text', hidden: true }
+      { key: 'page', label: 'Page', type: 'text', hidden: true },
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
     ]
   },
   {
@@ -189,7 +193,8 @@ const SHEET_DEFINITIONS = [
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
-      { key: 'page', label: 'Page', type: 'text', hidden: true }
+      { key: 'page', label: 'Page', type: 'text', hidden: true },
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
     ]
   }
 ];
@@ -240,7 +245,8 @@ const DATASET_DEFINITIONS = [
   { _id: 'drystock.type', label: 'Dry Stock Types', values: [] },
   { _id: 'premix.type', label: 'Pre-mix Types', values: [] },
   { _id: 'beer.type', label: 'Beer Types', values: [] },
-  { _id: 'shared.distributor', label: 'Distributors', values: [] }
+  { _id: 'shared.distributor', label: 'Distributors', values: [] },
+  { _id: 'shared.mapType', label: 'Map Types', values: [{ value: 'world', label: 'World' }, { value: 'us', label: 'US' }] }
 ];
 
 module.exports = {

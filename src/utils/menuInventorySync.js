@@ -121,6 +121,11 @@ export const extractSharedFieldsForInventory = (cocktailData, category) => {
     }
   }
   // regions array is already added above for cocktails/mocktails/wine/spirits/beer
+  
+  // mapType for world/us map selection
+  if ('mapType' in cocktailData) {
+    sharedFields.mapType = cocktailData.mapType;
+  }
 
   return sharedFields;
 };

@@ -819,6 +819,8 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
         // narrative stays in Cocktail model (not moved to Inventory)
         narrative: cocktail?.narrative || '',
         featured: cocktail?.featured || false,
+        // mapType from inventory (source of truth), fallback to cocktail model
+        mapType: values.mapType || cocktail?.mapType || 'world',
       itemId: cocktail?.itemId || (itemNumber ? `item${itemNumber}` : null),
       // Cloudinary media fields (ensure UI can render processed assets)
       ...buildCocktailMediaFields(cocktail)
