@@ -38,12 +38,28 @@ function formatSheet(sheet) {
   return doc;
 }
 
+// Fields that should always be saved to row values regardless of column definition
+const ALWAYS_SAVE_FIELDS = new Set([
+  'menuManagerId',
+  'menuManagerCategory', 
+  'recipeId',
+  'recipeType',
+  'mapType',
+  'regions',
+  'concept',
+  'videoFile',
+  'mapSnapshotFile',
+  'page',
+  'ingredients'
+]);
+
 function applyRowValues(row, values = {}, columnsByKey = {}) {
   if (!row?.values || typeof values !== 'object') {
     return;
   }
   Object.entries(values).forEach(([key, value]) => {
-    if (columnsByKey[key]) {
+    // Save if column exists OR if it's a metadata field that should always be saved
+    if (columnsByKey[key] || ALWAYS_SAVE_FIELDS.has(key)) {
       row.values.set(key, value);
     }
   });
