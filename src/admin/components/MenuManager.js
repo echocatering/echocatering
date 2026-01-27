@@ -1911,7 +1911,9 @@ const MenuManager = () => {
       const sheetKey = getSheetKeyFromCategory(targetCategory);
       if (sheetKey) {
         try {
-          const sharedFields = extractSharedFieldsForInventory(cocktailData, targetCategory);
+          // Include mapType from component state in cocktailData for inventory sync
+          const cocktailDataWithMapType = { ...cocktailData, mapType };
+          const sharedFields = extractSharedFieldsForInventory(cocktailDataWithMapType, targetCategory);
           // For new items, we only need name - other fields can be empty
           if (sharedFields && sharedFields.name) {
             if (isNew) {
