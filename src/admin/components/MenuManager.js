@@ -448,10 +448,15 @@ const MenuManager = () => {
       const categoryKey = normalizeCategoryKey(urlCategory);
       setSelectedCategory(categoryKey);
       
-      // Find item by itemNumber (preferred) or itemId/name (fallback)
+      // Filter cocktails the same way as filteredCocktails to get correct index
       const categoryFiltered = cocktails.filter(c => {
         const cat = normalizeCategoryKey(c.category);
-        return cat === categoryKey;
+        if (categoryKey === 'archived') {
+          return c.status === 'archived';
+        }
+        const isActive = c.status !== 'archived' && (c.isActive !== false);
+        const categoryMatches = cat === categoryKey;
+        return isActive && categoryMatches;
       });
       
       let targetIndex = -1;
