@@ -1,4 +1,5 @@
 import countryAliasMap from './countryAliasMap.json';
+import { US_STATES } from './usStatesData';
 
 const ISO_CODE_REGEX = /^[A-Za-z]{2}$/;
 
@@ -212,17 +213,40 @@ const getCountryNameFromCode = (code) => {
   return commonCountries[upper] || upper;
 };
 
-export const getCountryDisplayList = (cocktail) => {
+// Create a map of US state codes to names
+const US_STATE_CODE_TO_NAME = Object.fromEntries(
+  US_STATES.map(s => [s.code, s.name])
+);
+
+// Helper to get name from code based on mapType
+const getNameFromCode = (code, mapType) => {
+  const upper = String(code || '').toUpperCase();
+  
+  // If mapType is 'us', check US states first
+  if (mapType === 'us' && US_STATE_CODE_TO_NAME[upper]) {
+    return US_STATE_CODE_TO_NAME[upper];
+  }
+  
+  // Otherwise use country lookup
+  return getCountryNameFromCode(upper);
+};
+
+export const getCountryDisplayList = (cocktail, mapType) => {
   if (!cocktail) return [];
+  
+  // Determine mapType from cocktail if not provided
+  const resolvedMapType = mapType || cocktail.mapType || 'world';
   
   // First, try to use the countries array if it exists
   if (Array.isArray(cocktail.countries) && cocktail.countries.length) {
-    const result = formatCountryList(cocktail.countries);
-    // Debug: log if names are missing
-    result.forEach(entry => {
-      if (entry.name === entry.code) {
-        console.warn(`[countryUtils] Country ${entry.code} has no name, looked up: ${getCountryNameFromCode(entry.code)}`);
-      }
+    const result = cocktail.countries.map(entry => {
+      const code = String(entry.code || '').toUpperCase();
+      const providedName = entry.name || entry.title;
+      // Use provided name, or look up based on mapType
+      const name = (providedName && providedName !== code) 
+        ? providedName 
+        : getNameFromCode(code, resolvedMapType);
+      return { code, name };
     });
     return result;
   }
@@ -234,18 +258,14 @@ export const getCountryDisplayList = (cocktail) => {
       ? cocktail.regions
       : [];
 
-  // Deduplicate fallback codes and look up country names
+  // Deduplicate fallback codes and look up names based on mapType
   const byCode = new Map();
   fallbackCodes.forEach((code) => {
     const upper = String(code || '').toUpperCase();
     if (!upper) return;
     // Only add if we haven't seen this code before (deduplicate)
     if (!byCode.has(upper)) {
-      const lookedUpName = getCountryNameFromCode(upper);
-      // Debug: log if lookup failed
-      if (lookedUpName === upper) {
-        console.warn(`[countryUtils] Could not find country name for code: ${upper}`);
-      }
+      const lookedUpName = getNameFromCode(upper, resolvedMapType);
       byCode.set(upper, {
         code: upper,
         name: lookedUpName
