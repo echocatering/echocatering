@@ -8,14 +8,6 @@ import RecipeBuilder from './recipes/RecipeBuilder';
 import { extractSharedFieldsForInventory, extractMenuManagerOnlyFields, getSheetKeyFromCategory } from '../../utils/menuInventorySync';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
-// Helper to detect if regions contain US state codes
-const US_STATE_CODES = new Set(US_STATES.map(s => s.code));
-const inferMapTypeFromRegions = (regions) => {
-  if (!regions || !Array.isArray(regions) || regions.length === 0) return 'world';
-  // Check if any region is a US state code
-  const hasUSStates = regions.some(r => US_STATE_CODES.has(r?.toUpperCase?.()));
-  return hasUSStates ? 'us' : 'world';
-};
 
  const isProbablyIOS = () => {
    if (typeof navigator === 'undefined') return false;
@@ -750,9 +742,8 @@ const MenuManager = () => {
           }
           return { ...fallback };
         });
-        // Sync mapType from loaded cocktail data (infer from regions if not saved)
-        const resolvedMapType = fallback.mapType || inferMapTypeFromRegions(fallback.regions);
-        setMapType(resolvedMapType);
+        // Sync mapType from loaded cocktail data (use saved value or default to 'world')
+        setMapType(fallback.mapType || 'world');
         setVideoUpload(null);
         setVideoPreviewUrl(prev => {
           if (prev) {
@@ -1488,11 +1479,10 @@ const MenuManager = () => {
         onClick={() => {
           if (resolvedIndex >= 0) {
             setCurrentIndex(resolvedIndex);
-            // Sync mapType when clicking on a cocktail row (infer from regions if not saved)
+            // Sync mapType when clicking on a cocktail row (use saved value or default to 'world')
             const clickedCocktail = filteredCocktails[resolvedIndex];
             if (clickedCocktail) {
-              const resolvedMapType = clickedCocktail.mapType || inferMapTypeFromRegions(clickedCocktail.regions);
-              setMapType(resolvedMapType);
+              setMapType(clickedCocktail.mapType || 'world');
             }
           }
         }}
@@ -1858,9 +1848,8 @@ const MenuManager = () => {
         activeCocktailIdRef.current = nextCocktail?._id || null;
         setRecipeLoading(false);
         setEditingCocktail({ ...nextCocktail });
-        // Sync mapType when switching cocktails (infer from regions if not saved)
-        const resolvedMapType = nextCocktail.mapType || inferMapTypeFromRegions(nextCocktail.regions);
-        setMapType(resolvedMapType);
+        // Sync mapType when switching cocktails (use saved value or default to 'world')
+        setMapType(nextCocktail.mapType || 'world');
         setRecipe(null);
       }
     }
