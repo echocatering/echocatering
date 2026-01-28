@@ -821,6 +821,8 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
         featured: cocktail?.featured || false,
         // mapType from inventory (source of truth), fallback to cocktail model
         mapType: values.mapType || cocktail?.mapType || 'world',
+      // DEBUG: Log mapType resolution
+      _debug_mapType: { inventoryMapType: values.mapType, cocktailMapType: cocktail?.mapType, resolved: values.mapType || cocktail?.mapType || 'world' },
       itemId: cocktail?.itemId || (itemNumber ? `item${itemNumber}` : null),
       // Cloudinary media fields (ensure UI can render processed assets)
       ...buildCocktailMediaFields(cocktail)
