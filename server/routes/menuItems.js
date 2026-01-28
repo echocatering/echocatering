@@ -9,6 +9,29 @@ const InventorySheet = require('../models/InventorySheet');
 const Recipe = require('../models/Recipe');
 const { authenticateToken, requireEditor } = require('../middleware/auth');
 const { isValidCountryCode, getCountryByCode } = require('../utils/countries');
+
+// US States lookup for mapType='us'
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
+  { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'DC', name: 'District of Columbia' },
+  { code: 'FL', name: 'Florida' }, { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' },
+  { code: 'ID', name: 'Idaho' }, { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' },
+  { code: 'IA', name: 'Iowa' }, { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' },
+  { code: 'LA', name: 'Louisiana' }, { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' }, { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' },
+  { code: 'MS', name: 'Mississippi' }, { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' },
+  { code: 'NE', name: 'Nebraska' }, { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' },
+  { code: 'NJ', name: 'New Jersey' }, { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' }, { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' },
+  { code: 'OK', name: 'Oklahoma' }, { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' },
+  { code: 'RI', name: 'Rhode Island' }, { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' },
+  { code: 'TN', name: 'Tennessee' }, { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' }, { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' },
+  { code: 'WV', name: 'West Virginia' }, { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }
+];
+const US_STATE_CODE_TO_NAME = Object.fromEntries(US_STATES.map(s => [s.code, s.name]));
+const getStateNameByCode = (code) => US_STATE_CODE_TO_NAME[String(code).toUpperCase()] || null;
 const {
   ensureUploadDirs,
   videoDir,
@@ -1053,7 +1076,6 @@ router.get('/menu-gallery', async (req, res) => {
       if (!category || !menuGalleryData[category]) continue;
 
         const key = `item-${itemNumber}`;
-        const { codes, countries } = normalizeCountries(values.region);
 
         menuGalleryData[category].videoFiles.push(key);
         
@@ -1067,6 +1089,27 @@ router.get('/menu-gallery', async (req, res) => {
       const mapSnapshotFileFromDb = cocktailFromDb?.mapSnapshotFile || null;
       const cloudinaryVideoUrlValue = mediaFromDb.cloudinaryVideoUrl || null;
       const cloudinaryMapSnapshotUrlValue = mediaFromDb.cloudinaryMapSnapshotUrl || null;
+      
+      // Determine mapType FIRST so we can use it for country/state name lookup
+      const resolvedMapType = values.mapType || cocktailFromDb?.mapType || 'world';
+      
+      // Now normalize countries/states with mapType awareness
+      const codes = String(values.region || '')
+        .split(',')
+        .map((c) => c.trim().toUpperCase())
+        .filter(Boolean);
+      const countries = codes.map((code) => {
+        // If mapType is 'us', look up US state names first
+        if (resolvedMapType === 'us') {
+          const stateName = getStateNameByCode(code);
+          if (stateName) {
+            return { code, name: stateName };
+          }
+        }
+        // Otherwise use country lookup
+        const meta = getCountryByCode(code);
+        return { code, name: meta?.name || code };
+      });
       
       // Determine videoUrl (Cloudinary preferred)
       let videoUrl = mediaFromDb.videoUrl || `/menu-items/${itemNumber}.mp4`;
