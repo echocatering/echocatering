@@ -1058,7 +1058,7 @@ router.get('/menu-gallery', async (req, res) => {
       // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl and cloudinaryMapSnapshotUrl
       // This bypasses any map/caching issues
       const cocktailFromDb = await Cocktail.findOne({ itemNumber: itemNumber })
-        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId').lean();
+        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId mapType').lean();
       
       const mediaFromDb = buildCocktailMediaFields(cocktailFromDb);
       const videoFileFromDb = cocktailFromDb?.videoFile || null;
@@ -1096,7 +1096,9 @@ router.get('/menu-gallery', async (req, res) => {
           cloudinaryIconUrl: mediaFromDb.cloudinaryIconUrl || null,
           cloudinaryIconPublicId: mediaFromDb.cloudinaryIconPublicId || null,
           cloudinaryMapSnapshotPublicId: mediaFromDb.cloudinaryMapSnapshotPublicId || null,
-          category
+          category,
+          // Include mapType for US/world map display (defaults to 'world')
+          mapType: values.mapType || cocktailFromDb?.mapType || 'world'
         };
       
       // Store it
