@@ -1091,7 +1091,9 @@ router.get('/menu-gallery', async (req, res) => {
       const cloudinaryMapSnapshotUrlValue = mediaFromDb.cloudinaryMapSnapshotUrl || null;
       
       // Determine mapType FIRST so we can use it for country/state name lookup
-      const resolvedMapType = values.mapType || cocktailFromDb?.mapType || 'world';
+      // Normalize to lowercase since inventory may store 'Us' instead of 'us'
+      const rawMapType = values.mapType || cocktailFromDb?.mapType || 'world';
+      const resolvedMapType = String(rawMapType).toLowerCase();
       
       // DEBUG: Log mapType resolution for troubleshooting
       if (values.name && values.name.toLowerCase().includes('rose')) {
