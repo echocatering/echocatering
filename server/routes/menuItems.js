@@ -1093,6 +1093,17 @@ router.get('/menu-gallery', async (req, res) => {
       // Determine mapType FIRST so we can use it for country/state name lookup
       const resolvedMapType = values.mapType || cocktailFromDb?.mapType || 'world';
       
+      // DEBUG: Log mapType resolution for troubleshooting
+      if (values.name && values.name.toLowerCase().includes('rose')) {
+        console.log(`[menu-gallery] Rose Shirley mapType debug:`, {
+          name: values.name,
+          inventoryMapType: values.mapType,
+          cocktailDbMapType: cocktailFromDb?.mapType,
+          resolvedMapType,
+          regionCodes: values.region
+        });
+      }
+      
       // Now normalize countries/states with mapType awareness
       const codes = String(values.region || '')
         .split(',')
