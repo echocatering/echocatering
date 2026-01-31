@@ -332,6 +332,16 @@ app.get('/api/square/test', async (req, res) => {
 // Creates a Square Order and Payment from tab data
 app.post('/api/square/checkout', async (req, res) => {
   try {
+    // Check for Square credentials first
+    if (!process.env.SQUARE_ACCESS_TOKEN) {
+      console.error('[Square Checkout] SQUARE_ACCESS_TOKEN not configured');
+      return res.status(503).json({ 
+        success: false,
+        error: 'Square not configured', 
+        message: 'Square API credentials are not configured. Please add SQUARE_ACCESS_TOKEN to environment variables.' 
+      });
+    }
+
     const { tabId, tabName, items, total } = req.body;
     
     // Validate required fields
@@ -451,11 +461,18 @@ app.post('/api/square/checkout', async (req, res) => {
 
   } catch (error) {
     console.error('[Square Checkout] Error:', error);
+    console.error('[Square Checkout] Error stack:', error.stack);
+    console.error('[Square Checkout] Error stringified:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     // Extract meaningful error message from Square API errors
     let errorMessage = error.message || 'Payment processing failed';
     if (error.errors && Array.isArray(error.errors)) {
       errorMessage = error.errors.map(e => e.detail || e.code).join(', ');
+    }
+    
+    // Check for missing Square credentials
+    if (!process.env.SQUARE_ACCESS_TOKEN) {
+      errorMessage = 'Square API credentials not configured';
     }
     
     res.status(500).json({ 

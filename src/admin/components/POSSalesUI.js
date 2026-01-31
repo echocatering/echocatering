@@ -78,31 +78,47 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const [selectedModifiers, setSelectedModifiers] = useState([]); // Selected modifiers during ordering
   const longPressTimerRef = useRef(null);
   const longPressTriggeredRef = useRef(false);
-  const isTouchRef = useRef(false); // Track if current interaction is touch to prevent double-fire
+  const pressHandledRef = useRef(false); // Track if current press has been handled to prevent double-fire
+  const resetHandledTimeoutRef = useRef(null);
   
   // Handle item long-press start (for editing flow)
   const handleItemPressStart = useCallback((item, e) => {
-    // Track if this is a touch event
-    isTouchRef.current = e.type === 'touchstart';
-    e.preventDefault();
+    // Don't reset pressHandledRef here - it will be reset after a delay in handleItemPressEnd
+    // This prevents the double-fire issue where touch events fire, then mouse events fire
+    
+    // Only start long-press timer if not already handled
+    if (pressHandledRef.current) {
+      return;
+    }
+    
     longPressTriggeredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
       longPressTriggeredRef.current = true;
+      pressHandledRef.current = true; // Mark as handled
       setEditingItem(item);
+      
+      // Reset after a delay
+      setTimeout(() => {
+        pressHandledRef.current = false;
+      }, 300);
     }, 500); // 500ms for long-press
   }, []);
   
   // Handle item press end
   const handleItemPressEnd = useCallback((item, e) => {
-    // Prevent mouse events from firing after touch events
-    if (e && e.type === 'mouseup' && isTouchRef.current) {
+    // If already handled (by long-press or previous event), skip
+    if (pressHandledRef.current) {
       return;
     }
+    
+    // Mark as handled immediately to prevent double-fire
+    pressHandledRef.current = true;
     
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    
     // If long-press wasn't triggered, treat as tap (ordering flow)
     if (!longPressTriggeredRef.current) {
       const itemModifiers = item.modifiers || [];
@@ -118,10 +134,14 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
       }
     }
     
-    // Reset touch tracking after a short delay
-    setTimeout(() => {
-      isTouchRef.current = false;
-    }, 100);
+    // Reset the handled flag after 300ms to allow the next press
+    // This prevents mouse events from firing after touch events
+    if (resetHandledTimeoutRef.current) {
+      clearTimeout(resetHandledTimeoutRef.current);
+    }
+    resetHandledTimeoutRef.current = setTimeout(() => {
+      pressHandledRef.current = false;
+    }, 300);
   }, [onItemClick]);
   
   // Handle item click with flash effect (legacy, kept for compatibility)
@@ -414,7 +434,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     }}
                   />
                 </div>
-                {/* S# on right */}
+                {/* P# on right */}
                 <span style={{
                   color: '#800080',
                   fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
@@ -974,14 +994,14 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         justifyContent: 'center',
         boxShadow: '0 -1px 3px rgba(0,0,0,0.1)'
       }}>
-        {/* Top row - Tab S# left, TOTAL right */}
+        {/* Top row - Tab P# left, TOTAL right */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 8px'
         }}>
-          {/* Tab S# - top left, with custom name to the right if exists */}
+          {/* Tab P# - top left, with custom name to the right if exists */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1, marginRight: '12px' }}>
             {activeTabId && tabs.find(t => t.id === activeTabId) && (
               <>
@@ -1915,7 +1935,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const handleCreateTab = useCallback(() => {
     const newTab = {
       id: `tab-${Date.now()}`,
-      name: `S${nextTabNumber}`,
+      name: `P${nextTabNumber}`,
       items: []
     };
     setTabs(prev => [newTab, ...prev]);
@@ -2150,7 +2170,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     if (!targetTabId) {
       const newTab = {
         id: `tab-${Date.now()}`,
-        name: `S${nextTabNumber}`,
+        name: `P${nextTabNumber}`,
         items: []
       };
       setTabs(prev => [...prev, newTab]);
@@ -2498,7 +2518,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '8px 16px',
+                padding: '6px 12px',
                 fontSize: '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
@@ -2506,6 +2526,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 opacity: showEndEventButton ? 1 : 0,
                 transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
                 pointerEvents: showEndEventButton ? 'auto' : 'none',
+                whiteSpace: 'nowrap',
               }}
             >
               END EVENT

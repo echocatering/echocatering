@@ -15,5 +15,7 @@ services:
       # - CLOUDINARY_CLOUD_NAME (REQUIRED - all assets use Cloudinary)
       # - CLOUDINARY_API_KEY (REQUIRED - all assets use Cloudinary)
       # - CLOUDINARY_API_SECRET (REQUIRED - all assets use Cloudinary)
+      # - SQUARE_ACCESS_TOKEN (REQUIRED for POS checkout)
+      # - SQUARE_ENV (set to 'sandbox' or 'production')
       # - ALLOWED_ORIGINS (optional - comma-separated list of allowed origins)
 
