@@ -78,9 +78,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const [selectedModifiers, setSelectedModifiers] = useState([]); // Selected modifiers during ordering
   const longPressTimerRef = useRef(null);
   const longPressTriggeredRef = useRef(false);
+  const isTouchRef = useRef(false); // Track if current interaction is touch to prevent double-fire
   
   // Handle item long-press start (for editing flow)
   const handleItemPressStart = useCallback((item, e) => {
+    // Track if this is a touch event
+    isTouchRef.current = e.type === 'touchstart';
     e.preventDefault();
     longPressTriggeredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
@@ -90,7 +93,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   }, []);
   
   // Handle item press end
-  const handleItemPressEnd = useCallback((item) => {
+  const handleItemPressEnd = useCallback((item, e) => {
+    // Prevent mouse events from firing after touch events
+    if (e && e.type === 'mouseup' && isTouchRef.current) {
+      return;
+    }
+    
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -109,6 +117,11 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         setSelectedModifiers([]);
       }
     }
+    
+    // Reset touch tracking after a short delay
+    setTimeout(() => {
+      isTouchRef.current = false;
+    }, 100);
   }, [onItemClick]);
   
   // Handle item click with flash effect (legacy, kept for compatibility)
@@ -644,7 +657,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               <button
                 key={item._id}
                 onMouseDown={(e) => handleItemPressStart(item, e)}
-                onMouseUp={() => handleItemPressEnd(item)}
+                onMouseUp={(e) => handleItemPressEnd(item, e)}
                 onMouseLeave={() => {
                   if (longPressTimerRef.current) {
                     clearTimeout(longPressTimerRef.current);
@@ -652,7 +665,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }
                 }}
                 onTouchStart={(e) => handleItemPressStart(item, e)}
-                onTouchEnd={() => handleItemPressEnd(item)}
+                onTouchEnd={(e) => handleItemPressEnd(item, e)}
                 onContextMenu={(e) => e.preventDefault()}
                 style={{
                   aspectRatio: '1 / 1',
@@ -1803,13 +1816,33 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [eventSummary, setEventSummary] = useState(null);
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [showEndEventButton, setShowEndEventButton] = useState(false);
+  const endEventTimeoutRef = useRef(null);
   
   // Checkout state
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
+  // Logo state - fetched from admin logo uploader
+  const [logoUrl, setLogoUrl] = useState(null);
+  
   const { apiCall } = useAuth();
+  
+  // Fetch logo from admin logo uploader
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await apiCall('/media/logo');
+        if (response && response.content && response.content.startsWith('https://res.cloudinary.com/')) {
+          setLogoUrl(response.content);
+        }
+      } catch (error) {
+        console.error('[POS] Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, [apiCall]);
 
   // Fetch menu items
   useEffect(() => {
@@ -1926,6 +1959,25 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // ============================================
   // EVENT MANAGEMENT HANDLERS
   // ============================================
+
+  /**
+   * Handle header tap to reveal END EVENT button
+   * Button auto-hides after 3 seconds if not clicked
+   */
+  const handleHeaderTap = useCallback(() => {
+    // Clear any existing timeout
+    if (endEventTimeoutRef.current) {
+      clearTimeout(endEventTimeoutRef.current);
+    }
+    
+    // Show the END EVENT button
+    setShowEndEventButton(true);
+    
+    // Auto-hide after 3 seconds
+    endEventTimeoutRef.current = setTimeout(() => {
+      setShowEndEventButton(false);
+    }, 3000);
+  }, []);
 
   /**
    * Start a new POS event
@@ -2293,7 +2345,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
 
     // If no active event, show start event screen
-    if (!hasActiveEvent()) {
+    if (!eventId) {
       return (
         <div style={{
           width: '100%',
@@ -2369,59 +2421,96 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           flexDirection: 'column',
         }}
       >
-        {/* Event Header Bar */}
-        <div style={{
-          background: '#fff',
-          color: '#333',
-          padding: '8px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-          height: `${eventHeaderHeight}px`,
-          boxSizing: 'border-box',
-          borderBottom: '1px solid #e0e0e0',
-        }}>
-          {/* Left side: Logo + Event info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Logo */}
-            <img 
-              src="/assets/icons/LOGO_favicon.svg" 
-              alt="Echo" 
-              style={{ 
-                height: '32px', 
-                width: 'auto',
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-            {/* Event name and time */}
-            <div style={{ fontSize: '14px' }}>
+        {/* Event Header Bar - tap to reveal END EVENT button */}
+        <div 
+          onClick={handleHeaderTap}
+          style={{
+            background: '#fff',
+            color: '#333',
+            padding: '8px 16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
+            height: `${eventHeaderHeight}px`,
+            boxSizing: 'border-box',
+            borderBottom: '1px solid #e0e0e0',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          {/* Left side: Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt="Echo" 
+                style={{ 
+                  height: '32px', 
+                  width: 'auto',
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+          
+          {/* Right side: Event name/time OR End Event button */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            position: 'relative',
+            height: '100%',
+          }}>
+            {/* Event name and time - slides out when button shows */}
+            <div style={{ 
+              fontSize: '14px',
+              textAlign: 'right',
+              transition: 'opacity 0.3s ease, transform 0.3s ease',
+              opacity: showEndEventButton ? 0 : 1,
+              transform: showEndEventButton ? 'translateX(20px)' : 'translateX(0)',
+              pointerEvents: showEndEventButton ? 'none' : 'auto',
+            }}>
               <span style={{ fontWeight: 'bold', color: '#333' }}>{eventName}</span>
               {eventStarted && (
                 <span style={{ color: '#666', marginLeft: '8px' }}>
-                  Started {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
             </div>
+            
+            {/* End Event button - slides in from right */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (endEventTimeoutRef.current) {
+                  clearTimeout(endEventTimeoutRef.current);
+                }
+                setShowEndEventButton(false);
+                setShowEndEventModal(true);
+              }}
+              style={{
+                position: 'absolute',
+                right: 0,
+                background: '#c62828',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                opacity: showEndEventButton ? 1 : 0,
+                transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
+                pointerEvents: showEndEventButton ? 'auto' : 'none',
+              }}
+            >
+              END EVENT
+            </button>
           </div>
-          {/* Right side: End Event button */}
-          <button
-            onClick={() => setShowEndEventModal(true)}
-            style={{
-              background: '#c62828',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-            }}
-          >
-            END EVENT
-          </button>
         </div>
 
         {/* POS Content */}
