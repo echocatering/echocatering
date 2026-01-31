@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
+import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
 
 const CATEGORIES = [
   { id: 'cocktails', label: 'C', fullName: 'Cocktails' },
@@ -1758,18 +1759,48 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   );
 }
 
-export default function POSSalesUI() {
-  const [orientation, setOrientation] = useState('vertical');
+export default function POSSalesUI({ layoutMode = 'auto' }) {
+  // layoutMode: 'vertical' | 'horizontal' | 'auto'
+  // When layoutMode is 'vertical' or 'horizontal', force that layout and ignore user toggle
+  // When layoutMode is 'auto', allow user to switch between layouts
+  const forcedOrientation = layoutMode === 'auto' ? null : layoutMode;
+  const [orientation, setOrientation] = useState(forcedOrientation || 'vertical');
+  
+  // If layoutMode changes, update orientation to match
+  useEffect(() => {
+    if (forcedOrientation) {
+      setOrientation(forcedOrientation);
+    }
+  }, [forcedOrientation]);
   const [frameRef, frameSize] = useMeasuredSize();
   const [activeCategory, setActiveCategory] = useState('cocktails');
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastAction, setLastAction] = useState(null); // { type: 'add' | 'remove', itemName: string }
   
-  // Tab management
-  const [tabs, setTabs] = useState([]); // Array of { id, name, items: [] }
-  const [activeTabId, setActiveTabId] = useState(null);
-  const [nextTabNumber, setNextTabNumber] = useState(1); // Counter for S# naming
+  // localStorage-backed tab and event management
+  const {
+    eventId,
+    eventName,
+    eventStarted,
+    tabs,
+    setTabs,
+    nextTabNumber,
+    setNextTabNumber,
+    activeTabId,
+    setActiveTabId,
+    startEvent,
+    clearEvent,
+    hasActiveEvent,
+  } = usePosLocalStorage();
+  
+  // Event management UI state
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showEndEventModal, setShowEndEventModal] = useState(false);
+  const [showSummaryView, setShowSummaryView] = useState(false);
+  const [eventSummary, setEventSummary] = useState(null);
+  const [newEventName, setNewEventName] = useState('');
+  const [syncing, setSyncing] = useState(false);
   
   const { apiCall } = useAuth();
 
@@ -1885,6 +1916,101 @@ export default function POSSalesUI() {
     console.log(`[POS] Updated modifiers for item ${itemId}:`, modifiers);
   }, []);
 
+  // ============================================
+  // EVENT MANAGEMENT HANDLERS
+  // ============================================
+
+  /**
+   * Start a new POS event
+   * Creates event in DB and initializes local state
+   */
+  const handleStartEvent = useCallback(async (name) => {
+    try {
+      setSyncing(true);
+      const response = await apiCall('/pos-events', {
+        method: 'POST',
+        body: { name },
+      });
+      
+      if (response && response._id) {
+        startEvent(response._id, response.name);
+        setShowEventModal(false);
+        setNewEventName('');
+        console.log(`[POS] Started event: ${response.name} (${response._id})`);
+      }
+    } catch (error) {
+      console.error('[POS] Failed to start event:', error);
+      alert(`Failed to start event: ${error.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  }, [apiCall, startEvent]);
+
+  /**
+   * End the current event
+   * Syncs all tabs to DB and calculates summary
+   */
+  const handleEndEvent = useCallback(async () => {
+    if (!eventId) return;
+    
+    try {
+      setSyncing(true);
+      const response = await apiCall(`/pos-events/${eventId}/end`, {
+        method: 'PUT',
+        body: { tabs },
+      });
+      
+      if (response && response.event) {
+        setEventSummary(response.event.summary);
+        setShowEndEventModal(false);
+        setShowSummaryView(true);
+        console.log(`[POS] Ended event: ${eventName}`);
+      }
+    } catch (error) {
+      console.error('[POS] Failed to end event:', error);
+      alert(`Failed to end event: ${error.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  }, [apiCall, eventId, eventName, tabs]);
+
+  /**
+   * Close summary view and clear local state
+   */
+  const handleCloseSummary = useCallback(() => {
+    clearEvent();
+    setShowSummaryView(false);
+    setEventSummary(null);
+  }, [clearEvent]);
+
+  /**
+   * Sync current state to DB (for periodic saves)
+   */
+  const handleSyncToDb = useCallback(async () => {
+    if (!eventId) return;
+    
+    try {
+      await apiCall(`/pos-events/${eventId}/sync`, {
+        method: 'PUT',
+        body: { tabs },
+      });
+      console.log('[POS] Synced to DB');
+    } catch (error) {
+      console.error('[POS] Failed to sync:', error);
+    }
+  }, [apiCall, eventId, tabs]);
+
+  // Auto-sync to DB every 30 seconds when event is active
+  useEffect(() => {
+    if (!eventId) return;
+    
+    const interval = setInterval(() => {
+      handleSyncToDb();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [eventId, handleSyncToDb]);
+
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
     const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
@@ -1961,35 +2087,378 @@ export default function POSSalesUI() {
     return { width: stageWidth, height: stageHeight };
   }, [frameReady, frameSize, orientation]);
 
-  return (
-    <div style={{ padding: '60px 16px 16px 16px', width: '100%', height: '100%', minHeight: '100vh', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', gap: 12, marginTop: 0, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontWeight: 600 }}>Orientation:</span>
-          {[
-            { key: 'horizontal', label: '16:10' },
-            { key: 'vertical', label: '9:19' },
-          ].map(({ key, label }) => (
+  // When layoutMode is forced (not 'auto'), we're in standalone mode
+  // Render POSContent directly filling the viewport without the viewer wrapper
+  const isStandalone = layoutMode !== 'auto';
+
+  // Standalone mode: render POSContent directly filling the viewport
+  if (isStandalone) {
+    // If showing summary view after event end
+    if (showSummaryView && eventSummary) {
+      return (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '100vh',
+          background: '#1a1a1a',
+          color: '#fff',
+          padding: '20px',
+          boxSizing: 'border-box',
+          overflow: 'auto',
+        }}>
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center' }}>
+              Event Summary
+            </h1>
+            
+            {/* Totals */}
+            <div style={{
+              background: '#2a2a2a',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '20px',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
+                    ${(eventSummary.totalRevenue || 0).toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#888' }}>Total Revenue</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
+                    {eventSummary.totalItems || 0}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#888' }}>Total Items</div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                  {eventSummary.totalTabs || 0}
+                </div>
+                <div style={{ fontSize: '14px', color: '#888' }}>Total Tabs</div>
+              </div>
+            </div>
+            
+            {/* Category Breakdown */}
+            <div style={{
+              background: '#2a2a2a',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '20px',
+            }}>
+              <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>By Category</h2>
+              {eventSummary.categoryBreakdown && Object.entries(
+                eventSummary.categoryBreakdown instanceof Map 
+                  ? Object.fromEntries(eventSummary.categoryBreakdown)
+                  : eventSummary.categoryBreakdown
+              ).map(([cat, data]) => (
+                <div key={cat} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '8px 0',
+                  borderBottom: '1px solid #333',
+                }}>
+                  <span style={{ textTransform: 'capitalize' }}>{cat}</span>
+                  <span>
+                    {data.count} items • ${(data.revenue || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Timeline Breakdown */}
+            {eventSummary.timelineBreakdown && eventSummary.timelineBreakdown.length > 0 && (
+              <div style={{
+                background: '#2a2a2a',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px',
+              }}>
+                <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>Timeline (15-min intervals)</h2>
+                {eventSummary.timelineBreakdown.map((interval, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '8px 0',
+                    borderBottom: '1px solid #333',
+                  }}>
+                    <span>
+                      {new Date(interval.intervalStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span>
+                      {interval.itemCount} items • ${(interval.revenue || 0).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Close Button */}
             <button
-              key={key}
-              onClick={() => setOrientation(key)}
+              onClick={handleCloseSummary}
               style={{
-                border: '1px solid #333',
-                background: orientation === key ? '#333' : 'transparent',
-                color: orientation === key ? '#fff' : '#333',
-                padding: '6px 10px',
-                borderRadius: 4,
+                width: '100%',
+                padding: '16px',
+                background: '#800080',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: 'bold',
                 cursor: 'pointer',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontSize: '0.85rem',
               }}
             >
-              {label}
+              START NEW EVENT
             </button>
-          ))}
+          </div>
         </div>
+      );
+    }
+
+    // If no active event, show start event screen
+    if (!hasActiveEvent()) {
+      return (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '100vh',
+          background: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#2a2a2a',
+            borderRadius: '16px',
+            padding: '40px',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center',
+          }}>
+            <h1 style={{ color: '#fff', fontSize: '24px', marginBottom: '24px' }}>
+              Start New Event
+            </h1>
+            <input
+              type="text"
+              value={newEventName}
+              onChange={(e) => setNewEventName(e.target.value)}
+              placeholder="Event Name (optional)"
+              style={{
+                width: '100%',
+                padding: '16px',
+                fontSize: '18px',
+                border: '1px solid #444',
+                borderRadius: '8px',
+                background: '#333',
+                color: '#fff',
+                marginBottom: '20px',
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={() => handleStartEvent(newEventName || `Event ${new Date().toLocaleDateString()}`)}
+              disabled={syncing}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: syncing ? '#555' : '#800080',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: syncing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {syncing ? 'STARTING...' : 'START EVENT'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Active event: show POS UI with event header
+    return (
+      <div
+        ref={frameRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '100vh',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Event Header Bar */}
+        <div style={{
+          background: '#1a1a1a',
+          color: '#fff',
+          padding: '8px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0,
+        }}>
+          <div style={{ fontSize: '14px' }}>
+            <span style={{ fontWeight: 'bold' }}>{eventName}</span>
+            {eventStarted && (
+              <span style={{ color: '#888', marginLeft: '8px' }}>
+                Started {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowEndEventModal(true)}
+            style={{
+              background: '#c62828',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+            }}
+          >
+            END EVENT
+          </button>
+        </div>
+
+        {/* POS Content */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {frameReady && (
+            <POSContent
+              outerWidth={frameSize.width}
+              outerHeight={frameSize.height - 40}
+              items={items}
+              activeCategory={activeCategory}
+              setActiveCategory={setActiveCategory}
+              onItemClick={handleItemClick}
+              loading={loading}
+              total={total}
+              categoryCounts={categoryCounts}
+              selectedItems={selectedItems}
+              lastAction={lastAction}
+              onRemoveItem={handleRemoveItem}
+              tabs={tabs}
+              activeTabId={activeTabId}
+              onCreateTab={handleCreateTab}
+              onSelectTab={handleSelectTab}
+              onDeleteTab={handleDeleteTab}
+              onUpdateTabName={handleUpdateTabName}
+              onUpdateItemModifiers={handleUpdateItemModifiers}
+            />
+          )}
+        </div>
+
+        {/* End Event Confirmation Modal */}
+        {showEndEventModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}>
+            <div style={{
+              background: '#2a2a2a',
+              borderRadius: '16px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+            }}>
+              <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '16px' }}>
+                End Event?
+              </h2>
+              <p style={{ color: '#888', marginBottom: '24px' }}>
+                This will sync all tabs to the database and show the event summary.
+                You have {tabs.length} tab(s) with {selectedItems.length} total item(s).
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setShowEndEventModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: '#444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleEndEvent}
+                  disabled={syncing}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: syncing ? '#555' : '#c62828',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {syncing ? 'SYNCING...' : 'END EVENT'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    );
+  }
+
+  // Preview mode: render with viewer wrapper for admin interface
+  const containerPadding = '60px 16px 16px 16px';
+
+  return (
+    <div style={{ padding: containerPadding, width: '100%', height: '100%', minHeight: '100vh', boxSizing: 'border-box' }}>
+      {/* Only show orientation toggle when layoutMode is 'auto' */}
+      {layoutMode === 'auto' && (
+        <div style={{ display: 'flex', gap: 12, marginTop: 0, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontWeight: 600 }}>Orientation:</span>
+            {[
+              { key: 'horizontal', label: '16:10' },
+              { key: 'vertical', label: '9:19' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setOrientation(key)}
+                style={{
+                  border: '1px solid #333',
+                  background: orientation === key ? '#333' : 'transparent',
+                  color: orientation === key ? '#fff' : '#333',
+                  padding: '6px 10px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div
         style={{

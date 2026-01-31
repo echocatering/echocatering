@@ -307,6 +307,7 @@ app.use('/api/countries', require('./routes/countries'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/recipes', require('./routes/recipes'));
 app.use('/api/pos', require('./routes/pos'));
+app.use('/api/pos-events', require('./routes/posEvents'));
 app.use('/api/video-processing', require('./routes/videoProcessing'));
 app.use('/api/video-worker', require('./routes/videoWorker'));
 app.use('/api/video-jobs', require('./routes/videoJobs'));

@@ -18,6 +18,7 @@ import Header from './components/Header';
 import ItemUIPreview from './components/ItemUIPreview';
 import POSUIPreview from './components/POSUIPreview';
 import POSSalesUI from './components/POSSalesUI';
+import PosPage from './components/pos/PosPage';
 import './App.css';
 
 // Protected Route Component
@@ -64,7 +65,7 @@ const AdminApp = () => {
             <Route path="/orders-chart" element={<OrdersStackedBarChart />} />
             <Route path="/calendar" element={<CalendarManager />} />
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
-            <Route path="/sales/pos-ui" element={<POSSalesUI />} />
+            <Route path="/sales/pos-ui" element={<POSSalesUI layoutMode="vertical" />} />
           </Routes>
         </main>
       </div>
@@ -78,6 +79,16 @@ const App = () => {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* 
+          Standalone POS page - renders outside AdminApp (no sidebar/header)
+          Full viewport, vertical-only layout, touch-friendly
+          Route: /admin/pos
+        */}
+        <Route path="/pos" element={
+          <ProtectedRoute>
+            <PosPage />
+          </ProtectedRoute>
+        } />
         <Route path="/*" element={
           <ProtectedRoute>
             <AdminApp />
