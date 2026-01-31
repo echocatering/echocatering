@@ -2047,11 +2047,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       }
     } catch (error) {
       console.error('[POS] Failed to end event:', error);
-      alert(`Failed to end event: ${error.message}`);
+      
+      // If the event is not active (already ended or doesn't exist), clear local state
+      if (error.message && error.message.includes('not active')) {
+        console.log('[POS] Event already ended - clearing local state');
+        clearEvent();
+        setShowEndEventModal(false);
+      } else {
+        alert(`Failed to end event: ${error.message}`);
+      }
     } finally {
       setSyncing(false);
     }
-  }, [apiCall, eventId, eventName, tabs]);
+  }, [apiCall, eventId, eventName, tabs, clearEvent]);
 
   /**
    * Close summary view and clear local state
