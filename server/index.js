@@ -328,6 +328,145 @@ app.get('/api/square/test', async (req, res) => {
   }
 });
 
+// Square Checkout endpoint for POS tab payments
+// Creates a Square Order and Payment from tab data
+app.post('/api/square/checkout', async (req, res) => {
+  try {
+    const { tabId, tabName, items, total } = req.body;
+    
+    // Validate required fields
+    if (!tabId || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ 
+        error: 'Invalid request', 
+        message: 'tabId and items array are required' 
+      });
+    }
+
+    console.log(`[Square Checkout] Processing tab ${tabId} (${tabName}) with ${items.length} items, total: $${(total / 100).toFixed(2)}`);
+
+    // Initialize Square client
+    const squareClient = await initSquareClient();
+    
+    // Get location ID
+    const locationsResult = await squareClient.locations.list();
+    const locations = locationsResult.locations || [];
+    if (locations.length === 0) {
+      return res.status(404).json({ error: 'No Square locations found' });
+    }
+    const locationId = locations[0].id;
+    const currency = locations[0].currency || 'USD';
+
+    // Build line items for the order
+    // Each item includes name, quantity, price, and modifiers
+    const lineItems = items.map((item, index) => {
+      // Build item name with modifiers
+      let itemName = item.name;
+      if (item.modifier) {
+        itemName += ` (${item.modifier})`;
+      }
+      
+      // Price in cents (Square uses smallest currency unit)
+      const priceInCents = Math.round((item.price || 0) * 100);
+      
+      return {
+        name: itemName,
+        quantity: String(item.quantity || 1),
+        basePriceMoney: {
+          amount: BigInt(priceInCents),
+          currency: currency
+        },
+        note: item.modifier || undefined
+      };
+    });
+
+    // Calculate total in cents
+    const totalInCents = Math.round((total || 0) * 100);
+    
+    // Generate idempotency keys
+    const timestamp = Date.now();
+    const orderIdempotencyKey = `order-${tabId}-${timestamp}`;
+    const paymentIdempotencyKey = `payment-${tabId}-${timestamp}`;
+
+    // Create the order
+    console.log(`[Square Checkout] Creating order with ${lineItems.length} line items...`);
+    const orderResult = await squareClient.orders.create({
+      idempotencyKey: orderIdempotencyKey,
+      order: {
+        locationId: locationId,
+        lineItems: lineItems,
+        state: 'OPEN',
+        referenceId: `POS-${tabId}`,
+        metadata: {
+          tabId: tabId,
+          tabName: tabName || '',
+          source: 'echo-pos'
+        }
+      }
+    });
+
+    const order = orderResult.order;
+    console.log(`[Square Checkout] Order created: ${order.id}`);
+
+    // Create the payment
+    // In sandbox, use the test nonce; in production, this would come from Square Web Payments SDK
+    const isSandbox = process.env.SQUARE_ENV !== 'production';
+    const sourceId = isSandbox ? 'cnon:card-nonce-ok' : req.body.sourceId;
+    
+    if (!sourceId) {
+      return res.status(400).json({ 
+        error: 'Payment source required', 
+        message: 'sourceId is required for production payments' 
+      });
+    }
+
+    console.log(`[Square Checkout] Creating payment for order ${order.id}...`);
+    const paymentResult = await squareClient.payments.create({
+      idempotencyKey: paymentIdempotencyKey,
+      sourceId: sourceId,
+      amountMoney: {
+        amount: BigInt(totalInCents),
+        currency: currency
+      },
+      orderId: order.id,
+      locationId: locationId,
+      referenceId: `POS-${tabId}`,
+      note: `Tab: ${tabName || tabId}`
+    });
+
+    const payment = paymentResult.payment;
+    console.log(`[Square Checkout] Payment created: ${payment.id}, status: ${payment.status}`);
+
+    // Return success response
+    res.json({
+      success: true,
+      orderId: order.id,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      receiptUrl: payment.receiptUrl,
+      totalCharged: {
+        amount: Number(payment.amountMoney.amount),
+        currency: payment.amountMoney.currency
+      }
+    });
+
+  } catch (error) {
+    console.error('[Square Checkout] Error:', error);
+    
+    // Extract meaningful error message from Square API errors
+    let errorMessage = error.message || 'Payment processing failed';
+    if (error.errors && Array.isArray(error.errors)) {
+      errorMessage = error.errors.map(e => e.detail || e.code).join(', ');
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: 'Payment failed', 
+      message: errorMessage,
+      details: error.errors || null
+    });
+  }
+});
+
 // Square Orders Aggregated route
 // Fetches orders and groups them into 15-minute intervals with item quantities, costs, and categories
 app.get('/api/square/orders-aggregated', async (req, res) => {

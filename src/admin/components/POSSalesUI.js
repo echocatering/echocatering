@@ -49,7 +49,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onCheckout, checkoutLoading }) {
   // Bottom drawer (order list) state
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -560,21 +560,22 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               HOLD
             </button>
             <button
-              onClick={() => { /* TODO: Checkout functionality */ }}
+              onClick={() => onCheckout && onCheckout()}
+              disabled={checkoutLoading || selectedItems.length === 0}
               style={{
                 flex: 1,
                 padding: '12px',
                 border: 'none',
-                background: '#800080',
+                background: checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'),
                 color: '#fff',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: 'pointer',
+                cursor: checkoutLoading || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
                 borderRadius: '4px'
               }}
             >
-              CHECKOUT
+              {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
             </button>
           </div>
         )}
@@ -924,21 +925,22 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               HOLD
             </button>
             <button
-              onClick={() => { /* TODO: Checkout functionality */ }}
+              onClick={() => onCheckout && onCheckout()}
+              disabled={checkoutLoading || selectedItems.length === 0}
               style={{
                 flex: 1,
                 padding: '12px',
                 border: 'none',
-                background: '#800080',
+                background: checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'),
                 color: '#fff',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: 'pointer',
+                cursor: checkoutLoading || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
                 borderRadius: '4px'
               }}
             >
-              CHECKOUT
+              {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
             </button>
           </div>
         )}
@@ -1802,6 +1804,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
   
+  // Checkout state
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
+  
   const { apiCall } = useAuth();
 
   // Fetch menu items
@@ -2011,6 +2018,75 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     return () => clearInterval(interval);
   }, [eventId, handleSyncToDb]);
 
+  /**
+   * Handle checkout - send tab to Square for payment
+   * Uses sandbox nonce in development, real card in production
+   */
+  const handleCheckout = useCallback(async () => {
+    if (!activeTabId || selectedItems.length === 0) {
+      alert('No items to checkout');
+      return;
+    }
+
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) {
+      alert('No active tab found');
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      console.log(`[POS Checkout] Processing tab ${activeTab.id} (${activeTab.name}) with ${selectedItems.length} items`);
+
+      // Prepare checkout data
+      const checkoutData = {
+        tabId: activeTab.id,
+        tabName: activeTab.name,
+        items: selectedItems.map(item => ({
+          name: item.name,
+          quantity: 1,
+          price: item.price || 0,
+          modifier: item.modifier || null,
+          category: item.category
+        })),
+        total: total
+      };
+
+      // Call Square checkout endpoint
+      const response = await apiCall('/square/checkout', {
+        method: 'POST',
+        body: checkoutData,
+      });
+
+      if (response && response.success) {
+        console.log(`[POS Checkout] Success! Payment ID: ${response.paymentId}`);
+        
+        // Store checkout result
+        setLastCheckoutResult(response);
+        
+        // Mark tab as paid by clearing its items
+        setTabs(prev => prev.map(tab =>
+          tab.id === activeTabId
+            ? { ...tab, items: [], paidAt: new Date().toISOString(), paymentId: response.paymentId }
+            : tab
+        ));
+        
+        // Show success message
+        setShowCheckoutSuccess(true);
+        setTimeout(() => setShowCheckoutSuccess(false), 3000);
+        
+      } else {
+        throw new Error(response?.message || 'Payment failed');
+      }
+
+    } catch (error) {
+      console.error('[POS Checkout] Error:', error);
+      alert(`Checkout failed: ${error.message}`);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [activeTabId, selectedItems, tabs, total, apiCall, setTabs]);
+
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
     const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
@@ -2194,7 +2270,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </div>
             )}
             
-            {/* Close Button */}
+            {/* Home Button */}
             <button
               onClick={handleCloseSummary}
               style={{
@@ -2209,7 +2285,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 cursor: 'pointer',
               }}
             >
-              START NEW EVENT
+              HOME
             </button>
           </div>
         </div>
@@ -2279,13 +2355,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
 
     // Active event: show POS UI with event header
+    // Header height for positioning calculations - exported to POSContent via prop
+    const eventHeaderHeight = 50;
+    
     return (
       <div
-        ref={frameRef}
         style={{
           width: '100%',
-          height: '100%',
-          minHeight: '100vh',
+          height: '100vh',
           boxSizing: 'border-box',
           overflow: 'hidden',
           display: 'flex',
@@ -2294,22 +2371,42 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       >
         {/* Event Header Bar */}
         <div style={{
-          background: '#1a1a1a',
-          color: '#fff',
+          background: '#fff',
+          color: '#333',
           padding: '8px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexShrink: 0,
+          height: `${eventHeaderHeight}px`,
+          boxSizing: 'border-box',
+          borderBottom: '1px solid #e0e0e0',
         }}>
-          <div style={{ fontSize: '14px' }}>
-            <span style={{ fontWeight: 'bold' }}>{eventName}</span>
-            {eventStarted && (
-              <span style={{ color: '#888', marginLeft: '8px' }}>
-                Started {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+          {/* Left side: Logo + Event info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Logo */}
+            <img 
+              src="/assets/icons/LOGO_favicon.svg" 
+              alt="Echo" 
+              style={{ 
+                height: '32px', 
+                width: 'auto',
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            {/* Event name and time */}
+            <div style={{ fontSize: '14px' }}>
+              <span style={{ fontWeight: 'bold', color: '#333' }}>{eventName}</span>
+              {eventStarted && (
+                <span style={{ color: '#666', marginLeft: '8px' }}>
+                  Started {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
           </div>
+          {/* Right side: End Event button */}
           <button
             onClick={() => setShowEndEventModal(true)}
             style={{
@@ -2328,11 +2425,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         </div>
 
         {/* POS Content */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div 
+          ref={frameRef}
+          style={{ 
+            flex: 1, 
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
           {frameReady && (
             <POSContent
               outerWidth={frameSize.width}
-              outerHeight={frameSize.height - 40}
+              outerHeight={frameSize.height}
               items={items}
               activeCategory={activeCategory}
               setActiveCategory={setActiveCategory}
@@ -2350,6 +2454,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onDeleteTab={handleDeleteTab}
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
+              onCheckout={handleCheckout}
+              checkoutLoading={checkoutLoading}
             />
           )}
         </div>
@@ -2417,6 +2523,32 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   {syncing ? 'SYNCING...' : 'END EVENT'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Checkout Success Overlay */}
+        {showCheckoutSuccess && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,128,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+          }}>
+            <div style={{ textAlign: 'center', color: '#fff' }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>✓</div>
+              <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Successful</h2>
+              {lastCheckoutResult && (
+                <p style={{ fontSize: '18px', opacity: 0.9 }}>
+                  ${(lastCheckoutResult.totalCharged?.amount / 100).toFixed(2)} charged
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -2521,6 +2653,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onDeleteTab={handleDeleteTab}
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
+                onCheckout={handleCheckout}
+                checkoutLoading={checkoutLoading}
               />
             </div>
           )}
