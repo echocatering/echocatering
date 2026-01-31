@@ -535,7 +535,7 @@ const validatePayload = (payload, { requireRegions = true, requireConcept = true
 };
 
 // @route   GET /api/menu-items
-// @desc    Get all menu items
+// @desc    Get all menu items with pricing from inventory
 // @access  Public
 router.get('/', async (req, res) => {
   try {
@@ -579,7 +579,50 @@ router.get('/', async (req, res) => {
       .sort({ category: 1, order: 1, name: 1 })
       .lean(); // Use lean() for better performance and consistency
 
-    res.json(cocktails);
+    // Fetch inventory data to get salesPrice
+    const categoryToSheetKey = {
+      'cocktails': 'cocktails',
+      'mocktails': 'mocktails',
+      'wine': 'wine',
+      'beer': 'beer',
+      'spirits': 'spirits',
+      'premix': 'preMix'
+    };
+
+    const sheetKeys = resolvedCategory 
+      ? [categoryToSheetKey[resolvedCategory]] 
+      : Object.values(categoryToSheetKey);
+    
+    const inventorySheets = await InventorySheet.find({ sheetKey: { $in: sheetKeys } }).lean();
+
+    // Build a map of itemNumber -> salesPrice
+    const priceMap = new Map();
+    inventorySheets.forEach(sheet => {
+      if (!sheet.rows || !Array.isArray(sheet.rows)) return;
+      
+      sheet.rows.forEach(row => {
+        if (row.isDeleted) return;
+        
+        const values = row.values instanceof Map 
+          ? Object.fromEntries(row.values)
+          : (row.values || {});
+        
+        const itemNumber = values.itemNumber;
+        const salesPrice = values.salesPrice;
+        
+        if (itemNumber && salesPrice !== undefined && salesPrice !== null) {
+          priceMap.set(Number(itemNumber), Number(salesPrice));
+        }
+      });
+    });
+
+    // Merge salesPrice into cocktails
+    const cocktailsWithPrice = cocktails.map(cocktail => ({
+      ...cocktail,
+      price: priceMap.get(cocktail.itemNumber) || 0
+    }));
+
+    res.json(cocktailsWithPrice);
   } catch (error) {
     console.error('Get cocktails error:', error);
     res.status(500).json({ message: 'Server error' });
