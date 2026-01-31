@@ -1818,10 +1818,13 @@ export default function POSSalesUI() {
 
   // Calculate total from selected items (active tab)
   const total = useMemo(() => {
-    return selectedItems.reduce((sum, item) => {
+    const result = selectedItems.reduce((sum, item) => {
       const price = parseFloat(item.price) || 0;
+      console.log(`[POS] Total calc - item: ${item.name}, price: ${price}, modifier: ${item.modifier || 'none'}`);
       return sum + price;
     }, 0);
+    console.log(`[POS] Total: ${result}`);
+    return result;
   }, [selectedItems]);
 
   // Calculate category counts from selected items (active tab)
@@ -1885,7 +1888,7 @@ export default function POSSalesUI() {
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
     const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
-    const modifierPrice = typeof modifierData === 'object' && modifierData?.priceAdjustment ? modifierData.priceAdjustment : 0;
+    const modifierPrice = typeof modifierData === 'object' && modifierData !== null && modifierData.priceAdjustment !== undefined ? Number(modifierData.priceAdjustment) : 0;
     console.log(`[POS] Item clicked: "${item.name}"${modifierName ? ` with modifier: "${modifierName}"` : ''} at ${timestamp}`);
     
     // If no active tab, auto-create one first
@@ -1906,13 +1909,16 @@ export default function POSSalesUI() {
     // Add item to the active tab with adjusted price
     const basePrice = parseFloat(item.price) || 0;
     const adjustedPrice = basePrice + modifierPrice;
+    console.log(`[POS] Price calculation: item.price=${item.price}, basePrice=${basePrice}, modifierPrice=${modifierPrice}, adjustedPrice=${adjustedPrice}`);
     const newItem = {
       ...item,
       addedAt: timestamp,
       modifier: modifierName || item.modifier || null,
       modifierPriceAdjustment: modifierPrice,
+      basePrice: basePrice,
       price: adjustedPrice
     };
+    console.log(`[POS] New item created with price: ${newItem.price}`);
     
     setTabs(prev => prev.map(tab => 
       tab.id === targetTabId 
