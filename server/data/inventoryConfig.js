@@ -11,7 +11,9 @@ const SHEET_DEFINITIONS = [
       { key: 'garnish', label: 'Garnish', type: 'dropdown', datasetId: 'cocktails.garnish' },
       { key: 'sumOz', label: 'Σ oz', type: 'number', unit: 'oz', precision: 2 },
       { key: 'unitCost', label: '$ / Unit', type: 'currency', unit: 'USD', precision: 2 },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
+      { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
       { key: 'page', label: 'Page', type: 'text', hidden: true },
@@ -30,6 +32,7 @@ const SHEET_DEFINITIONS = [
       { key: 'garnish', label: 'Garnish', type: 'dropdown', datasetId: 'mocktails.garnish' },
       { key: 'sumOz', label: 'Σ oz', type: 'number', unit: 'oz', precision: 2 },
       { key: 'unitCost', label: '$ / Unit', type: 'currency', unit: 'USD', precision: 2 },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
@@ -77,6 +80,7 @@ const SHEET_DEFINITIONS = [
         },
         helperText: 'Calculated as $ / oz × 5.'
       },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
@@ -110,6 +114,7 @@ const SHEET_DEFINITIONS = [
         },
         helperText: 'Automatically calculated using ml → oz conversion (29.57 ml per oz).'
       },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
@@ -150,6 +155,7 @@ const SHEET_DEFINITIONS = [
         },
         helperText: 'Automatically converts ml/g to oz before dividing unit cost.'
       },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 }
     ]
   },
@@ -162,6 +168,7 @@ const SHEET_DEFINITIONS = [
       { key: 'type', label: 'Type', type: 'dropdown', datasetId: 'premix.type' },
       { key: 'cocktail', label: 'Cocktail', type: 'dropdown', datasetId: 'cocktails.name' },
       { key: 'ounceCost', label: '$ / oz', type: 'currency', unit: 'USD', precision: 2 },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' }
     ]
@@ -189,6 +196,7 @@ const SHEET_DEFINITIONS = [
         },
         helperText: 'Automatically calculated as $/Pack ÷ #Units.'
       },
+      { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' },
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },

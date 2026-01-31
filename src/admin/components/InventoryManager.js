@@ -41,6 +41,7 @@ const COLUMN_WIDTHS = {
     garnish: 120,
     sumOz: 80,
     unitCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   },
@@ -52,6 +53,7 @@ const COLUMN_WIDTHS = {
     garnish: 120,
     sumOz: 80,
     unitCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   },
@@ -65,6 +67,7 @@ const COLUMN_WIDTHS = {
     unitCost: 80,
     ounceCost: 80,
     glassCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   },
@@ -76,6 +79,7 @@ const COLUMN_WIDTHS = {
     sizeOz: 80,
     unitCost: 80,
     ounceCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   },
@@ -87,6 +91,7 @@ const COLUMN_WIDTHS = {
     sizeUnit: 100,
     unitCost: 80,
     gramCost: 80,
+    salesPrice: 80,
     itemNumber: 80
   },
   preMix: {
@@ -94,6 +99,7 @@ const COLUMN_WIDTHS = {
     type: 120,
     cocktail: 120,
     ounceCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   },
@@ -104,6 +110,7 @@ const COLUMN_WIDTHS = {
     packCost: 80,
     numUnits: 80,
     unitCost: 80,
+    salesPrice: 80,
     itemNumber: 80,
     menu: 80
   }
@@ -1816,11 +1823,13 @@ const commitBeerNumUnitsValue = (rowId) => {
                                 lowerLabel.includes('$ / glass') ||
                                 lowerLabel.includes('$ / pack') ||
                                 lowerLabel.includes('$ / oz') ||
+                                lowerLabel.includes('$ sales') ||
                                 lowerKey === 'unitcost' ||
                                 lowerKey === 'ouncecost' ||
                                 lowerKey === 'glasscost' ||
                                 lowerKey === 'gramcost' ||
-                                lowerKey === 'packcost';
+                                lowerKey === 'packcost' ||
+                                lowerKey === 'salesprice';
                               const isSpiritsSizeColumn =
                                 resolvedSheetKey === 'spirits' && column.key === 'sizeOz';
                               const isWineSizeColumn =
@@ -1872,17 +1881,19 @@ const commitBeerNumUnitsValue = (rowId) => {
                               
                               // Don't apply title case when displaying - let user type freely, apply on blur
                               const formatCurrencyDisplay = (value) => {
-                                if (value === null || value === undefined) return '';
+                                if (value === null || value === undefined) return '0.00';
                                 const precision = column.precision ?? 2;
                                 const numberValue = Number(value);
-                                if (!Number.isFinite(numberValue)) return value;
+                                if (!Number.isFinite(numberValue)) return '0.00';
                                 return numberValue.toFixed(precision);
                               };
                               const hasCurrencyValue =
                                 hasOriginalValue && cellValue !== null && cellValue !== undefined;
+                              // For salesPrice column, always show formatted value (0.00 if empty)
+                              const isSalesPriceColumn = column.key === 'salesPrice';
                               let currencyInputValue =
                                 pendingRowUpdates[row._id]?.[column.key] ??
-                                (hasCurrencyValue ? formatCurrencyDisplay(cellValue) : '');
+                                (hasCurrencyValue || isSalesPriceColumn ? formatCurrencyDisplay(cellValue) : '');
                               return (
                                 <td
                                   key={column.key}
