@@ -10,12 +10,14 @@ import InventoryManager from './components/InventoryManager';
 import FullMenu from './components/FullMenu';
 
 import SalesManager from './components/SalesManager';
+import OrdersStackedBarChart from '../components/OrdersStackedBarChart';
 import CalendarManager from './components/CalendarManager';
 import POSManager from './components/POSManager';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ItemUIPreview from './components/ItemUIPreview';
 import POSUIPreview from './components/POSUIPreview';
+import POSSalesUI from './components/POSSalesUI';
 import './App.css';
 
 // Protected Route Component
@@ -59,8 +61,10 @@ const AdminApp = () => {
             <Route path="/inventory/recipes/:recipeType?" element={<FullMenu />} />
             <Route path="/inventory/:sheetKey?" element={<InventoryManager />} />
             <Route path="/sales" element={<SalesManager />} />
+            <Route path="/orders-chart" element={<OrdersStackedBarChart />} />
             <Route path="/calendar" element={<CalendarManager />} />
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
+            <Route path="/sales/pos-ui" element={<POSSalesUI />} />
           </Routes>
         </main>
       </div>

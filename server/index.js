@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { readOnlyMiddleware, isReadOnlyEnabled } = require('./middleware/readOnly');
+const { initSquareClient } = require('./squareClient');
 
 // Only load dotenv if not in production (Render provides env vars directly)
 if (process.env.NODE_ENV !== 'production') {
@@ -310,6 +311,184 @@ app.use('/api/video-processing', require('./routes/videoProcessing'));
 app.use('/api/video-worker', require('./routes/videoWorker'));
 app.use('/api/video-jobs', require('./routes/videoJobs'));
 
+// Square Sandbox test route
+app.get('/api/square/test', async (req, res) => {
+  try {
+    const squareClient = await initSquareClient();
+    // Square SDK v44+ uses squareClient.locations.list() instead of locationsApi.listLocations()
+    const result = await squareClient.locations.list();
+    res.json(result);
+  } catch (error) {
+    console.error('Square API error:', error);
+    res.status(500).json({ 
+      error: 'Square API request failed', 
+      message: error.message 
+    });
+  }
+});
+
+// Square Orders Aggregated route
+// Fetches orders and groups them into 15-minute intervals with item quantities, costs, and categories
+app.get('/api/square/orders-aggregated', async (req, res) => {
+  try {
+    // Step 1: Initialize Square client
+    const squareClient = await initSquareClient();
+    
+    // Step 2: Get the first location ID (or use query param if provided)
+    const locationId = req.query.locationId;
+    let targetLocationId = locationId;
+    
+    if (!targetLocationId) {
+      // Fetch locations to get the default location ID
+      const locationsResult = await squareClient.locations.list();
+      const locations = locationsResult.locations || [];
+      if (locations.length === 0) {
+        return res.status(404).json({ error: 'No locations found' });
+      }
+      targetLocationId = locations[0].id;
+    }
+    
+    // Step 3: Search for orders at this location
+    // Square SDK v44 uses squareClient.orders.search()
+    const searchResult = await squareClient.orders.search({
+      locationIds: [targetLocationId],
+      // Optionally filter by date range (default: last 30 days)
+      query: {
+        filter: {
+          dateTimeFilter: {
+            createdAt: {
+              startAt: req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+              endAt: req.query.endDate || new Date().toISOString()
+            }
+          }
+        },
+        sort: {
+          sortField: 'CREATED_AT',
+          sortOrder: 'ASC'
+        }
+      }
+    });
+    
+    const orders = searchResult.orders || [];
+    
+    // Step 4: Group orders into 15-minute intervals
+    const intervalMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const intervalMap = new Map();
+    
+    for (const order of orders) {
+      // Parse the order creation timestamp
+      // For fake orders, use the simulated timestamp from referenceId (format: FAKE|<timestamp>|...)
+      let createdAt;
+      const refId = order.referenceId || '';
+      if (refId.startsWith('FAKE|')) {
+        const parts = refId.split('|');
+        createdAt = new Date(parts[1]);
+      } else {
+        createdAt = new Date(order.createdAt);
+      }
+      
+      // Calculate the interval start (floor to nearest 15 minutes)
+      const intervalStartMs = Math.floor(createdAt.getTime() / intervalMs) * intervalMs;
+      const intervalStart = new Date(intervalStartMs).toISOString();
+      const intervalEnd = new Date(intervalStartMs + intervalMs).toISOString();
+      
+      // Get or create the interval entry
+      if (!intervalMap.has(intervalStart)) {
+        intervalMap.set(intervalStart, {
+          intervalStart,
+          intervalEnd,
+          // items: { itemName: { quantity, cost, category } }
+          items: new Map(),
+          // categories: { categoryName: { quantity, cost } }
+          categories: new Map(),
+          // Totals for this interval
+          totalQuantity: 0,
+          totalCost: 0
+        });
+      }
+      const interval = intervalMap.get(intervalStart);
+      
+      // Step 5: Aggregate item quantities, costs, and categories for this order
+      const lineItems = order.lineItems || [];
+      for (const item of lineItems) {
+        const itemName = item.name || 'Unknown Item';
+        const quantity = parseInt(item.quantity, 10) || 1;
+        // Get price in cents (Square uses BigInt for money amounts)
+        const pricePerItem = item.basePriceMoney?.amount 
+          ? Number(item.basePriceMoney.amount) 
+          : 0;
+        const itemTotalCost = pricePerItem * quantity;
+        // Extract category from note (format: "Category: CategoryName")
+        const noteMatch = (item.note || '').match(/Category:\s*(.+)/i);
+        const category = noteMatch ? noteMatch[1].trim() : 'Uncategorized';
+        
+        // Update item aggregation
+        if (!interval.items.has(itemName)) {
+          interval.items.set(itemName, { quantity: 0, cost: 0, category });
+        }
+        const itemData = interval.items.get(itemName);
+        itemData.quantity += quantity;
+        itemData.cost += itemTotalCost;
+        
+        // Update category aggregation
+        if (!interval.categories.has(category)) {
+          interval.categories.set(category, { quantity: 0, cost: 0 });
+        }
+        const catData = interval.categories.get(category);
+        catData.quantity += quantity;
+        catData.cost += itemTotalCost;
+        
+        // Update interval totals
+        interval.totalQuantity += quantity;
+        interval.totalCost += itemTotalCost;
+      }
+    }
+    
+    // Step 6: Convert the Map to the desired output format and sort chronologically
+    const result = Array.from(intervalMap.values())
+      .sort((a, b) => new Date(a.intervalStart) - new Date(b.intervalStart))
+      .map(interval => ({
+        intervalStart: interval.intervalStart,
+        intervalEnd: interval.intervalEnd,
+        // Total items and cost for this interval
+        totalQuantity: interval.totalQuantity,
+        totalCost: interval.totalCost / 100, // Convert cents to dollars
+        // Items with quantity, cost, and category
+        items: Object.fromEntries(
+          Array.from(interval.items.entries()).map(([name, data]) => [
+            name,
+            {
+              quantity: data.quantity,
+              cost: data.cost / 100, // Convert cents to dollars
+              category: data.category
+            }
+          ])
+        ),
+        // Categories with quantity and cost
+        categories: Object.fromEntries(
+          Array.from(interval.categories.entries()).map(([name, data]) => [
+            name,
+            {
+              quantity: data.quantity,
+              cost: data.cost / 100 // Convert cents to dollars
+            }
+          ])
+        )
+      }));
+    
+    // Step 7: Return the aggregated data
+    res.json(result);
+    
+  } catch (error) {
+    // Step 8: Handle errors gracefully
+    console.error('Square Orders Aggregated API error:', error);
+    res.status(500).json({ 
+      error: 'Square API request failed', 
+      message: error.message 
+    });
+  }
+});
+
 // Simple logo endpoint that doesn't require database
 app.get('/api/logo', (req, res) => {
   res.json({
@@ -414,6 +593,3 @@ const gracefulShutdown = async (signal) => {
     process.exit(0);
   });
 };
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));

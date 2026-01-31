@@ -264,12 +264,20 @@ const Sidebar = () => {
           </button>
         </div>
         {expandedSections.sales && (
-          <NavLink
-            to="/admin/sales"
-            className={`nav-item ${location.pathname === '/admin/sales' ? 'active' : ''}`}
-          >
-            <span className="nav-text">SALES</span>
-          </NavLink>
+          <>
+            <NavLink
+              to="/admin/sales"
+              className={`nav-item ${location.pathname === '/admin/sales' ? 'active' : ''}`}
+            >
+              <span className="nav-text">SALES</span>
+            </NavLink>
+            <NavLink
+              to="/admin/sales/pos-ui"
+              className={`nav-item ${location.pathname === '/admin/sales/pos-ui' ? 'active' : ''}`}
+            >
+              <span className="nav-text">POS UI</span>
+            </NavLink>
+          </>
         )}
         
         <div className="nav-section-header">
