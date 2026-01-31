@@ -1891,9 +1891,18 @@ const commitBeerNumUnitsValue = (rowId) => {
                                 hasOriginalValue && cellValue !== null && cellValue !== undefined;
                               // For salesPrice column, always show formatted value (0.00 if empty)
                               const isSalesPriceColumn = column.key === 'salesPrice';
-                              let currencyInputValue =
-                                pendingRowUpdates[row._id]?.[column.key] ??
-                                (hasCurrencyValue || isSalesPriceColumn ? formatCurrencyDisplay(cellValue) : '');
+                              // Show raw pending value if user is typing, otherwise show formatted value
+                              const pendingValue = pendingRowUpdates[row._id]?.[column.key];
+                              let currencyInputValue;
+                              if (pendingValue !== undefined) {
+                                // Show raw value while typing
+                                currencyInputValue = pendingValue;
+                              } else if (hasCurrencyValue || isSalesPriceColumn) {
+                                // Show formatted value when not typing
+                                currencyInputValue = formatCurrencyDisplay(cellValue);
+                              } else {
+                                currencyInputValue = '';
+                              }
                               return (
                                 <td
                                   key={column.key}

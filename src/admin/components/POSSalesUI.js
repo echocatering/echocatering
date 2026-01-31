@@ -1476,8 +1476,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 type="number"
                 value={newModifierPrice}
                 onChange={(e) => setNewModifierPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
+                placeholder="0"
+                step="1"
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -1517,7 +1517,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   if (newModifierName.trim()) {
                     const newMod = {
                       name: newModifierName.trim(),
-                      priceAdjustment: parseFloat(newModifierPrice) || 0,
+                      priceAdjustment: parseInt(newModifierPrice, 10) || 0,
                       isLink: newModifierLink
                     };
                     const currentModifiers = editingItem.modifiers || [];
@@ -1666,7 +1666,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         if (!mod.isLink) {
                           // Non-LINK: add item immediately with this modifier
                           setFlashingItemId(orderingItem._id);
-                          onItemClick(orderingItem, mod.name);
+                          onItemClick(orderingItem, mod);
                           setTimeout(() => setFlashingItemId(null), 500);
                           setOrderingItem(null);
                           setSelectedModifiers([]);
@@ -1709,8 +1709,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   onClick={() => {
                     // Add item with all selected LINK modifiers
                     const modifierNames = selectedModifiers.map(m => m.name).join(', ');
+                    const totalPriceAdjustment = selectedModifiers.reduce((sum, m) => sum + (m.priceAdjustment || 0), 0);
                     setFlashingItemId(orderingItem._id);
-                    onItemClick(orderingItem, modifierNames);
+                    onItemClick(orderingItem, { name: modifierNames, priceAdjustment: totalPriceAdjustment });
                     setTimeout(() => setFlashingItemId(null), 500);
                     setOrderingItem(null);
                     setSelectedModifiers([]);
@@ -1881,9 +1882,11 @@ export default function POSSalesUI() {
     console.log(`[POS] Updated modifiers for item ${itemId}:`, modifiers);
   }, []);
 
-  const handleItemClick = useCallback((item, modifier = null) => {
+  const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
-    console.log(`[POS] Item clicked: "${item.name}"${modifier ? ` with modifier: "${modifier}"` : ''} at ${timestamp}`);
+    const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
+    const modifierPrice = typeof modifierData === 'object' && modifierData?.priceAdjustment ? modifierData.priceAdjustment : 0;
+    console.log(`[POS] Item clicked: "${item.name}"${modifierName ? ` with modifier: "${modifierName}"` : ''} at ${timestamp}`);
     
     // If no active tab, auto-create one first
     let targetTabId = activeTabId;
@@ -1900,11 +1903,15 @@ export default function POSSalesUI() {
       console.log(`[POS] Auto-created new tab: ${newTab.name}`);
     }
     
-    // Add item to the active tab
+    // Add item to the active tab with adjusted price
+    const basePrice = parseFloat(item.price) || 0;
+    const adjustedPrice = basePrice + modifierPrice;
     const newItem = {
       ...item,
       addedAt: timestamp,
-      modifier: modifier || item.modifier || null
+      modifier: modifierName || item.modifier || null,
+      modifierPriceAdjustment: modifierPrice,
+      price: adjustedPrice
     };
     
     setTabs(prev => prev.map(tab => 
@@ -1914,7 +1921,7 @@ export default function POSSalesUI() {
     ));
     
     // Update last action
-    const actionName = modifier ? `${item.name} (${modifier})` : item.name;
+    const actionName = modifierName ? `${item.name} (${modifierName})` : item.name;
     setLastAction({ type: 'add', itemName: actionName });
   }, [activeTabId, nextTabNumber]);
 
