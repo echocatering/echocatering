@@ -1849,6 +1849,43 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   
   const { apiCall } = useAuth();
   
+  // On startup, sync with backend to check for active events
+  // This handles the case where localStorage is out of sync with DB
+  useEffect(() => {
+    const syncWithBackend = async () => {
+      try {
+        const response = await apiCall('/pos-events/active');
+        
+        if (response && response.active && response.event) {
+          // There's an active event in the DB
+          const dbEvent = response.event;
+          
+          if (!eventId) {
+            // localStorage has no event but DB does - restore it
+            console.log(`[POS] Restoring active event from DB: ${dbEvent.name}`);
+            startEvent(dbEvent._id, dbEvent.name);
+          } else if (eventId !== dbEvent._id) {
+            // localStorage has different event than DB - use DB's event
+            console.log(`[POS] Syncing to DB event: ${dbEvent.name} (was: ${eventId})`);
+            startEvent(dbEvent._id, dbEvent.name);
+          }
+          // If eventId matches dbEvent._id, we're already in sync
+        } else {
+          // No active event in DB
+          if (eventId) {
+            // localStorage has event but DB doesn't - clear localStorage
+            console.log('[POS] No active event in DB - clearing localStorage');
+            clearEvent();
+          }
+        }
+      } catch (error) {
+        console.error('[POS] Error syncing with backend:', error);
+      }
+    };
+    
+    syncWithBackend();
+  }, [apiCall]); // Only run once on mount - don't include eventId/startEvent/clearEvent to avoid loops
+  
   // Fetch logo from admin logo uploader
   useEffect(() => {
     const fetchLogo = async () => {
@@ -2019,7 +2056,59 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       }
     } catch (error) {
       console.error('[POS] Failed to start event:', error);
-      alert(`Failed to start event: ${error.message}`);
+      
+      // Check if error is due to existing active event
+      if (error.message && error.message.includes('active event already exists')) {
+        // Try to get the active event info and offer options
+        try {
+          const activeResponse = await apiCall('/pos-events/active');
+          if (activeResponse && activeResponse.active && activeResponse.event) {
+            const activeEvent = activeResponse.event;
+            const choice = window.confirm(
+              `An active event "${activeEvent.name}" already exists.\n\n` +
+              `Click OK to resume this event, or Cancel to end it and start a new one.`
+            );
+            
+            if (choice) {
+              // Resume the existing event
+              startEvent(activeEvent._id, activeEvent.name);
+              setShowEventModal(false);
+              setNewEventName('');
+              console.log(`[POS] Resumed existing event: ${activeEvent.name}`);
+            } else {
+              // End the existing event first, then start new one
+              try {
+                await apiCall(`/pos-events/${activeEvent._id}/end`, {
+                  method: 'PUT',
+                  body: { tabs: [] },
+                });
+                console.log(`[POS] Ended existing event: ${activeEvent.name}`);
+                
+                // Now try to start the new event again
+                const newResponse = await apiCall('/pos-events', {
+                  method: 'POST',
+                  body: { name },
+                });
+                
+                if (newResponse && newResponse._id) {
+                  startEvent(newResponse._id, newResponse.name);
+                  setShowEventModal(false);
+                  setNewEventName('');
+                  console.log(`[POS] Started new event: ${newResponse.name}`);
+                }
+              } catch (endError) {
+                console.error('[POS] Failed to end existing event:', endError);
+                alert(`Failed to end existing event: ${endError.message}`);
+              }
+            }
+          }
+        } catch (activeError) {
+          console.error('[POS] Failed to get active event:', activeError);
+          alert(`Failed to start event: ${error.message}`);
+        }
+      } else {
+        alert(`Failed to start event: ${error.message}`);
+      }
     } finally {
       setSyncing(false);
     }
