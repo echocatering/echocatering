@@ -1696,6 +1696,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
+  // ============================================
+  // SQUARE POS TEST MODE
+  // When true: all items are $0.01, orders labeled as TEST
+  // When false: real prices, production checkout
+  // ============================================
+  const [squareTestMode, setSquareTestMode] = useState(true);
+  
   // Logo state - fetched from admin logo uploader
   const [logoUrl, setLogoUrl] = useState(null);
   
@@ -2067,8 +2074,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [eventId, handleSyncToDb]);
 
   /**
-   * Handle checkout - send tab to Square for payment
-   * Uses sandbox nonce in development, real card in production
+   * Handle checkout - Create Square order and open Square app via deep-link
+   * 
+   * SQUARE POS INTEGRATION:
+   * 1. Send tab data to backend to create Square order
+   * 2. Receive order_id and location_id
+   * 3. Open Square app using deep-link for payment
+   * 
+   * TEST_MODE (squareTestMode = true):
+   * - All items are $0.01
+   * - Orders labeled as TEST
+   * - Safe for testing without charging real money
    */
   const handleCheckout = useCallback(async () => {
     if (!activeTabId || selectedItems.length === 0) {
@@ -2084,12 +2100,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
     try {
       setCheckoutLoading(true);
-      console.log(`[POS Checkout] Processing tab ${activeTab.id} (${activeTab.name}) with ${selectedItems.length} items`);
+      
+      // ============================================
+      // SQUARE POS CHECKOUT FLOW
+      // ============================================
+      const testModeLabel = squareTestMode ? '[TEST MODE] ' : '';
+      console.log(`[POS Checkout] ${testModeLabel}Processing tab ${activeTab.id} (${activeTab.customName || activeTab.name}) with ${selectedItems.length} items`);
 
-      // Prepare checkout data
+      // Prepare checkout data for Square order creation
       const checkoutData = {
         tabId: activeTab.id,
-        tabName: activeTab.name,
+        tabName: activeTab.customName || activeTab.name,
         items: selectedItems.map(item => ({
           name: item.name,
           quantity: 1,
@@ -2097,34 +2118,40 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           modifier: item.modifier || null,
           category: item.category
         })),
-        total: total
+        total: total,
+        testMode: squareTestMode  // TEST_MODE flag
       };
 
-      // Call Square checkout endpoint
-      const response = await apiCall('/square/checkout', {
+      // Call backend to create Square order
+      console.log(`[POS Checkout] Creating Square order (testMode: ${squareTestMode})...`);
+      const response = await apiCall('/square/create-order-test', {
         method: 'POST',
         body: checkoutData,
       });
 
-      if (response && response.success) {
-        console.log(`[POS Checkout] Success! Payment ID: ${response.paymentId}`);
+      if (response && response.success && response.orderId && response.locationId) {
+        console.log(`[POS Checkout] ${testModeLabel}Order created: ${response.orderId}`);
+        console.log(`[POS Checkout] Location: ${response.locationId}`);
         
         // Store checkout result
         setLastCheckoutResult(response);
         
-        // Mark tab as paid by clearing its items
-        setTabs(prev => prev.map(tab =>
-          tab.id === activeTabId
-            ? { ...tab, items: [], paidAt: new Date().toISOString(), paymentId: response.paymentId }
-            : tab
-        ));
+        // ============================================
+        // OPEN SQUARE APP VIA DEEP-LINK
+        // This will open the Square Point of Sale app
+        // for payment processing on Android
+        // ============================================
+        const deepLinkUrl = `square-commerce-v1://payment/create?location_id=${response.locationId}&order_id=${response.orderId}`;
+        console.log(`[POS Checkout] Opening Square app: ${deepLinkUrl}`);
         
-        // Show success message
-        setShowCheckoutSuccess(true);
-        setTimeout(() => setShowCheckoutSuccess(false), 3000);
+        // Open Square app - works on Android Chrome and PWA
+        window.location.href = deepLinkUrl;
+        
+        // Note: We don't clear the tab here because the user may cancel in Square app
+        // The tab should be cleared when payment is confirmed (future enhancement)
         
       } else {
-        throw new Error(response?.message || 'Payment failed');
+        throw new Error(response?.message || 'Failed to create Square order');
       }
 
     } catch (error) {
@@ -2133,7 +2160,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     } finally {
       setCheckoutLoading(false);
     }
-  }, [activeTabId, selectedItems, tabs, total, apiCall, setTabs]);
+  }, [activeTabId, selectedItems, tabs, total, apiCall, squareTestMode]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -2518,6 +2545,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               />
             )}
           </div>
+          
+          {/* Center: TEST MODE toggle */}
+          <button
+            onClick={() => setSquareTestMode(prev => !prev)}
+            style={{
+              background: squareTestMode ? '#ff9800' : '#4caf50',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              marginRight: '12px',
+            }}
+          >
+            {squareTestMode ? 'TEST' : 'LIVE'}
+          </button>
           
           {/* Right side: Event name/time OR End Event button */}
           <div style={{ 
