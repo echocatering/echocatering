@@ -158,7 +158,9 @@ const cocktailSchema = new mongoose.Schema({
       id: String,
       name: String,
       price: Number,
-      linkedItemId: String
+      priceAdjustment: Number,
+      linkedItemId: String,
+      isLink: Boolean
     }],
     default: []
   }

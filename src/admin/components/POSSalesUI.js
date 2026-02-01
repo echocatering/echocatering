@@ -20,6 +20,16 @@ const normalizeCategoryKey = (value = '') => {
   return categoryMap[key] || key;
 };
 
+// Convert string to Title Case
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 function useMeasuredSize() {
   const ref = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -444,7 +454,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         textAlign: 'center',
                         wordBreak: 'break-word'
                       }}>
-                        {item.name || 'Item'}
+                        {toTitleCase(item.name) || 'Item'}
                       </span>
                     </div>
                   );
@@ -470,7 +480,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    {item.name || 'Untitled'}
+                    {toTitleCase(item.name) || 'Untitled'}
                   </span>
                 </div>
               </button>
@@ -607,7 +617,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         color: '#333'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 500 }}>{item.name || 'Item'}</span>
+                          <span style={{ fontWeight: 500 }}>{toTitleCase(item.name) || 'Item'}</span>
                           <span style={{ color: '#999' }}>-</span>
                           <span style={{ color: '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
                         </div>
@@ -965,7 +975,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               color: '#333',
               textAlign: 'center'
             }}>
-              Remove "{itemToRemove.item.name}"?
+              Remove "{toTitleCase(itemToRemove.item.name)}"?
             </span>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -1130,7 +1140,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 fontWeight: 600,
                 color: '#333'
               }}>
-                {editingItem.name}
+                {toTitleCase(editingItem.name)}
               </span>
               <span style={{
                 fontSize: `${Math.max(12, outerWidth / 24)}px`,
@@ -1511,7 +1521,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               marginBottom: '16px',
               textAlign: 'center'
             }}>
-              {orderingItem.name}
+              {toTitleCase(orderingItem.name)}
             </div>
             
             <div style={{
@@ -1749,11 +1759,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setLoading(true);
       try {
         const data = await apiCall('/menu-items?includeArchived=true');
+        
+        // Default modifiers for Spirits category
+        const defaultSpiritsModifiers = [
+          { name: 'Shot', priceAdjustment: 0, isLink: false },
+          { name: 'Single', priceAdjustment: 3, isLink: false },
+          { name: 'Double', priceAdjustment: 5, isLink: false }
+        ];
+        
         const normalized = Array.isArray(data)
-          ? data.map((item) => ({
-              ...item,
-              category: normalizeCategoryKey(item.category || item.section || 'cocktails')
-            }))
+          ? data.map((item) => {
+              const category = normalizeCategoryKey(item.category || item.section || 'cocktails');
+              // Apply default modifiers for spirits if none exist
+              const modifiers = (item.modifiers && item.modifiers.length > 0) 
+                ? item.modifiers 
+                : (category === 'spirits' ? defaultSpiritsModifiers : []);
+              return {
+                ...item,
+                category,
+                modifiers
+              };
+            })
           : [];
         
         // Filter out archived and placeholder items
@@ -2151,7 +2177,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     ));
     
     // Update last action with tab name
-    const actionName = modifierName ? `${item.name} (${modifierName})` : item.name;
+    const actionName = modifierName ? `${toTitleCase(item.name)} (${modifierName})` : toTitleCase(item.name);
     const targetTab = tabs.find(t => t.id === targetTabId);
     const tabDisplayName = targetTab?.customName || targetTab?.name || '';
     setLastAction({ type: 'add', itemName: actionName, tabName: tabDisplayName });
@@ -2174,7 +2200,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     // Update last action with tab name
     const tabDisplayName = activeTab?.customName || activeTab?.name || '';
-    setLastAction({ type: 'remove', itemName: itemToRemove.name, tabName: tabDisplayName });
+    setLastAction({ type: 'remove', itemName: toTitleCase(itemToRemove.name), tabName: tabDisplayName });
   }, [activeTabId, tabs]);
 
   const frameReady = frameSize.width > 0 && frameSize.height > 0;
