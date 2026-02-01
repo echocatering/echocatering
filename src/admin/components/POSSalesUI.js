@@ -457,7 +457,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{
+            <div className="scrollable-content" style={{
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden'
@@ -638,7 +638,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
       </div>
 
       {/* Scrollable Item Grid */}
-      <div style={{
+      <div className="scrollable-content" style={{
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -845,7 +845,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         
         {/* Order List - Only visible when expanded */}
         {currentDrawerHeight > footerHeight + handleBarHeight + 20 && (
-          <div style={{
+          <div className="scrollable-content" style={{
             flex: 1,
             overflowY: 'auto',
             padding: '8px',

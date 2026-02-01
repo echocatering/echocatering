@@ -3,9 +3,9 @@
   "short_name": "ECHO POS",
   "description": "ECHO Catering Point of Sale System",
   "start_url": "/admin/pos",
-  "scope": "/",
+  "scope": "/admin/pos",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "theme_color": "#800080",
   "background_color": "#ffffff",
   "icons": [

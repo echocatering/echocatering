@@ -114,6 +114,49 @@ const PosPage = () => {
     // Update document title for PWA
     document.title = 'ECHO POS';
     
+    // Prevent browser gestures (pull-to-refresh, swipe navigation)
+    const preventBrowserGestures = (e) => {
+      // Only prevent if scrolling at the top or bottom of a container
+      const target = e.target;
+      const scrollableParent = target.closest('.scrollable-content');
+      
+      if (!scrollableParent) {
+        // Not in a scrollable container - prevent default to stop browser gestures
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      } else {
+        // In a scrollable container - only prevent if at boundaries
+        const atTop = scrollableParent.scrollTop === 0;
+        const atBottom = scrollableParent.scrollTop + scrollableParent.clientHeight >= scrollableParent.scrollHeight;
+        
+        // Detect swipe direction
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - (scrollableParent._lastTouchY || touch.clientY);
+        scrollableParent._lastTouchY = touch.clientY;
+        
+        // Prevent pull-to-refresh when at top and swiping down
+        if (atTop && deltaY > 0 && e.cancelable) {
+          e.preventDefault();
+        }
+        // Prevent overscroll when at bottom and swiping up
+        if (atBottom && deltaY < 0 && e.cancelable) {
+          e.preventDefault();
+        }
+      }
+    };
+    
+    // Add global touchmove listener with passive: false to allow preventDefault
+    document.addEventListener('touchmove', preventBrowserGestures, { passive: false });
+    
+    // Reset touch tracking on touchend
+    const resetTouchTracking = () => {
+      document.querySelectorAll('.scrollable-content').forEach(el => {
+        delete el._lastTouchY;
+      });
+    };
+    document.addEventListener('touchend', resetTouchTracking);
+    
     // Handle PWA install prompt
     const handleBeforeInstallPrompt = (e) => {
       console.log('[POS PWA] Install prompt detected');
@@ -171,8 +214,10 @@ const PosPage = () => {
       }
       document.title = 'ECHO Catering - Rochester, NY | Craft Cocktails & Events';
       
-      // Clean up event listener
+      // Clean up event listeners
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      document.removeEventListener('touchmove', preventBrowserGestures);
+      document.removeEventListener('touchend', resetTouchTracking);
     };
   }, []);
 
