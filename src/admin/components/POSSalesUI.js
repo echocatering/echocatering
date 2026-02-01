@@ -288,7 +288,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         {CATEGORIES.map((category) => (
           <button
             key={category.id}
-            onClick={() => { setActiveCategory(category.id); setDrawerExpanded(false); setTopDrawerExpanded(false); }}
+            onClick={() => { setActiveCategory(category.id); setDrawerExpanded(false); }}
             title={category.fullName}
             style={{
               flex: 1,
