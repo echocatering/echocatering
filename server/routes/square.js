@@ -99,6 +99,7 @@ router.post('/create-order-test', async (req, res) => {
 
     console.log(`[Square] Creating order for tab ${tabId} (${tabName}), testMode: ${testMode}`);
     console.log(`[Square] Line items:`, lineItems.map(li => ({ name: li.name, qty: li.quantity, price: li.basePriceMoney.amount.toString() })));
+    console.log(`[Square] Full order request:`, JSON.stringify(orderRequest, null, 2));
 
     // Square SDK v44+ uses squareClient.orders.create() not createOrder()
     const result = await squareClient.orders.create(orderRequest);

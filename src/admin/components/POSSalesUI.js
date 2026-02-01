@@ -2123,43 +2123,83 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         testMode: squareTestMode  // TEST_MODE flag
       };
 
-      // Call backend to create Square order
-      console.log(`[POS Checkout] Creating Square order (testMode: ${squareTestMode})...`);
-      const response = await apiCall('/square/create-order-test', {
-        method: 'POST',
-        body: checkoutData,
-      });
-
-      if (response && response.success && response.orderId && response.locationId) {
-        console.log(`[POS Checkout] ${testModeLabel}Order created: ${response.orderId}`);
-        console.log(`[POS Checkout] Location: ${response.locationId}`);
-        
-        // Store checkout result
-        setLastCheckoutResult(response);
-        
-        // ============================================
-        // OPEN SQUARE APP VIA DEEP-LINK
-        // This will open the Square Point of Sale app
-        // for payment processing on Android
-        // ============================================
-        const deepLinkUrl = `square-commerce-v1://payment/create?location_id=${response.locationId}&order_id=${response.orderId}`;
-        console.log(`[POS Checkout] Opening Square app: ${deepLinkUrl}`);
-        
-        // Show success message first
-        alert(`Order created! ${response.testMode ? '(TEST MODE)' : ''}\n\nOrder ID: ${response.orderId}\n\nOpening Square app for payment...`);
-        
-        // Try to open Square app via deep-link
-        // Use setTimeout to allow the alert to close first
-        setTimeout(() => {
-          window.location.href = deepLinkUrl;
-        }, 100);
-        
-        // Note: We don't clear the tab here because the user may cancel in Square app
-        // The tab should be cleared when payment is confirmed (future enhancement)
-        
-      } else {
-        throw new Error(response?.message || 'Failed to create Square order');
+      // ============================================
+      // SQUARE POS API CHECKOUT FLOW
+      // Use Square Point of Sale API directly for charges
+      // ============================================
+      console.log(`[POS Checkout] ${testModeLabel}Processing tab ${activeTab.id} (${activeTab.customName || activeTab.name}) with ${selectedItems.length} items`);
+      
+      // Get Square location ID
+      const locationResponse = await apiCall('/square/location');
+      if (!locationResponse || !locationResponse.locationId) {
+        throw new Error('Square location not configured');
       }
+      
+      // Calculate total in cents
+      const totalCents = squareTestMode 
+        ? selectedItems.length  // $0.01 per item in test mode
+        : Math.round((total || 0) * 100);
+      
+      // Store checkout result
+      setLastCheckoutResult({
+        success: true,
+        locationId: locationResponse.locationId,
+        testMode: squareTestMode,
+        totalCents: totalCents,
+        tabId: activeTab.id,
+        tabName: activeTab.customName || activeTab.name
+      });
+      
+      // ============================================
+      // OPEN SQUARE APP VIA DEEP-LINK
+      // Using Square Point of Sale API format for Android
+      // ============================================
+      
+      // For Square POS API, we need to use the Android intent format
+      // This creates a charge transaction directly
+      const callbackUrl = `${window.location.origin}/admin/pos`;
+      const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
+      
+      console.log(`[POS Checkout] CLIENT_ID:`, clientId);
+      console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
+      console.log(`[POS Checkout] Total cents:`, totalCents);
+      
+      if (!clientId || clientId === 'sq0idp-') {
+        console.error('[POS Checkout] Missing REACT_APP_SQUARE_CLIENT_ID');
+        alert('Error: Square Client ID not configured. Please add REACT_APP_SQUARE_CLIENT_ID to environment variables.');
+        return;
+      }
+      
+      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(JSON.stringify({tabId: activeTab.id, tabName: activeTab.customName || activeTab.name, testMode: squareTestMode, items: selectedItems.map(i => ({name: i.name, modifier: i.modifier, price: i.price}))}))};end`;
+      
+      console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
+      
+      // Show success message first
+      alert(`Opening Square app for payment...\n\n${squareTestMode ? '(TEST MODE - $0.01 per item)' : ''}\nTotal: $${(totalCents / 100).toFixed(2)}\n\nItems: ${selectedItems.length}`);
+      
+      // Try to open Square app via deep-link
+      // Use setTimeout to allow the alert to close first
+      setTimeout(() => {
+        console.log('[POS Checkout] Attempting to open Square app...');
+        window.location.href = deepLinkUrl;
+        
+        // Fallback: If Square app doesn't open within 2 seconds, show manual option
+        setTimeout(() => {
+          const shouldCopy = window.confirm('Square app didn\'t open automatically. Would you like to copy the deep-link to open it manually?\n\nThis can happen if:\n- Square app isn\'t installed\n- Browser blocked the navigation\n- Deep-link format issue');
+          
+          if (shouldCopy) {
+            // Copy to clipboard
+            navigator.clipboard.writeText(deepLinkUrl).then(() => {
+              alert('Deep-link copied to clipboard!\n\nPaste it in your browser\'s address bar or use a QR code scanner to open Square app manually.');
+            }).catch(() => {
+              alert('Could not copy to clipboard. Here\'s the link:\n\n' + deepLinkUrl);
+            });
+          }
+        }, 2000);
+      }, 100);
+      
+      // Note: We don't clear the tab here because the user may cancel in Square app
+      // The tab should be cleared when payment is confirmed (future enhancement)
 
     } catch (error) {
       console.error('[POS Checkout] Error:', error);
