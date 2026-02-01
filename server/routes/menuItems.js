@@ -2019,6 +2019,33 @@ router.put('/reorder', [authenticateToken, requireEditor], async (req, res) => {
   }
 });
 
+// @route   PUT /api/menu-items/:id/modifiers
+// @desc    Update POS modifiers for a menu item (persists across events)
+// @access  Private (Editor)
+router.put('/:id/modifiers', [authenticateToken, requireEditor], async (req, res) => {
+  try {
+    const { modifiers } = req.body;
+    
+    if (!Array.isArray(modifiers)) {
+      return res.status(400).json({ message: 'Modifiers must be an array' });
+    }
+    
+    const cocktail = await findCocktailByAnyId(req.params.id);
+    if (!cocktail) {
+      return res.status(404).json({ message: 'Menu item not found' });
+    }
+    
+    cocktail.modifiers = modifiers;
+    await cocktail.save();
+    
+    console.log(`[MenuItems] Updated modifiers for ${cocktail.name}:`, modifiers);
+    res.json({ success: true, modifiers: cocktail.modifiers });
+  } catch (error) {
+    console.error('Update modifiers error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // OLD STAGE1/STAGE2 ENDPOINTS REMOVED - Using new video processing system in videoProcessing.js
 // Stage media APIs (REMOVED - replaced by /api/video-processing/upload-base and /api/video-processing/process)
 // All BGMV2 and stage1/stage2 code has been removed

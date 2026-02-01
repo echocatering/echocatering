@@ -151,6 +151,16 @@ const cocktailSchema = new mongoose.Schema({
   cloudinaryMapSnapshotPublicId: {
     type: String,
     default: ''
+  },
+  // POS modifiers - persists across events
+  modifiers: {
+    type: [{
+      id: String,
+      name: String,
+      price: Number,
+      linkedItemId: String
+    }],
+    default: []
   }
 }, {
   timestamps: true

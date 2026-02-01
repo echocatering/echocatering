@@ -908,12 +908,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               key={actionKey}
               style={{
                 color: lastAction.type === 'add' ? '#22c55e' : '#ef4444',
-                fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
-                fontWeight: 500,
+                fontSize: `${Math.max(12, footerHeight * 0.28)}px`,
+                fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
                 animation: 'fadeSlideIn 0.5s ease-out'
               }}>
-              {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
+              {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}{lastAction.tabName ? ` → ${lastAction.tabName}` : ''}
             </span>
           )}
         </div>
@@ -1831,15 +1831,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     ));
   }, []);
 
-  // Update item modifiers (for editing flow)
-  const handleUpdateItemModifiers = useCallback((itemId, modifiers) => {
+  // Update item modifiers (for editing flow) - persists to database
+  const handleUpdateItemModifiers = useCallback(async (itemId, modifiers) => {
+    // Update local state immediately
     setAllItems(prev => prev.map(item =>
       item._id === itemId
         ? { ...item, modifiers }
         : item
     ));
-    console.log(`[POS] Updated modifiers for item ${itemId}:`, modifiers);
-  }, []);
+    
+    // Persist to database
+    try {
+      await apiCall(`/menu-items/${itemId}/modifiers`, {
+        method: 'PUT',
+        body: { modifiers }
+      });
+      console.log(`[POS] Saved modifiers for item ${itemId} to database:`, modifiers);
+    } catch (error) {
+      console.error(`[POS] Failed to save modifiers for item ${itemId}:`, error);
+    }
+  }, [apiCall]);
 
   // ============================================
   // EVENT MANAGEMENT HANDLERS
@@ -2125,10 +2136,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         : tab
     ));
     
-    // Update last action
+    // Update last action with tab name
     const actionName = modifierName ? `${item.name} (${modifierName})` : item.name;
-    setLastAction({ type: 'add', itemName: actionName });
-  }, [activeTabId, nextTabNumber]);
+    const targetTab = tabs.find(t => t.id === targetTabId);
+    const tabDisplayName = targetTab?.customName || targetTab?.name || '';
+    setLastAction({ type: 'add', itemName: actionName, tabName: tabDisplayName });
+  }, [activeTabId, nextTabNumber, tabs]);
 
   const handleRemoveItem = useCallback((index) => {
     if (!activeTabId) return;
@@ -2145,7 +2158,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         : tab
     ));
     
-    setLastAction({ type: 'remove', itemName: itemToRemove.name });
+    // Update last action with tab name
+    const tabDisplayName = activeTab?.customName || activeTab?.name || '';
+    setLastAction({ type: 'remove', itemName: itemToRemove.name, tabName: tabDisplayName });
   }, [activeTabId, tabs]);
 
   const frameReady = frameSize.width > 0 && frameSize.height > 0;
