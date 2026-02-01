@@ -922,12 +922,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
                 animation: 'fadeSlideIn 0.5s ease-out'
               }}>
-              <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
-                {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
-              </span>
               {lastAction.tabName && (
-                <span style={{ color: '#d0d0d0' }}> — {lastAction.tabName}</span>
+                <span style={{ color: '#d0d0d0' }}>{lastAction.tabName} — </span>
               )}
+              <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
+                {lastAction.type === 'add' ? '+' : '-'}{lastAction.itemName}
+              </span>
             </span>
           )}
         </div>
