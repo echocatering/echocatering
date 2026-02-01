@@ -27,11 +27,17 @@ function useMeasuredSize() {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    
+    // Immediately measure on mount to prevent stuck loading state
+    const initialMeasure = () => {
+      setSize({ width: node.clientWidth, height: node.clientHeight });
+    };
+    initialMeasure();
+    
     if (!window.ResizeObserver) {
       const handle = () => {
         setSize({ width: node.clientWidth, height: node.clientHeight });
       };
-      handle();
       window.addEventListener('resize', handle);
       return () => window.removeEventListener('resize', handle);
     }
@@ -50,17 +56,14 @@ function useMeasuredSize() {
 
 // Inner POS Content Component for 9:19 view
 function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onCheckout, checkoutLoading }) {
-  // Bottom drawer (order list) state
-  const [drawerExpanded, setDrawerExpanded] = useState(false);
+  // Bottom drawer state - always starts expanded with receipt view
+  const [drawerExpanded, setDrawerExpanded] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [dragCurrentY, setDragCurrentY] = useState(0);
   
-  // Top drawer (tabs) state
-  const [topDrawerExpanded, setTopDrawerExpanded] = useState(false);
-  const [isTopDragging, setIsTopDragging] = useState(false);
-  const [topDragStartY, setTopDragStartY] = useState(0);
-  const [topDragCurrentY, setTopDragCurrentY] = useState(0);
+  // Drawer view state: 'receipt' or 'tabs'
+  const [drawerView, setDrawerView] = useState('receipt');
   
   const [itemToRemove, setItemToRemove] = useState(null); // For confirmation popup
   const [actionKey, setActionKey] = useState(0); // For triggering fade-in animation
@@ -168,11 +171,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const footerHeight = itemButtonSize / 2; // Collapsed footer height
   const headerHeight = outerWidth / 5; // Header buttons are 1:1, 5 across = width/5 each
   const handleBarHeight = 36; // Height of the swipe handle bar (balanced for touch and aesthetics)
-  const topDrawerCollapsedHeight = handleBarHeight; // Just the handle bar when collapsed
-  // Bottom drawer expanded: from footer+subfooter up to header (fully overlaps top drawer handle)
+  // Bottom drawer expanded: from footer up to header
   const bottomDrawerExpandedHeight = outerHeight - headerHeight - footerHeight - handleBarHeight;
-  // Top drawer expanded: from header down to footer+subfooter (fully overlaps bottom drawer handle)  
-  const topDrawerExpandedHeight = outerHeight - headerHeight - footerHeight - handleBarHeight;
   
   // Calculate current drawer height based on drag or expanded state
   const getDrawerHeight = () => {
@@ -217,7 +217,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         setDrawerExpanded(true);
       }
     }
-  }, [isDragging, dragStartY, dragCurrentY, drawerExpanded, bottomDrawerExpandedHeight, footerHeight, handleBarHeight]);
+  }, [isDragging, dragStartY, dragCurrentY, drawerExpanded, bottomDrawerExpandedHeight, handleBarHeight]);
   
   useEffect(() => {
     if (isDragging) {
@@ -237,70 +237,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
       };
     }
   }, [isDragging, handleDragMove, handleDragEnd]);
-  
-  // Top drawer (tabs) height calculation
-  const getTopDrawerHeight = () => {
-    if (isTopDragging) {
-      const dragDelta = topDragCurrentY - topDragStartY; // Positive = dragging down
-      const baseHeight = topDrawerExpanded ? topDrawerExpandedHeight : topDrawerCollapsedHeight;
-      const newHeight = Math.max(topDrawerCollapsedHeight, Math.min(topDrawerExpandedHeight, baseHeight + dragDelta));
-      return newHeight;
-    }
-    return topDrawerExpanded ? topDrawerExpandedHeight : topDrawerCollapsedHeight;
-  };
-  
-  const currentTopDrawerHeight = getTopDrawerHeight();
-  
-  const handleTopDragStart = (e) => {
-    setIsTopDragging(true);
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    setTopDragStartY(clientY);
-    setTopDragCurrentY(clientY);
-  };
-  
-  const handleTopDragMove = useCallback((e) => {
-    if (!isTopDragging) return;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    setTopDragCurrentY(clientY);
-  }, [isTopDragging]);
-  
-  const handleTopDragEnd = useCallback(() => {
-    if (!isTopDragging) return;
-    setIsTopDragging(false);
-    const dragDelta = topDragCurrentY - topDragStartY;
-    const threshold = (topDrawerExpandedHeight - topDrawerCollapsedHeight) / 3;
-    
-    if (topDrawerExpanded) {
-      // If expanded and dragged up enough, collapse
-      if (dragDelta < -threshold) {
-        setTopDrawerExpanded(false);
-      }
-    } else {
-      // If collapsed and dragged down enough, expand
-      if (dragDelta > threshold) {
-        setTopDrawerExpanded(true);
-      }
-    }
-  }, [isTopDragging, topDragStartY, topDragCurrentY, topDrawerExpanded, topDrawerExpandedHeight, topDrawerCollapsedHeight]);
-  
-  useEffect(() => {
-    if (isTopDragging) {
-      const handleMove = (e) => handleTopDragMove(e);
-      const handleEnd = () => handleTopDragEnd();
-      
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove);
-      window.addEventListener('touchend', handleEnd);
-      
-      return () => {
-        window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', handleEnd);
-        window.removeEventListener('touchmove', handleMove);
-        window.removeEventListener('touchend', handleEnd);
-      };
-    }
-  }, [isTopDragging, handleTopDragMove, handleTopDragEnd]);
   
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
@@ -377,273 +313,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         ))}
       </div>
 
-      {/* Top Sliding Drawer (Tabs) */}
-      <div style={{
-        position: 'absolute',
-        top: headerHeight,
-        left: 0,
-        right: 0,
-        height: `${currentTopDrawerHeight}px`,
-        background: '#fff',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: topDrawerExpanded ? 103 : 101,
-        overflow: 'hidden',
-        transition: isTopDragging ? 'none' : 'height 0.3s ease-out'
-      }}>
-        {/* Tab Name Input Row - at top of drawer */}
-        {topDrawerExpanded && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px',
-            background: '#fff',
-            borderBottom: '1px solid #eee',
-            flexShrink: 0,
-            height: `${Math.max(60, footerHeight * 0.9)}px`
-          }}>
-            {activeTabId && (
-              <>
-                {/* NAME: input on left */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '12px' }}>
-                  <span style={{
-                    color: '#d0d0d0',
-                    fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
-                    fontWeight: 500,
-                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                  }}>
-                    NAME:
-                  </span>
-                  <input
-                    type="text"
-                    value={tabs.find(t => t.id === activeTabId)?.customName || ''}
-                    onChange={(e) => onUpdateTabName(activeTabId, e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      color: '#000',
-                      fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
-                      fontWeight: 600,
-                      fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                      background: 'transparent',
-                      flex: 1,
-                      minWidth: 0,
-                      textTransform: 'uppercase'
-                    }}
-                  />
-                </div>
-                {/* P# on right */}
-                <span style={{
-                  color: '#800080',
-                  fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
-                  fontWeight: 600,
-                  fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                }}>
-                  {tabs.find(t => t.id === activeTabId)?.name}
-                </span>
-              </>
-            )}
-          </div>
-        )}
-        
-        {/* Tab Content Area - Scrollable Container */}
-        {topDrawerExpanded && (
-          <div style={{
-            flex: 1,
-            overflow: 'hidden',
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div className="scrollable-content" style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden'
-            }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '4px',
-                padding: '4px',
-                paddingBottom: '8px',
-                alignContent: 'start'
-              }}>
-                {/* Add Tab Button - always first */}
-                <button
-                  onClick={onCreateTab}
-                  style={{
-                    aspectRatio: '1 / 1',
-                    width: '100%',
-                    border: 'none',
-                    background: '#fff',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <span style={{
-                    color: '#d0d0d0',
-                    fontSize: `${outerWidth / 6}px`,
-                    fontWeight: 300,
-                    lineHeight: 1
-                  }}>+</span>
-                </button>
-                
-                {/* Tab Buttons */}
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => onSelectTab(tab.id)}
-                    style={{
-                      aspectRatio: '1 / 1',
-                      width: '100%',
-                      border: activeTabId === tab.id ? '2px solid #800080' : 'none',
-                      background: activeTabId === tab.id ? '#f0e6f0' : '#fff',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                      padding: '24px',
-                      overflow: 'hidden',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    {(() => {
-                      const displayName = (tab.customName || tab.name).toUpperCase();
-                      const words = displayName.split(' ');
-                      const longestWord = Math.max(...words.map(w => w.length));
-                      const numLines = words.length;
-                      const buttonWidth = (outerWidth - 16) / 3;
-                      const availableWidth = buttonWidth - 48;
-                      const availableHeight = buttonWidth - 48;
-                      const fontSizeByWidth = availableWidth / (longestWord * 0.6);
-                      const fontSizeByHeight = availableHeight / (numLines * 1.2);
-                      const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
-                      
-                      return words.map((word, idx) => (
-                        <span 
-                          key={idx}
-                          style={{
-                            color: activeTabId === tab.id ? '#800080' : '#333',
-                            fontSize: `${fontSize}px`,
-                            fontWeight: 600,
-                            lineHeight: 1.2
-                          }}
-                        >
-                          {word}
-                        </span>
-                      ));
-                    })()}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {topDrawerExpanded && (
-          <div style={{
-            display: 'flex',
-            padding: '8px',
-            gap: '8px',
-            background: '#fff',
-            flexShrink: 0
-          }}>
-            <button
-              onClick={() => activeTabId && setShowCloseTabConfirm(true)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: '#f0f0f0',
-                color: activeTabId ? '#333' : '#999',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: activeTabId ? 'pointer' : 'not-allowed',
-                borderRadius: '4px'
-              }}
-            >
-              CLOSE
-            </button>
-            <button
-              onClick={() => { /* TODO: Hold functionality */ }}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: '#f0f0f0',
-                color: '#333',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              HOLD
-            </button>
-            <button
-              onClick={() => onCheckout && onCheckout()}
-              disabled={checkoutLoading || selectedItems.length === 0}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'),
-                color: '#fff',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: checkoutLoading || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
-            </button>
-          </div>
-        )}
-        
-        {/* Handle Bar at bottom of top drawer - always draggable */}
-        <div
-          onMouseDown={handleTopDragStart}
-          onTouchStart={handleTopDragStart}
-          style={{
-            height: `${handleBarHeight}px`,
-            background: '#f8f8f8',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'grab',
-            flexShrink: 0,
-            borderTop: '1px solid #e0e0e0'
-          }}
-        >
-          <div style={{
-            width: '60px',
-            height: '6px',
-            background: '#999',
-            borderRadius: '3px'
-          }} />
-        </div>
-      </div>
-
       {/* Scrollable Item Grid */}
       <div className="scrollable-content" style={{
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
         padding: '4px',
-        paddingTop: `${handleBarHeight + 4}px`,
         paddingBottom: `${footerHeight + handleBarHeight + 12}px`
       }}>
         {loading ? (
@@ -820,7 +495,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         overflow: 'hidden',
         transition: isDragging ? 'none' : 'height 0.3s ease-out'
       }}>
-        {/* Handle Bar - Swipe indicator - always draggable, overlaps top drawer handle */}
+        {/* Handle Bar - Swipe indicator - always draggable */}
         <div
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
@@ -843,78 +518,228 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
           }} />
         </div>
         
-        {/* Order List - Only visible when expanded */}
-        {currentDrawerHeight > footerHeight + handleBarHeight + 20 && (
-          <div className="scrollable-content" style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '8px',
-            borderBottom: '1px solid #eee'
-          }}>
-            {selectedItems.length === 0 ? (
+        {/* Drawer Content - switches between Receipt and Tabs views */}
+        {currentDrawerHeight > handleBarHeight + 20 && (
+          <>
+            {/* Tab Name Input Row - only show when on tabs view and a tab is selected */}
+            {drawerView === 'tabs' && activeTabId && (
               <div style={{
-                color: '#999',
-                fontSize: `${Math.max(10, outerWidth / 30)}px`,
-                textAlign: 'center',
-                padding: '16px'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px',
+                background: '#fff',
+                borderBottom: '1px solid #eee',
+                flexShrink: 0,
+                height: `${Math.max(60, footerHeight * 0.9)}px`
               }}>
-                No items added yet
-              </div>
-            ) : (
-              selectedItems.map((item, index) => (
-                <div 
-                  key={`${item._id}-${index}`}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '6px 0',
-                    borderBottom: index < selectedItems.length - 1 ? '1px solid #f0f0f0' : 'none'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: `${Math.max(10, outerWidth / 28)}px`,
-                    color: '#333'
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '12px' }}>
+                  <span style={{
+                    color: '#d0d0d0',
+                    fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
+                    fontWeight: 500,
+                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 500 }}>{item.name || 'Item'}</span>
-                      <span style={{ color: '#999' }}>-</span>
-                      <span style={{ color: '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#999' }}>{formatTimestamp(item.addedAt)}</span>
-                      <button
-                        onClick={() => setItemToRemove({ item, index })}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#d0d0d0',
-                          fontSize: `${Math.max(18, outerWidth / 16)}px`,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: '0 4px',
-                          lineHeight: 1
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: `${Math.max(9, outerWidth / 32)}px`,
-                    color: '#666',
-                    marginTop: '2px'
-                  }}>
-                    ${(parseFloat(item.price) || 0).toFixed(2)}
-                  </div>
+                    NAME:
+                  </span>
+                  <input
+                    type="text"
+                    value={tabs.find(t => t.id === activeTabId)?.customName || ''}
+                    onChange={(e) => onUpdateTabName(activeTabId, e.target.value)}
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      color: '#000',
+                      fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
+                      fontWeight: 600,
+                      fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                      background: 'transparent',
+                      flex: 1,
+                      minWidth: 0,
+                      textTransform: 'uppercase'
+                    }}
+                  />
                 </div>
-              ))
+                <span style={{
+                  color: '#800080',
+                  fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
+                  fontWeight: 600,
+                  fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                }}>
+                  {tabs.find(t => t.id === activeTabId)?.name}
+                </span>
+              </div>
             )}
-          </div>
+            
+            {/* Receipt View - Order List */}
+            {drawerView === 'receipt' && (
+              <div className="scrollable-content" style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '8px',
+                borderBottom: '1px solid #eee'
+              }}>
+                {selectedItems.length === 0 ? (
+                  <div style={{
+                    color: '#999',
+                    fontSize: `${Math.max(10, outerWidth / 30)}px`,
+                    textAlign: 'center',
+                    padding: '16px'
+                  }}>
+                    No items added yet
+                  </div>
+                ) : (
+                  selectedItems.map((item, index) => (
+                    <div 
+                      key={`${item._id}-${index}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '6px 0',
+                        borderBottom: index < selectedItems.length - 1 ? '1px solid #f0f0f0' : 'none'
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: `${Math.max(10, outerWidth / 28)}px`,
+                        color: '#333'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 500 }}>{item.name || 'Item'}</span>
+                          <span style={{ color: '#999' }}>-</span>
+                          <span style={{ color: '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: '#999' }}>{formatTimestamp(item.addedAt)}</span>
+                          <button
+                            onClick={() => setItemToRemove({ item, index })}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#d0d0d0',
+                              fontSize: `${Math.max(18, outerWidth / 16)}px`,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              padding: '0 4px',
+                              lineHeight: 1
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: `${Math.max(9, outerWidth / 32)}px`,
+                        color: '#666',
+                        marginTop: '2px'
+                      }}>
+                        ${(parseFloat(item.price) || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            
+            {/* Tabs View - Tab Grid */}
+            {drawerView === 'tabs' && (
+              <div className="scrollable-content" style={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '4px',
+                  padding: '4px',
+                  paddingBottom: '8px',
+                  alignContent: 'start'
+                }}>
+                  {/* Add Tab Button - always first */}
+                  <button
+                    onClick={onCreateTab}
+                    style={{
+                      aspectRatio: '1 / 1',
+                      width: '100%',
+                      border: 'none',
+                      background: '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <span style={{
+                      color: '#d0d0d0',
+                      fontSize: `${outerWidth / 6}px`,
+                      fontWeight: 300,
+                      lineHeight: 1
+                    }}>+</span>
+                  </button>
+                  
+                  {/* Tab Buttons */}
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => onSelectTab(tab.id)}
+                      style={{
+                        aspectRatio: '1 / 1',
+                        width: '100%',
+                        border: activeTabId === tab.id ? '2px solid #800080' : 'none',
+                        background: activeTabId === tab.id ? '#f0e6f0' : '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                        padding: '24px',
+                        overflow: 'hidden',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {(() => {
+                        const displayName = (tab.customName || tab.name).toUpperCase();
+                        const words = displayName.split(' ');
+                        const longestWord = Math.max(...words.map(w => w.length));
+                        const numLines = words.length;
+                        const buttonWidth = (outerWidth - 16) / 3;
+                        const availableWidth = buttonWidth - 48;
+                        const availableHeight = buttonWidth - 48;
+                        const fontSizeByWidth = availableWidth / (longestWord * 0.6);
+                        const fontSizeByHeight = availableHeight / (numLines * 1.2);
+                        const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
+                        
+                        return words.map((word, idx) => (
+                          <span 
+                            key={idx}
+                            style={{
+                              color: activeTabId === tab.id ? '#800080' : '#333',
+                              fontSize: `${fontSize}px`,
+                              fontWeight: 600,
+                              lineHeight: 1.2
+                            }}
+                          >
+                            {word}
+                          </span>
+                        ));
+                      })()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         
+        {/* Action Buttons - always visible when drawer is expanded */}
         {drawerExpanded && (
           <div style={{
             display: 'flex',
@@ -923,6 +748,25 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             background: '#fff',
             flexShrink: 0
           }}>
+            {/* Page Switcher Button - TABS when on receipt, VIEW when on tabs */}
+            <button
+              onClick={() => setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                border: 'none',
+                background: '#f0f0f0',
+                color: '#333',
+                fontSize: `${Math.max(12, outerWidth / 25)}px`,
+                fontWeight: 600,
+                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                cursor: 'pointer',
+                borderRadius: '4px'
+              }}
+            >
+              {drawerView === 'receipt' ? 'TABS' : 'VIEW'}
+            </button>
+            {/* Close Button */}
             <button
               onClick={() => activeTabId && setShowCloseTabConfirm(true)}
               style={{
@@ -940,23 +784,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             >
               CLOSE
             </button>
-            <button
-              onClick={() => { /* TODO: Hold functionality */ }}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: '#f0f0f0',
-                color: '#333',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              HOLD
-            </button>
+            {/* Checkout Button */}
             <button
               onClick={() => onCheckout && onCheckout()}
               disabled={checkoutLoading || selectedItems.length === 0}
@@ -2353,7 +2181,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           <div style={{
             background: '#fff',
             padding: '8px 16px',
-            borderBottom: '1px solid #e0e0e0',
             height: '50px',
             display: 'flex',
             alignItems: 'center',
@@ -2511,7 +2338,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           <div style={{
             background: '#fff',
             padding: '8px 16px',
-            borderBottom: '1px solid #e0e0e0',
             height: '50px',
             display: 'flex',
             alignItems: 'center',
