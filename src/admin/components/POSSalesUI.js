@@ -56,8 +56,8 @@ function useMeasuredSize() {
 
 // Inner POS Content Component for 9:19 view
 function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onCheckout, checkoutLoading }) {
-  // Bottom drawer state - always starts expanded with receipt view
-  const [drawerExpanded, setDrawerExpanded] = useState(true);
+  // Bottom drawer state - starts collapsed, receipt view is default
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [dragCurrentY, setDragCurrentY] = useState(0);
