@@ -129,7 +129,7 @@ const PosPage = () => {
     // Check PWA install eligibility
     const checkInstallEligibility = () => {
       console.log('[POS PWA] Checking install eligibility...');
-      console.log('[POS PWA] - HTTPS:', location.protocol === 'https:' || location.hostname === 'localhost');
+      console.log('[POS PWA] - HTTPS:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
       console.log('[POS PWA] - Service Worker:', 'serviceWorker' in navigator);
       console.log('[POS PWA] - Manifest:', document.querySelector('link[rel="manifest"]')?.href);
       
