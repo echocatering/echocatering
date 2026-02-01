@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { flushSync } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
@@ -168,7 +167,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const tabButtonSize = itemButtonSize; // Same size as item buttons
   const footerHeight = itemButtonSize / 2; // Collapsed footer height
   const headerHeight = outerWidth / 5; // Header buttons are 1:1, 5 across = width/5 each
-  const handleBarHeight = 24; // Height of the swipe handle bar
+  const handleBarHeight = 48; // Height of the swipe handle bar (increased for better touch interaction)
   const topDrawerCollapsedHeight = handleBarHeight; // Just the handle bar when collapsed
   // Bottom drawer expanded: from footer+subfooter up to header (fully overlaps top drawer handle)
   const bottomDrawerExpandedHeight = outerHeight - headerHeight - footerHeight - handleBarHeight;
@@ -630,10 +629,10 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
           }}
         >
           <div style={{
-            width: '40px',
-            height: '4px',
-            background: '#ccc',
-            borderRadius: '2px'
+            width: '60px',
+            height: '6px',
+            background: '#999',
+            borderRadius: '3px'
           }} />
         </div>
       </div>
@@ -837,10 +836,10 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
           }}
         >
           <div style={{
-            width: '40px',
-            height: '4px',
-            background: '#ccc',
-            borderRadius: '2px'
+            width: '60px',
+            height: '6px',
+            background: '#999',
+            borderRadius: '3px'
           }} />
         </div>
         
@@ -2050,10 +2049,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       });
       
       if (response && response._id) {
-        // Use flushSync to ensure state updates happen immediately
-        flushSync(() => {
-          startEvent(response._id, response.name);
-        });
+        startEvent(response._id, response.name);
         setShowEventModal(false);
         setNewEventName('');
         console.log(`[POS] Started event: ${response.name} (${response._id})`);
@@ -2075,9 +2071,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             
             if (choice) {
               // Resume the existing event
-              flushSync(() => {
-                startEvent(activeEvent._id, activeEvent.name);
-              });
+              startEvent(activeEvent._id, activeEvent.name);
               setShowEventModal(false);
               setNewEventName('');
               console.log(`[POS] Resumed existing event: ${activeEvent.name}`);
@@ -2097,9 +2091,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 });
                 
                 if (newResponse && newResponse._id) {
-                  flushSync(() => {
-                    startEvent(newResponse._id, newResponse.name);
-                  });
+                  startEvent(newResponse._id, newResponse.name);
                   setShowEventModal(false);
                   setNewEventName('');
                   console.log(`[POS] Started new event: ${newResponse.name}`);
