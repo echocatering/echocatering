@@ -2145,8 +2145,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         const deepLinkUrl = `square-commerce-v1://payment/create?location_id=${response.locationId}&order_id=${response.orderId}`;
         console.log(`[POS Checkout] Opening Square app: ${deepLinkUrl}`);
         
-        // Open Square app - works on Android Chrome and PWA
-        window.location.href = deepLinkUrl;
+        // Show success message first
+        alert(`Order created! ${response.testMode ? '(TEST MODE)' : ''}\n\nOrder ID: ${response.orderId}\n\nOpening Square app for payment...`);
+        
+        // Try to open Square app via deep-link
+        // Use setTimeout to allow the alert to close first
+        setTimeout(() => {
+          window.location.href = deepLinkUrl;
+        }, 100);
         
         // Note: We don't clear the tab here because the user may cancel in Square app
         // The tab should be cleared when payment is confirmed (future enhancement)
