@@ -907,13 +907,17 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             <span 
               key={actionKey}
               style={{
-                color: lastAction.type === 'add' ? '#22c55e' : '#ef4444',
                 fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
                 fontWeight: 500,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
                 animation: 'fadeSlideIn 0.5s ease-out'
               }}>
-              {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}{lastAction.tabName ? `   ${lastAction.tabName}` : ''}
+              <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
+                {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
+              </span>
+              {lastAction.tabName && (
+                <span style={{ color: '#d0d0d0' }}> — {lastAction.tabName}</span>
+              )}
             </span>
           )}
         </div>
@@ -1040,7 +1044,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 onClick={() => {
                   onDeleteTab(activeTabId);
                   setShowCloseTabConfirm(false);
-                  setDrawerExpanded(false);
                 }}
                 style={{
                   background: '#ef4444',
@@ -1520,17 +1523,24 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 
                 return modifiers.map((mod, idx) => {
                   const isSelected = selectedModifiers.some(m => m.name === mod.name);
-                  const isDisabled = hasLinkSelected && !mod.isLink;
+                  const modIsLink = mod.isLink ?? !!mod.linkedItemId;
+                  const isDisabled = hasLinkSelected && !modIsLink;
                   
                   return (
                     <button
                       key={idx}
                       disabled={isDisabled}
                       onClick={() => {
-                        if (!mod.isLink) {
+                        // Normalize modifier to ensure priceAdjustment exists
+                        const normalizedMod = {
+                          ...mod,
+                          priceAdjustment: mod.priceAdjustment ?? mod.price ?? 0,
+                          isLink: mod.isLink ?? !!mod.linkedItemId
+                        };
+                        if (!normalizedMod.isLink) {
                           // Non-LINK: add item immediately with this modifier
                           setFlashingItemId(orderingItem._id);
-                          onItemClick(orderingItem, mod);
+                          onItemClick(orderingItem, normalizedMod);
                           setTimeout(() => setFlashingItemId(null), 500);
                           setOrderingItem(null);
                           setSelectedModifiers([]);
@@ -1539,7 +1549,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           if (isSelected) {
                             setSelectedModifiers(selectedModifiers.filter(m => m.name !== mod.name));
                           } else {
-                            setSelectedModifiers([...selectedModifiers, mod]);
+                            setSelectedModifiers([...selectedModifiers, normalizedMod]);
                           }
                         }
                       }}
@@ -1556,9 +1566,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       }}
                     >
                       {mod.name}
-                      {mod.priceAdjustment !== 0 && (
+                      {(mod.priceAdjustment ?? mod.price ?? 0) !== 0 && (
                         <span style={{ marginLeft: '4px' }}>
-                          {mod.priceAdjustment > 0 ? '+' : ''}{mod.priceAdjustment.toFixed(2)}
+                          {(mod.priceAdjustment ?? mod.price ?? 0) > 0 ? '+' : ''}{(mod.priceAdjustment ?? mod.price ?? 0).toFixed(2)}
                         </span>
                       )}
                     </button>
