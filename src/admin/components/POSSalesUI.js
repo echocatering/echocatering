@@ -142,6 +142,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         setTimeout(() => setFlashingItemId(null), 500);
       } else {
         // Has modifiers - open modifier selection popup
+        console.log(`[POS] Opening modifier popup for "${item.name}", base price: ${item.price}`);
         setOrderingItem(item);
         setSelectedModifiers([]);
       }
@@ -2167,6 +2168,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
     const modifierPrice = typeof modifierData === 'object' && modifierData !== null && modifierData.priceAdjustment !== undefined ? Number(modifierData.priceAdjustment) : 0;
     console.log(`[POS] Item clicked: "${item.name}"${modifierName ? ` with modifier: "${modifierName}"` : ''} at ${timestamp}`);
+    console.log(`[POS] DEBUG - item.price: ${item.price}, modifierData:`, modifierData);
     
     // If no active tab, auto-create one first
     let targetTabId = activeTabId;
