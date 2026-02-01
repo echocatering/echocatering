@@ -1202,49 +1202,53 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   );
                 }
                 
-                return modifiers.map((mod, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: mod.isLink ? '#e6f0ff' : '#f0f0f0',
-                      borderRadius: '20px',
-                      padding: '8px 14px',
-                      fontSize: `${Math.max(11, outerWidth / 28)}px`,
-                      color: '#333'
-                    }}
-                  >
-                    <span>{mod.name}</span>
-                    {mod.priceAdjustment !== 0 && (
-                      <span style={{ color: mod.priceAdjustment > 0 ? '#22c55e' : '#ef4444' }}>
-                        {mod.priceAdjustment > 0 ? '+' : ''}{mod.priceAdjustment.toFixed(2)}
-                      </span>
-                    )}
-                    {mod.isLink && (
-                      <span style={{ color: '#3b82f6', fontSize: '10px' }}>LINK</span>
-                    )}
-                    <button
-                      onClick={() => {
-                        const newModifiers = [...modifiers];
-                        newModifiers.splice(idx, 1);
-                        setEditingItem({ ...editingItem, modifiers: newModifiers });
-                      }}
+                return modifiers.map((mod, idx) => {
+                  const modPrice = mod.priceAdjustment ?? mod.price ?? 0;
+                  const modIsLink = mod.isLink ?? !!mod.linkedItemId;
+                  return (
+                    <div
+                      key={idx}
                       style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#999',
-                        cursor: 'pointer',
-                        padding: '0 2px',
-                        fontSize: '14px',
-                        lineHeight: 1
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: modIsLink ? '#e6f0ff' : '#f0f0f0',
+                        borderRadius: '20px',
+                        padding: '8px 14px',
+                        fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                        color: '#333'
                       }}
                     >
-                      ×
-                    </button>
-                  </div>
-                ));
+                      <span>{mod.name}</span>
+                      {modPrice !== 0 && (
+                        <span style={{ color: modPrice > 0 ? '#22c55e' : '#ef4444' }}>
+                          {modPrice > 0 ? '+' : ''}{modPrice.toFixed(2)}
+                        </span>
+                      )}
+                      {modIsLink && (
+                        <span style={{ color: '#3b82f6', fontSize: '10px' }}>LINK</span>
+                      )}
+                      <button
+                        onClick={() => {
+                          const newModifiers = [...modifiers];
+                          newModifiers.splice(idx, 1);
+                          setEditingItem({ ...editingItem, modifiers: newModifiers });
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#999',
+                          cursor: 'pointer',
+                          padding: '0 2px',
+                          fontSize: '14px',
+                          lineHeight: 1
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                });
               })()}
             </div>
           </div>
