@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
@@ -2049,7 +2050,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       });
       
       if (response && response._id) {
-        startEvent(response._id, response.name);
+        // Use flushSync to ensure state updates happen immediately
+        flushSync(() => {
+          startEvent(response._id, response.name);
+        });
         setShowEventModal(false);
         setNewEventName('');
         console.log(`[POS] Started event: ${response.name} (${response._id})`);
@@ -2071,7 +2075,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             
             if (choice) {
               // Resume the existing event
-              startEvent(activeEvent._id, activeEvent.name);
+              flushSync(() => {
+                startEvent(activeEvent._id, activeEvent.name);
+              });
               setShowEventModal(false);
               setNewEventName('');
               console.log(`[POS] Resumed existing event: ${activeEvent.name}`);
@@ -2091,7 +2097,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 });
                 
                 if (newResponse && newResponse._id) {
-                  startEvent(newResponse._id, newResponse.name);
+                  flushSync(() => {
+                    startEvent(newResponse._id, newResponse.name);
+                  });
                   setShowEventModal(false);
                   setNewEventName('');
                   console.log(`[POS] Started new event: ${newResponse.name}`);

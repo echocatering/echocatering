@@ -103,9 +103,6 @@ const updateManifest = () => {
  * Includes PWA support for Android installation.
  */
 const PosPage = () => {
-  const [deferredPrompt, setDeferredPrompt] = React.useState(null);
-  const [installable, setInstallable] = React.useState(false);
-
   // Register service worker and update manifest on mount
   useEffect(() => {
     updateManifest();
@@ -157,24 +154,6 @@ const PosPage = () => {
     };
     document.addEventListener('touchend', resetTouchTracking);
     
-    // Handle PWA install prompt
-    const handleBeforeInstallPrompt = (e) => {
-      console.log('[POS PWA] Install prompt detected');
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setInstallable(true);
-      
-      // Show install button
-      const btn = document.getElementById('pwa-install-btn');
-      if (btn) {
-        btn.style.display = 'block';
-      }
-      
-      console.log('[POS PWA] App is installable - prompt ready');
-    };
-    
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
     // Check PWA install eligibility
     const checkInstallEligibility = () => {
       console.log('[POS PWA] Checking install eligibility...');
@@ -215,7 +194,6 @@ const PosPage = () => {
       document.title = 'ECHO Catering - Rochester, NY | Craft Cocktails & Events';
       
       // Clean up event listeners
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       document.removeEventListener('touchmove', preventBrowserGestures);
       document.removeEventListener('touchend', resetTouchTracking);
     };
@@ -250,62 +228,6 @@ const PosPage = () => {
         - Ignores device rotation
       */}
       <POSSalesUI layoutMode="vertical" />
-      
-      {/* PWA Install Button */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          zIndex: 9999,
-          background: '#800080',
-          color: 'white',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          fontSize: '14px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-          display: installable ? 'block' : 'none',
-          userSelect: 'none',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-        onClick={async () => {
-          console.log('[POS PWA] Install button clicked');
-          
-          if (!deferredPrompt) {
-            console.log('[POS PWA] No deferred prompt available');
-            alert('Install not available. Try using Chrome menu > "Add to Home screen"');
-            return;
-          }
-          
-          try {
-            // Show the install prompt
-            console.log('[POS PWA] Showing install prompt...');
-            deferredPrompt.prompt();
-            
-            // Wait for the user's response
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`[POS PWA] User response: ${outcome}`);
-            
-            if (outcome === 'accepted') {
-              console.log('[POS PWA] User accepted the install');
-            } else {
-              console.log('[POS PWA] User dismissed the install');
-            }
-            
-            // Clear the deferred prompt
-            setDeferredPrompt(null);
-            setInstallable(false);
-          } catch (error) {
-            console.error('[POS PWA] Install error:', error);
-            alert('Installation failed. Try using Chrome menu > "Add to Home screen"');
-          }
-        }}
-        id="pwa-install-btn"
-      >
-        📱 Install App
-      </div>
     </div>
   );
 };
