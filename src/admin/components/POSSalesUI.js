@@ -908,12 +908,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               key={actionKey}
               style={{
                 color: lastAction.type === 'add' ? '#22c55e' : '#ef4444',
-                fontSize: `${Math.max(12, footerHeight * 0.28)}px`,
-                fontWeight: 600,
+                fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
+                fontWeight: 500,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
                 animation: 'fadeSlideIn 0.5s ease-out'
               }}>
-              {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}{lastAction.tabName ? ` → ${lastAction.tabName}` : ''}
+              {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}{lastAction.tabName ? `   ${lastAction.tabName}` : ''}
             </span>
           )}
         </div>
