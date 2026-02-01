@@ -103,6 +103,9 @@ const updateManifest = () => {
  * Includes PWA support for Android installation.
  */
 const PosPage = () => {
+  const [deferredPrompt, setDeferredPrompt] = React.useState(null);
+  const [installable, setInstallable] = React.useState(false);
+
   // Register service worker and update manifest on mount
   useEffect(() => {
     updateManifest();
@@ -112,15 +115,18 @@ const PosPage = () => {
     document.title = 'ECHO POS';
     
     // Handle PWA install prompt
-    let deferredPrompt = null;
-    
     const handleBeforeInstallPrompt = (e) => {
       console.log('[POS PWA] Install prompt detected');
       e.preventDefault();
-      deferredPrompt = e;
+      setDeferredPrompt(e);
+      setInstallable(true);
       
-      // Show install button or prompt
-      // For now, just log that the prompt is available
+      // Show install button
+      const btn = document.getElementById('pwa-install-btn');
+      if (btn) {
+        btn.style.display = 'block';
+      }
+      
       console.log('[POS PWA] App is installable - prompt ready');
     };
     
@@ -156,17 +162,6 @@ const PosPage = () => {
     
     // Check eligibility after a short delay
     setTimeout(checkInstallEligibility, 2000);
-    
-    // Show install button for debugging (only on mobile)
-    if (window.innerWidth <= 768) {
-      setTimeout(() => {
-        const btn = document.getElementById('pwa-install-btn');
-        if (btn) {
-          btn.style.display = 'block';
-          console.log('[POS PWA] Install button shown - tap to try install');
-        }
-      }, 3000);
-    }
     
     return () => {
       // Restore original manifest on unmount (if navigating away)
@@ -211,7 +206,7 @@ const PosPage = () => {
       */}
       <POSSalesUI layoutMode="vertical" />
       
-      {/* PWA Install Button (for debugging) */}
+      {/* PWA Install Button */}
       <div
         style={{
           position: 'fixed',
@@ -220,22 +215,51 @@ const PosPage = () => {
           zIndex: 9999,
           background: '#800080',
           color: 'white',
-          padding: '8px 12px',
-          borderRadius: '4px',
-          fontSize: '12px',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: 600,
           cursor: 'pointer',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          display: 'none', // Hidden by default, show with console
+          boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+          display: installable ? 'block' : 'none',
+          userSelect: 'none',
+          WebkitTapHighlightColor: 'transparent',
         }}
-        onClick={() => {
-          console.log('[POS PWA] Manual install button clicked');
-          // Try to trigger install prompt
-          const event = new Event('beforeinstallprompt');
-          window.dispatchEvent(event);
+        onClick={async () => {
+          console.log('[POS PWA] Install button clicked');
+          
+          if (!deferredPrompt) {
+            console.log('[POS PWA] No deferred prompt available');
+            alert('Install not available. Try using Chrome menu > "Add to Home screen"');
+            return;
+          }
+          
+          try {
+            // Show the install prompt
+            console.log('[POS PWA] Showing install prompt...');
+            deferredPrompt.prompt();
+            
+            // Wait for the user's response
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`[POS PWA] User response: ${outcome}`);
+            
+            if (outcome === 'accepted') {
+              console.log('[POS PWA] User accepted the install');
+            } else {
+              console.log('[POS PWA] User dismissed the install');
+            }
+            
+            // Clear the deferred prompt
+            setDeferredPrompt(null);
+            setInstallable(false);
+          } catch (error) {
+            console.error('[POS PWA] Install error:', error);
+            alert('Installation failed. Try using Chrome menu > "Add to Home screen"');
+          }
         }}
         id="pwa-install-btn"
       >
-        Install PWA
+        📱 Install App
       </div>
     </div>
   );
