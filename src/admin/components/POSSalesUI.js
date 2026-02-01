@@ -167,7 +167,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const tabButtonSize = itemButtonSize; // Same size as item buttons
   const footerHeight = itemButtonSize / 2; // Collapsed footer height
   const headerHeight = outerWidth / 5; // Header buttons are 1:1, 5 across = width/5 each
-  const handleBarHeight = 48; // Height of the swipe handle bar (increased for better touch interaction)
+  const handleBarHeight = 36; // Height of the swipe handle bar (balanced for touch and aesthetics)
   const topDrawerCollapsedHeight = handleBarHeight; // Just the handle bar when collapsed
   // Bottom drawer expanded: from footer+subfooter up to header (fully overlaps top drawer handle)
   const bottomDrawerExpandedHeight = outerHeight - headerHeight - footerHeight - handleBarHeight;
@@ -2345,117 +2345,152 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100%',
           height: '100%',
           minHeight: '100vh',
-          background: '#1a1a1a',
-          color: '#fff',
-          padding: '20px',
-          boxSizing: 'border-box',
-          overflow: 'auto',
+          background: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center' }}>
-              Event Summary
-            </h1>
-            
-            {/* Totals */}
-            <div style={{
-              background: '#2a2a2a',
-              borderRadius: '12px',
-              padding: '20px',
-              marginBottom: '20px',
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
-                    ${(eventSummary.totalRevenue || 0).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#888' }}>Total Revenue</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
-                    {eventSummary.totalItems || 0}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#888' }}>Total Items</div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {eventSummary.totalTabs || 0}
-                </div>
-                <div style={{ fontSize: '14px', color: '#888' }}>Total Tabs</div>
-              </div>
-            </div>
-            
-            {/* Category Breakdown */}
-            <div style={{
-              background: '#2a2a2a',
-              borderRadius: '12px',
-              padding: '20px',
-              marginBottom: '20px',
-            }}>
-              <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>By Category</h2>
-              {eventSummary.categoryBreakdown && Object.entries(
-                eventSummary.categoryBreakdown instanceof Map 
-                  ? Object.fromEntries(eventSummary.categoryBreakdown)
-                  : eventSummary.categoryBreakdown
-              ).map(([cat, data]) => (
-                <div key={cat} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '8px 0',
-                  borderBottom: '1px solid #333',
-                }}>
-                  <span style={{ textTransform: 'capitalize' }}>{cat}</span>
-                  <span>
-                    {data.count} items • ${(data.revenue || 0).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            
-            {/* Timeline Breakdown */}
-            {eventSummary.timelineBreakdown && eventSummary.timelineBreakdown.length > 0 && (
+          {/* Header with logo - matching POS UI */}
+          <div style={{
+            background: '#fff',
+            padding: '8px 16px',
+            borderBottom: '1px solid #e0e0e0',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}>
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt="Echo" 
+                style={{ 
+                  height: '32px', 
+                  width: 'auto',
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+          
+          {/* Summary content */}
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: '20px',
+          }}>
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+              <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center', color: '#333' }}>
+                Event Summary
+              </h1>
+              
+              {/* Totals */}
               <div style={{
-                background: '#2a2a2a',
+                background: '#f5f5f5',
                 borderRadius: '12px',
                 padding: '20px',
                 marginBottom: '20px',
+                border: '1px solid #e0e0e0',
               }}>
-                <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>Timeline (15-min intervals)</h2>
-                {eventSummary.timelineBreakdown.map((interval, idx) => (
-                  <div key={idx} style={{
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
+                      ${(eventSummary.totalRevenue || 0).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>Total Revenue</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
+                      {eventSummary.totalItems || 0}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>Total Items</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
+                    {eventSummary.totalTabs || 0}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#666' }}>Total Tabs</div>
+                </div>
+              </div>
+              
+              {/* Category Breakdown */}
+              <div style={{
+                background: '#f5f5f5',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px',
+                border: '1px solid #e0e0e0',
+              }}>
+                <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>By Category</h2>
+                {eventSummary.categoryBreakdown && Object.entries(
+                  eventSummary.categoryBreakdown instanceof Map 
+                    ? Object.fromEntries(eventSummary.categoryBreakdown)
+                    : eventSummary.categoryBreakdown
+                ).map(([cat, data]) => (
+                  <div key={cat} style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: '8px 0',
-                    borderBottom: '1px solid #333',
+                    borderBottom: '1px solid #ddd',
+                    color: '#333',
                   }}>
+                    <span style={{ textTransform: 'capitalize' }}>{cat}</span>
                     <span>
-                      {new Date(interval.intervalStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span>
-                      {interval.itemCount} items • ${(interval.revenue || 0).toFixed(2)}
+                      {data.count} items • ${(data.revenue || 0).toFixed(2)}
                     </span>
                   </div>
                 ))}
               </div>
-            )}
-            
-            {/* Home Button */}
-            <button
-              onClick={handleCloseSummary}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: '#800080',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
-              HOME
-            </button>
+              
+              {/* Timeline Breakdown */}
+              {eventSummary.timelineBreakdown && eventSummary.timelineBreakdown.length > 0 && (
+                <div style={{
+                  background: '#f5f5f5',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: '1px solid #e0e0e0',
+                }}>
+                  <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Timeline (15-min intervals)</h2>
+                  {eventSummary.timelineBreakdown.map((interval, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #ddd',
+                      color: '#333',
+                    }}>
+                      <span>
+                        {new Date(interval.intervalStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span>
+                        {interval.itemCount} items • ${(interval.revenue || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Home Button */}
+              <button
+                onClick={handleCloseSummary}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: '#800080',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                HOME
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -2468,56 +2503,85 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100%',
           height: '100%',
           minHeight: '100vh',
-          background: '#1a1a1a',
+          background: '#fff',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          flexDirection: 'column',
         }}>
+          {/* Header with logo - matching POS UI */}
           <div style={{
-            background: '#2a2a2a',
-            borderRadius: '16px',
-            padding: '40px',
-            maxWidth: '400px',
-            width: '90%',
-            textAlign: 'center',
+            background: '#fff',
+            padding: '8px 16px',
+            borderBottom: '1px solid #e0e0e0',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0,
           }}>
-            <h1 style={{ color: '#fff', fontSize: '24px', marginBottom: '24px' }}>
-              Start New Event
-            </h1>
-            <input
-              type="text"
-              value={newEventName}
-              onChange={(e) => setNewEventName(e.target.value)}
-              placeholder="Event Name (optional)"
-              style={{
-                width: '100%',
-                padding: '16px',
-                fontSize: '18px',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                background: '#333',
-                color: '#fff',
-                marginBottom: '20px',
-                boxSizing: 'border-box',
-              }}
-            />
-            <button
-              onClick={() => handleStartEvent(newEventName || `Event ${new Date().toLocaleDateString()}`)}
-              disabled={syncing}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: syncing ? '#555' : '#800080',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: syncing ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {syncing ? 'STARTING...' : 'START EVENT'}
-            </button>
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt="Echo" 
+                style={{ 
+                  height: '32px', 
+                  width: 'auto',
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+          
+          {/* Start event form - centered */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}>
+            <div style={{
+              maxWidth: '400px',
+              width: '100%',
+            }}>
+              <h1 style={{ color: '#333', fontSize: '24px', marginBottom: '24px', textAlign: 'center' }}>
+                Start New Event
+              </h1>
+              <input
+                type="text"
+                value={newEventName}
+                onChange={(e) => setNewEventName(e.target.value)}
+                placeholder="Event Name (optional)"
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  fontSize: '18px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  background: '#fff',
+                  color: '#333',
+                  marginBottom: '20px',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                onClick={() => handleStartEvent(newEventName || `Event ${new Date().toLocaleDateString()}`)}
+                disabled={syncing}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: syncing ? '#ccc' : '#800080',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: syncing ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {syncing ? 'STARTING...' : 'START EVENT'}
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -2638,9 +2702,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             flex: 1, 
             overflow: 'hidden',
             width: '100%',
+            background: '#fff',
           }}
         >
-          {frameReady && (
+          {frameReady ? (
             <POSContent
               outerWidth={frameSize.width}
               outerHeight={frameSize.height}
@@ -2664,6 +2729,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onCheckout={handleCheckout}
               checkoutLoading={checkoutLoading}
             />
+          ) : (
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#666',
+            }}>
+              Loading POS...
+            </div>
           )}
         </div>
 
