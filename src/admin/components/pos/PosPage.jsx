@@ -111,6 +111,63 @@ const PosPage = () => {
     // Update document title for PWA
     document.title = 'ECHO POS';
     
+    // Handle PWA install prompt
+    let deferredPrompt = null;
+    
+    const handleBeforeInstallPrompt = (e) => {
+      console.log('[POS PWA] Install prompt detected');
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Show install button or prompt
+      // For now, just log that the prompt is available
+      console.log('[POS PWA] App is installable - prompt ready');
+    };
+    
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    // Check PWA install eligibility
+    const checkInstallEligibility = () => {
+      console.log('[POS PWA] Checking install eligibility...');
+      console.log('[POS PWA] - HTTPS:', location.protocol === 'https:' || location.hostname === 'localhost');
+      console.log('[POS PWA] - Service Worker:', 'serviceWorker' in navigator);
+      console.log('[POS PWA] - Manifest:', document.querySelector('link[rel="manifest"]')?.href);
+      
+      // Check if manifest is valid
+      if (document.querySelector('link[rel="manifest"]')) {
+        fetch('/pos-manifest.json')
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Manifest not found');
+          })
+          .then(manifest => {
+            console.log('[POS PWA] Manifest loaded:', manifest);
+            console.log('[POS PWA] - Start URL:', manifest.start_url);
+            console.log('[POS PWA] - Display:', manifest.display);
+            console.log('[POS PWA] - Icons:', manifest.icons?.length || 0);
+          })
+          .catch(err => {
+            console.error('[POS PWA] Manifest error:', err);
+          });
+      }
+    };
+    
+    // Check eligibility after a short delay
+    setTimeout(checkInstallEligibility, 2000);
+    
+    // Show install button for debugging (only on mobile)
+    if (window.innerWidth <= 768) {
+      setTimeout(() => {
+        const btn = document.getElementById('pwa-install-btn');
+        if (btn) {
+          btn.style.display = 'block';
+          console.log('[POS PWA] Install button shown - tap to try install');
+        }
+      }, 3000);
+    }
+    
     return () => {
       // Restore original manifest on unmount (if navigating away)
       const manifestLink = document.querySelector('link[rel="manifest"]');
@@ -118,6 +175,9 @@ const PosPage = () => {
         manifestLink.href = '/manifest.json';
       }
       document.title = 'ECHO Catering - Rochester, NY | Craft Cocktails & Events';
+      
+      // Clean up event listener
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
@@ -150,6 +210,33 @@ const PosPage = () => {
         - Ignores device rotation
       */}
       <POSSalesUI layoutMode="vertical" />
+      
+      {/* PWA Install Button (for debugging) */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          zIndex: 9999,
+          background: '#800080',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          cursor: 'pointer',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          display: 'none', // Hidden by default, show with console
+        }}
+        onClick={() => {
+          console.log('[POS PWA] Manual install button clicked');
+          // Try to trigger install prompt
+          const event = new Event('beforeinstallprompt');
+          window.dispatchEvent(event);
+        }}
+        id="pwa-install-btn"
+      >
+        Install PWA
+      </div>
     </div>
   );
 };

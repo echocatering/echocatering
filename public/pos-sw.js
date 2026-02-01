@@ -41,7 +41,8 @@ self.addEventListener('install', (event) => {
         );
       })
       .then(() => {
-        console.log('[POS SW] Service worker installed');
+        console.log('[POS SW] Service worker installed, activating...');
+        // Force activation
         return self.skipWaiting();
       })
   );
