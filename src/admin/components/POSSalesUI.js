@@ -1724,12 +1724,88 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
   // Checkout mode for horizontal view - when true, shows receipt/tipping screen instead of MenuGallery2
-  const [checkoutMode, setCheckoutMode] = useState(false);
-  const [checkoutItems, setCheckoutItems] = useState([]); // Items being checked out
-  const [checkoutSubtotal, setCheckoutSubtotal] = useState(0); // Subtotal before tip
-  const [checkoutTabInfo, setCheckoutTabInfo] = useState(null); // Tab info for checkout
-  const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input
-  const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars
+  // This state is synced via localStorage so it works across browser windows/devices
+  const [checkoutMode, setCheckoutModeState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pos_checkout_mode');
+      return stored ? JSON.parse(stored) : false;
+    } catch { return false; }
+  });
+  const [checkoutItems, setCheckoutItemsState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pos_checkout_items');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [checkoutSubtotal, setCheckoutSubtotalState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pos_checkout_subtotal');
+      return stored ? JSON.parse(stored) : 0;
+    } catch { return 0; }
+  });
+  const [checkoutTabInfo, setCheckoutTabInfoState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pos_checkout_tab_info');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+  const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input (local only)
+  const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars (local only)
+  
+  // Wrapper functions to sync checkout state to localStorage
+  const setCheckoutMode = useCallback((value) => {
+    setCheckoutModeState(value);
+    try { localStorage.setItem('pos_checkout_mode', JSON.stringify(value)); } catch {}
+  }, []);
+  
+  const setCheckoutItems = useCallback((items) => {
+    setCheckoutItemsState(items);
+    try { localStorage.setItem('pos_checkout_items', JSON.stringify(items)); } catch {}
+  }, []);
+  
+  const setCheckoutSubtotal = useCallback((subtotal) => {
+    setCheckoutSubtotalState(subtotal);
+    try { localStorage.setItem('pos_checkout_subtotal', JSON.stringify(subtotal)); } catch {}
+  }, []);
+  
+  const setCheckoutTabInfo = useCallback((info) => {
+    setCheckoutTabInfoState(info);
+    try { localStorage.setItem('pos_checkout_tab_info', JSON.stringify(info)); } catch {}
+  }, []);
+  
+  // Listen for localStorage changes from other windows/tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'pos_checkout_mode') {
+        try {
+          const value = e.newValue ? JSON.parse(e.newValue) : false;
+          console.log('[POS] Checkout mode changed from another window:', value);
+          setCheckoutModeState(value);
+        } catch {}
+      }
+      if (e.key === 'pos_checkout_items') {
+        try {
+          const value = e.newValue ? JSON.parse(e.newValue) : [];
+          setCheckoutItemsState(value);
+        } catch {}
+      }
+      if (e.key === 'pos_checkout_subtotal') {
+        try {
+          const value = e.newValue ? JSON.parse(e.newValue) : 0;
+          setCheckoutSubtotalState(value);
+        } catch {}
+      }
+      if (e.key === 'pos_checkout_tab_info') {
+        try {
+          const value = e.newValue ? JSON.parse(e.newValue) : null;
+          setCheckoutTabInfoState(value);
+        } catch {}
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   
   // ============================================
   // SQUARE POS TEST MODE
