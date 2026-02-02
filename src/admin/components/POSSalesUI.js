@@ -2394,7 +2394,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100vw', 
           height: '100vh', 
           overflow: 'hidden', 
-          background: '#f5f5f5',
+          background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 10%, rgba(210, 210, 210, 1) 40%, rgba(250, 250, 250, 1) 90%, rgba(255, 255, 255, 1) 100%)',
           display: 'flex',
           flexDirection: 'column',
           color: '#333',
