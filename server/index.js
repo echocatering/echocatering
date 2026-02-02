@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const { WebSocketServer } = require('ws');
 const { readOnlyMiddleware, isReadOnlyEnabled } = require('./middleware/readOnly');
 const { initSquareClient } = require('./squareClient');
 
@@ -719,6 +720,53 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`   Database: ${dbConnected ? '✅ Connected' : '⚠️  Not connected'}`);
   console.log('═══════════════════════════════════════════════════════════');
 });
+
+// ============================================
+// WEBSOCKET SERVER FOR POS CHECKOUT SYNC
+// Broadcasts checkout events across devices
+// ============================================
+const wss = new WebSocketServer({ server, path: '/ws/pos' });
+
+// Track connected POS clients
+const posClients = new Set();
+
+wss.on('connection', (ws, req) => {
+  console.log('[WebSocket] POS client connected');
+  posClients.add(ws);
+  
+  // Send welcome message
+  ws.send(JSON.stringify({ type: 'connected', message: 'POS WebSocket connected' }));
+  
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      console.log('[WebSocket] Received:', message.type);
+      
+      // Broadcast checkout events to all other connected clients
+      if (message.type === 'checkout_start' || message.type === 'checkout_complete' || message.type === 'checkout_cancel') {
+        posClients.forEach((client) => {
+          if (client !== ws && client.readyState === 1) { // 1 = OPEN
+            client.send(JSON.stringify(message));
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[WebSocket] Error parsing message:', err);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log('[WebSocket] POS client disconnected');
+    posClients.delete(ws);
+  });
+  
+  ws.on('error', (err) => {
+    console.error('[WebSocket] Error:', err);
+    posClients.delete(ws);
+  });
+});
+
+console.log(`[WebSocket] POS sync server running on ws://localhost:${PORT}/ws/pos`);
 
 // Handle EADDRINUSE errors explicitly
 server.on('error', (err) => {

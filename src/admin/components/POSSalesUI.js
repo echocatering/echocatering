@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
+import { usePosWebSocket } from '../hooks/usePosWebSocket';
 import MenuGallery2 from '../../pages/menuGallery2';
 
 const CATEGORIES = [
@@ -1724,88 +1725,47 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
   // Checkout mode for horizontal view - when true, shows receipt/tipping screen instead of MenuGallery2
-  // This state is synced via localStorage so it works across browser windows/devices
-  const [checkoutMode, setCheckoutModeState] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pos_checkout_mode');
-      return stored ? JSON.parse(stored) : false;
-    } catch { return false; }
-  });
-  const [checkoutItems, setCheckoutItemsState] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pos_checkout_items');
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
-  const [checkoutSubtotal, setCheckoutSubtotalState] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pos_checkout_subtotal');
-      return stored ? JSON.parse(stored) : 0;
-    } catch { return 0; }
-  });
-  const [checkoutTabInfo, setCheckoutTabInfoState] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pos_checkout_tab_info');
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
+  // This state is synced via WebSocket so it works across different devices
+  const [checkoutMode, setCheckoutMode] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState([]);
+  const [checkoutSubtotal, setCheckoutSubtotal] = useState(0);
+  const [checkoutTabInfo, setCheckoutTabInfo] = useState(null);
   const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input (local only)
   const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars (local only)
   
-  // Wrapper functions to sync checkout state to localStorage
-  const setCheckoutMode = useCallback((value) => {
-    setCheckoutModeState(value);
-    try { localStorage.setItem('pos_checkout_mode', JSON.stringify(value)); } catch {}
+  // WebSocket handlers for checkout sync across devices
+  const handleWsCheckoutStart = useCallback((data) => {
+    console.log('[POS] WebSocket checkout_start received:', data);
+    setCheckoutMode(true);
+    setCheckoutItems(data.items || []);
+    setCheckoutSubtotal(data.subtotal || 0);
+    setCheckoutTabInfo(data.tabInfo || null);
+    setShowCustomTip(false);
+    setCustomTipAmount('');
   }, []);
   
-  const setCheckoutItems = useCallback((items) => {
-    setCheckoutItemsState(items);
-    try { localStorage.setItem('pos_checkout_items', JSON.stringify(items)); } catch {}
+  const handleWsCheckoutComplete = useCallback((data) => {
+    console.log('[POS] WebSocket checkout_complete received:', data);
+    setCheckoutMode(false);
+    setCheckoutItems([]);
+    setCheckoutSubtotal(0);
+    setCheckoutTabInfo(null);
   }, []);
   
-  const setCheckoutSubtotal = useCallback((subtotal) => {
-    setCheckoutSubtotalState(subtotal);
-    try { localStorage.setItem('pos_checkout_subtotal', JSON.stringify(subtotal)); } catch {}
+  const handleWsCheckoutCancel = useCallback(() => {
+    console.log('[POS] WebSocket checkout_cancel received');
+    setCheckoutMode(false);
+    setCheckoutItems([]);
+    setCheckoutSubtotal(0);
+    setCheckoutTabInfo(null);
   }, []);
   
-  const setCheckoutTabInfo = useCallback((info) => {
-    setCheckoutTabInfoState(info);
-    try { localStorage.setItem('pos_checkout_tab_info', JSON.stringify(info)); } catch {}
-  }, []);
-  
-  // Listen for localStorage changes from other windows/tabs
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'pos_checkout_mode') {
-        try {
-          const value = e.newValue ? JSON.parse(e.newValue) : false;
-          console.log('[POS] Checkout mode changed from another window:', value);
-          setCheckoutModeState(value);
-        } catch {}
-      }
-      if (e.key === 'pos_checkout_items') {
-        try {
-          const value = e.newValue ? JSON.parse(e.newValue) : [];
-          setCheckoutItemsState(value);
-        } catch {}
-      }
-      if (e.key === 'pos_checkout_subtotal') {
-        try {
-          const value = e.newValue ? JSON.parse(e.newValue) : 0;
-          setCheckoutSubtotalState(value);
-        } catch {}
-      }
-      if (e.key === 'pos_checkout_tab_info') {
-        try {
-          const value = e.newValue ? JSON.parse(e.newValue) : null;
-          setCheckoutTabInfoState(value);
-        } catch {}
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  // Connect to WebSocket for cross-device checkout sync
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel } = usePosWebSocket(
+    handleWsCheckoutStart,
+    handleWsCheckoutComplete,
+    handleWsCheckoutCancel
+  );
   
   // ============================================
   // SQUARE POS TEST MODE
@@ -2207,21 +2167,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
     console.log(`[POS Checkout] Entering checkout mode for tab ${activeTab.id} (${activeTab.customName || activeTab.name})`);
     
-    // Store checkout data for the tipping screen
-    setCheckoutItems([...selectedItems]);
-    setCheckoutSubtotal(total);
-    setCheckoutTabInfo({
-      id: activeTab.id,
-      name: activeTab.customName || activeTab.name
-    });
+    const checkoutData = {
+      items: [...selectedItems],
+      subtotal: total,
+      tabInfo: {
+        id: activeTab.id,
+        name: activeTab.customName || activeTab.name
+      }
+    };
+    
+    // Store checkout data locally for the tipping screen
+    setCheckoutItems(checkoutData.items);
+    setCheckoutSubtotal(checkoutData.subtotal);
+    setCheckoutTabInfo(checkoutData.tabInfo);
     setShowCustomTip(false);
     setCustomTipAmount('');
     
-    // Enter checkout mode - this will trigger the horizontal view to show the receipt/tipping screen
+    // Enter checkout mode locally
     setCheckoutMode(true);
     
+    // Broadcast checkout start via WebSocket to sync horizontal view on other devices
+    sendCheckoutStart(checkoutData);
+    
     console.log(`[POS Checkout] Checkout mode activated. Subtotal: $${total.toFixed(2)}, Items: ${selectedItems.length}`);
-  }, [activeTabId, selectedItems, tabs, total]);
+  }, [activeTabId, selectedItems, tabs, total, sendCheckoutStart]);
 
   /**
    * Process payment with tip - Opens Square app via deep-link
@@ -2306,6 +2275,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       // Open Square app via deep-link immediately (no alert to avoid blocking)
       window.location.href = deepLinkUrl;
       
+      // Broadcast checkout complete via WebSocket to reset horizontal view on other devices
+      sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id });
+      
       // Exit checkout mode after a delay (user is now in Square app)
       setTimeout(() => {
         setCheckoutMode(false);
@@ -2317,7 +2289,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       alert(`Checkout failed: ${error.message}`);
       setCheckoutLoading(false);
     }
-  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, apiCall, squareTestMode]);
+  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, apiCall, squareTestMode, sendCheckoutComplete]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
