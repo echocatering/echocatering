@@ -222,12 +222,11 @@ const PosPage = () => {
       }}
     >
       {/* 
-        POSSalesUI with layoutMode="vertical" 
-        - Forces 9:19 vertical layout
-        - Hides orientation toggle
-        - Ignores device rotation
+        POSSalesUI with layoutMode="auto" 
+        - Horizontal: Shows MenuGallery2 customer view
+        - Vertical: Shows POS admin interface
       */}
-      <POSSalesUI layoutMode="vertical" />
+      <POSSalesUI layoutMode="auto" />
     </div>
   );
 };

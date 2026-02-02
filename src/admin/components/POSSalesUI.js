@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
+import MenuGallery2 from '../../pages/menuGallery2';
 
 const CATEGORIES = [
   { id: 'cocktails', label: 'C', fullName: 'Cocktails' },
@@ -1649,12 +1650,37 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
 
 export default function POSSalesUI({ layoutMode = 'auto' }) {
   // layoutMode: 'vertical' | 'horizontal' | 'auto'
-  // When layoutMode is 'vertical' or 'horizontal', force that layout and ignore user toggle
-  // When layoutMode is 'auto', allow user to switch between layouts
+  // When layoutMode is 'vertical' or 'horizontal', force that layout and ignore device orientation
+  // When layoutMode is 'auto', detect device orientation and switch layouts automatically:
+  //   - Horizontal (landscape): Show MenuGallery2 customer view
+  //   - Vertical (portrait): Show POS admin interface
   const forcedOrientation = layoutMode === 'auto' ? null : layoutMode;
   const [orientation, setOrientation] = useState(forcedOrientation || 'vertical');
   
-  // If layoutMode changes, update orientation to match
+  // Device orientation detection for layoutMode='auto'
+  useEffect(() => {
+    if (layoutMode !== 'auto') return;
+    
+    const detectOrientation = () => {
+      const isHorizontal = window.innerWidth > window.innerHeight;
+      setOrientation(isHorizontal ? 'horizontal' : 'vertical');
+      console.log('[POS] Device orientation:', isHorizontal ? 'HORIZONTAL' : 'VERTICAL');
+    };
+    
+    // Check on mount
+    detectOrientation();
+    
+    // Listen for changes
+    window.addEventListener('resize', detectOrientation);
+    window.addEventListener('orientationchange', detectOrientation);
+    
+    return () => {
+      window.removeEventListener('resize', detectOrientation);
+      window.removeEventListener('orientationchange', detectOrientation);
+    };
+  }, [layoutMode]);
+  
+  // If layoutMode is forced (not 'auto'), update orientation to match
   useEffect(() => {
     if (forcedOrientation) {
       setOrientation(forcedOrientation);
@@ -2290,9 +2316,33 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     return { width: stageWidth, height: stageHeight };
   }, [frameReady, frameSize, orientation]);
 
-  // When layoutMode is forced (not 'auto'), we're in standalone mode
-  // Render POSContent directly filling the viewport without the viewer wrapper
-  const isStandalone = layoutMode !== 'auto';
+  // ============================================
+  // HORIZONTAL VIEW (CUSTOMER-FACING)
+  // When orientation is horizontal and layoutMode is 'auto', show MenuGallery2
+  // ============================================
+  if (layoutMode === 'auto' && orientation === 'horizontal') {
+    return (
+      <div style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        overflow: 'hidden', 
+        background: '#000',
+        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+      }}>
+        <MenuGallery2 
+          viewMode="web"
+          orientationOverride="horizontal"
+        />
+      </div>
+    );
+  }
+
+  // ============================================
+  // VERTICAL VIEW (POS ADMIN INTERFACE)
+  // When layoutMode is forced (not 'auto'), OR when layoutMode is 'auto' with vertical orientation
+  // we're in standalone mode - render POSContent directly filling the viewport without the viewer wrapper
+  // ============================================
+  const isStandalone = layoutMode !== 'auto' || (layoutMode === 'auto' && orientation === 'vertical');
 
   // Standalone mode: render POSContent directly filling the viewport
   if (isStandalone) {
