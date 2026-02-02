@@ -2830,7 +2830,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
       }}>
         <MenuGallery2 
-          viewMode="web"
+          viewMode="menu"
           orientationOverride="horizontal"
         />
       </div>
