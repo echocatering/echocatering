@@ -1835,3 +1835,10 @@ div[class*="sidebar-no-fade"] {
     scrollbar-width: none;  /* Firefox */
   }
 }
+
+/* Force Montserrat font globally */
+body,
+.app-root,
+.app-root * {
+  font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}

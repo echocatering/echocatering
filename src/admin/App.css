@@ -2379,7 +2379,9 @@ input[type="file"].menu-manager-action-button:hover::file-selector-button {
   border-color: #000 !important;
 }
 
-/* POS Horizontal Checkout View - Force Montserrat font */
+/* Force Montserrat font across all admin components */
+.admin-app,
+.admin-app *,
 .pos-horizontal-checkout,
 .pos-horizontal-checkout * {
   font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
