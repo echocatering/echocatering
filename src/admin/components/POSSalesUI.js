@@ -2538,35 +2538,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       </button>
                     </>
                   ) : (
-                    /* Custom tip input */
+                    /* Custom tip input with number pad */
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-                      <div style={{ position: 'relative' }}>
-                        <span style={{
-                          position: 'absolute',
-                          left: '16px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '24px',
-                          color: '#666',
-                        }}>$</span>
-                        <input
-                          type="number"
-                          value={customTipAmount}
-                          onChange={(e) => setCustomTipAmount(e.target.value)}
-                          placeholder="0.00"
-                          style={{
-                            width: '100%',
-                            padding: '20px 20px 20px 44px',
-                            fontSize: '28px',
-                            fontWeight: '500',
-                            background: '#fff',
-                            color: '#333',
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '8px',
-                            boxSizing: 'border-box',
-                          }}
-                          autoFocus
-                        />
+                      {/* Display area */}
+                      <div style={{
+                        width: '100%',
+                        padding: '20px',
+                        fontSize: '36px',
+                        fontWeight: '500',
+                        background: '#fff',
+                        color: '#333',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box',
+                        textAlign: 'center',
+                        minHeight: '80px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        ${customTipAmount || '0'}
                       </div>
                       
                       {/* Show calculated total */}
@@ -2574,23 +2565,130 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         Total: ${(checkoutSubtotal + (parseFloat(customTipAmount) || 0)).toFixed(2)}
                       </div>
                       
-                      <button
-                        onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
-                        disabled={checkoutLoading}
-                        style={{
-                          width: '100%',
-                          padding: '20px',
-                          fontSize: '18px',
-                          fontWeight: '600',
-                          background: checkoutLoading ? '#ccc' : '#800080',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {checkoutLoading ? 'Processing...' : 'Continue'}
-                      </button>
+                      {/* Number pad */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Row 1: 1, 2, 3 */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {['1', '2', '3'].map((num) => (
+                            <button
+                              key={num}
+                              onClick={() => setCustomTipAmount(prev => prev + num)}
+                              style={{
+                                flex: 1,
+                                padding: '20px',
+                                fontSize: '24px',
+                                fontWeight: '600',
+                                background: '#fff',
+                                color: '#333',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Row 2: 4, 5, 6 */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {['4', '5', '6'].map((num) => (
+                            <button
+                              key={num}
+                              onClick={() => setCustomTipAmount(prev => prev + num)}
+                              style={{
+                                flex: 1,
+                                padding: '20px',
+                                fontSize: '24px',
+                                fontWeight: '600',
+                                background: '#fff',
+                                color: '#333',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Row 3: 7, 8, 9 */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {['7', '8', '9'].map((num) => (
+                            <button
+                              key={num}
+                              onClick={() => setCustomTipAmount(prev => prev + num)}
+                              style={{
+                                flex: 1,
+                                padding: '20px',
+                                fontSize: '24px',
+                                fontWeight: '600',
+                                background: '#fff',
+                                color: '#333',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Row 4: Undo, 0, Check */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {/* Undo button */}
+                          <button
+                            onClick={() => setCustomTipAmount(prev => prev.slice(0, -1))}
+                            style={{
+                              flex: 1,
+                              padding: '20px',
+                              fontSize: '20px',
+                              fontWeight: '600',
+                              background: '#fff',
+                              color: '#666',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            ←
+                          </button>
+                          {/* 0 button */}
+                          <button
+                            onClick={() => setCustomTipAmount(prev => prev + '0')}
+                            style={{
+                              flex: 1,
+                              padding: '20px',
+                              fontSize: '24px',
+                              fontWeight: '600',
+                              background: '#fff',
+                              color: '#333',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            0
+                          </button>
+                          {/* Green check button */}
+                          <button
+                            onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
+                            disabled={checkoutLoading}
+                            style={{
+                              flex: 1,
+                              padding: '20px',
+                              fontSize: '24px',
+                              fontWeight: '600',
+                              background: checkoutLoading ? '#ccc' : '#22c55e',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            ✓
+                          </button>
+                        </div>
+                      </div>
                       
                       <button
                         onClick={() => {
