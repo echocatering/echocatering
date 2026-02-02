@@ -2464,7 +2464,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 padding: '40px 20px',
                                 fontSize: '16px',
                                 background: '#fff',
-                                color: '#2d9cdb',
+                                color: '#800080',
                                 border: '1px solid #e0e0e0',
                                 borderRadius: '8px',
                                 cursor: checkoutLoading ? 'not-allowed' : 'pointer',
@@ -2492,7 +2492,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           fontSize: '18px',
                           fontWeight: '600',
                           background: '#fff',
-                          color: '#2d9cdb',
+                          color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
@@ -2512,7 +2512,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           fontSize: '18px',
                           fontWeight: '600',
                           background: '#fff',
-                          color: '#2d9cdb',
+                          color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
@@ -2583,7 +2583,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           padding: '20px',
                           fontSize: '18px',
                           fontWeight: '600',
-                          background: checkoutLoading ? '#ccc' : '#2d9cdb',
+                          background: checkoutLoading ? '#ccc' : '#800080',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '8px',
@@ -3028,7 +3028,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             position: 'relative',
             height: '100%',
           }}>
-            {/* Event name and time - slides out when button shows */}
+            {/* Event name and time OR Payment Processing indicator */}
             <div style={{ 
               fontSize: '14px',
               textAlign: 'right',
@@ -3037,11 +3037,28 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               transform: showEndEventButton ? 'translateX(20px)' : 'translateX(0)',
               pointerEvents: showEndEventButton ? 'none' : 'auto',
             }}>
-              <span style={{ fontWeight: 'bold', color: '#333' }}>{eventName}</span>
-              {eventStarted && (
-                <span style={{ color: '#666', marginLeft: '8px' }}>
-                  {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              {checkoutMode ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
+                  <span style={{ fontWeight: 'bold', color: '#800080' }}>PAYMENT PROCESSING</span>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #e0e0e0',
+                    borderTopColor: '#800080',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }} />
+                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+              ) : (
+                <>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>{eventName}</span>
+                  {eventStarted && (
+                    <span style={{ color: '#666', marginLeft: '8px' }}>
+                      {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </>
               )}
             </div>
             
