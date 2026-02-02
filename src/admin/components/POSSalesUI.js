@@ -1732,6 +1732,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [checkoutTabInfo, setCheckoutTabInfo] = useState(null);
   const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input (local only)
   const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars (local only)
+  const [showTabView, setShowTabView] = useState(false); // Toggle between tip view and receipt view
   
   // WebSocket handlers for checkout sync across devices
   const handleWsCheckoutStart = useCallback((data) => {
@@ -1742,6 +1743,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutTabInfo(data.tabInfo || null);
     setShowCustomTip(false);
     setCustomTipAmount('');
+    setShowTabView(false);
   }, []);
   
   const handleWsCheckoutComplete = useCallback((data) => {
@@ -2392,7 +2394,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100vw', 
           height: '100vh', 
           overflow: 'hidden', 
-          background: '#fff',
+          background: '#f5f5f5',
           fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
           display: 'flex',
           flexDirection: 'column',
@@ -2425,183 +2427,241 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             padding: '20px',
             overflow: 'auto',
           }}>
-            {/* Items Container */}
+            {/* Tip Selection Area */}
             <div style={{
               width: '100%',
-              maxWidth: '500px',
-              marginBottom: '30px',
+              maxWidth: '600px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}>
-              {checkoutItems.map((item, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '10px 0',
-                  borderBottom: '1px solid #e0e0e0',
-                  fontSize: '16px',
-                }}>
-                  <span style={{ color: '#333' }}>
-                    {toTitleCase(item.name)}
-                    {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
-                  </span>
-                  <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
-                </div>
-              ))}
-              
-              {/* Subtotal */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '16px 0 0 0',
-                fontSize: '20px',
-                fontWeight: '600',
-                color: '#333',
-              }}>
-                <span>Total</span>
-                <span>${checkoutSubtotal.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            {/* Tip Selection - no container */}
-            <div style={{
-              width: '100%',
-              maxWidth: '500px',
-            }}>
-              {!showCustomTip ? (
+              {!showTabView ? (
+                /* TIP VIEW - Total at top, tip buttons below */
                 <>
-                  {/* Tip percentage buttons - horizontal row */}
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                    {tipPercentages.map(({ label, value }) => {
-                      const tipAmount = checkoutSubtotal * value;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => handleProcessPaymentWithTip(tipAmount)}
-                          disabled={checkoutLoading}
+                  {/* Large Total Display */}
+                  <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '48px', fontWeight: '700', color: '#333' }}>
+                      ${checkoutSubtotal.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: '18px', color: '#888', marginTop: '4px' }}>
+                      Add a tip
+                    </div>
+                  </div>
+                  
+                  {!showCustomTip ? (
+                    <>
+                      {/* Tip percentage buttons - horizontal row */}
+                      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', width: '100%' }}>
+                        {tipPercentages.map(({ label, value }) => {
+                          const tipAmount = checkoutSubtotal * value;
+                          return (
+                            <button
+                              key={label}
+                              onClick={() => handleProcessPaymentWithTip(tipAmount)}
+                              disabled={checkoutLoading}
+                              style={{
+                                flex: 1,
+                                padding: '40px 20px',
+                                fontSize: '16px',
+                                background: '#fff',
+                                color: '#2d9cdb',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '8px',
+                                opacity: checkoutLoading ? 0.6 : 1,
+                              }}
+                            >
+                              <span style={{ fontSize: '36px', fontWeight: '400' }}>{label}</span>
+                              <span style={{ fontSize: '18px', color: '#666' }}>${tipAmount.toFixed(2)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Custom Tip Amount button */}
+                      <button
+                        onClick={() => setShowCustomTip(true)}
+                        disabled={checkoutLoading}
+                        style={{
+                          width: '100%',
+                          padding: '20px',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          background: '#fff',
+                          color: '#2d9cdb',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '8px',
+                          cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        Custom Tip Amount
+                      </button>
+                      
+                      {/* No Tip button */}
+                      <button
+                        onClick={() => handleProcessPaymentWithTip(0)}
+                        disabled={checkoutLoading}
+                        style={{
+                          width: '100%',
+                          padding: '20px',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          background: '#fff',
+                          color: '#2d9cdb',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '8px',
+                          cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        No Tip
+                      </button>
+                      
+                      {/* View Tab button */}
+                      <button
+                        onClick={() => setShowTabView(true)}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          fontSize: '16px',
+                          background: 'transparent',
+                          color: '#666',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        View Tab
+                      </button>
+                    </>
+                  ) : (
+                    /* Custom tip input */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{
+                          position: 'absolute',
+                          left: '16px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: '24px',
+                          color: '#666',
+                        }}>$</span>
+                        <input
+                          type="number"
+                          value={customTipAmount}
+                          onChange={(e) => setCustomTipAmount(e.target.value)}
+                          placeholder="0.00"
                           style={{
-                            flex: 1,
-                            padding: '24px 16px',
-                            fontSize: '16px',
+                            width: '100%',
+                            padding: '20px 20px 20px 44px',
+                            fontSize: '28px',
+                            fontWeight: '500',
                             background: '#fff',
-                            color: '#2d9cdb',
+                            color: '#333',
                             border: '1px solid #e0e0e0',
                             borderRadius: '8px',
-                            cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '8px',
-                            opacity: checkoutLoading ? 0.6 : 1,
+                            boxSizing: 'border-box',
                           }}
-                        >
-                          <span style={{ fontSize: '28px', fontWeight: '400' }}>{label}</span>
-                          <span style={{ fontSize: '16px', color: '#666' }}>${tipAmount.toFixed(2)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Custom Tip Amount button */}
-                  <button
-                    onClick={() => setShowCustomTip(true)}
-                    disabled={checkoutLoading}
-                    style={{
-                      width: '100%',
-                      padding: '18px',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      background: '#fff',
-                      color: '#333',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '8px',
-                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                      marginBottom: '12px',
-                    }}
-                  >
-                    Custom Tip Amount
-                  </button>
-                  
-                  {/* No Tip button */}
-                  <button
-                    onClick={() => handleProcessPaymentWithTip(0)}
-                    disabled={checkoutLoading}
-                    style={{
-                      width: '100%',
-                      padding: '18px',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      background: '#fff',
-                      color: '#2d9cdb',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '8px',
-                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    No Tip
-                  </button>
+                          autoFocus
+                        />
+                      </div>
+                      
+                      {/* Show calculated total */}
+                      <div style={{ textAlign: 'center', fontSize: '20px', color: '#666' }}>
+                        Total: ${(checkoutSubtotal + (parseFloat(customTipAmount) || 0)).toFixed(2)}
+                      </div>
+                      
+                      <button
+                        onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
+                        disabled={checkoutLoading}
+                        style={{
+                          width: '100%',
+                          padding: '20px',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          background: checkoutLoading ? '#ccc' : '#2d9cdb',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {checkoutLoading ? 'Processing...' : 'Continue'}
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowCustomTip(false);
+                          setCustomTipAmount('');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          fontSize: '16px',
+                          background: 'transparent',
+                          color: '#666',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Back
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
-                /* Custom tip input */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{
-                      position: 'absolute',
-                      left: '16px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '24px',
-                      color: '#666',
-                    }}>$</span>
-                    <input
-                      type="number"
-                      value={customTipAmount}
-                      onChange={(e) => setCustomTipAmount(e.target.value)}
-                      placeholder="0.00"
-                      style={{
-                        width: '100%',
-                        padding: '18px 18px 18px 44px',
-                        fontSize: '24px',
-                        fontWeight: '500',
-                        background: '#fff',
-                        color: '#333',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '8px',
-                        boxSizing: 'border-box',
-                      }}
-                      autoFocus
-                    />
-                  </div>
-                  
-                  {/* Show calculated total */}
-                  <div style={{ textAlign: 'center', fontSize: '18px', color: '#666' }}>
-                    Total: ${(checkoutSubtotal + (parseFloat(customTipAmount) || 0)).toFixed(2)}
-                  </div>
-                  
-                  <button
-                    onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
-                    disabled={checkoutLoading}
-                    style={{
-                      width: '100%',
-                      padding: '18px',
-                      fontSize: '18px',
+                /* TAB VIEW - Receipt with items */
+                <>
+                  {/* Items list */}
+                  <div style={{
+                    width: '100%',
+                    background: '#fff',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    marginBottom: '16px',
+                  }}>
+                    {checkoutItems.map((item, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '12px 0',
+                        borderBottom: idx < checkoutItems.length - 1 ? '1px solid #e0e0e0' : 'none',
+                        fontSize: '18px',
+                      }}>
+                        <span style={{ color: '#333' }}>
+                          {toTitleCase(item.name)}
+                          {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
+                        </span>
+                        <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    
+                    {/* Total */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '16px 0 0 0',
+                      marginTop: '12px',
+                      borderTop: '2px solid #333',
+                      fontSize: '22px',
                       fontWeight: '600',
-                      background: checkoutLoading ? '#ccc' : '#2d9cdb',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {checkoutLoading ? 'Processing...' : 'Continue'}
-                  </button>
+                      color: '#333',
+                    }}>
+                      <span>Total</span>
+                      <span>${checkoutSubtotal.toFixed(2)}</span>
+                    </div>
+                  </div>
                   
+                  {/* Back button */}
                   <button
-                    onClick={() => {
-                      setShowCustomTip(false);
-                      setCustomTipAmount('');
-                    }}
+                    onClick={() => setShowTabView(false)}
                     style={{
                       width: '100%',
-                      padding: '14px',
+                      padding: '16px',
                       fontSize: '16px',
                       background: 'transparent',
                       color: '#666',
@@ -2611,7 +2671,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   >
                     Back
                   </button>
-                </div>
+                </>
               )}
             </div>
           </div>
