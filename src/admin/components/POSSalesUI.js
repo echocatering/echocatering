@@ -2522,22 +2522,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       >
                         No Tip
                       </button>
-                      
-                      {/* View Tab button */}
-                      <button
-                        onClick={() => setShowTabView(true)}
-                        style={{
-                          width: '100%',
-                          padding: '16px',
-                          fontSize: '16px',
-                          background: 'transparent',
-                          color: '#666',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        View Tab
-                      </button>
                     </>
                   ) : (
                     /* Custom tip input with number pad */
@@ -2692,32 +2676,44 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               border: 'none',
                               borderRadius: '8px',
                               cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                             }}
                           >
-                            ✓
+                            <img 
+                              src="/assets/icons/check.svg" 
+                              alt="Confirm" 
+                              style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }}
+                            />
                           </button>
                         </div>
                       </div>
-                      
-                      <button
-                        onClick={() => {
-                          setShowCustomTip(false);
-                          setCustomTipAmount('');
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '16px',
-                          fontSize: '16px',
-                          background: 'transparent',
-                          color: '#666',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Back
-                      </button>
                     </div>
                   )}
+                  
+                  {/* View Tab / Back button - always visible at bottom */}
+                  <button
+                    onClick={() => {
+                      if (showCustomTip) {
+                        setShowCustomTip(false);
+                        setCustomTipAmount('');
+                      } else {
+                        setShowTabView(true);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      fontSize: '16px',
+                      background: 'transparent',
+                      color: '#666',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showCustomTip ? 'Back' : 'View Tab'}
+                  </button>
                 </>
               ) : (
                 /* TAB VIEW - Receipt with items */
