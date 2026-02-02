@@ -308,7 +308,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               aspectRatio: '1 / 1',
               border: 'none',
               background: activeCategory === category.id ? '#800080' : '#d0d0d0',
-              color: activeCategory === category.id ? '#fff' : '#333',
+              color: '#fff',
               fontSize: `${outerWidth / 12}px`,
               fontWeight: 600,
               cursor: 'pointer',
