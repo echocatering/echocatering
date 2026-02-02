@@ -1723,6 +1723,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
+  // Checkout mode for horizontal view - when true, shows receipt/tipping screen instead of MenuGallery2
+  const [checkoutMode, setCheckoutMode] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState([]); // Items being checked out
+  const [checkoutSubtotal, setCheckoutSubtotal] = useState(0); // Subtotal before tip
+  const [checkoutTabInfo, setCheckoutTabInfo] = useState(null); // Tab info for checkout
+  const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input
+  const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars
+  
   // ============================================
   // SQUARE POS TEST MODE
   // When true: all items are $0.01, orders labeled as TEST
@@ -2101,19 +2109,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [eventId, handleSyncToDb]);
 
   /**
-   * Handle checkout - Create Square order and open Square app via deep-link
+   * Handle checkout - Enter checkout mode to show tipping screen on horizontal view
    * 
-   * SQUARE POS INTEGRATION:
-   * 1. Send tab data to backend to create Square order
-   * 2. Receive order_id and location_id
-   * 3. Open Square app using deep-link for payment
-   * 
-   * TEST_MODE (squareTestMode = true):
-   * - All items are $0.01
-   * - Orders labeled as TEST
-   * - Safe for testing without charging real money
+   * CHECKOUT FLOW:
+   * 1. User clicks CHECKOUT on vertical POS
+   * 2. Horizontal view switches from MenuGallery2 to receipt/tipping screen
+   * 3. Customer selects tip (15%, 20%, 25%, or custom)
+   * 4. Tip selection triggers Square deep-link with total + tip
    */
-  const handleCheckout = useCallback(async () => {
+  const handleCheckout = useCallback(() => {
     if (!activeTabId || selectedItems.length === 0) {
       alert('No items to checkout');
       return;
@@ -2125,6 +2129,36 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
 
+    console.log(`[POS Checkout] Entering checkout mode for tab ${activeTab.id} (${activeTab.customName || activeTab.name})`);
+    
+    // Store checkout data for the tipping screen
+    setCheckoutItems([...selectedItems]);
+    setCheckoutSubtotal(total);
+    setCheckoutTabInfo({
+      id: activeTab.id,
+      name: activeTab.customName || activeTab.name
+    });
+    setShowCustomTip(false);
+    setCustomTipAmount('');
+    
+    // Enter checkout mode - this will trigger the horizontal view to show the receipt/tipping screen
+    setCheckoutMode(true);
+    
+    console.log(`[POS Checkout] Checkout mode activated. Subtotal: $${total.toFixed(2)}, Items: ${selectedItems.length}`);
+  }, [activeTabId, selectedItems, tabs, total]);
+
+  /**
+   * Process payment with tip - Opens Square app via deep-link
+   * Called when customer selects a tip option
+   */
+  const handleProcessPaymentWithTip = useCallback(async (tipAmount) => {
+    if (!checkoutTabInfo || checkoutItems.length === 0) {
+      alert('No checkout data');
+      return;
+    }
+
+    const finalTotal = checkoutSubtotal + tipAmount;
+    
     try {
       setCheckoutLoading(true);
       
@@ -2132,39 +2166,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       // SQUARE POS CHECKOUT FLOW
       // ============================================
       const testModeLabel = squareTestMode ? '[TEST MODE] ' : '';
-      console.log(`[POS Checkout] ${testModeLabel}Processing tab ${activeTab.id} (${activeTab.customName || activeTab.name}) with ${selectedItems.length} items`);
+      console.log(`[POS Checkout] ${testModeLabel}Processing payment with tip`);
+      console.log(`[POS Checkout] Subtotal: $${checkoutSubtotal.toFixed(2)}, Tip: $${tipAmount.toFixed(2)}, Total: $${finalTotal.toFixed(2)}`);
 
       // Prepare checkout data for Square order creation
       const checkoutData = {
-        tabId: activeTab.id,
-        tabName: activeTab.customName || activeTab.name,
-        items: selectedItems.map(item => ({
+        tabId: checkoutTabInfo.id,
+        tabName: checkoutTabInfo.name,
+        items: checkoutItems.map(item => ({
           name: item.name,
           quantity: 1,
           price: item.price || 0,
           modifier: item.modifier || null,
           category: item.category
         })),
-        total: total,
+        total: finalTotal,
         testMode: squareTestMode  // TEST_MODE flag
       };
 
-      // ============================================
-      // SQUARE POS API CHECKOUT FLOW
-      // Use Square Point of Sale API directly for charges
-      // ============================================
-      console.log(`[POS Checkout] ${testModeLabel}Processing tab ${activeTab.id} (${activeTab.customName || activeTab.name}) with ${selectedItems.length} items`);
-      
       // Get Square location ID
       const locationResponse = await apiCall('/square/location');
       if (!locationResponse || !locationResponse.locationId) {
         throw new Error('Square location not configured');
       }
       
-      // Calculate total in cents
+      // Calculate total in cents (with tip included)
       const totalCents = squareTestMode 
-        ? selectedItems.length  // $0.01 per item in test mode
-        : Math.round((total || 0) * 100);
+        ? checkoutItems.length  // $0.01 per item in test mode
+        : Math.round(finalTotal * 100);
       
       // Store checkout result
       setLastCheckoutResult({
@@ -2172,23 +2201,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         locationId: locationResponse.locationId,
         testMode: squareTestMode,
         totalCents: totalCents,
-        tabId: activeTab.id,
-        tabName: activeTab.customName || activeTab.name
+        tipAmount: tipAmount,
+        tabId: checkoutTabInfo.id,
+        tabName: checkoutTabInfo.name
       });
       
       // ============================================
       // OPEN SQUARE APP VIA DEEP-LINK
       // Using Square Point of Sale API format for Android
       // ============================================
-      
-      // For Square POS API, we need to use the Android intent format
-      // This creates a charge transaction directly
       const callbackUrl = `${window.location.origin}/admin/pos`;
       const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
       
       console.log(`[POS Checkout] CLIENT_ID:`, clientId);
       console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
-      console.log(`[POS Checkout] Total cents:`, totalCents);
+      console.log(`[POS Checkout] Total cents (with tip):`, totalCents);
       
       if (!clientId || clientId === 'sq0idp-') {
         console.error('[POS Checkout] Missing REACT_APP_SQUARE_CLIENT_ID');
@@ -2196,44 +2223,25 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         return;
       }
       
-      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(JSON.stringify({tabId: activeTab.id, tabName: activeTab.customName || activeTab.name, testMode: squareTestMode, items: selectedItems.map(i => ({name: i.name, modifier: i.modifier, price: i.price}))}))};end`;
+      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(JSON.stringify({tabId: checkoutTabInfo.id, tabName: checkoutTabInfo.name, testMode: squareTestMode, tipAmount: tipAmount, items: checkoutItems.map(i => ({name: i.name, modifier: i.modifier, price: i.price}))}))};end`;
       
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
-      // Show success message first
-      alert(`Opening Square app for payment...\n\n${squareTestMode ? '(TEST MODE - $0.01 per item)' : ''}\nTotal: $${(totalCents / 100).toFixed(2)}\n\nItems: ${selectedItems.length}`);
+      // Open Square app via deep-link immediately (no alert to avoid blocking)
+      window.location.href = deepLinkUrl;
       
-      // Try to open Square app via deep-link
-      // Use setTimeout to allow the alert to close first
+      // Exit checkout mode after a delay (user is now in Square app)
       setTimeout(() => {
-        console.log('[POS Checkout] Attempting to open Square app...');
-        window.location.href = deepLinkUrl;
-        
-        // Fallback: If Square app doesn't open within 2 seconds, show manual option
-        setTimeout(() => {
-          const shouldCopy = window.confirm('Square app didn\'t open automatically. Would you like to copy the deep-link to open it manually?\n\nThis can happen if:\n- Square app isn\'t installed\n- Browser blocked the navigation\n- Deep-link format issue');
-          
-          if (shouldCopy) {
-            // Copy to clipboard
-            navigator.clipboard.writeText(deepLinkUrl).then(() => {
-              alert('Deep-link copied to clipboard!\n\nPaste it in your browser\'s address bar or use a QR code scanner to open Square app manually.');
-            }).catch(() => {
-              alert('Could not copy to clipboard. Here\'s the link:\n\n' + deepLinkUrl);
-            });
-          }
-        }, 2000);
-      }, 100);
-      
-      // Note: We don't clear the tab here because the user may cancel in Square app
-      // The tab should be cleared when payment is confirmed (future enhancement)
+        setCheckoutMode(false);
+        setCheckoutLoading(false);
+      }, 2000);
 
     } catch (error) {
       console.error('[POS Checkout] Error:', error);
       alert(`Checkout failed: ${error.message}`);
-    } finally {
       setCheckoutLoading(false);
     }
-  }, [activeTabId, selectedItems, tabs, total, apiCall, squareTestMode]);
+  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, apiCall, squareTestMode]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -2318,9 +2326,259 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
   // ============================================
   // HORIZONTAL VIEW (CUSTOMER-FACING)
-  // When orientation is horizontal and layoutMode is 'auto', show MenuGallery2
+  // When orientation is horizontal and layoutMode is 'auto':
+  // - If checkoutMode is true: show receipt/tipping screen
+  // - Otherwise: show MenuGallery2
   // ============================================
   if (layoutMode === 'auto' && orientation === 'horizontal') {
+    // CHECKOUT MODE: Show receipt with tip options
+    if (checkoutMode && checkoutItems.length > 0) {
+      const tipPercentages = [
+        { label: '15%', value: 0.15 },
+        { label: '20%', value: 0.20 },
+        { label: '25%', value: 0.25 },
+      ];
+      
+      return (
+        <div style={{ 
+          width: '100vw', 
+          height: '100vh', 
+          overflow: 'hidden', 
+          background: '#1a1a1a',
+          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          color: '#fff',
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '20px 40px',
+            borderBottom: '1px solid #333',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <h1 style={{ fontSize: '28px', fontWeight: '600', margin: 0 }}>
+              {checkoutTabInfo?.name || 'Receipt'}
+            </h1>
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt="Echo" 
+                style={{ height: '40px', width: 'auto' }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
+          </div>
+          
+          {/* Receipt Content */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            padding: '30px 40px',
+            gap: '40px',
+            overflow: 'hidden',
+          }}>
+            {/* Left side: Items list */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              paddingRight: '20px',
+            }}>
+              <h2 style={{ fontSize: '20px', marginBottom: '20px', color: '#888' }}>Items</h2>
+              {checkoutItems.map((item, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '12px 0',
+                  borderBottom: '1px solid #333',
+                  fontSize: '18px',
+                }}>
+                  <span>
+                    {toTitleCase(item.name)}
+                    {item.modifier && <span style={{ color: '#888', marginLeft: '8px' }}>({item.modifier})</span>}
+                  </span>
+                  <span style={{ fontWeight: '600' }}>${(item.price || 0).toFixed(2)}</span>
+                </div>
+              ))}
+              
+              {/* Subtotal */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '20px 0',
+                fontSize: '22px',
+                fontWeight: '600',
+                borderTop: '2px solid #444',
+                marginTop: '20px',
+              }}>
+                <span>Subtotal</span>
+                <span>${checkoutSubtotal.toFixed(2)}</span>
+              </div>
+            </div>
+            
+            {/* Right side: Tip selection */}
+            <div style={{
+              width: '400px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}>
+              <h2 style={{ fontSize: '24px', marginBottom: '30px', textAlign: 'center' }}>
+                Add a Tip
+              </h2>
+              
+              {!showCustomTip ? (
+                <>
+                  {/* Tip percentage buttons */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {tipPercentages.map(({ label, value }) => {
+                      const tipAmount = checkoutSubtotal * value;
+                      const totalWithTip = checkoutSubtotal + tipAmount;
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => handleProcessPaymentWithTip(tipAmount)}
+                          disabled={checkoutLoading}
+                          style={{
+                            padding: '20px 30px',
+                            fontSize: '22px',
+                            fontWeight: '600',
+                            background: checkoutLoading ? '#444' : '#800080',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '12px',
+                            cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <span>{label}</span>
+                          <span>
+                            <span style={{ color: '#ccc', marginRight: '10px' }}>+${tipAmount.toFixed(2)}</span>
+                            ${totalWithTip.toFixed(2)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* OTHER button */}
+                  <button
+                    onClick={() => setShowCustomTip(true)}
+                    disabled={checkoutLoading}
+                    style={{
+                      marginTop: '16px',
+                      padding: '20px 30px',
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      background: 'transparent',
+                      color: '#fff',
+                      border: '2px solid #666',
+                      borderRadius: '12px',
+                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    OTHER
+                  </button>
+                  
+                  {/* No Tip option */}
+                  <button
+                    onClick={() => handleProcessPaymentWithTip(0)}
+                    disabled={checkoutLoading}
+                    style={{
+                      marginTop: '16px',
+                      padding: '16px 30px',
+                      fontSize: '18px',
+                      background: 'transparent',
+                      color: '#888',
+                      border: 'none',
+                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    No Tip
+                  </button>
+                </>
+              ) : (
+                /* Custom tip input */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{
+                      position: 'absolute',
+                      left: '20px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '28px',
+                      color: '#888',
+                    }}>$</span>
+                    <input
+                      type="number"
+                      value={customTipAmount}
+                      onChange={(e) => setCustomTipAmount(e.target.value)}
+                      placeholder="0.00"
+                      style={{
+                        width: '100%',
+                        padding: '20px 20px 20px 50px',
+                        fontSize: '28px',
+                        fontWeight: '600',
+                        background: '#333',
+                        color: '#fff',
+                        border: '2px solid #555',
+                        borderRadius: '12px',
+                        boxSizing: 'border-box',
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  
+                  {/* Show calculated total */}
+                  <div style={{ textAlign: 'center', fontSize: '20px', color: '#888' }}>
+                    Total: ${(checkoutSubtotal + (parseFloat(customTipAmount) || 0)).toFixed(2)}
+                  </div>
+                  
+                  <button
+                    onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
+                    disabled={checkoutLoading}
+                    style={{
+                      padding: '20px 30px',
+                      fontSize: '22px',
+                      fontWeight: '600',
+                      background: checkoutLoading ? '#444' : '#800080',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {checkoutLoading ? 'PROCESSING...' : 'CONTINUE'}
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setShowCustomTip(false);
+                      setCustomTipAmount('');
+                    }}
+                    style={{
+                      padding: '16px 30px',
+                      fontSize: '18px',
+                      background: 'transparent',
+                      color: '#888',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Back
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // DEFAULT: Show MenuGallery2
     return (
       <div style={{ 
         width: '100vw', 
