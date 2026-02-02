@@ -2394,7 +2394,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100vw', 
           height: '100vh', 
           overflow: 'hidden', 
-          background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 10%, rgba(210, 210, 210, 1) 40%, rgba(250, 250, 250, 1) 90%, rgba(255, 255, 255, 1) 100%)',
+          background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
           display: 'flex',
           flexDirection: 'column',
           color: '#333',
@@ -2405,6 +2405,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             background: '#fff',
             display: 'flex',
             alignItems: 'center',
+            minHeight: '68px',
+            boxSizing: 'border-box',
           }}>
             {logoUrl && (
               <img 
@@ -2648,9 +2650,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               border: '1px solid #e0e0e0',
                               borderRadius: '8px',
                               cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                             }}
                           >
-                            ←
+                            <img 
+                              src="/assets/icons/backspace.svg" 
+                              alt="Backspace" 
+                              style={{ width: '28px', height: '28px' }}
+                            />
                           </button>
                           {/* 0 button */}
                           <button
@@ -2777,6 +2786,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           <div style={{
             padding: '16px 24px',
             background: 'transparent',
+            minHeight: '68px',
+            boxSizing: 'border-box',
             flexShrink: 0,
           }} />
         </div>
