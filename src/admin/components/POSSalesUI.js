@@ -2461,13 +2461,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </div>
             </div>
             
-            {/* Tip Selection Container - Square style */}
+            {/* Tip Selection - no container */}
             <div style={{
               width: '100%',
               maxWidth: '500px',
-              background: '#f5f5f5',
-              borderRadius: '12px',
-              padding: '24px',
             }}>
               {!showCustomTip ? (
                 <>
@@ -2512,7 +2509,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       padding: '18px',
                       fontSize: '16px',
                       fontWeight: '600',
-                      background: '#f5f5f5',
+                      background: '#fff',
                       color: '#333',
                       border: '1px solid #e0e0e0',
                       borderRadius: '8px',
@@ -2532,7 +2529,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       padding: '18px',
                       fontSize: '16px',
                       fontWeight: '600',
-                      background: '#f5f5f5',
+                      background: '#fff',
                       color: '#2d9cdb',
                       border: '1px solid #e0e0e0',
                       borderRadius: '8px',
