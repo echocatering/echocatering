@@ -259,7 +259,7 @@ function useContainerSize(outerWidthOverride, outerHeightOverride, viewMode = 'w
 /**
  * Video background that fills the outer container (viewport).
  */
-function VideoBackground({ videoSrc, isVertical = false }) {
+function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
   const videoRef = useRef(null);
 
   const safeVideoSrc = useMemo(() => getIosSafeCloudinaryVideoUrl(videoSrc), [videoSrc]);
@@ -337,7 +337,7 @@ function VideoBackground({ videoSrc, isVertical = false }) {
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical ? 'scale(1.32)' : 'scale(1)',
+        transform: isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)'),
       }}
     >
       <source src={safeVideoSrc} type="video/mp4" />
@@ -373,6 +373,11 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
     padding: 0,
     margin: 0,
     transition: 'all 0.2s ease',
+    outline: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
   };
 
   const hoverHandlers = (isNext) => ({
@@ -387,16 +392,19 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
     onClick: isNext ? onNext : onPrev,
   });
 
+  const svgSize = Math.round(size * 0.6);
+  const strokeWidth = Math.max(1.5, Math.round(size / 40));
+  
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 32, pointerEvents: 'auto' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: size * 0.5, pointerEvents: 'auto' }}>
       <button aria-label="Previous" style={base} {...hoverHandlers(false)}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-          <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={svgSize} height={svgSize} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+          <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
       <button aria-label="Next" style={base} {...hoverHandlers(true)}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-          <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={svgSize} height={svgSize} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+          <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
     </div>
@@ -471,6 +479,8 @@ function EchoCocktailSubpage2({
   const bottomControlsRef = useRef(null);
   const navBarRef = useRef(null);
   const innerContainerRef = useRef(null);
+  const touchStartX = useRef(null);
+  const touchEndX = useRef(null);
   const [verticalInfoFontScale, setVerticalInfoFontScale] = useState(1);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(60);
 
@@ -505,6 +515,11 @@ function EchoCocktailSubpage2({
         innerHeight = outerHeight;
         innerWidth = innerHeight * innerAR;
       }
+      // Scale inner container by 1.10x to extend beyond screen edge (only in app/menu mode)
+      if (viewMode === 'menu') {
+        innerWidth *= 1.10;
+        innerHeight *= 1.10;
+      }
     } else {
       // For vertical: always fit by height
         innerFit = 'height';
@@ -521,7 +536,7 @@ function EchoCocktailSubpage2({
       inner: { width: innerWidth, height: innerHeight, fit: innerFit },
       video: { ...videoSize, fit: videoFit },
     };
-  }, [size.width, size.height, orientationOverride]);
+  }, [size.width, size.height, orientationOverride, viewMode]);
 
   const innerLeft = (size.width - layout.inner.width) / 2;
   const innerTop = (size.height - layout.inner.height) / 2;
@@ -651,6 +666,31 @@ function EchoCocktailSubpage2({
       window.scrollTo({ top: targetScroll, behavior: 'smooth' });
     }, 10);
   }, [viewMode, galleryRef]);
+
+  // Swipe gesture handlers
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+  
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        handleNext(); // Swipe left = next
+      } else {
+        handlePrev(); // Swipe right = prev
+      }
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   // Fade logic for prev/next
   const handlePrev = (e) => {
@@ -1830,16 +1870,21 @@ function EchoCocktailSubpage2({
                   background: 'transparent',
                   border: 'none',
                   color: color,
-                  fontSize: '1.3rem',
+                  fontSize: viewMode === 'menu' ? '1.8rem' : '1.3rem',
                   fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
-                  padding: '8px 12px',
+                  padding: viewMode === 'menu' ? '12px 16px' : '8px 12px',
                   transition: 'color 0.2s ease, filter 0.2s ease',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: viewMode === 'menu' ? '12px' : '8px',
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
                 }}
               >
                 {icon && (
@@ -1847,8 +1892,8 @@ function EchoCocktailSubpage2({
                     src={icon}
                     alt={label}
                     style={{
-                      width: '24px',
-                      height: '24px',
+                      width: viewMode === 'menu' ? '32px' : '24px',
+                      height: viewMode === 'menu' ? '32px' : '24px',
                       display: 'block',
                       filter: iconFilter,
                       transition: 'filter 0.2s ease',
@@ -1970,33 +2015,7 @@ function EchoCocktailSubpage2({
                 </button>
               </>
             )}
-            {viewMode === 'menu' && (
-              <button
-                onMouseEnter={() => setHoveredButton('all-items')}
-                onMouseLeave={() => setHoveredButton(null)}
-                style={{
-                  background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'all-items' ? '#000' : '#fff'}`,
-                  color: hoveredButton === 'all-items' ? '#000' : '#fff',
-                  border: `2px solid ${hoveredButton === 'all-items' ? '#000' : '#fff'}`,
-                  color: hoveredButton === 'all-items' ? '#000' : '#fff',
-                  padding: '10px 16px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  transition: 'border 0.2s ease, color 0.2s ease',
-                  fontSize: '1.1rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  position: 'relative',
-                }}
-              >
-                All Items
-              </button>
-            )}
+{/* All Items button hidden for menu viewMode (horizontal POS view) */}
           </div>
         </div>
 
@@ -2039,13 +2058,13 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
-        {/* Arrows */}
+        {/* Arrows - larger and lower for horizontal view */}
         <div
           style={{
             position: 'absolute',
-            left: `${innerLeft + (layout.inner.width - 256) / 2}px`,
-            bottom: `${arrowBottom}px`,
-            width: '256px',
+            left: `${innerLeft + (layout.inner.width - 320) / 2}px`,
+            bottom: `${Math.max(arrowBottom - 40, 20)}px`,
+            width: '320px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2054,7 +2073,7 @@ function EchoCocktailSubpage2({
           }}
         >
           <div style={{ pointerEvents: 'auto' }}>
-            <ArrowButtons onPrev={handlePrev} onNext={handleNext} />
+            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 112 : 80} />
           </div>
         </div>
       </>
@@ -2183,38 +2202,7 @@ function EchoCocktailSubpage2({
                   All Items
                 </button>
               )}
-              {viewMode === 'menu' && (
-                <button
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#222';
-                    e.currentTarget.style.borderColor = '#222';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#888';
-                    e.currentTarget.style.borderColor = '#888';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid #888',
-                    color: '#888',
-                    padding: '6px 8px',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    fontSize: '0.7rem',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 9999,
-                    position: 'relative',
-                  }}
-                >
-                  All Items
-                </button>
-              )}
+{/* All Items button hidden for menu viewMode */}
             </div>
           </div>
         )}
@@ -2753,6 +2741,9 @@ function EchoCocktailSubpage2({
   return (
     <div
       ref={ref}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         position: 'relative',
         width: outerWidthOverride ? `${outerWidthOverride}px` : (viewMode === 'web' ? `${size.width}px` : '100%'),
@@ -2764,7 +2755,7 @@ function EchoCocktailSubpage2({
     >
       {/* Video background fills entire outer container/viewport */}
       {videoSrc ? (
-        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} />
+        <VideoBackground videoSrc={videoSrc} isVertical={isVertical} viewMode={viewMode} />
       ) : (
         <div style={{
           position: 'absolute',

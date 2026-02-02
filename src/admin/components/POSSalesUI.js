@@ -2760,8 +2760,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   maxWidth: '700px',
                   alignItems: 'center',
                 }}>
-                  {/* Items list - fixed 1:1 square, scrollable */}
-                  <div ref={receiptContainerRef} style={{
+                  {/* Receipt square container */}
+                  <div style={{
                     width: '100%',
                     aspectRatio: '1 / 1',
                     maxHeight: '700px',
@@ -2769,35 +2769,43 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     borderRadius: '8px',
                     padding: '20px',
                     marginBottom: '16px',
-                    overflow: 'auto',
                     boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}>
-                    {checkoutItems.map((item, idx) => (
-                      <div key={idx} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '12px 0',
-                        borderBottom: idx < checkoutItems.length - 1 ? '1px solid #e0e0e0' : 'none',
-                        fontSize: '18px',
-                      }}>
-                        <span style={{ color: '#333' }}>
-                          {(item.name || '').toUpperCase()}
-                          {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
-                        </span>
-                        <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
-                      </div>
-                    ))}
+                    {/* Items list - scrollable area */}
+                    <div ref={receiptContainerRef} style={{
+                      flex: 1,
+                      overflow: 'auto',
+                      marginBottom: '12px',
+                    }}>
+                      {checkoutItems.map((item, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '12px 0',
+                          borderBottom: idx < checkoutItems.length - 1 ? '1px solid #e0e0e0' : 'none',
+                          fontSize: '18px',
+                        }}>
+                          <span style={{ color: '#333' }}>
+                            {(item.name || '').toUpperCase()}
+                            {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
+                          </span>
+                          <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
                     
-                    {/* Total */}
+                    {/* Total - fixed at bottom of square */}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       padding: '16px 0 0 0',
-                      marginTop: '12px',
                       borderTop: '2px solid #333',
                       fontSize: '22px',
                       fontWeight: '600',
                       color: '#333',
+                      flexShrink: 0,
                     }}>
                       <span>Total</span>
                       <span>${checkoutSubtotal.toFixed(2)}</span>
