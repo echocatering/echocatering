@@ -437,6 +437,17 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       </video>
                     );
                   }
+                  const displayName = (item.name || 'Item').toUpperCase();
+                  const words = displayName.split(' ');
+                  const longestWord = Math.max(...words.map(w => w.length));
+                  const numLines = words.length;
+                  const buttonWidth = (outerWidth - 16) / 3;
+                  const availableWidth = buttonWidth - 24;
+                  const availableHeight = buttonWidth - 24;
+                  const fontSizeByWidth = availableWidth / (longestWord * 0.6);
+                  const fontSizeByHeight = availableHeight / (numLines * 1.2);
+                  const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
+                  
                   return (
                     <div style={{
                       position: 'absolute',
@@ -446,19 +457,27 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       height: '100%',
                       backgroundColor: '#f0f0f0',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      zIndex: 1
+                      zIndex: 1,
+                      padding: '12px',
+                      boxSizing: 'border-box'
                     }}>
-                      <span style={{ 
-                        fontSize: `${outerWidth / 20}px`,
-                        color: '#999',
-                        padding: '8px',
-                        textAlign: 'center',
-                        wordBreak: 'break-word'
-                      }}>
-                        {(item.name || 'Item').toUpperCase()}
-                      </span>
+                      {words.map((word, idx) => (
+                        <span 
+                          key={idx}
+                          style={{ 
+                            fontSize: `${fontSize}px`,
+                            fontWeight: 600,
+                            color: '#999',
+                            lineHeight: 1.1,
+                            textAlign: 'center'
+                          }}
+                        >
+                          {word}
+                        </span>
+                      ))}
                     </div>
                   );
                 })()}
@@ -471,20 +490,40 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   right: 0,
                   background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
                   padding: '8px 4px 4px 4px',
-                  zIndex: 2
+                  zIndex: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end'
                 }}>
-                  <span style={{
-                    fontSize: `${Math.max(10, outerWidth / 28)}px`,
-                    fontWeight: 500,
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                    display: 'block',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {(item.name || 'Untitled').toUpperCase()}
-                  </span>
+                  {(() => {
+                    const displayName = (item.name || 'Untitled').toUpperCase();
+                    const words = displayName.split(' ');
+                    const longestWord = Math.max(...words.map(w => w.length));
+                    const numLines = words.length;
+                    const buttonWidth = (outerWidth - 16) / 3;
+                    const availableWidth = buttonWidth - 16;
+                    const availableHeight = buttonWidth * 0.4;
+                    const fontSizeByWidth = availableWidth / (longestWord * 0.6);
+                    const fontSizeByHeight = availableHeight / (numLines * 1.2);
+                    const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 16);
+                    
+                    return words.map((word, idx) => (
+                      <span 
+                        key={idx}
+                        style={{
+                          color: '#fff',
+                          fontSize: `${fontSize}px`,
+                          fontWeight: 600,
+                          lineHeight: 1.1,
+                          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {word}
+                      </span>
+                    ));
+                  })()}
                 </div>
               </button>
             ))}
