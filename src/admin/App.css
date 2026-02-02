@@ -2384,5 +2384,5 @@ input[type="file"].menu-manager-action-button:hover::file-selector-button {
 .admin-app *,
 .pos-horizontal-checkout,
 .pos-horizontal-checkout * {
-  font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+  font-family: Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
 }

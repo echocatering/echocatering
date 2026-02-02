@@ -2775,9 +2775,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     onClick={() => setShowTabView(false)}
                     style={{
                       width: '100%',
-                      padding: '16px',
+                      padding: '20px',
                       paddingBottom: '102px',
-                      fontSize: '16px',
+                      fontSize: '18px',
+                      fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
                       border: 'none',

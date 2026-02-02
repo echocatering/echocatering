@@ -11,7 +11,7 @@
  * - Offline fallback for the POS UI
  */
 
-const CACHE_NAME = 'echo-pos-v1';
+const CACHE_NAME = 'echo-pos-v2';
 const OFFLINE_URL = '/admin/pos';
 
 // Assets to cache for offline use
@@ -83,6 +83,28 @@ self.addEventListener('fetch', (event) => {
   
   // Skip cross-origin requests (except for fonts)
   if (url.origin !== location.origin && !url.hostname.includes('fonts')) {
+    return;
+  }
+  
+  // Google Fonts - Network first to ensure fonts load correctly
+  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful font responses
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(request);
+        })
+    );
     return;
   }
   
