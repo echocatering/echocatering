@@ -296,7 +296,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         display: 'flex',
         width: '100%',
         flexShrink: 0,
-        background: '#333'
+        background: '#d0d0d0'
       }}>
         {CATEGORIES.map((category) => (
           <button
@@ -307,8 +307,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               flex: 1,
               aspectRatio: '1 / 1',
               border: 'none',
-              background: activeCategory === category.id ? '#800080' : '#333',
-              color: '#fff',
+              background: activeCategory === category.id ? '#800080' : '#d0d0d0',
+              color: activeCategory === category.id ? '#fff' : '#333',
               fontSize: `${outerWidth / 12}px`,
               fontWeight: 600,
               cursor: 'pointer',
