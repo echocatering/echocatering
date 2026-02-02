@@ -457,7 +457,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         textAlign: 'center',
                         wordBreak: 'break-word'
                       }}>
-                        {toTitleCase(item.name) || 'Item'}
+                        {(item.name || 'Item').toUpperCase()}
                       </span>
                     </div>
                   );
@@ -483,7 +483,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    {toTitleCase(item.name) || 'Untitled'}
+                    {(item.name || 'Untitled').toUpperCase()}
                   </span>
                 </div>
               </button>
@@ -620,7 +620,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         color: '#333'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 500 }}>{toTitleCase(item.name) || 'Item'}</span>
+                          <span style={{ fontWeight: 500 }}>{(item.name || 'Item').toUpperCase()}</span>
                           <span style={{ color: '#999' }}>-</span>
                           <span style={{ color: '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
                         </div>
@@ -2762,7 +2762,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         fontSize: '18px',
                       }}>
                         <span style={{ color: '#333' }}>
-                          {toTitleCase(item.name)}
+                          {(item.name || '').toUpperCase()}
                           {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
                         </span>
                         <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
