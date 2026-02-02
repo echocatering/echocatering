@@ -1779,6 +1779,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // Logo state - fetched from admin logo uploader
   const [logoUrl, setLogoUrl] = useState(null);
   
+  // Ref for receipt container to scroll to bottom
+  const receiptContainerRef = useRef(null);
+  
+  // Scroll receipt to bottom when tab view is shown
+  useEffect(() => {
+    if (showTabView && receiptContainerRef.current) {
+      // Use setTimeout to ensure DOM has rendered
+      setTimeout(() => {
+        if (receiptContainerRef.current) {
+          receiptContainerRef.current.scrollTop = receiptContainerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [showTabView]);
+  
   const { apiCall } = useAuth();
   
   // On startup, sync with backend to check for active events
@@ -2727,7 +2742,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   alignItems: 'center',
                 }}>
                   {/* Items list - fixed 1:1 square, scrollable */}
-                  <div style={{
+                  <div ref={receiptContainerRef} style={{
                     width: '100%',
                     aspectRatio: '1 / 1',
                     maxHeight: '700px',
