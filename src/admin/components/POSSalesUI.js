@@ -2705,8 +2705,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }}
                     style={{
                       width: '100%',
-                      padding: '16px',
-                      fontSize: '16px',
+                      padding: '20px',
+                      fontSize: '18px',
+                      fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
                       border: 'none',
@@ -2722,14 +2723,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   display: 'flex',
                   flexDirection: 'column',
                   width: '100%',
-                  maxWidth: '400px',
+                  maxWidth: '700px',
                   alignItems: 'center',
                 }}>
                   {/* Items list - fixed 1:1 square, scrollable */}
                   <div style={{
                     width: '100%',
                     aspectRatio: '1 / 1',
-                    maxHeight: '400px',
+                    maxHeight: '700px',
                     background: '#fff',
                     borderRadius: '8px',
                     padding: '20px',
