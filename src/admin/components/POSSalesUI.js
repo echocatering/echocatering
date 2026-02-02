@@ -490,40 +490,20 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   right: 0,
                   background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
                   padding: '8px 4px 4px 4px',
-                  zIndex: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end'
+                  zIndex: 2
                 }}>
-                  {(() => {
-                    const displayName = (item.name || 'Untitled').toUpperCase();
-                    const words = displayName.split(' ');
-                    const longestWord = Math.max(...words.map(w => w.length));
-                    const numLines = words.length;
-                    const buttonWidth = (outerWidth - 16) / 3;
-                    const availableWidth = buttonWidth - 16;
-                    const availableHeight = buttonWidth * 0.4;
-                    const fontSizeByWidth = availableWidth / (longestWord * 0.6);
-                    const fontSizeByHeight = availableHeight / (numLines * 1.2);
-                    const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 16);
-                    
-                    return words.map((word, idx) => (
-                      <span 
-                        key={idx}
-                        style={{
-                          color: '#fff',
-                          fontSize: `${fontSize}px`,
-                          fontWeight: 600,
-                          lineHeight: 1.1,
-                          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                          textAlign: 'center'
-                        }}
-                      >
-                        {word}
-                      </span>
-                    ));
-                  })()}
+                  <span style={{
+                    fontSize: `${Math.max(10, outerWidth / 28)}px`,
+                    fontWeight: 500,
+                    color: '#fff',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {(item.name || 'Untitled').toUpperCase()}
+                  </span>
                 </div>
               </button>
             ))}
