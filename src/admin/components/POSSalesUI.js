@@ -926,10 +926,10 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 animation: 'fadeSlideIn 0.5s ease-out'
               }}>
               {lastAction.tabName && (
-                <span style={{ color: '#d0d0d0' }}>{lastAction.tabName} — </span>
+                <span style={{ color: '#d0d0d0' }}>{lastAction.tabName} </span>
               )}
               <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
-                {lastAction.type === 'add' ? '+' : '-'}{lastAction.itemName}
+                {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
               </span>
             </span>
           )}
@@ -2336,7 +2336,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     ));
     
     // Update last action with tab name
-    const actionName = modifierName ? `${toTitleCase(item.name)} (${modifierName})` : toTitleCase(item.name);
+    const actionName = modifierName ? `${toTitleCase(item.name)} ${modifierName}` : toTitleCase(item.name);
     const targetTab = tabs.find(t => t.id === targetTabId);
     const tabDisplayName = targetTab?.customName || targetTab?.name || '';
     setLastAction({ type: 'add', itemName: actionName, tabName: tabDisplayName });
