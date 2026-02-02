@@ -2395,11 +2395,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           height: '100vh', 
           overflow: 'hidden', 
           background: '#f5f5f5',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
           display: 'flex',
           flexDirection: 'column',
           color: '#333',
-        }}>
+        }} className="pos-horizontal-checkout">
           {/* Header with logo - white background, no border */}
           <div style={{
             padding: '16px 24px',

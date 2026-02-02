@@ -21,21 +21,14 @@
         font-family: Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif;
         -webkit-text-size-adjust: 100%;
         text-size-adjust: 100%;
-        /* Disable overscroll and pull-to-refresh for PWA */
-        overscroll-behavior: none;
+        /* Allow normal scrolling */
         -webkit-overflow-scrolling: touch;
-        /* Lock viewport height to prevent browser chrome interference */
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
+        min-height: 100%;
       }
 
       #root {
         width: 100%;
-        height: 100%;
-        overflow: hidden;
-        position: relative;
+        min-height: 100%;
       }
       
       /* Enable smooth scrolling for inner scrollable containers */
