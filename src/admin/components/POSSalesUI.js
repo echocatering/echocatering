@@ -2379,7 +2379,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // - Otherwise: show MenuGallery2
   // ============================================
   if (layoutMode === 'auto' && orientation === 'horizontal') {
-    // CHECKOUT MODE: Show receipt with tip options
+    // CHECKOUT MODE: Show receipt with tip options (Square-style light theme)
     if (checkoutMode && checkoutItems.length > 0) {
       const tipPercentages = [
         { label: '15%', value: 0.15 },
@@ -2392,61 +2392,58 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100vw', 
           height: '100vh', 
           overflow: 'hidden', 
-          background: '#1a1a1a',
+          background: '#fff',
           fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
           display: 'flex',
           flexDirection: 'column',
-          color: '#fff',
+          color: '#333',
         }}>
-          {/* Header */}
+          {/* Header with logo - white background, no border */}
           <div style={{
-            padding: '20px 40px',
-            borderBottom: '1px solid #333',
+            padding: '16px 24px',
+            background: '#fff',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
           }}>
-            <h1 style={{ fontSize: '28px', fontWeight: '600', margin: 0 }}>
-              {checkoutTabInfo?.name || 'Receipt'}
-            </h1>
             {logoUrl && (
               <img 
                 src={logoUrl} 
                 alt="Echo" 
-                style={{ height: '40px', width: 'auto' }}
+                style={{ height: '36px', width: 'auto' }}
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             )}
           </div>
           
-          {/* Receipt Content */}
+          {/* Main Content - centered */}
           <div style={{
             flex: 1,
             display: 'flex',
-            padding: '30px 40px',
-            gap: '40px',
-            overflow: 'hidden',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            overflow: 'auto',
           }}>
-            {/* Left side: Items list */}
+            {/* Items Container */}
             <div style={{
-              flex: 1,
-              overflow: 'auto',
-              paddingRight: '20px',
+              width: '100%',
+              maxWidth: '500px',
+              marginBottom: '30px',
             }}>
-              <h2 style={{ fontSize: '20px', marginBottom: '20px', color: '#888' }}>Items</h2>
               {checkoutItems.map((item, idx) => (
                 <div key={idx} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  padding: '12px 0',
-                  borderBottom: '1px solid #333',
-                  fontSize: '18px',
+                  padding: '10px 0',
+                  borderBottom: '1px solid #e0e0e0',
+                  fontSize: '16px',
                 }}>
-                  <span>
+                  <span style={{ color: '#333' }}>
                     {toTitleCase(item.name)}
-                    {item.modifier && <span style={{ color: '#888', marginLeft: '8px' }}>({item.modifier})</span>}
+                    {item.modifier && <span style={{ color: '#888', marginLeft: '6px' }}>({item.modifier})</span>}
                   </span>
-                  <span style={{ fontWeight: '600' }}>${(item.price || 0).toFixed(2)}</span>
+                  <span style={{ fontWeight: '500', color: '#333' }}>${(item.price || 0).toFixed(2)}</span>
                 </div>
               ))}
               
@@ -2454,94 +2451,91 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                padding: '20px 0',
-                fontSize: '22px',
+                padding: '16px 0 0 0',
+                fontSize: '20px',
                 fontWeight: '600',
-                borderTop: '2px solid #444',
-                marginTop: '20px',
+                color: '#333',
               }}>
-                <span>Subtotal</span>
+                <span>Total</span>
                 <span>${checkoutSubtotal.toFixed(2)}</span>
               </div>
             </div>
             
-            {/* Right side: Tip selection */}
+            {/* Tip Selection Container - Square style */}
             <div style={{
-              width: '400px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
+              width: '100%',
+              maxWidth: '500px',
+              background: '#f5f5f5',
+              borderRadius: '12px',
+              padding: '24px',
             }}>
-              <h2 style={{ fontSize: '24px', marginBottom: '30px', textAlign: 'center' }}>
-                Add a Tip
-              </h2>
-              
               {!showCustomTip ? (
                 <>
-                  {/* Tip percentage buttons */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Tip percentage buttons - horizontal row */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
                     {tipPercentages.map(({ label, value }) => {
                       const tipAmount = checkoutSubtotal * value;
-                      const totalWithTip = checkoutSubtotal + tipAmount;
                       return (
                         <button
                           key={label}
                           onClick={() => handleProcessPaymentWithTip(tipAmount)}
                           disabled={checkoutLoading}
                           style={{
-                            padding: '20px 30px',
-                            fontSize: '22px',
-                            fontWeight: '600',
-                            background: checkoutLoading ? '#444' : '#800080',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '12px',
+                            flex: 1,
+                            padding: '24px 16px',
+                            fontSize: '16px',
+                            background: '#fff',
+                            color: '#2d9cdb',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '8px',
                             cursor: checkoutLoading ? 'not-allowed' : 'pointer',
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            flexDirection: 'column',
                             alignItems: 'center',
+                            gap: '8px',
+                            opacity: checkoutLoading ? 0.6 : 1,
                           }}
                         >
-                          <span>{label}</span>
-                          <span>
-                            <span style={{ color: '#ccc', marginRight: '10px' }}>+${tipAmount.toFixed(2)}</span>
-                            ${totalWithTip.toFixed(2)}
-                          </span>
+                          <span style={{ fontSize: '28px', fontWeight: '400' }}>{label}</span>
+                          <span style={{ fontSize: '16px', color: '#666' }}>${tipAmount.toFixed(2)}</span>
                         </button>
                       );
                     })}
                   </div>
                   
-                  {/* OTHER button */}
+                  {/* Custom Tip Amount button */}
                   <button
                     onClick={() => setShowCustomTip(true)}
                     disabled={checkoutLoading}
                     style={{
-                      marginTop: '16px',
-                      padding: '20px 30px',
-                      fontSize: '20px',
+                      width: '100%',
+                      padding: '18px',
+                      fontSize: '16px',
                       fontWeight: '600',
-                      background: 'transparent',
-                      color: '#fff',
-                      border: '2px solid #666',
-                      borderRadius: '12px',
+                      background: '#f5f5f5',
+                      color: '#333',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
                       cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                      marginBottom: '12px',
                     }}
                   >
-                    OTHER
+                    Custom Tip Amount
                   </button>
                   
-                  {/* No Tip option */}
+                  {/* No Tip button */}
                   <button
                     onClick={() => handleProcessPaymentWithTip(0)}
                     disabled={checkoutLoading}
                     style={{
-                      marginTop: '16px',
-                      padding: '16px 30px',
-                      fontSize: '18px',
-                      background: 'transparent',
-                      color: '#888',
-                      border: 'none',
+                      width: '100%',
+                      padding: '18px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      background: '#f5f5f5',
+                      color: '#2d9cdb',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
                       cursor: checkoutLoading ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -2550,15 +2544,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </>
               ) : (
                 /* Custom tip input */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ position: 'relative' }}>
                     <span style={{
                       position: 'absolute',
-                      left: '20px',
+                      left: '16px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      fontSize: '28px',
-                      color: '#888',
+                      fontSize: '24px',
+                      color: '#666',
                     }}>$</span>
                     <input
                       type="number"
@@ -2567,13 +2561,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       placeholder="0.00"
                       style={{
                         width: '100%',
-                        padding: '20px 20px 20px 50px',
-                        fontSize: '28px',
-                        fontWeight: '600',
-                        background: '#333',
-                        color: '#fff',
-                        border: '2px solid #555',
-                        borderRadius: '12px',
+                        padding: '18px 18px 18px 44px',
+                        fontSize: '24px',
+                        fontWeight: '500',
+                        background: '#fff',
+                        color: '#333',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
                         boxSizing: 'border-box',
                       }}
                       autoFocus
@@ -2581,7 +2575,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </div>
                   
                   {/* Show calculated total */}
-                  <div style={{ textAlign: 'center', fontSize: '20px', color: '#888' }}>
+                  <div style={{ textAlign: 'center', fontSize: '18px', color: '#666' }}>
                     Total: ${(checkoutSubtotal + (parseFloat(customTipAmount) || 0)).toFixed(2)}
                   </div>
                   
@@ -2589,17 +2583,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
                     disabled={checkoutLoading}
                     style={{
-                      padding: '20px 30px',
-                      fontSize: '22px',
+                      width: '100%',
+                      padding: '18px',
+                      fontSize: '18px',
                       fontWeight: '600',
-                      background: checkoutLoading ? '#444' : '#800080',
+                      background: checkoutLoading ? '#ccc' : '#2d9cdb',
                       color: '#fff',
                       border: 'none',
-                      borderRadius: '12px',
+                      borderRadius: '8px',
                       cursor: checkoutLoading ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {checkoutLoading ? 'PROCESSING...' : 'CONTINUE'}
+                    {checkoutLoading ? 'Processing...' : 'Continue'}
                   </button>
                   
                   <button
@@ -2608,10 +2603,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       setCustomTipAmount('');
                     }}
                     style={{
-                      padding: '16px 30px',
-                      fontSize: '18px',
+                      width: '100%',
+                      padding: '14px',
+                      fontSize: '16px',
                       background: 'transparent',
-                      color: '#888',
+                      color: '#666',
                       border: 'none',
                       cursor: 'pointer',
                     }}
