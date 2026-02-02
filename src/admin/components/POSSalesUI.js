@@ -2401,18 +2401,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         }} className="pos-horizontal-checkout">
           {/* Header with logo - white background, no border */}
           <div style={{
-            padding: '16px 24px',
+            padding: '24px 36px',
             background: '#fff',
             display: 'flex',
             alignItems: 'center',
-            minHeight: '68px',
+            minHeight: '102px',
             boxSizing: 'border-box',
           }}>
             {logoUrl && (
               <img 
                 src={logoUrl} 
                 alt="Echo" 
-                style={{ height: '36px', width: 'auto' }}
+                style={{ height: '54px', width: 'auto' }}
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             )}
@@ -2722,19 +2722,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   display: 'flex',
                   flexDirection: 'column',
                   width: '100%',
-                  maxHeight: '100%',
-                  overflow: 'hidden',
+                  maxWidth: '400px',
+                  alignItems: 'center',
                 }}>
-                  {/* Items list - scrollable */}
+                  {/* Items list - fixed 1:1 square, scrollable */}
                   <div style={{
-                    flex: 1,
                     width: '100%',
+                    aspectRatio: '1 / 1',
+                    maxHeight: '400px',
                     background: '#fff',
                     borderRadius: '8px',
                     padding: '20px',
                     marginBottom: '16px',
                     overflow: 'auto',
-                    minHeight: 0,
+                    boxSizing: 'border-box',
                   }}>
                     {checkoutItems.map((item, idx) => (
                       <div key={idx} style={{
@@ -2768,12 +2769,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   
-                  {/* Back button - fixed at bottom */}
+                  {/* Back button - fixed at bottom with padding matching footer */}
                   <button
                     onClick={() => setShowTabView(false)}
                     style={{
                       width: '100%',
                       padding: '16px',
+                      paddingBottom: '102px',
                       fontSize: '16px',
                       background: 'transparent',
                       color: '#666',
@@ -2791,9 +2793,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           
           {/* Empty footer - same size as header */}
           <div style={{
-            padding: '16px 24px',
+            padding: '24px 36px',
             background: 'transparent',
-            minHeight: '68px',
+            minHeight: '102px',
             boxSizing: 'border-box',
             flexShrink: 0,
           }} />
