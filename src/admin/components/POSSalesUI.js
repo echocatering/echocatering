@@ -2426,7 +2426,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '20px',
-            overflow: 'auto',
+            overflow: 'hidden',
+            minHeight: 0,
           }}>
             {/* Tip Selection Area */}
             <div style={{
@@ -2642,7 +2643,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             <img 
                               src="/assets/icons/backspace.svg" 
                               alt="Backspace" 
-                              style={{ width: '28px', height: '28px' }}
+                              style={{ width: '42px', height: '42px' }}
                             />
                           </button>
                           {/* 0 button */}
@@ -2671,9 +2672,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               padding: '20px',
                               fontSize: '24px',
                               fontWeight: '600',
-                              background: checkoutLoading ? '#ccc' : '#22c55e',
-                              color: '#fff',
-                              border: 'none',
+                              background: checkoutLoading ? '#ccc' : '#fff',
+                              color: '#22c55e',
+                              border: '1px solid #e0e0e0',
                               borderRadius: '8px',
                               cursor: checkoutLoading ? 'not-allowed' : 'pointer',
                               display: 'flex',
@@ -2684,7 +2685,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             <img 
                               src="/assets/icons/check.svg" 
                               alt="Confirm" 
-                              style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }}
+                              style={{ width: '36px', height: '36px', filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(95%) contrast(90%)' }}
                             />
                           </button>
                         </div>
@@ -2717,14 +2718,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </>
               ) : (
                 /* TAB VIEW - Receipt with items */
-                <>
-                  {/* Items list */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  maxHeight: '100%',
+                  overflow: 'hidden',
+                }}>
+                  {/* Items list - scrollable */}
                   <div style={{
+                    flex: 1,
                     width: '100%',
                     background: '#fff',
                     borderRadius: '8px',
                     padding: '20px',
                     marginBottom: '16px',
+                    overflow: 'auto',
+                    minHeight: 0,
                   }}>
                     {checkoutItems.map((item, idx) => (
                       <div key={idx} style={{
@@ -2758,7 +2768,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   
-                  {/* Back button */}
+                  {/* Back button - fixed at bottom */}
                   <button
                     onClick={() => setShowTabView(false)}
                     style={{
@@ -2769,11 +2779,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       color: '#666',
                       border: 'none',
                       cursor: 'pointer',
+                      flexShrink: 0,
                     }}
                   >
                     Back
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
