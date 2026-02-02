@@ -2674,6 +2674,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               )}
             </div>
           </div>
+          
+          {/* Empty footer - same size as header */}
+          <div style={{
+            padding: '16px 24px',
+            background: 'transparent',
+            flexShrink: 0,
+          }} />
         </div>
       );
     }
