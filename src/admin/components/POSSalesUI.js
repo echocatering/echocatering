@@ -2487,7 +2487,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   {!showCustomTip ? (
                     <>
                       {/* Tip percentage buttons - horizontal row */}
-                      <div style={{ display: 'flex', gap: 'clamp(8px, 2vw, 16px)', marginBottom: '1.5vh', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: 'clamp(12px, 2vw, 20px)', marginBottom: '2vh', width: '100%' }}>
                         {tipPercentages.map(({ label, value }) => {
                           const tipAmount = checkoutSubtotal * value;
                           return (
@@ -2497,8 +2497,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               disabled={checkoutLoading}
                               style={{
                                 flex: 1,
-                                padding: 'clamp(20px, 4vh, 40px) clamp(10px, 2vw, 20px)',
-                                fontSize: 'clamp(12px, 2vh, 16px)',
+                                padding: 'clamp(28px, 6vh, 50px) clamp(12px, 2vw, 24px)',
+                                fontSize: 'clamp(14px, 2.5vh, 18px)',
                                 background: '#fff',
                                 color: '#800080',
                                 border: '1px solid #e0e0e0',
@@ -2507,12 +2507,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.5vh',
+                                gap: '1vh',
                                 opacity: checkoutLoading ? 0.6 : 1,
                               }}
                             >
-                              <span style={{ fontSize: 'clamp(24px, 5vh, 36px)', fontWeight: '400' }}>{label}</span>
-                              <span style={{ fontSize: 'clamp(14px, 2.5vh, 18px)', color: '#666' }}>${tipAmount.toFixed(2)}</span>
+                              <span style={{ fontSize: 'clamp(28px, 6vh, 42px)', fontWeight: '400' }}>{label}</span>
+                              <span style={{ fontSize: 'clamp(16px, 3vh, 20px)', color: '#666' }}>${tipAmount.toFixed(2)}</span>
                             </button>
                           );
                         })}
@@ -2524,15 +2524,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         disabled={checkoutLoading}
                         style={{
                           width: '100%',
-                          padding: 'clamp(12px, 2vh, 20px)',
-                          fontSize: 'clamp(14px, 2.5vh, 18px)',
+                          padding: 'clamp(16px, 2.5vh, 24px)',
+                          fontSize: 'clamp(16px, 3vh, 20px)',
                           fontWeight: '600',
                           background: '#fff',
                           color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                          marginBottom: '1vh',
+                          marginBottom: '1.5vh',
                         }}
                       >
                         Custom Tip Amount
@@ -2544,15 +2544,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         disabled={checkoutLoading}
                         style={{
                           width: '100%',
-                          padding: 'clamp(12px, 2vh, 20px)',
-                          fontSize: 'clamp(14px, 2.5vh, 18px)',
+                          padding: 'clamp(16px, 2.5vh, 24px)',
+                          fontSize: 'clamp(16px, 3vh, 20px)',
                           fontWeight: '600',
                           background: '#fff',
                           color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                          marginBottom: '1vh',
+                          marginBottom: '1.5vh',
                         }}
                       >
                         No Tip
@@ -2752,7 +2752,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </button>
                 </>
               ) : (
-                /* TAB VIEW - Receipt with items - scales to fit without scrolling */
+                /* TAB VIEW - Receipt with items */
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -2760,35 +2760,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   maxWidth: 'min(700px, 90vw)',
                   height: '100%',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   overflow: 'hidden',
                 }}>
-                  {/* Receipt container - landscape rectangle */}
+                  {/* Receipt container with scrollable items */}
                   <div style={{
                     width: '100%',
                     flex: 1,
-                    maxHeight: 'calc(100% - 50px)',
+                    minHeight: 0,
                     background: '#fff',
                     borderRadius: '8px',
-                    padding: 'clamp(10px, 1.5vh, 16px)',
+                    padding: '16px',
                     boxSizing: 'border-box',
                     display: 'flex',
                     flexDirection: 'column',
-                    overflow: 'hidden',
+                    marginBottom: '8px',
                   }}>
                     {/* Items list - scrollable area */}
                     <div ref={receiptContainerRef} style={{
                       flex: 1,
                       overflow: 'auto',
-                      marginBottom: '1vh',
+                      minHeight: 0,
                     }}>
                       {checkoutItems.map((item, idx) => (
                         <div key={idx} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          padding: 'clamp(6px, 1vh, 10px) 0',
+                          padding: '10px 0',
                           borderBottom: idx < checkoutItems.length - 1 ? '1px solid #e0e0e0' : 'none',
-                          fontSize: 'clamp(12px, 2vh, 16px)',
+                          fontSize: '16px',
                         }}>
                           <span style={{ color: '#333' }}>
                             {(item.name || '').toUpperCase()}
@@ -2799,13 +2798,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       ))}
                     </div>
                     
-                    {/* Total - fixed at bottom */}
+                    {/* Total - fixed at bottom of receipt */}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      padding: 'clamp(8px, 1.5vh, 12px) 0 0 0',
+                      padding: '12px 0 0 0',
+                      marginTop: '8px',
                       borderTop: '2px solid #333',
-                      fontSize: 'clamp(14px, 2.5vh, 18px)',
+                      fontSize: '18px',
                       fontWeight: '600',
                       color: '#333',
                       flexShrink: 0,
@@ -2815,13 +2815,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   
-                  {/* Back button */}
+                  {/* Back button - always visible */}
                   <button
                     onClick={() => setShowTabView(false)}
                     style={{
                       width: '100%',
-                      padding: 'clamp(12px, 2.5vh, 20px)',
-                      fontSize: 'clamp(14px, 2.5vh, 18px)',
+                      padding: '16px',
+                      fontSize: '18px',
                       fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
