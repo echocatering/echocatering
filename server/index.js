@@ -310,6 +310,7 @@ app.use('/api/recipes', require('./routes/recipes'));
 app.use('/api/pos', require('./routes/pos'));
 app.use('/api/pos-events', require('./routes/posEvents'));
 app.use('/api/square', require('./routes/square'));
+app.use('/api/square-webhook', require('./routes/squareWebhook'));
 app.use('/api/video-processing', require('./routes/videoProcessing'));
 app.use('/api/video-worker', require('./routes/videoWorker'));
 app.use('/api/video-jobs', require('./routes/videoJobs'));
@@ -767,6 +768,10 @@ wss.on('connection', (ws, req) => {
 });
 
 console.log(`[WebSocket] POS sync server running on ws://localhost:${PORT}/ws/pos`);
+
+// Connect WebSocket clients to Square webhook for payment status broadcasts
+const { setPosClients } = require('./routes/squareWebhook');
+setPosClients(posClients);
 
 // Handle EADDRINUSE errors explicitly
 server.on('error', (err) => {

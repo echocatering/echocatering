@@ -1917,6 +1917,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
+  // Payment status state for Square webhook updates
+  // States: null, 'pending', 'payment_success', 'payment_canceled', 'payment_failed', 'payment_expired'
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [currentCheckoutId, setCurrentCheckoutId] = useState(null);
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState(null);
+  
   // Checkout mode for horizontal view - when true, shows receipt/tipping screen instead of MenuGallery2
   // This state is synced via WebSocket so it works across different devices
   const [checkoutMode, setCheckoutMode] = useState(false);
@@ -1955,11 +1961,59 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutTabInfo(null);
   }, []);
   
+  // Handle payment status updates from Square webhook via WebSocket
+  const handlePaymentStatus = useCallback((message) => {
+    console.log('[POS] Payment status received:', message);
+    const { checkoutId, status, transactionId, tabId, tabName } = message;
+    
+    // Only process if it matches our current checkout or if we're waiting for any payment
+    if (currentCheckoutId && checkoutId !== currentCheckoutId && checkoutId !== 'unknown') {
+      console.log('[POS] Ignoring payment status for different checkout:', checkoutId);
+      return;
+    }
+    
+    setPaymentStatus(status);
+    
+    if (status === 'payment_success') {
+      setPaymentStatusMessage(`Payment successful! Transaction: ${transactionId || 'N/A'}`);
+      // Auto-clear after 5 seconds
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        setCurrentCheckoutId(null);
+        setCheckoutMode(false);
+        setCheckoutLoading(false);
+      }, 5000);
+    } else if (status === 'payment_canceled') {
+      setPaymentStatusMessage('Payment was canceled');
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        setCurrentCheckoutId(null);
+        setCheckoutLoading(false);
+      }, 3000);
+    } else if (status === 'payment_failed') {
+      setPaymentStatusMessage('Payment failed. Please try again.');
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        setCurrentCheckoutId(null);
+        setCheckoutLoading(false);
+      }, 3000);
+    } else if (status === 'payment_expired') {
+      setPaymentStatusMessage('Payment session expired');
+      setPaymentStatus(null);
+      setCurrentCheckoutId(null);
+      setCheckoutLoading(false);
+    }
+  }, [currentCheckoutId]);
+  
   // Connect to WebSocket for cross-device checkout sync
   const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
-    handleWsCheckoutCancel
+    handleWsCheckoutCancel,
+    handlePaymentStatus
   );
   
   // ============================================
@@ -2450,6 +2504,32 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         ? checkoutItems.length  // $0.01 per item in test mode
         : Math.round(finalTotal * 100);
       
+      // ============================================
+      // GENERATE UNIQUE CHECKOUT ID
+      // Used to track payment status via webhook
+      // ============================================
+      const checkoutId = `ECHO-${checkoutTabInfo.id}-${Date.now()}`;
+      setCurrentCheckoutId(checkoutId);
+      setPaymentStatus('pending');
+      setPaymentStatusMessage('Waiting for payment...');
+      
+      // Register checkout with backend for webhook tracking
+      try {
+        await apiCall('/square-webhook/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            checkoutId,
+            tabId: checkoutTabInfo.id,
+            tabName: checkoutTabInfo.name,
+            totalCents,
+            items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
+          })
+        });
+        console.log(`[POS Checkout] Registered checkout: ${checkoutId}`);
+      } catch (regError) {
+        console.warn('[POS Checkout] Failed to register checkout (continuing anyway):', regError);
+      }
+      
       // Store checkout result
       setLastCheckoutResult({
         success: true,
@@ -2458,7 +2538,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         totalCents: totalCents,
         tipAmount: tipAmount,
         tabId: checkoutTabInfo.id,
-        tabName: checkoutTabInfo.name
+        tabName: checkoutTabInfo.name,
+        checkoutId: checkoutId
       });
       
       // ============================================
@@ -2471,14 +2552,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       console.log(`[POS Checkout] CLIENT_ID:`, clientId);
       console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
       console.log(`[POS Checkout] Total cents (with tip):`, totalCents);
+      console.log(`[POS Checkout] Checkout ID:`, checkoutId);
       
       if (!clientId || clientId === 'sq0idp-') {
         console.error('[POS Checkout] Missing REACT_APP_SQUARE_CLIENT_ID');
         alert('Error: Square Client ID not configured. Please add REACT_APP_SQUARE_CLIENT_ID to environment variables.');
+        setPaymentStatus(null);
+        setCurrentCheckoutId(null);
         return;
       }
       
-      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(JSON.stringify({tabId: checkoutTabInfo.id, tabName: checkoutTabInfo.name, testMode: squareTestMode, tipAmount: tipAmount, items: checkoutItems.map(i => ({name: i.name, modifier: i.modifier, price: i.price}))}))};end`;
+      // Include checkoutId in metadata so webhook can match payment to checkout
+      const metadata = JSON.stringify({
+        checkoutId: checkoutId,
+        tabId: checkoutTabInfo.id,
+        tabName: checkoutTabInfo.name,
+        testMode: squareTestMode,
+        tipAmount: tipAmount,
+        items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
+      });
+      
+      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(metadata)};end`;
       
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
@@ -2486,13 +2580,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       window.location.href = deepLinkUrl;
       
       // Broadcast checkout complete via WebSocket to reset horizontal view on other devices
-      sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id });
+      sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id, checkoutId });
       
-      // Exit checkout mode after a delay (user is now in Square app)
-      setTimeout(() => {
-        setCheckoutMode(false);
-        setCheckoutLoading(false);
-      }, 2000);
+      // Note: We do NOT exit checkout mode here anymore
+      // The payment status will be updated via WebSocket when Square webhook fires
+      // User stays in "waiting for payment" state until webhook confirms payment
 
     } catch (error) {
       console.error('[POS Checkout] Error:', error);
@@ -3635,6 +3727,79 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <p style={{ fontSize: '18px', opacity: 0.9 }}>
                   ${(lastCheckoutResult.totalCharged?.amount / 100).toFixed(2)} charged
                 </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Payment Status Overlay - Shows while waiting for Square webhook */}
+        {paymentStatus && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: paymentStatus === 'payment_success' ? 'rgba(0,128,0,0.95)' 
+              : paymentStatus === 'pending' ? 'rgba(128,0,128,0.95)'
+              : 'rgba(200,50,50,0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2001,
+          }}>
+            <div style={{ textAlign: 'center', color: '#fff', padding: '40px' }}>
+              {paymentStatus === 'pending' && (
+                <>
+                  <div style={{ fontSize: '48px', marginBottom: '20px', animation: 'pulse 2s infinite' }}>⏳</div>
+                  <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Processing Payment</h2>
+                  <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '20px' }}>
+                    {paymentStatusMessage || 'Waiting for Square POS...'}
+                  </p>
+                  <p style={{ fontSize: '14px', opacity: 0.7 }}>
+                    Complete the payment in Square POS app
+                  </p>
+                  <button
+                    onClick={() => {
+                      setPaymentStatus(null);
+                      setPaymentStatusMessage(null);
+                      setCurrentCheckoutId(null);
+                      setCheckoutLoading(false);
+                    }}
+                    style={{
+                      marginTop: '30px',
+                      padding: '12px 24px',
+                      fontSize: '16px',
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      border: '2px solid #fff',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+              {paymentStatus === 'payment_success' && (
+                <>
+                  <div style={{ fontSize: '64px', marginBottom: '20px' }}>✓</div>
+                  <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Successful!</h2>
+                  <p style={{ fontSize: '18px', opacity: 0.9 }}>
+                    {paymentStatusMessage}
+                  </p>
+                </>
+              )}
+              {(paymentStatus === 'payment_canceled' || paymentStatus === 'payment_failed') && (
+                <>
+                  <div style={{ fontSize: '64px', marginBottom: '20px' }}>✕</div>
+                  <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>
+                    {paymentStatus === 'payment_canceled' ? 'Payment Canceled' : 'Payment Failed'}
+                  </h2>
+                  <p style={{ fontSize: '18px', opacity: 0.9 }}>
+                    {paymentStatusMessage}
+                  </p>
+                </>
               )}
             </div>
           </div>

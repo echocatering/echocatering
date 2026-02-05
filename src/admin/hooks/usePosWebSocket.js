@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -65,6 +65,12 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onCheckoutCancel(message.data);
               }
               break;
+            case 'payment_status':
+              // Handle Square payment status updates from webhook
+              if (onPaymentStatus) {
+                onPaymentStatus(message);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -99,7 +105,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
