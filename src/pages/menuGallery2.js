@@ -2073,6 +2073,26 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
+        {/* QR Code - bottom right of inner container (menu view only) */}
+        {viewMode === 'menu' && (
+          <img
+            src="/assets/icons/QR.png"
+            alt="QR Code"
+            style={{
+              position: 'absolute',
+              right: `${innerLeft + 48}px`,
+              bottom: `${size.height - (innerTop + layout.inner.height) + 24}px`,
+              width: 'auto',
+              height: 'auto',
+              maxWidth: '120px',
+              maxHeight: '120px',
+              filter: 'brightness(0) invert(1)',
+              pointerEvents: 'none',
+              zIndex: 25,
+            }}
+          />
+        )}
+
       </>
     );
   };

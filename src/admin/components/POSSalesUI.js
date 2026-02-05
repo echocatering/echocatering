@@ -2558,8 +2558,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       // ============================================
       // OPEN SQUARE APP VIA DEEP-LINK
-      // Using square-commerce-v1:// scheme for TWA compatibility
-      // Callback uses custom scheme echocatering:// for reliable return
+      // Using Android Intent format for Square POS API
+      // Callback uses custom scheme echocatering:// for reliable TWA return
       // ============================================
       const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
       
@@ -2578,34 +2578,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         return;
       }
       
-      // Build Square POS payment data object
-      const squarePaymentData = {
-        amount_money: {
-          amount: totalCents,
-          currency_code: 'USD'
-        },
-        callback_url: callbackUrl,
-        client_id: clientId,
-        version: '1.3',
-        notes: `Tab: ${checkoutTabInfo.name}${squareTestMode ? ' [TEST]' : ''}`,
-        location_id: locationResponse.locationId,
-        options: {
-          supported_tender_types: ['CREDIT_CARD', 'CASH', 'OTHER', 'SQUARE_GIFT_CARD', 'CARD_ON_FILE']
-        },
-        state: JSON.stringify({
-          tabId: checkoutTabInfo.id,
-          tabName: checkoutTabInfo.name,
-          testMode: squareTestMode,
-          tipAmount: tipAmount,
-          items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
-        })
-      };
+      // Build Android Intent URL for Square POS API
+      // Format: intent:#Intent;action=...;package=...;S.key=value;end
+      const metadata = JSON.stringify({
+        tabId: checkoutTabInfo.id,
+        tabName: checkoutTabInfo.name,
+        testMode: squareTestMode,
+        tipAmount: tipAmount,
+        items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
+      });
       
-      // Encode payment data as base64 for the deep link
-      const encodedData = btoa(JSON.stringify(squarePaymentData));
-      const deepLinkUrl = `square-commerce-v1://payment/create?data=${encodedData}`;
+      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(metadata)};end`;
       
-      console.log(`[POS Checkout] Square payment data:`, squarePaymentData);
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
       // Open Square app via deep-link immediately (no alert to avoid blocking)
