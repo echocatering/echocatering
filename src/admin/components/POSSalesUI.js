@@ -2452,36 +2452,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             )}
           </div>
           
-          {/* Main Content - centered */}
+          {/* Main Content - aligned to top, no scrolling */}
           <div style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
+            justifyContent: 'flex-start',
+            padding: '2vh 20px 0 20px',
             overflow: 'hidden',
             minHeight: 0,
           }}>
-            {/* Tip Selection Area */}
+            {/* Tip Selection Area - no scrolling */}
             <div style={{
               width: '100%',
               maxWidth: '600px',
-              maxHeight: '100%',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              overflow: 'auto',
             }}>
               {!showTabView ? (
                 /* TIP VIEW - Total at top, tip buttons below */
                 <>
                   {/* Large Total Display */}
-                  <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                    <div style={{ fontSize: '48px', fontWeight: '700', color: '#333' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '1.5vh' }}>
+                    <div style={{ fontSize: 'clamp(32px, 6vh, 48px)', fontWeight: '700', color: '#333' }}>
                       ${checkoutSubtotal.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '18px', color: '#888', marginTop: '4px' }}>
+                    <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginTop: '0.5vh' }}>
                       Add a tip
                     </div>
                   </div>
@@ -2489,7 +2487,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   {!showCustomTip ? (
                     <>
                       {/* Tip percentage buttons - horizontal row */}
-                      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: 'clamp(8px, 2vw, 16px)', marginBottom: '1.5vh', width: '100%' }}>
                         {tipPercentages.map(({ label, value }) => {
                           const tipAmount = checkoutSubtotal * value;
                           return (
@@ -2499,8 +2497,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               disabled={checkoutLoading}
                               style={{
                                 flex: 1,
-                                padding: '40px 20px',
-                                fontSize: '16px',
+                                padding: 'clamp(20px, 4vh, 40px) clamp(10px, 2vw, 20px)',
+                                fontSize: 'clamp(12px, 2vh, 16px)',
                                 background: '#fff',
                                 color: '#800080',
                                 border: '1px solid #e0e0e0',
@@ -2509,12 +2507,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '8px',
+                                gap: '0.5vh',
                                 opacity: checkoutLoading ? 0.6 : 1,
                               }}
                             >
-                              <span style={{ fontSize: '36px', fontWeight: '400' }}>{label}</span>
-                              <span style={{ fontSize: '18px', color: '#666' }}>${tipAmount.toFixed(2)}</span>
+                              <span style={{ fontSize: 'clamp(24px, 5vh, 36px)', fontWeight: '400' }}>{label}</span>
+                              <span style={{ fontSize: 'clamp(14px, 2.5vh, 18px)', color: '#666' }}>${tipAmount.toFixed(2)}</span>
                             </button>
                           );
                         })}
@@ -2526,15 +2524,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         disabled={checkoutLoading}
                         style={{
                           width: '100%',
-                          padding: '20px',
-                          fontSize: '18px',
+                          padding: 'clamp(12px, 2vh, 20px)',
+                          fontSize: 'clamp(14px, 2.5vh, 18px)',
                           fontWeight: '600',
                           background: '#fff',
                           color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                          marginBottom: '12px',
+                          marginBottom: '1vh',
                         }}
                       >
                         Custom Tip Amount
@@ -2546,15 +2544,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         disabled={checkoutLoading}
                         style={{
                           width: '100%',
-                          padding: '20px',
-                          fontSize: '18px',
+                          padding: 'clamp(12px, 2vh, 20px)',
+                          fontSize: 'clamp(14px, 2.5vh, 18px)',
                           fontWeight: '600',
                           background: '#fff',
                           color: '#800080',
                           border: '1px solid #e0e0e0',
                           borderRadius: '8px',
                           cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                          marginBottom: '12px',
+                          marginBottom: '1vh',
                         }}
                       >
                         No Tip
@@ -2740,13 +2738,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }}
                     style={{
                       width: '100%',
-                      padding: '20px',
-                      fontSize: '18px',
+                      padding: 'clamp(10px, 1.5vh, 16px)',
+                      fontSize: 'clamp(14px, 2vh, 18px)',
                       fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
                       border: 'none',
                       cursor: 'pointer',
+                      marginTop: '0.5vh',
                     }}
                   >
                     {showCustomTip ? 'Back' : 'View Tab'}
