@@ -34,19 +34,5 @@
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
-  "additionalIntentFilters": [
-    {
-      "action": "android.intent.action.VIEW",
-      "autoVerify": true,
-      "categories": [
-        "android.intent.category.DEFAULT",
-        "android.intent.category.BROWSABLE"
-      ],
-      "data": {
-        "scheme": "https",
-        "host": "echocatering.com",
-        "pathPrefix": "/admin/pos"
-      }
-    }
-  ]
+  "additionalIntentFilters": []
 }
