@@ -2588,7 +2588,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
       });
       
-      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(metadata)};end`;
+      // Use HTTPS callback for browser_fallback_url (required), but custom scheme for WEB_CALLBACK_URI
+      const httpsCallbackUrl = `${window.location.origin}/admin/pos`;
+      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(httpsCallbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(metadata)};end`;
       
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
