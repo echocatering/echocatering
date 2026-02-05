@@ -393,7 +393,7 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
   });
 
   const svgSize = Math.round(size * 0.6);
-  const strokeWidth = Math.max(1.5, Math.round(size / 40));
+  const strokeWidth = Math.max(1, Math.round(size / 56));
   
   return (
     <div style={{ display: 'flex', justifyContent: 'center', gap: size * 0.5, pointerEvents: 'auto' }}>
@@ -2058,12 +2058,12 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
-        {/* Arrows - larger and lower for horizontal view */}
+        {/* Arrows - aligned with categories for horizontal view */}
         <div
           style={{
             position: 'absolute',
             left: `${innerLeft + (layout.inner.width - 320) / 2}px`,
-            bottom: `${Math.max(arrowBottom - 40, 20)}px`,
+            bottom: `${viewMode === 'menu' ? bottomNavBottom : Math.max(arrowBottom - 40, 20)}px`,
             width: '320px',
             display: 'flex',
             alignItems: 'center',
@@ -2073,7 +2073,7 @@ function EchoCocktailSubpage2({
           }}
         >
           <div style={{ pointerEvents: 'auto' }}>
-            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 112 : 80} />
+            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} />
           </div>
         </div>
       </>
