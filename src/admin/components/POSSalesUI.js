@@ -2752,13 +2752,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </button>
                 </>
               ) : (
-                /* TAB VIEW - Receipt with items */
+                /* TAB VIEW - Receipt with items - fits between header/footer */
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   width: '100%',
                   maxWidth: 'min(700px, 90vw)',
                   height: '100%',
+                  maxHeight: '100%',
                   alignItems: 'center',
                   overflow: 'hidden',
                 }}>
@@ -2767,15 +2768,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     width: '100%',
                     flex: 1,
                     minHeight: 0,
+                    maxHeight: 'calc(100% - 60px)',
                     background: '#fff',
                     borderRadius: '8px',
                     padding: '16px',
                     boxSizing: 'border-box',
                     display: 'flex',
                     flexDirection: 'column',
-                    marginBottom: '8px',
                   }}>
-                    {/* Items list - scrollable area */}
+                    {/* Items list - scrollable area, auto-scrolls to bottom */}
                     <div ref={receiptContainerRef} style={{
                       flex: 1,
                       overflow: 'auto',
@@ -2815,7 +2816,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   
-                  {/* Back button - always visible */}
+                  {/* Back button - always visible below receipt */}
                   <button
                     onClick={() => setShowTabView(false)}
                     style={{
@@ -2828,6 +2829,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       border: 'none',
                       cursor: 'pointer',
                       flexShrink: 0,
+                      marginTop: '8px',
                     }}
                   >
                     Back
