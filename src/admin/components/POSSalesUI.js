@@ -1225,36 +1225,45 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 No other tabs available
               </span>
             ) : (
-              <select
-                onChange={(e) => {
-                  const targetTabId = e.target.value;
-                  if (targetTabId && onMoveItems) {
-                    onMoveItems(activeTabId, targetTabId, Array.from(selectedReceiptIndices));
-                    setSelectedReceiptIndices(new Set());
-                    setShowMoveModal(false);
-                  }
-                }}
-                defaultValue=""
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  fontSize: `${Math.max(14, outerWidth / 24)}px`,
-                  fontWeight: 500,
-                  color: '#333',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  appearance: 'menulist'
-                }}
-              >
-                <option value="" disabled>Choose a tab...</option>
+              <div style={{
+                width: '100%',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-y',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
                 {tabs.filter(t => t.id !== activeTabId).map((tab) => (
-                  <option key={tab.id} value={tab.id}>
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      if (onMoveItems) {
+                        onMoveItems(activeTabId, tab.id, Array.from(selectedReceiptIndices));
+                      }
+                      setSelectedReceiptIndices(new Set());
+                      setShowMoveModal(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      fontSize: `${Math.max(14, outerWidth / 24)}px`,
+                      fontWeight: 500,
+                      color: '#333',
+                      background: '#f0f0f0',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      flexShrink: 0
+                    }}
+                  >
                     {(tab.customName || tab.name).toUpperCase()}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             )}
             <button
               onClick={() => setShowMoveModal(false)}
