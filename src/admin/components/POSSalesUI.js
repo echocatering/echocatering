@@ -2763,11 +2763,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   maxHeight: '100%',
                   alignItems: 'center',
                 }}>
-                  {/* Receipt square container - scales to fit available space */}
+                  {/* Receipt container - landscape rectangle to ensure back button is always visible */}
                   <div style={{
                     width: '100%',
-                    aspectRatio: '1 / 1',
-                    maxHeight: 'calc(100vh - 280px)',
+                    aspectRatio: '16 / 9',
+                    maxHeight: 'calc(100vh - 300px)',
                     background: '#fff',
                     borderRadius: '8px',
                     padding: 'clamp(12px, 2vh, 20px)',
