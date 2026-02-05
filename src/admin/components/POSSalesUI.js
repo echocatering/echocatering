@@ -2494,11 +2494,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </div>
                   
                   {/* Content area - flex grows to fill */}
-                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1.5vh' }}>
                     {!showCustomTip ? (
                       <>
-                        {/* Tip percentage buttons - horizontal row */}
-                        <div style={{ display: 'flex', gap: 'clamp(8px, 1.5vw, 16px)', marginBottom: '1.5vh', width: '100%' }}>
+                        {/* Tip percentage buttons - horizontal row - takes up most space */}
+                        <div style={{ display: 'flex', gap: 'clamp(8px, 1.5vw, 16px)', width: '100%', flex: 2 }}>
                           {tipPercentages.map(({ label, value }) => {
                             const tipAmount = checkoutSubtotal * value;
                             return (
@@ -2508,7 +2508,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 disabled={checkoutLoading}
                                 style={{
                                   flex: 1,
-                                  padding: 'clamp(20px, 4vh, 40px) clamp(8px, 1.5vw, 16px)',
                                   fontSize: 'clamp(12px, 2vh, 16px)',
                                   background: '#fff',
                                   color: '#800080',
@@ -2518,12 +2517,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
-                                  gap: '0.5vh',
+                                  justifyContent: 'center',
+                                  gap: '1vh',
                                   opacity: checkoutLoading ? 0.6 : 1,
                                 }}
                               >
-                                <span style={{ fontSize: 'clamp(24px, 5vh, 36px)', fontWeight: '400' }}>{label}</span>
-                                <span style={{ fontSize: 'clamp(14px, 2.5vh, 18px)', color: '#666' }}>${tipAmount.toFixed(2)}</span>
+                                <span style={{ fontSize: 'clamp(28px, 6vh, 44px)', fontWeight: '400' }}>{label}</span>
+                                <span style={{ fontSize: 'clamp(16px, 3vh, 22px)', color: '#666' }}>${tipAmount.toFixed(2)}</span>
                               </button>
                             );
                           })}
@@ -2535,15 +2535,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           disabled={checkoutLoading}
                           style={{
                             width: '100%',
-                            padding: 'clamp(12px, 2vh, 20px)',
-                            fontSize: 'clamp(14px, 2.5vh, 18px)',
+                            flex: 1,
+                            fontSize: 'clamp(16px, 3vh, 22px)',
                             fontWeight: '600',
                             background: '#fff',
                             color: '#800080',
                             border: '1px solid #e0e0e0',
                             borderRadius: '8px',
                             cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                            marginBottom: '1vh',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                         >
                           Custom Tip Amount
@@ -2555,14 +2557,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           disabled={checkoutLoading}
                           style={{
                             width: '100%',
-                            padding: 'clamp(12px, 2vh, 20px)',
-                            fontSize: 'clamp(14px, 2.5vh, 18px)',
+                            flex: 1,
+                            fontSize: 'clamp(16px, 3vh, 22px)',
                             fontWeight: '600',
                             background: '#fff',
                             color: '#800080',
                             border: '1px solid #e0e0e0',
                             borderRadius: '8px',
                             cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                         >
                           No Tip
