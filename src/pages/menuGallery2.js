@@ -393,7 +393,7 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
   });
 
   const svgSize = Math.round(size * 0.6);
-  const strokeWidth = Math.max(1, Math.round(size / 56));
+  const strokeWidth = Math.max(2, Math.round(size / 28));
   
   return (
     <div style={{ display: 'flex', justifyContent: 'center', gap: size * 0.5, pointerEvents: 'auto' }}>
@@ -2017,6 +2017,19 @@ function EchoCocktailSubpage2({
             )}
 {/* All Items button hidden for menu viewMode (horizontal POS view) */}
           </div>
+          
+          {/* Arrows - centered in category bar */}
+          <div style={{ 
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+          }}>
+            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} />
+          </div>
         </div>
 
         {/* Left info */}
@@ -2058,24 +2071,6 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
-        {/* Arrows - aligned with categories for horizontal view */}
-        <div
-          style={{
-            position: 'absolute',
-            left: `${innerLeft + (layout.inner.width - 320) / 2}px`,
-            bottom: `${viewMode === 'menu' ? bottomNavBottom : Math.max(arrowBottom - 40, 20)}px`,
-            width: '320px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-            zIndex: 9999,
-          }}
-        >
-          <div style={{ pointerEvents: 'auto' }}>
-            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} />
-          </div>
-        </div>
       </>
     );
   };
