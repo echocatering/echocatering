@@ -1917,6 +1917,101 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState(null);
   
+  // Square callback result state (for TWA return flow)
+  const [squareCallbackResult, setSquareCallbackResult] = useState(null);
+  
+  // ============================================
+  // SQUARE CALLBACK HANDLER
+  // Parses callback from Square POS app when returning to TWA
+  // Callback URL format: echocatering://square-callback?data=...
+  // ============================================
+  useEffect(() => {
+    const parseSquareCallback = () => {
+      // Check URL for Square callback parameters
+      const url = window.location.href;
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Square returns data in various formats depending on success/cancel
+      const status = urlParams.get('status');
+      const transactionId = urlParams.get('transaction_id');
+      const clientTransactionId = urlParams.get('client_transaction_id');
+      const errorCode = urlParams.get('error_code');
+      const stateParam = urlParams.get('state');
+      
+      // Also check for base64 encoded data parameter
+      const dataParam = urlParams.get('data');
+      
+      console.log('[POS] Checking for Square callback...', { url, status, transactionId, errorCode, dataParam });
+      
+      // If we have any Square callback parameters, process them
+      if (status || transactionId || errorCode || dataParam) {
+        let callbackData = {
+          status: status || (transactionId ? 'ok' : 'error'),
+          transactionId: transactionId,
+          clientTransactionId: clientTransactionId,
+          errorCode: errorCode,
+          state: null
+        };
+        
+        // Parse state if present (contains our original checkout data)
+        if (stateParam) {
+          try {
+            callbackData.state = JSON.parse(stateParam);
+          } catch (e) {
+            console.warn('[POS] Failed to parse state param:', e);
+          }
+        }
+        
+        // Parse base64 data if present
+        if (dataParam) {
+          try {
+            const decoded = JSON.parse(atob(dataParam));
+            callbackData = { ...callbackData, ...decoded };
+          } catch (e) {
+            console.warn('[POS] Failed to parse data param:', e);
+          }
+        }
+        
+        console.log('[POS] Square callback received:', callbackData);
+        
+        // Set the callback result to show appropriate UI
+        setSquareCallbackResult(callbackData);
+        
+        // Clear the URL parameters to prevent re-processing on refresh
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        
+        // If payment was successful, reset checkout mode
+        if (callbackData.status === 'ok' && transactionId) {
+          console.log('[POS] Payment successful! Transaction ID:', transactionId);
+          setCheckoutMode(false);
+          setCheckoutItems([]);
+          setCheckoutSubtotal(0);
+          setCheckoutTabInfo(null);
+          
+          // Show success message briefly
+          setTimeout(() => {
+            setSquareCallbackResult(null);
+          }, 5000);
+        } else if (callbackData.status === 'error' || errorCode) {
+          console.log('[POS] Payment failed or canceled:', errorCode);
+          // Keep checkout mode active so user can retry
+          // Clear callback result after showing message
+          setTimeout(() => {
+            setSquareCallbackResult(null);
+          }, 5000);
+        }
+      }
+    };
+    
+    // Parse on mount
+    parseSquareCallback();
+    
+    // Also listen for popstate in case TWA navigates back
+    window.addEventListener('popstate', parseSquareCallback);
+    return () => window.removeEventListener('popstate', parseSquareCallback);
+  }, []);
+  
   // Checkout mode for horizontal view - when true, shows receipt/tipping screen instead of MenuGallery2
   // This state is synced via WebSocket so it works across different devices
   const [checkoutMode, setCheckoutMode] = useState(false);
@@ -2463,14 +2558,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       // ============================================
       // OPEN SQUARE APP VIA DEEP-LINK
-      // Using Square Point of Sale API format for Android
+      // Using square-commerce-v1:// scheme for TWA compatibility
+      // Callback uses custom scheme echocatering:// for reliable return
       // ============================================
-      const callbackUrl = `${window.location.origin}/admin/pos`;
       const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
+      
+      // Custom callback URL using echocatering:// scheme for TWA intent filter
+      // This ensures Android routes the callback back to the TWA app, not Chrome
+      const callbackUrl = 'echocatering://square-callback';
       
       console.log(`[POS Checkout] CLIENT_ID:`, clientId);
       console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
       console.log(`[POS Checkout] Total cents (with tip):`, totalCents);
+      console.log(`[POS Checkout] Callback URL:`, callbackUrl);
       
       if (!clientId || clientId === 'sq0idp-') {
         console.error('[POS Checkout] Missing REACT_APP_SQUARE_CLIENT_ID');
@@ -2478,8 +2578,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         return;
       }
       
-      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(JSON.stringify({tabId: checkoutTabInfo.id, tabName: checkoutTabInfo.name, testMode: squareTestMode, tipAmount: tipAmount, items: checkoutItems.map(i => ({name: i.name, modifier: i.modifier, price: i.price}))}))};end`;
+      // Build Square POS payment data object
+      const squarePaymentData = {
+        amount_money: {
+          amount: totalCents,
+          currency_code: 'USD'
+        },
+        callback_url: callbackUrl,
+        client_id: clientId,
+        version: '1.3',
+        notes: `Tab: ${checkoutTabInfo.name}${squareTestMode ? ' [TEST]' : ''}`,
+        location_id: locationResponse.locationId,
+        options: {
+          supported_tender_types: ['CREDIT_CARD', 'CASH', 'OTHER', 'SQUARE_GIFT_CARD', 'CARD_ON_FILE']
+        },
+        state: JSON.stringify({
+          tabId: checkoutTabInfo.id,
+          tabName: checkoutTabInfo.name,
+          testMode: squareTestMode,
+          tipAmount: tipAmount,
+          items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
+        })
+      };
       
+      // Encode payment data as base64 for the deep link
+      const encodedData = btoa(JSON.stringify(squarePaymentData));
+      const deepLinkUrl = `square-commerce-v1://payment/create?data=${encodedData}`;
+      
+      console.log(`[POS Checkout] Square payment data:`, squarePaymentData);
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
       // Open Square app via deep-link immediately (no alert to avoid blocking)
@@ -3636,6 +3762,57 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   ${(lastCheckoutResult.totalCharged?.amount / 100).toFixed(2)} charged
                 </p>
               )}
+            </div>
+          </div>
+        )}
+        
+        {/* Square Callback Result Overlay (TWA return flow) */}
+        {squareCallbackResult && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: squareCallbackResult.status === 'ok' ? 'rgba(0,128,0,0.95)' : 'rgba(200,50,50,0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+          }}>
+            <div style={{ textAlign: 'center', color: '#fff', padding: '20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>
+                {squareCallbackResult.status === 'ok' ? '✓' : '✕'}
+              </div>
+              <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>
+                {squareCallbackResult.status === 'ok' ? 'Payment Successful' : 'Payment Canceled'}
+              </h2>
+              {squareCallbackResult.transactionId && (
+                <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '10px' }}>
+                  Transaction: {squareCallbackResult.transactionId}
+                </p>
+              )}
+              {squareCallbackResult.errorCode && (
+                <p style={{ fontSize: '14px', opacity: 0.8 }}>
+                  {squareCallbackResult.errorCode === 'payment_canceled' ? 'Payment was canceled' : `Error: ${squareCallbackResult.errorCode}`}
+                </p>
+              )}
+              <button
+                onClick={() => setSquareCallbackResult(null)}
+                style={{
+                  marginTop: '20px',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  border: '2px solid #fff',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                {squareCallbackResult.status === 'ok' ? 'Continue' : 'Try Again'}
+              </button>
             </div>
           </div>
         )}

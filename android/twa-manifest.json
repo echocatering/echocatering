@@ -1,0 +1,51 @@
+{
+  "packageId": "com.echocatering.pos",
+  "host": "echocatering.com",
+  "name": "ECHO POS",
+  "launcherName": "ECHO POS",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#800080",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": false,
+  "startUrl": "/admin/pos",
+  "iconUrl": "https://echocatering.com/assets/icons/pos-icon-512.png",
+  "maskableIconUrl": "https://echocatering.com/assets/icons/pos-icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./echo-pos.keystore",
+    "alias": "echo-pos"
+  },
+  "appVersionCode": 2,
+  "appVersionName": "1.1.0",
+  "shortcuts": [],
+  "generatorApp": "nicholasbraun-anthropic-sdk",
+  "webManifestUrl": "https://echocatering.com/pos-manifest.json",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://echocatering.com/",
+  "minSdkVersion": 21,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "additionalIntentFilters": [
+    {
+      "action": "android.intent.action.VIEW",
+      "autoVerify": false,
+      "categories": [
+        "android.intent.category.DEFAULT",
+        "android.intent.category.BROWSABLE"
+      ],
+      "data": {
+        "scheme": "echocatering",
+        "host": "square-callback"
+      }
+    }
+  ]
+}
