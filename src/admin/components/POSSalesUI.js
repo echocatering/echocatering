@@ -1931,6 +1931,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       const url = window.location.href;
       const urlParams = new URLSearchParams(window.location.search);
       
+      // Check if this is a Square callback (from our custom query parameter)
+      const isSquareCallback = urlParams.get('square_callback') === 'true';
+      
+      if (!isSquareCallback) return;
+      
       // Square returns data in various formats depending on success/cancel
       const status = urlParams.get('status');
       const transactionId = urlParams.get('transaction_id');
@@ -2563,9 +2568,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       // ============================================
       const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
       
-      // Custom callback URL using echocatering:// scheme for TWA intent filter
-      // This ensures Android routes the callback back to the TWA app, not Chrome
-      const callbackUrl = 'echocatering://square-callback';
+      // Callback URL - Square requires HTTPS, but we can identify the callback
+      // Add query parameter to detect Square callback vs normal navigation
+      const callbackUrl = `${window.location.origin}/admin/pos?square_callback=true`;
       
       console.log(`[POS Checkout] CLIENT_ID:`, clientId);
       console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);

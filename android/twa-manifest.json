@@ -37,14 +37,15 @@
   "additionalIntentFilters": [
     {
       "action": "android.intent.action.VIEW",
-      "autoVerify": false,
+      "autoVerify": true,
       "categories": [
         "android.intent.category.DEFAULT",
         "android.intent.category.BROWSABLE"
       ],
       "data": {
-        "scheme": "echocatering",
-        "host": "square-callback"
+        "scheme": "https",
+        "host": "echocatering.com",
+        "pathPrefix": "/admin/pos"
       }
     }
   ]
