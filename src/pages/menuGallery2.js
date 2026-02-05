@@ -354,7 +354,7 @@ function VideoStage({ videoSrc, layout }) {
   return null;
 }
 
-function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', size = 56 }) {
+function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', size = 56, noHover = false }) {
   const arrowFontSize = size * 0.4; // Scale font size relative to button size
   const base = {
     background: 'transparent',
@@ -372,7 +372,7 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
     justifyContent: 'center',
     padding: 0,
     margin: 0,
-    transition: 'all 0.2s ease',
+    transition: noHover ? 'none' : 'all 0.2s ease',
     outline: 'none',
     WebkitTapHighlightColor: 'transparent',
     WebkitTouchCallout: 'none',
@@ -380,7 +380,9 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
     userSelect: 'none',
   };
 
-  const hoverHandlers = (isNext) => ({
+  const hoverHandlers = (isNext) => noHover ? {
+    onClick: isNext ? onNext : onPrev,
+  } : {
     onMouseEnter: (e) => {
       e.currentTarget.style.color = hoverColor;
       e.currentTarget.style.transform = 'scale(1.1)';
@@ -390,7 +392,7 @@ function ArrowButtons({ onPrev, onNext, color = '#888', hoverColor = '#222', siz
       e.currentTarget.style.transform = 'scale(1)';
     },
     onClick: isNext ? onNext : onPrev,
-  });
+  };
 
   const svgSize = Math.round(size * 0.6);
   const strokeWidth = Math.max(2, Math.round(size / 28));
@@ -2028,7 +2030,7 @@ function EchoCocktailSubpage2({
             justifyContent: 'center',
             pointerEvents: 'auto',
           }}>
-            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} />
+            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} noHover={viewMode === 'menu'} />
           </div>
         </div>
 
