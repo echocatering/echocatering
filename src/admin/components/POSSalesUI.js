@@ -67,7 +67,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onCheckout, checkoutLoading }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +81,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const [actionKey, setActionKey] = useState(0); // For triggering fade-in animation
   const [flashingItemId, setFlashingItemId] = useState(null); // For item click flash effect
   const [showCloseTabConfirm, setShowCloseTabConfirm] = useState(false); // For close tab confirmation
+  
+  // Receipt item selection state (for moving items between tabs)
+  const [selectedReceiptIndices, setSelectedReceiptIndices] = useState(new Set());
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const receiptLongPressTimerRef = useRef(null);
+  const receiptLongPressTriggeredRef = useRef(false);
   
   // Modifier system state
   const [editingItem, setEditingItem] = useState(null); // Item being edited (long-press)
@@ -169,6 +175,40 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
       setFlashingItemId(null);
     }, 500);
   }, [onItemClick]);
+  
+  // Handle receipt item long-press start (for selection/move flow)
+  const handleReceiptItemPressStart = useCallback((index, e) => {
+    e.preventDefault();
+    receiptLongPressTriggeredRef.current = false;
+    receiptLongPressTimerRef.current = setTimeout(() => {
+      receiptLongPressTriggeredRef.current = true;
+      // Toggle selection for this item
+      setSelectedReceiptIndices(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(index)) {
+          newSet.delete(index);
+        } else {
+          newSet.add(index);
+        }
+        return newSet;
+      });
+    }, 400); // 400ms for long-press
+  }, []);
+  
+  // Handle receipt item press end
+  const handleReceiptItemPressEnd = useCallback((e) => {
+    if (receiptLongPressTimerRef.current) {
+      clearTimeout(receiptLongPressTimerRef.current);
+      receiptLongPressTimerRef.current = null;
+    }
+  }, []);
+  
+  // Clear selection when drawer view changes or drawer closes
+  useEffect(() => {
+    if (drawerView !== 'receipt' || !drawerExpanded) {
+      setSelectedReceiptIndices(new Set());
+    }
+  }, [drawerView, drawerExpanded]);
   
   // Update actionKey when lastAction changes to trigger fade-in
   useEffect(() => {
@@ -621,56 +661,71 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     No items added yet
                   </div>
                 ) : (
-                  selectedItems.map((item, index) => (
-                    <div 
-                      key={`${item._id}-${index}`}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: '6px 0',
-                        borderBottom: index < selectedItems.length - 1 ? '1px solid #f0f0f0' : 'none'
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: `${Math.max(10, outerWidth / 28)}px`,
-                        color: '#333'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 500 }}>{(item.name || 'Item').toUpperCase()}</span>
-                          <span style={{ color: '#999' }}>-</span>
-                          <span style={{ color: '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
+                  selectedItems.map((item, index) => {
+                    const isSelected = selectedReceiptIndices.has(index);
+                    return (
+                      <div 
+                        key={`${item._id}-${index}`}
+                        onMouseDown={(e) => handleReceiptItemPressStart(index, e)}
+                        onMouseUp={handleReceiptItemPressEnd}
+                        onMouseLeave={handleReceiptItemPressEnd}
+                        onTouchStart={(e) => handleReceiptItemPressStart(index, e)}
+                        onTouchEnd={handleReceiptItemPressEnd}
+                        onTouchCancel={handleReceiptItemPressEnd}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          padding: '6px 8px',
+                          marginBottom: '2px',
+                          borderRadius: '4px',
+                          background: isSelected ? '#f0f0f0' : 'transparent',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontSize: `${Math.max(10, outerWidth / 28)}px`,
+                          color: isSelected ? '#fff' : '#333'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 500, color: isSelected ? '#333' : '#333' }}>{(item.name || 'Item').toUpperCase()}</span>
+                            <span style={{ color: isSelected ? '#666' : '#999' }}>-</span>
+                            <span style={{ color: isSelected ? '#666' : '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: isSelected ? '#666' : '#999' }}>{formatTimestamp(item.addedAt)}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setItemToRemove({ item, index }); }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: isSelected ? '#666' : '#d0d0d0',
+                                fontSize: `${Math.max(18, outerWidth / 16)}px`,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                padding: '0 4px',
+                                lineHeight: 1
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ color: '#999' }}>{formatTimestamp(item.addedAt)}</span>
-                          <button
-                            onClick={() => setItemToRemove({ item, index })}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#d0d0d0',
-                              fontSize: `${Math.max(18, outerWidth / 16)}px`,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              padding: '0 4px',
-                              lineHeight: 1
-                            }}
-                          >
-                            ×
-                          </button>
+                        <div style={{
+                          fontSize: `${Math.max(9, outerWidth / 32)}px`,
+                          color: isSelected ? '#666' : '#666',
+                          marginTop: '2px'
+                        }}>
+                          ${(parseFloat(item.price) || 0).toFixed(2)}
                         </div>
                       </div>
-                      <div style={{
-                        fontSize: `${Math.max(9, outerWidth / 32)}px`,
-                        color: '#666',
-                        marginTop: '2px'
-                      }}>
-                        ${(parseFloat(item.price) || 0).toFixed(2)}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}
@@ -780,9 +835,17 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             background: '#fff',
             flexShrink: 0
           }}>
-            {/* Page Switcher Button - TABS when on receipt, VIEW when on tabs */}
+            {/* Page Switcher Button - TABS/MOVE when on receipt, VIEW when on tabs */}
             <button
-              onClick={() => setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt')}
+              onClick={() => {
+                if (drawerView === 'receipt' && selectedReceiptIndices.size > 0) {
+                  // MOVE mode - open tab selection modal
+                  setShowMoveModal(true);
+                } else {
+                  // Normal mode - switch views
+                  setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt');
+                }
+              }}
               style={{
                 flex: 1,
                 padding: '12px',
@@ -796,25 +859,33 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 borderRadius: '4px'
               }}
             >
-              {drawerView === 'receipt' ? 'TABS' : 'VIEW'}
+              {drawerView === 'receipt' ? (selectedReceiptIndices.size > 0 ? 'MOVE' : 'TABS') : 'VIEW'}
             </button>
-            {/* Close Button */}
+            {/* Close/Cancel Button */}
             <button
-              onClick={() => activeTabId && setShowCloseTabConfirm(true)}
+              onClick={() => {
+                if (selectedReceiptIndices.size > 0) {
+                  // CANCEL mode - deselect all items
+                  setSelectedReceiptIndices(new Set());
+                } else {
+                  // Normal mode - close tab
+                  activeTabId && setShowCloseTabConfirm(true);
+                }
+              }}
               style={{
                 flex: 1,
                 padding: '12px',
                 border: 'none',
                 background: '#f0f0f0',
-                color: activeTabId ? '#333' : '#999',
+                color: (selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: activeTabId ? 'pointer' : 'not-allowed',
+                cursor: (selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed',
                 borderRadius: '4px'
               }}
             >
-              CLOSE
+              {selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE'}
             </button>
             {/* Checkout Button */}
             <button
@@ -1106,6 +1177,104 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 CANCEL
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Move Items Modal - Select destination tab */}
+      {showMoveModal && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '8px',
+            padding: '16px 24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            maxWidth: '80%',
+            minWidth: '200px'
+          }}>
+            <span style={{
+              fontSize: `${Math.max(12, outerWidth / 24)}px`,
+              fontWeight: 500,
+              color: '#333',
+              textAlign: 'center'
+            }}>
+              SELECT TAB
+            </span>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              width: '100%',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              {tabs.filter(t => t.id !== activeTabId).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    // Move selected items to this tab
+                    if (onMoveItems) {
+                      onMoveItems(activeTabId, tab.id, Array.from(selectedReceiptIndices));
+                    }
+                    setSelectedReceiptIndices(new Set());
+                    setShowMoveModal(false);
+                  }}
+                  style={{
+                    background: '#f0f0f0',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 16px',
+                    fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                    fontWeight: 500,
+                    color: '#333',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {(tab.customName || tab.name).toUpperCase()}
+                </button>
+              ))}
+              {tabs.filter(t => t.id !== activeTabId).length === 0 && (
+                <span style={{
+                  fontSize: `${Math.max(10, outerWidth / 30)}px`,
+                  color: '#999',
+                  textAlign: 'center',
+                  padding: '8px'
+                }}>
+                  No other tabs available
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowMoveModal(false)}
+              style={{
+                background: '#e5e5e5',
+                color: '#333',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 20px',
+                fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              CANCEL
+            </button>
           </div>
         </div>
       )}
@@ -2396,6 +2565,40 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setLastAction({ type: 'remove', itemName: toTitleCase(itemToRemove.name), tabName: tabDisplayName });
   }, [activeTabId, tabs]);
 
+  const handleMoveItems = useCallback((fromTabId, toTabId, indices) => {
+    if (!fromTabId || !toTabId || indices.length === 0) return;
+    
+    const fromTab = tabs.find(t => t.id === fromTabId);
+    const toTab = tabs.find(t => t.id === toTabId);
+    if (!fromTab || !toTab) return;
+    
+    // Get items to move (sorted indices in reverse to remove from end first)
+    const sortedIndices = [...indices].sort((a, b) => b - a);
+    const itemsToMove = indices.map(i => fromTab.items[i]).filter(Boolean);
+    
+    if (itemsToMove.length === 0) return;
+    
+    console.log(`[POS] Moving ${itemsToMove.length} items from ${fromTab.name} to ${toTab.name}`);
+    
+    setTabs(prev => prev.map(tab => {
+      if (tab.id === fromTabId) {
+        // Remove items from source tab
+        const newItems = tab.items.filter((_, i) => !indices.includes(i));
+        return { ...tab, items: newItems };
+      }
+      if (tab.id === toTabId) {
+        // Add items to destination tab
+        return { ...tab, items: [...tab.items, ...itemsToMove] };
+      }
+      return tab;
+    }));
+    
+    // Update last action
+    const fromTabName = fromTab?.customName || fromTab?.name || '';
+    const toTabName = toTab?.customName || toTab?.name || '';
+    setLastAction({ type: 'move', itemName: `${itemsToMove.length} item${itemsToMove.length > 1 ? 's' : ''}`, tabName: `${fromTabName} → ${toTabName}` });
+  }, [tabs]);
+
   const frameReady = frameSize.width > 0 && frameSize.height > 0;
 
   const stageDims = useMemo(() => {
@@ -3319,6 +3522,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onDeleteTab={handleDeleteTab}
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
+              onMoveItems={handleMoveItems}
               onCheckout={handleCheckout}
               checkoutLoading={checkoutLoading}
             />
@@ -3529,6 +3733,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onDeleteTab={handleDeleteTab}
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
+                onMoveItems={handleMoveItems}
                 onCheckout={handleCheckout}
                 checkoutLoading={checkoutLoading}
               />
