@@ -1931,10 +1931,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       const url = window.location.href;
       const urlParams = new URLSearchParams(window.location.search);
       
-      // Check if this is a Square callback (from our custom query parameter)
-      const isSquareCallback = urlParams.get('square_callback') === 'true';
-      
-      if (!isSquareCallback) return;
+      // Square adds parameters like status, transaction_id, error_code to the callback URL
+      // Check if any Square-specific parameters are present
       
       // Square returns data in various formats depending on success/cancel
       const status = urlParams.get('status');
@@ -2568,9 +2566,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       // ============================================
       const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
       
-      // Callback URL - Square requires HTTPS, but we can identify the callback
-      // Add query parameter to detect Square callback vs normal navigation
-      const callbackUrl = `${window.location.origin}/admin/pos?square_callback=true`;
+      // Callback URL - must match EXACTLY what's registered in Square Developer Portal
+      const callbackUrl = `${window.location.origin}/admin/pos`;
       
       console.log(`[POS Checkout] CLIENT_ID:`, clientId);
       console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
