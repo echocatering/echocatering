@@ -2080,8 +2080,8 @@ function EchoCocktailSubpage2({
             alt="QR Code"
             style={{
               position: 'absolute',
-              right: `${innerLeft + 48}px`,
-              bottom: `${size.height - (innerTop + layout.inner.height) + 24}px`,
+              right: `${innerLeft + parseFloat(bottomBarPadding) * 2}px`,
+              bottom: `${bottomNavBottom + parseFloat(bottomBarPadding)}px`,
               width: 'auto',
               height: 'auto',
               maxWidth: '120px',
@@ -2089,6 +2089,7 @@ function EchoCocktailSubpage2({
               filter: 'brightness(0) invert(1)',
               pointerEvents: 'none',
               zIndex: 25,
+              transform: 'translateY(15%)',
             }}
           />
         )}
