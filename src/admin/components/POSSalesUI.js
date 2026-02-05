@@ -1215,51 +1215,47 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             }}>
               SELECT TAB
             </span>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              width: '100%',
-              maxHeight: '200px',
-              overflowY: 'auto'
-            }}>
-              {tabs.filter(t => t.id !== activeTabId).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    // Move selected items to this tab
-                    if (onMoveItems) {
-                      onMoveItems(activeTabId, tab.id, Array.from(selectedReceiptIndices));
-                    }
+            {tabs.filter(t => t.id !== activeTabId).length === 0 ? (
+              <span style={{
+                fontSize: `${Math.max(10, outerWidth / 30)}px`,
+                color: '#999',
+                textAlign: 'center',
+                padding: '8px'
+              }}>
+                No other tabs available
+              </span>
+            ) : (
+              <select
+                onChange={(e) => {
+                  const targetTabId = e.target.value;
+                  if (targetTabId && onMoveItems) {
+                    onMoveItems(activeTabId, targetTabId, Array.from(selectedReceiptIndices));
                     setSelectedReceiptIndices(new Set());
                     setShowMoveModal(false);
-                  }}
-                  style={{
-                    background: '#f0f0f0',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '12px 16px',
-                    fontSize: `${Math.max(11, outerWidth / 28)}px`,
-                    fontWeight: 500,
-                    color: '#333',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  {(tab.customName || tab.name).toUpperCase()}
-                </button>
-              ))}
-              {tabs.filter(t => t.id !== activeTabId).length === 0 && (
-                <span style={{
-                  fontSize: `${Math.max(10, outerWidth / 30)}px`,
-                  color: '#999',
-                  textAlign: 'center',
-                  padding: '8px'
-                }}>
-                  No other tabs available
-                </span>
-              )}
-            </div>
+                  }
+                }}
+                defaultValue=""
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: `${Math.max(14, outerWidth / 24)}px`,
+                  fontWeight: 500,
+                  color: '#333',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  appearance: 'menulist'
+                }}
+              >
+                <option value="" disabled>Choose a tab...</option>
+                {tabs.filter(t => t.id !== activeTabId).map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {(tab.customName || tab.name).toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               onClick={() => setShowMoveModal(false)}
               style={{
@@ -2963,15 +2959,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }}
                     style={{
                       width: '100%',
-                      padding: 'clamp(8px, 1.2vh, 14px)',
-                      fontSize: 'clamp(12px, 1.8vh, 16px)',
+                      padding: '12px',
+                      fontSize: '16px',
                       fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
                       border: 'none',
                       cursor: 'pointer',
                       flexShrink: 0,
-                      marginTop: '0.5vh',
+                      marginTop: '8px',
                     }}
                   >
                     {showCustomTip ? 'Back' : 'View Tab'}
@@ -3005,6 +3001,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       minHeight: 0,
+                      WebkitOverflowScrolling: 'touch',
+                      touchAction: 'pan-y',
                     }}>
                       {checkoutItems.map((item, idx) => (
                         <div key={idx} style={{
@@ -3045,8 +3043,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     onClick={() => setShowTabView(false)}
                     style={{
                       width: '100%',
-                      padding: 'clamp(10px, 1.5vh, 16px)',
-                      fontSize: 'clamp(14px, 2vh, 18px)',
+                      padding: '12px',
+                      fontSize: '16px',
                       fontWeight: '600',
                       background: 'transparent',
                       color: '#666',
