@@ -2008,6 +2008,63 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
   }, [currentCheckoutId]);
   
+  // ============================================
+  // VISIBILITY CHANGE DETECTION
+  // Detect when user returns from Square POS app
+  // Since Square POS doesn't send webhooks for in-person payments,
+  // we detect when the app regains focus and show a confirmation dialog
+  // ============================================
+  const [showPaymentConfirmDialog, setShowPaymentConfirmDialog] = useState(false);
+  const squareLaunchedRef = useRef(false);
+  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // When app becomes visible again and we launched Square
+      if (document.visibilityState === 'visible' && squareLaunchedRef.current && paymentStatus === 'pending') {
+        console.log('[POS] App regained focus after Square launch - showing confirmation dialog');
+        // Small delay to ensure the app is fully visible
+        setTimeout(() => {
+          setShowPaymentConfirmDialog(true);
+        }, 500);
+        squareLaunchedRef.current = false;
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [paymentStatus]);
+  
+  // Handle payment confirmation from user
+  const handlePaymentConfirm = useCallback((wasSuccessful) => {
+    setShowPaymentConfirmDialog(false);
+    
+    if (wasSuccessful) {
+      setPaymentStatus('payment_success');
+      setPaymentStatusMessage('Payment confirmed!');
+      // Clear the tab after successful payment
+      if (checkoutTabInfo?.id) {
+        setTabs(prev => prev.filter(t => t.id !== checkoutTabInfo.id));
+        setActiveTabId(null);
+      }
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        setCurrentCheckoutId(null);
+        setCheckoutMode(false);
+        setCheckoutLoading(false);
+      }, 3000);
+    } else {
+      setPaymentStatus('payment_canceled');
+      setPaymentStatusMessage('Payment was not completed');
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        setCurrentCheckoutId(null);
+        setCheckoutLoading(false);
+      }, 2000);
+    }
+  }, [checkoutTabInfo, setTabs, setActiveTabId]);
+  
   // Connect to WebSocket for cross-device checkout sync
   const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel } = usePosWebSocket(
     handleWsCheckoutStart,
@@ -2576,6 +2633,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
       
+      // Mark that we're launching Square so we can detect when user returns
+      squareLaunchedRef.current = true;
+      
       // Open Square app via deep-link immediately (no alert to avoid blocking)
       window.location.href = deepLinkUrl;
       
@@ -2583,8 +2643,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id, checkoutId });
       
       // Note: We do NOT exit checkout mode here anymore
-      // The payment status will be updated via WebSocket when Square webhook fires
-      // User stays in "waiting for payment" state until webhook confirms payment
+      // When user returns from Square, visibility change will trigger confirmation dialog
 
     } catch (error) {
       console.error('[POS Checkout] Error:', error);
@@ -3732,8 +3791,66 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           </div>
         )}
 
-        {/* Payment Status Overlay - Shows while waiting for Square webhook */}
-        {paymentStatus && (
+        {/* Payment Confirmation Dialog - Shows when user returns from Square */}
+        {showPaymentConfirmDialog && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2002,
+          }}>
+            <div style={{ textAlign: 'center', color: '#fff', padding: '40px', maxWidth: '400px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>💳</div>
+              <h2 style={{ fontSize: '28px', marginBottom: '20px' }}>Was the payment successful?</h2>
+              <p style={{ fontSize: '16px', opacity: 0.8, marginBottom: '30px' }}>
+                Confirm whether the payment was completed in Square POS
+              </p>
+              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => handlePaymentConfirm(true)}
+                  style={{
+                    padding: '16px 32px',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    background: '#22c55e',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    minWidth: '120px'
+                  }}
+                >
+                  ✓ YES
+                </button>
+                <button
+                  onClick={() => handlePaymentConfirm(false)}
+                  style={{
+                    padding: '16px 32px',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    background: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    minWidth: '120px'
+                  }}
+                >
+                  ✕ NO
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Status Overlay - Shows result after confirmation */}
+        {paymentStatus && !showPaymentConfirmDialog && (
           <div style={{
             position: 'fixed',
             top: 0,
@@ -3751,7 +3868,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             <div style={{ textAlign: 'center', color: '#fff', padding: '40px' }}>
               {paymentStatus === 'pending' && (
                 <>
-                  <div style={{ fontSize: '48px', marginBottom: '20px', animation: 'pulse 2s infinite' }}>⏳</div>
+                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
                   <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Processing Payment</h2>
                   <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '20px' }}>
                     {paymentStatusMessage || 'Waiting for Square POS...'}
