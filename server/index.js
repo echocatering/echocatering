@@ -311,6 +311,7 @@ app.use('/api/pos', require('./routes/pos'));
 app.use('/api/pos-events', require('./routes/posEvents'));
 app.use('/api/square', require('./routes/square'));
 app.use('/api/square-webhook', require('./routes/squareWebhook'));
+app.use('/api/stripe', require('./routes/stripeTerminal'));
 app.use('/api/video-processing', require('./routes/videoProcessing'));
 app.use('/api/video-worker', require('./routes/videoWorker'));
 app.use('/api/video-jobs', require('./routes/videoJobs'));

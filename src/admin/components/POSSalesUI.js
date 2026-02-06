@@ -378,11 +378,19 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            justifyContent: 'center', 
+            justifyContent: 'center',
             height: '100%',
-            color: '#666'
+            color: '#666',
+            flexDirection: 'column',
+            gap: '20px'
           }}>
-            Loading items...
+            <div style={{ fontSize: '24px' }}>Loading items...</div>
+            {window.location.search.includes('app=native') && (
+              <div style={{ fontSize: '14px', opacity: 0.7, textAlign: 'center', maxWidth: '300px' }}>
+                If this takes too long, the API might be blocked in the native app.
+                The app will continue with empty items after 10 seconds.
+              </div>
+            )}
           </div>
         ) : items.length === 0 ? (
           <div style={{ 
@@ -2156,8 +2164,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   useEffect(() => {
     const loadItems = async () => {
       setLoading(true);
+      
+      // Add timeout to prevent infinite loading
+      const timeout = setTimeout(() => {
+        console.warn('[POS] Menu items loading timeout - using fallback');
+        setLoading(false);
+        // Use fallback empty items to prevent stuck loading
+        setAllItems([]);
+      }, 10000); // 10 second timeout
+      
       try {
         const data = await apiCall('/menu-items?includeArchived=true');
+        
+        // Clear timeout on successful response
+        clearTimeout(timeout);
         
         // Default modifiers for Spirits category
         const defaultSpiritsModifiers = [
@@ -2193,6 +2213,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setAllItems(filtered);
       } catch (err) {
         console.error('Failed to load menu items:', err);
+        // Clear timeout on error
+        clearTimeout(timeout);
+        
+        // In WebView, API might fail - try fallback or show error
+        if (window.location.search.includes('app=native')) {
+          console.log('[POS] Running in native app - API might be blocked');
+          // You could add hardcoded fallback items here if needed
+          setAllItems([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -2514,7 +2543,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [activeTabId, selectedItems, tabs, total, sendCheckoutStart]);
 
   /**
-   * Process payment with tip - Opens Square app via deep-link
+   * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
    * Called when customer selects a tip option
    */
   const handleProcessPaymentWithTip = useCallback(async (tipAmount) => {
@@ -2524,133 +2553,93 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
 
     const finalTotal = checkoutSubtotal + tipAmount;
+    const totalCents = Math.round(finalTotal * 100);
     
     try {
       setCheckoutLoading(true);
       
       // ============================================
-      // SQUARE POS CHECKOUT FLOW
+      // STRIPE TERMINAL CHECKOUT FLOW
       // ============================================
-      const testModeLabel = squareTestMode ? '[TEST MODE] ' : '';
-      console.log(`[POS Checkout] ${testModeLabel}Processing payment with tip`);
+      console.log(`[POS Checkout] Processing payment with Stripe Terminal`);
       console.log(`[POS Checkout] Subtotal: $${checkoutSubtotal.toFixed(2)}, Tip: $${tipAmount.toFixed(2)}, Total: $${finalTotal.toFixed(2)}`);
-
-      // Prepare checkout data for Square order creation
-      const checkoutData = {
-        tabId: checkoutTabInfo.id,
-        tabName: checkoutTabInfo.name,
-        items: checkoutItems.map(item => ({
-          name: item.name,
-          quantity: 1,
-          price: item.price || 0,
-          modifier: item.modifier || null,
-          category: item.category
-        })),
-        total: finalTotal,
-        testMode: squareTestMode  // TEST_MODE flag
-      };
-
-      // Get Square location ID
-      const locationResponse = await apiCall('/square/location');
-      if (!locationResponse || !locationResponse.locationId) {
-        throw new Error('Square location not configured');
+      
+      // Check if running in native app with Stripe Terminal
+      if (window.stripeBridge) {
+        console.log('[POS Checkout] Using Stripe Terminal native bridge');
+        
+        // Set up payment status handlers
+        window.onPaymentComplete = (result) => {
+          console.log('[POS Checkout] Payment completed:', result);
+          if (result.success) {
+            setPaymentStatus('payment_success');
+            setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
+            
+            // Clear the tab after successful payment
+            if (checkoutTabInfo?.id) {
+              setTabs(prev => prev.filter(t => t.id !== checkoutTabInfo.id));
+              setActiveTabId(null);
+            }
+            
+            setTimeout(() => {
+              setPaymentStatus(null);
+              setPaymentStatusMessage(null);
+              setCurrentCheckoutId(null);
+              setCheckoutMode(false);
+              setCheckoutLoading(false);
+            }, 3000);
+          } else {
+            setPaymentStatus('payment_failed');
+            setPaymentStatusMessage('Payment failed. Please try again.');
+            setTimeout(() => {
+              setPaymentStatus(null);
+              setPaymentStatusMessage(null);
+              setCheckoutLoading(false);
+            }, 3000);
+          }
+        };
+        
+        window.onPaymentError = (error) => {
+          console.error('[POS Checkout] Payment error:', error);
+          setPaymentStatus('payment_failed');
+          setPaymentStatusMessage(`Payment error: ${error}`);
+          setTimeout(() => {
+            setPaymentStatus(null);
+            setPaymentStatusMessage(null);
+            setCheckoutLoading(false);
+          }, 3000);
+        };
+        
+        // Process payment via Stripe Terminal
+        window.stripeBridge.processPayment(totalCents, 'usd');
+        
+      } else {
+        // Fallback for web testing
+        console.log('[POS Checkout] Stripe Terminal not available - showing test mode');
+        alert('Stripe Terminal requires native app with connected reader. This is web testing mode.');
+        
+        // Simulate payment for testing
+        setTimeout(() => {
+          setPaymentStatus('payment_success');
+          setPaymentStatusMessage('Test payment successful (web mode)');
+          setTimeout(() => {
+            setPaymentStatus(null);
+            setPaymentStatusMessage(null);
+            setCheckoutMode(false);
+            setCheckoutLoading(false);
+          }, 2000);
+        }, 2000);
       }
       
-      // Calculate total in cents (with tip included)
-      const totalCents = squareTestMode 
-        ? checkoutItems.length  // $0.01 per item in test mode
-        : Math.round(finalTotal * 100);
-      
-      // ============================================
-      // GENERATE UNIQUE CHECKOUT ID
-      // Used to track payment status via webhook
-      // ============================================
-      const checkoutId = `ECHO-${checkoutTabInfo.id}-${Date.now()}`;
-      setCurrentCheckoutId(checkoutId);
-      setPaymentStatus('pending');
-      setPaymentStatusMessage('Waiting for payment...');
-      
-      // Register checkout with backend for webhook tracking
-      try {
-        await apiCall('/square-webhook/register', {
-          method: 'POST',
-          body: JSON.stringify({
-            checkoutId,
-            tabId: checkoutTabInfo.id,
-            tabName: checkoutTabInfo.name,
-            totalCents,
-            items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
-          })
-        });
-        console.log(`[POS Checkout] Registered checkout: ${checkoutId}`);
-      } catch (regError) {
-        console.warn('[POS Checkout] Failed to register checkout (continuing anyway):', regError);
-      }
-      
-      // Store checkout result
-      setLastCheckoutResult({
-        success: true,
-        locationId: locationResponse.locationId,
-        testMode: squareTestMode,
-        totalCents: totalCents,
-        tipAmount: tipAmount,
-        tabId: checkoutTabInfo.id,
-        tabName: checkoutTabInfo.name,
-        checkoutId: checkoutId
-      });
-      
-      // ============================================
-      // OPEN SQUARE APP VIA DEEP-LINK
-      // Using Square Point of Sale API format for Android
-      // ============================================
-      const callbackUrl = `${window.location.origin}/admin/pos`;
-      const clientId = process.env.REACT_APP_SQUARE_CLIENT_ID;
-      
-      console.log(`[POS Checkout] CLIENT_ID:`, clientId);
-      console.log(`[POS Checkout] Location ID:`, locationResponse.locationId);
-      console.log(`[POS Checkout] Total cents (with tip):`, totalCents);
-      console.log(`[POS Checkout] Checkout ID:`, checkoutId);
-      
-      if (!clientId || clientId === 'sq0idp-') {
-        console.error('[POS Checkout] Missing REACT_APP_SQUARE_CLIENT_ID');
-        alert('Error: Square Client ID not configured. Please add REACT_APP_SQUARE_CLIENT_ID to environment variables.');
-        setPaymentStatus(null);
-        setCurrentCheckoutId(null);
-        return;
-      }
-      
-      // Include checkoutId in metadata so webhook can match payment to checkout
-      const metadata = JSON.stringify({
-        checkoutId: checkoutId,
-        tabId: checkoutTabInfo.id,
-        tabName: checkoutTabInfo.name,
-        testMode: squareTestMode,
-        tipAmount: tipAmount,
-        items: checkoutItems.map(i => ({ name: i.name, modifier: i.modifier, price: i.price }))
-      });
-      
-      const deepLinkUrl = `intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.browser_fallback_url=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};S.com.squareup.pos.CLIENT_ID=${clientId};S.com.squareup.pos.API_VERSION=v2.0;S.com.squareup.pos.LOCATION_ID=${locationResponse.locationId};i.com.squareup.pos.TOTAL_AMOUNT=${totalCents};S.com.squareup.pos.CURRENCY_CODE=USD;S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CASH;S.com.squareup.pos.REQUEST_METADATA=${encodeURIComponent(metadata)};end`;
-      
-      console.log(`[POS Checkout] Opening Square POS app:`, deepLinkUrl);
-      
-      // Mark that we're launching Square so we can detect when user returns
-      squareLaunchedRef.current = true;
-      
-      // Open Square app via deep-link immediately (no alert to avoid blocking)
-      window.location.href = deepLinkUrl;
-      
-      // Broadcast checkout complete via WebSocket to reset horizontal view on other devices
-      sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id, checkoutId });
-      
-      // Note: We do NOT exit checkout mode here anymore
-      // When user returns from Square, visibility change will trigger confirmation dialog
+      // Broadcast checkout complete via WebSocket to sync horizontal view on other devices
+      sendCheckoutComplete({ tipAmount, finalTotal, tabId: checkoutTabInfo.id });
 
     } catch (error) {
       console.error('[POS Checkout] Error:', error);
       alert(`Checkout failed: ${error.message}`);
       setCheckoutLoading(false);
     }
-  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, apiCall, squareTestMode, sendCheckoutComplete]);
+  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, sendCheckoutComplete]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
