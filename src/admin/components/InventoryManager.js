@@ -1866,12 +1866,13 @@ const commitBeerNumUnitsValue = (rowId) => {
                                 row.values && Object.prototype.hasOwnProperty.call(row.values, column.key);
                               let cellValue = hasOriginalValue ? row.values[column.key] : null;
                               
-                              // Format display value for PREMIX Name column - always Title Case
+                              // Format display value - apply Title Case for shared fields
                               const formatDisplayValue = (value) => {
                                 if (value === null || value === undefined || value === '') return '';
                                 
-                                // For PREMIX Name column, always apply Title Case
-                                if (resolvedSheetKey === 'preMix' && isNameColumn) {
+                                // For shared free-text fields, always apply Title Case on display
+                                const sharedFields = getSharedFields(resolvedSheetKey);
+                                if (sharedFields.includes(column.key) && column.key !== 'region') {
                                   return toTitleCase(String(value));
                                 }
                                 

@@ -8,6 +8,16 @@
  * MenuManager (Cocktail model) is now minimal/optional - kept for backward compatibility
  */
 
+const toTitleCase = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  return trimmed
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 // Map MenuManager category to Inventory sheetKey
 export const categoryToSheetKey = {
   'cocktails': 'cocktails',
@@ -38,9 +48,9 @@ export const extractSharedFieldsForInventory = (cocktailData, category) => {
 
   const sharedFields = {};
 
-  // Common fields for all categories
+  // Common fields for all categories - always Title Case
   if (cocktailData.name) {
-    sharedFields.name = cocktailData.name.trim();
+    sharedFields.name = toTitleCase(cocktailData.name.trim());
   }
 
   // Category-specific field mappings
@@ -93,7 +103,8 @@ export const extractSharedFieldsForInventory = (cocktailData, category) => {
 
     case 'preMix':
       if ('ingredients' in cocktailData) {
-        sharedFields.type = (cocktailData.ingredients || '').trim();
+        const typeVal = (cocktailData.ingredients || '').trim();
+        sharedFields.type = typeVal ? toTitleCase(typeVal) : '';
       }
       break;
   }
@@ -225,6 +236,9 @@ export const mergeInventoryWithCocktail = (inventoryRow, cocktailData, category)
       break;
 
     case 'preMix':
+      if (values.type !== undefined && values.type !== null) {
+        merged.ingredients = values.type;
+      }
       break;
   }
 

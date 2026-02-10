@@ -433,7 +433,6 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
   const [ingredientSearch, setIngredientSearch] = useState({});
   const [searchState, setSearchState] = useState({});
   const [openDropdownKey, setOpenDropdownKey] = useState(null);
-  const [showColorPicker, setShowColorPicker] = useState(false);
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const [typeDataset, setTypeDataset] = useState(null);
@@ -1095,10 +1094,6 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
     updateRecipe({ ...currentRecipe, [field]: value });
   };
 
-  const handleBackgroundColorChange = (color) => {
-    const currentRecipe = recipeRef.current || recipe;
-    updateRecipe({ ...currentRecipe, backgroundColor: color });
-  };
 
   // Export functions
   const exportAsImage = async (format = 'png') => {
@@ -1106,9 +1101,8 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
     
     try {
       setExporting(true);
-      const bgColor = recipe?.backgroundColor || '#ffffff';
       const canvas = await html2canvas(recipeCardRef.current, {
-        backgroundColor: bgColor,
+        backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true
@@ -1133,9 +1127,8 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
     
     try {
       setExporting(true);
-      const bgColor = recipe?.backgroundColor || '#ffffff';
       const canvas = await html2canvas(recipeCardRef.current, {
-        backgroundColor: bgColor,
+        backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true
@@ -1546,8 +1539,8 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
   // Always recalculate totals from items to ensure accuracy
   const totals = calculateTotals(items);
 
-  // Only use custom background color for premix, otherwise use default
-  const backgroundColor = (type === 'premix' && recipe?.backgroundColor) ? recipe.backgroundColor : '#d0d0d0';
+  // Always use default background color for all sections
+  const backgroundColor = '#d0d0d0';
 
   return (
     <div className="recipe-builder-card" ref={recipeCardRef} style={{ backgroundColor: '#d0d0d0', border: '2px solid #666666' }}>
@@ -1598,82 +1591,6 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
             )}
           </div>
           <div className="recipe-details-row">
-            {/* Color picker for premix */}
-            {type === 'premix' && (
-              <div className="recipe-type-picker">
-                <div className="recipe-type-label-row">
-                  <label className="recipe-label">COLOR</label>
-                </div>
-                <div className="recipe-type-select-wrapper" style={{ position: 'relative' }}>
-                  <div 
-                    className="recipe-type-display-box"
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #666666',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      aspectRatio: '1',
-                      width: '100%',
-                      maxWidth: '60px'
-                    }}
-                    onClick={() => setShowColorPicker(!showColorPicker)}
-                  >
-                    <div
-                      style={{
-                        width: '90%',
-                        aspectRatio: '1',
-                        backgroundColor: recipe?.backgroundColor || '#e5e5e5',
-                        border: '1px solid #999'
-                      }}
-                    />
-                  </div>
-                  {showColorPicker && (
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        marginTop: '4px',
-                        backgroundColor: 'white',
-                        border: '1px solid #d4d4d4',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
-                        zIndex: 1000,
-                        padding: '12px',
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(10, 1fr)',
-                        gap: '4px',
-                        width: '400px'
-                      }}
-                      onMouseLeave={() => setShowColorPicker(false)}
-                    >
-                      {PRESELECTED_COLORS.map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => {
-                            handleBackgroundColorChange(color);
-                            setShowColorPicker(false);
-                          }}
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            backgroundColor: color,
-                            border: recipe?.backgroundColor === color ? '2px solid #000' : '1px solid #ccc',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            padding: 0
-                          }}
-                          title={color}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
             <div className="recipe-type-picker">
               <div className="recipe-type-label-row">
                 <label className="recipe-label">TYPE</label>

@@ -2841,7 +2841,11 @@ const MenuManager = () => {
                 key={`${editingCocktail?._id || ''}`}
                 recipe={{
                   ...recipe,
-                  title: recipe.title || editingCocktail.name || '' // Use recipe title, fallback to cocktail name
+                  title: recipe.title || editingCocktail.name || '', // Use recipe title, fallback to cocktail name
+                  metadata: {
+                    ...(recipe.metadata || {}),
+                    type: recipe.metadata?.type || editingCocktail.ingredients || '' // Sync type from inventory
+                  }
                 }}
                 onChange={(updatedRecipe) => {
                   // For PRE-MIX, allow title editing and sync it back to cocktail name
@@ -2861,6 +2865,13 @@ const MenuManager = () => {
                     setEditingCocktail(prev => ({
                       ...prev,
                       name: updatedRecipe.title || prev.name
+                    }));
+                  }
+                  // Sync recipe metadata type → editingCocktail.ingredients for inventory sync
+                  if (updatedRecipe?.metadata?.type !== undefined) {
+                    setEditingCocktail(prev => ({
+                      ...prev,
+                      ingredients: updatedRecipe.metadata.type || ''
                     }));
                   }
                 }}
