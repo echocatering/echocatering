@@ -108,6 +108,18 @@ const uniqueId = () => Math.random().toString(36).slice(2, 9);
 
 const defaultFraction = () => ({ whole: 0, numerator: 0, denominator: 1 });
 
+const createBlankRecipe = (type) => {
+  return {
+    _id: `new-${Date.now()}`,
+    title: '',
+    type: type || 'premix',
+    items: [],
+    totals: { volumeOz: 0, costEach: 0 },
+    metadata: { type: '' },
+    notes: ''
+  };
+};
+
 const formatNumber = (value, digits = 2, fallback = '0.00') => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -231,7 +243,7 @@ const derivePricing = (values = {}) => {
   // For pre-mix items, ounceCost is the primary field
   // For dry stock, gramCost is actually $/oz (despite the key name)
   // For spirits/wine, ounceCost is the primary field
-  const perOz = ounceCost ?? gramCost ?? mlCost ?? null;
+  const perOz = ounceCost ?? mlCost ?? null;
   
   // Debug: log if we're looking for ounceCost but not finding it
   if (values && 'ounceCost' in values && perOz === null) {
@@ -246,7 +258,7 @@ const derivePricing = (values = {}) => {
     currency: 'USD',
     perUnit: unitCost,
     perOz,
-    perGram: ounceCost != null ? null : gramCost,
+    perGram: gramCost ? gramCost / 100 : null, // Convert to cost per gram (not per oz)
     perMl: ounceCost != null ? null : mlCost
   };
 };
@@ -1886,6 +1898,39 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
         )}
         {hideActions && (
           <div className="recipe-actions" style={{ position: 'relative', backgroundColor, display: 'flex', gap: '8px' }}>
+            {type === 'premix' && (
+              <button
+                type="button"
+                className="recipes-primary-btn"
+                onClick={() => {
+                  // Create a new blank recipe with the same type
+                  const blankRecipe = createBlankRecipe('premix');
+                  updateRecipe(blankRecipe);
+                }}
+                style={{ 
+                  position: 'relative',
+                  backgroundColor: '#d0d0d0',
+                  color: '#000',
+                  border: '2px solid #666666',
+                  borderColor: '#666666',
+                  borderRadius: '0'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#b8b8b8';
+                    e.currentTarget.style.borderColor = '#666666';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#d0d0d0';
+                    e.currentTarget.style.borderColor = '#666666';
+                  }
+                }}
+              >
+                NEW RECIPE
+              </button>
+            )}
             <button
               type="button"
               className="recipes-primary-btn"
