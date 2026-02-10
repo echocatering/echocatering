@@ -1047,9 +1047,19 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
   const handleTitleChange = (value) => {
     // Use the ref to get the latest recipe to avoid stale closures
     const currentRecipe = recipeRef.current || recipe;
-    // Apply title case formatting
-    const formattedTitle = toTitleCase(value);
-    updateRecipe({ ...currentRecipe, title: formattedTitle });
+    // Store raw value while typing - Title Case will be applied on blur
+    updateRecipe({ ...currentRecipe, title: value });
+  };
+
+  const handleTitleBlur = () => {
+    // Apply Title Case formatting when user finishes typing
+    const currentRecipe = recipeRef.current || recipe;
+    if (currentRecipe?.title) {
+      const formattedTitle = toTitleCase(currentRecipe.title);
+      if (formattedTitle !== currentRecipe.title) {
+        updateRecipe({ ...currentRecipe, title: formattedTitle });
+      }
+    }
   };
 
   const handleVideoChange = (field, value) => {
@@ -1553,6 +1563,11 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
                 if (!disableTitleEdit) {
                   const value = forceUppercaseTitle ? e.target.value.toUpperCase() : e.target.value;
                   handleTitleChange(value);
+                }
+              }}
+              onBlur={() => {
+                if (!disableTitleEdit && !forceUppercaseTitle) {
+                  handleTitleBlur();
                 }
               }}
               placeholder=""

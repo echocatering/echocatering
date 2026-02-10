@@ -1933,7 +1933,9 @@ const commitBeerNumUnitsValue = (rowId) => {
                                   ) : isFreeTextColumn ? (
                                     <input
                                       type="text"
-                                      value={formatDisplayValue(pendingRowUpdates[row._id]?.[column.key] ?? cellValue)}
+                                      value={pendingRowUpdates[row._id]?.[column.key] !== undefined 
+                                        ? pendingRowUpdates[row._id][column.key] 
+                                        : formatDisplayValue(cellValue)}
                                       onChange={(e) => handleNameChange(row._id, column.key, e.target.value, resolvedSheetKey)}
                                       onBlur={(e) => {
                                         handleNameBlur(row._id, column.key, e.target.value, resolvedSheetKey);

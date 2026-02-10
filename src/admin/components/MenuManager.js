@@ -2497,16 +2497,16 @@ const MenuManager = () => {
   }, [recipe?.metadata?.garnish, recipe?._id]);
 
   // Sync name bidirectionally between MenuManager and RecipeBuilder
-  // For PRE-MIX, recipe title drives the cocktail name (uppercase), not the other way around
+  // For PRE-MIX, recipe title drives the cocktail name (Title Case)
   useEffect(() => {
     if (recipe && editingCocktail) {
       const isPremix = normalizeCategoryKey(editingCocktail.category) === 'premix';
       if (isPremix) {
-        // For PRE-MIX, recipe title drives the cocktail name (uppercase)
-        if (recipe.title && recipe.title.toUpperCase() !== editingCocktail.name?.toUpperCase()) {
+        // For PRE-MIX, recipe title drives the cocktail name (Title Case - handled by RecipeBuilder)
+        if (recipe.title && recipe.title !== editingCocktail.name) {
           setEditingCocktail(prev => ({
             ...prev,
-            name: recipe.title.toUpperCase()
+            name: recipe.title
           }));
         }
       } else {
@@ -2788,28 +2788,51 @@ const MenuManager = () => {
         </div>
       )}
       <div className="menu-manager bg-white min-h-screen px-6 pb-6 w-full" style={{ paddingTop: 0, position: 'relative' }}>
-        {/* Category Navigation Header - Always visible, pinned to top, aligned right */}
-        <header style={{ position: 'absolute', top: '60px', right: 0, zIndex: 101, display: 'flex', justifyContent: 'flex-end', paddingRight: '100px' }}>
-          <div className="flex gap-4">
-            {menuCategories.map((category) => (
-              <button
-                key={category.key}
-                onClick={() => setSelectedCategory(category.key)}
-                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
-                  selectedCategory === category.key
-                    ? 'bg-gray-800 text-white border-gray-800'
-                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
-        </header>
+        {/* Category Navigation Header - For non-premix: absolute positioned. For premix: in document flow */}
+        {normalizeCategoryKey(selectedCategory) !== 'premix' && (
+          <header style={{ position: 'absolute', top: '60px', right: 0, zIndex: 101, display: 'flex', justifyContent: 'flex-end', paddingRight: '100px' }}>
+            <div className="flex gap-4">
+              {menuCategories.map((category) => (
+                <button
+                  key={category.key}
+                  onClick={() => setSelectedCategory(category.key)}
+                  className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                    selectedCategory === category.key
+                      ? 'bg-gray-800 text-white border-gray-800'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
+          </header>
+        )}
+        
+        {/* For PRE-MIX: Category Navigation Header in document flow above RecipeBuilder */}
+        {normalizeCategoryKey(selectedCategory) === 'premix' && (
+          <header style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '100px', paddingTop: '60px', paddingBottom: '20px' }}>
+            <div className="flex gap-4">
+              {menuCategories.map((category) => (
+                <button
+                  key={category.key}
+                  onClick={() => setSelectedCategory(category.key)}
+                  className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                    selectedCategory === category.key
+                      ? 'bg-gray-800 text-white border-gray-800'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
+          </header>
+        )}
         
         {/* Recipe Builder for PRE-MIX - Display below header */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
-          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', marginTop: '120px' }}>
+          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
             <div
               onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
               onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
@@ -2833,11 +2856,11 @@ const MenuManager = () => {
                   if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
                     setHasUnsavedChanges(true);
                   }
-                  // Update cocktail name to match recipe title (always uppercase)
+                  // Update cocktail name to match recipe title (Title Case)
                   if (updatedRecipe?.title !== undefined) {
                     setEditingCocktail(prev => ({
                       ...prev,
-                      name: updatedRecipe.title ? updatedRecipe.title.toUpperCase() : prev.name
+                      name: updatedRecipe.title || prev.name
                     }));
                   }
                 }}
@@ -2857,7 +2880,7 @@ const MenuManager = () => {
                 }}
                 disableTitleEdit={false}
                 hideActions={false}
-                forceUppercaseTitle={true}
+                forceUppercaseTitle={false}
                 showOnlyName={true}
               />
             </div>
