@@ -70,11 +70,17 @@ const derivePricingFromInventory = (values = {}) => {
     const num = Number(raw);
     return Number.isFinite(num) ? num : null;
   };
+  const unitCost = parseNumber('unitCost');
+  const sumOz = parseNumber('sumOz');
   // ounceCost (spirits/wine) and gramCost (dryStock) are both formula columns that compute $/oz
-  const perOz = parseNumber('ounceCost') ?? parseNumber('gramCost') ?? null;
+  // For cocktails/mocktails, derive $/oz from unitCost (total cost) / sumOz (total volume)
+  let perOz = parseNumber('ounceCost') ?? parseNumber('gramCost') ?? null;
+  if (perOz === null && unitCost != null && sumOz != null && sumOz > 0) {
+    perOz = unitCost / sumOz;
+  }
   return {
     currency: 'USD',
-    perUnit: parseNumber('unitCost'),
+    perUnit: unitCost,
     perOz,
     perGram: null, // gramCost is $/oz (not $/gram), so never use as perGram
     perMl: parseNumber('mlCost')

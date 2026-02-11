@@ -239,11 +239,16 @@ const derivePricing = (values = {}) => {
   const ounceCost = parseValue('ounceCost');
   const gramCost = parseValue('gramCost');
   const mlCost = parseValue('mlCost');
+  const sumOz = parseValue('sumOz');
   
   // ounceCost (spirits/wine) and gramCost (dryStock) are both formula columns that compute $/oz
   // For pre-mix, ounceCost is directly set as costEach/volumeOz
-  // Priority: ounceCost → gramCost → null (all represent $/oz)
-  const perOz = ounceCost ?? gramCost ?? null;
+  // For cocktails/mocktails, derive $/oz from unitCost (total cost) / sumOz (total volume)
+  // Priority: ounceCost → gramCost → (unitCost/sumOz) → null
+  let perOz = ounceCost ?? gramCost ?? null;
+  if (perOz === null && unitCost != null && sumOz != null && sumOz > 0) {
+    perOz = unitCost / sumOz;
+  }
   
   return {
     currency: 'USD',
