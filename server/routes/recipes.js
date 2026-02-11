@@ -43,7 +43,7 @@ const upload = multer({
   }
 });
 
-const DEFAULT_INGREDIENT_SHEETS = ['spirits', 'dryStock', 'preMix'];
+const DEFAULT_INGREDIENT_SHEETS = ['spirits', 'dryStock', 'preMix', 'wine', 'beer', 'cocktails', 'mocktails'];
 
 router.get('/', async (req, res, next) => {
   try {

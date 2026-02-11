@@ -240,26 +240,17 @@ const derivePricing = (values = {}) => {
   const gramCost = parseValue('gramCost');
   const mlCost = parseValue('mlCost');
   
-  // For pre-mix items, ounceCost is the primary field
-  // For dry stock, gramCost is actually $/oz (despite the key name)
-  // For spirits/wine, ounceCost is the primary field
-  const perOz = ounceCost ?? mlCost ?? null;
-  
-  // Debug: log if we're looking for ounceCost but not finding it
-  if (values && 'ounceCost' in values && perOz === null) {
-    console.warn('⚠️ ounceCost exists in values but parseValue returned null:', {
-      raw: values.ounceCost,
-      type: typeof values.ounceCost,
-      parsed: parseValue('ounceCost')
-    });
-  }
+  // ounceCost (spirits/wine) and gramCost (dryStock) are both formula columns that compute $/oz
+  // For pre-mix, ounceCost is directly set as costEach/volumeOz
+  // Priority: ounceCost → gramCost → null (all represent $/oz)
+  const perOz = ounceCost ?? gramCost ?? null;
   
   return {
     currency: 'USD',
     perUnit: unitCost,
     perOz,
-    perGram: gramCost ? gramCost / 100 : null, // Convert to cost per gram (not per oz)
-    perMl: ounceCost != null ? null : mlCost
+    perGram: null, // gramCost is $/oz (not $/gram), so never use as perGram
+    perMl: mlCost ?? null
   };
 };
 
@@ -460,8 +451,13 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
   const [garnishEditorValue, setGarnishEditorValue] = useState('');
   const [garnishEditorSaving, setGarnishEditorSaving] = useState(false);
   const [batchCheckboxes, setBatchCheckboxes] = useState({});
-  const [batchSize, setBatchSize] = useState('1000');
-  const [batchUnit, setBatchUnit] = useState('ml');
+  const [batchSize, setBatchSize] = useState(() => {
+    const saved = recipe?.batch?.size;
+    return saved && Number(saved) > 0 ? String(saved) : '1000';
+  });
+  const [batchUnit, setBatchUnit] = useState(() => {
+    return recipe?.batch?.unit === 'oz' ? 'oz' : 'ml';
+  });
   const [amountInputs, setAmountInputs] = useState({}); // Store raw input values while typing
   const searchTimersRef = useRef({});
   const inventoryCacheRef = useRef({});
@@ -492,6 +488,18 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
       setBatchCheckboxes({});
     };
   }, []);
+
+  // Restore batch size/unit from recipe when recipe changes (e.g. switching items)
+  useEffect(() => {
+    const saved = recipe?.batch?.size;
+    if (saved && Number(saved) > 0) {
+      setBatchSize(String(saved));
+    }
+    const savedUnit = recipe?.batch?.unit;
+    if (savedUnit === 'oz' || savedUnit === 'ml') {
+      setBatchUnit(savedUnit);
+    }
+  }, [recipe?._id]);
 
   const TYPE_DATASET_ID = useMemo(
     () => {
@@ -2348,14 +2356,22 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
                         type="number"
                         className="recipe-input recipe-batch-size-input"
                         value={batchSize}
-                        onChange={(e) => setBatchSize(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBatchSize(val);
+                          updateRecipe({ ...recipe, batch: { ...(recipe.batch || {}), size: Number(val) || 0, unit: batchUnit } });
+                        }}
                         placeholder="0"
                         step="0.01"
                       />
                       <select
                         className="recipe-input recipe-batch-unit-select"
                         value={batchUnit}
-                        onChange={(e) => setBatchUnit(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBatchUnit(val);
+                          updateRecipe({ ...recipe, batch: { ...(recipe.batch || {}), size: Number(batchSize) || 0, unit: val } });
+                        }}
                       >
                         <option value="oz">oz</option>
                         <option value="ml">ml</option>
