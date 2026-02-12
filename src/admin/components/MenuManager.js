@@ -1953,74 +1953,57 @@ const MenuManager = () => {
                 }
               }
             } else {
-              // Update existing inventory row using itemNumber as the primary key (no name/menuManagerId lookup)
+              // Update existing inventory row - single fetch to get both rowId and version
               const itemNumber = cocktailData.itemNumber;
               let inventoryRowId = null;
               let inventoryVersion = null;
               
               if (itemNumber && Number.isFinite(Number(itemNumber))) {
-                const byItemResponse = await apiCall(`/inventory/${sheetKey}/by-item-number/${itemNumber}`);
-                const inventoryRow = byItemResponse?.row;
-                if (inventoryRow?._id) {
-                  inventoryRowId = inventoryRow._id;
-                }
-              }
-              
-              // Fallback: fetch sheet once to get version (and rowId if not found above)
-              if (!inventoryRowId) {
+                // Single API call to get sheet (includes rows and version)
                 const inventorySheet = await apiCall(`/inventory/${sheetKey}`);
                 inventoryVersion = inventorySheet?.version;
-                if (inventorySheet?.rows && itemNumber && Number.isFinite(Number(itemNumber))) {
+                if (inventorySheet?.rows) {
                   const found = inventorySheet.rows.find(r => {
                     const values = r.values || {};
-                  const rowItemNumber = values.itemNumber;
-                    return Number(rowItemNumber) === Number(itemNumber);
+                    return Number(values.itemNumber) === Number(itemNumber);
                   });
                   if (found?._id) {
                     inventoryRowId = found._id;
                   }
                 }
-                
-                // If still not found, warn but do not create new (avoid duplicates)
-                if (!inventoryRowId) {
-                  console.error('❌ Could not find inventory row by itemNumber for existing cocktail:', {
-                    cocktailId: cocktailData._id,
-                    cocktailName: cocktailData.name,
-                    itemNumber: cocktailData.itemNumber,
-                    sheetKey: sheetKey
-                  });
-                  showNotification(`Could not find inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
-                }
+              }
+              
+              if (!inventoryRowId) {
+                console.error('❌ Could not find inventory row by itemNumber for existing cocktail:', {
+                  cocktailId: cocktailData._id,
+                  cocktailName: cocktailData.name,
+                  itemNumber: cocktailData.itemNumber,
+                  sheetKey: sheetKey
+                });
+                showNotification(`Could not find inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
               }
                 
               if (inventoryRowId) {
-                // Ensure itemNumber + menuManagerId are included
-                  const updatedSharedFields = {
-                    ...sharedFields,
+                const updatedSharedFields = {
+                  ...sharedFields,
                   itemNumber: itemNumber,
                   menuManagerId: String(cocktailData._id || '')
-                  };
-                  
-                // If we didn’t fetch version yet, fetch it now (lightweight head)
-                if (!inventoryVersion) {
-                  const sheetMeta = await apiCall(`/inventory/${sheetKey}`);
-                  inventoryVersion = sheetMeta?.version;
-                }
+                };
                 
-                  await apiCall(`/inventory/${sheetKey}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
+                await apiCall(`/inventory/${sheetKey}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({
                     version: inventoryVersion,
-                      rows: [{
+                    rows: [{
                       _id: inventoryRowId,
-                        values: updatedSharedFields
-                      }],
-                      updatedBy: 'menumanager'
-                    }),
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  });
+                      values: updatedSharedFields
+                    }],
+                    updatedBy: 'menumanager'
+                  }),
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
               }
             }
           }
@@ -2117,30 +2100,14 @@ const MenuManager = () => {
               }
             };
 
-            // Check if recipe already exists (by title)
-            let existingRecipe = null;
-            try {
-              const response = await apiCall(`/recipes?type=${recipeType}`);
-              // Handle both array response and { recipes: [...] } response format
-              const recipes = Array.isArray(response) 
-                ? response 
-                : (response?.recipes || []);
-              
-              // Try exact match first, then case-insensitive match
-              existingRecipe = recipes.find(r => r.title === cocktailData.name);
-              if (!existingRecipe) {
-                existingRecipe = recipes.find(r => 
-                  r.title && cocktailData.name && 
-                  r.title.toLowerCase() === cocktailData.name.toLowerCase()
-                );
-              }
-              
-            } catch (err) {
-              console.warn('Could not check for existing recipe:', err);
-            }
+            // Use the already-loaded recipe _id to determine PUT vs POST
+            // This avoids an expensive API call to fetch ALL recipes just to check existence
+            const existingRecipeId = recipe._id && typeof recipe._id === 'string' 
+              && recipe._id.length === 24 && /^[0-9a-fA-F]{24}$/.test(recipe._id)
+              ? recipe._id : null;
 
-            const recipeEndpoint = existingRecipe?._id ? `/recipes/${existingRecipe._id}` : '/recipes';
-            const recipeMethod = existingRecipe?._id ? 'PUT' : 'POST';
+            const recipeEndpoint = existingRecipeId ? `/recipes/${existingRecipeId}` : '/recipes';
+            const recipeMethod = existingRecipeId ? 'PUT' : 'POST';
 
             // Use FormData if there's a video file, otherwise JSON
             const videoFile = recipeToSave._videoFile;
@@ -2177,6 +2144,9 @@ const MenuManager = () => {
             // Handle both { recipe: {...} } and direct recipe object responses
             const savedRecipe = savedRecipeResponse?.recipe || savedRecipeResponse;
             if (savedRecipe) {
+              // Reset interaction ref BEFORE setRecipe so the onChange triggered by
+              // the new recipe state doesn't falsely mark unsaved changes
+              recipeBuilderInteractedRef.current = false;
               setRecipe(savedRecipe);
             }
           }
@@ -2238,6 +2208,7 @@ const MenuManager = () => {
       
       showNotification(`Cocktail ${isNew ? 'created' : 'updated'} successfully!`, 'success');
       setHasUnsavedChanges(false);
+      recipeBuilderInteractedRef.current = false;
     } catch (error) {
       console.error('Error saving cocktail:', error);
       showNotification(`Error saving cocktail: ${error.message}`, 'error');
@@ -2423,31 +2394,16 @@ const MenuManager = () => {
         }
       }
       
-      // FALLBACK: Try to find recipe by title (cocktail name) - for backward compatibility
-      const response = await apiCall(`/recipes?type=${recipeType}`);
-      // Handle both array response and { recipes: [...] } response format
-      const recipes = Array.isArray(response) 
-        ? response 
-        : (response?.recipes || []);
-      
-      
-      // Try exact match first, then case-insensitive match
-      let matchingRecipe = recipes.find(r => r.title === cocktail.name);
-      if (!matchingRecipe) {
-        matchingRecipe = recipes.find(r => 
-          r.title && cocktail.name && 
-          r.title.toLowerCase() === cocktail.name.toLowerCase()
-        );
-      }
-      
-      if (matchingRecipe) {
-        // If recipe doesn't have itemNumber but cocktail does, update it
-        if (cocktail.itemNumber && !matchingRecipe.itemNumber) {
-          matchingRecipe.itemNumber = cocktail.itemNumber;
+      // FALLBACK: The menu-manager endpoint already attaches recipe data to each item.
+      // If we didn't find by itemNumber, check if the cocktail already has recipe data attached.
+      if (cocktail.recipe && cocktail.recipe._id) {
+        const attachedRecipe = cocktail.recipe;
+        if (cocktail.itemNumber && !attachedRecipe.itemNumber) {
+          attachedRecipe.itemNumber = cocktail.itemNumber;
         }
-        setHydratedRecipe(matchingRecipe);
+        setHydratedRecipe(attachedRecipe);
       } else {
-        // Create blank recipe if none exists, with itemNumber if available
+        // No recipe found - create blank
         const blankRecipe = createBlankRecipe(recipeType);
         if (cocktail.itemNumber) {
           blankRecipe.itemNumber = cocktail.itemNumber;

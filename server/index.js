@@ -136,7 +136,7 @@ app.use(cors(corsOptions));
 // Rate limiting - exclude auth endpoints from strict rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // relaxed limit in development
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // 500 in production (admin panel needs ~5-8 calls per save)
   // Never rate limit health/logo endpoints (Render may poll these during deploy)
   // NOTE: req.path here is the path AFTER the `/api/` mount (because limiter is applied on `/api/`).
   // We also skip worker heartbeat/status so a 3s heartbeat doesn't trip the limiter.

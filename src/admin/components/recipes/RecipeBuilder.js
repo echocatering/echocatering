@@ -998,7 +998,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
       .filter((key) => !inventoryCacheRef.current[key]);
     
     if (missingKeys.length) {
-      fetchInventoryByIds(missingKeys).then(() => {
+      fetchInventoryByIds(missingKeys).then(async () => {
         // After fetching by IDs, check if any items are still missing
         // If so, try searching by ingredient name
         const stillMissing = (recipe.items || [])
@@ -1017,47 +1017,48 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
           .filter(Boolean);
         
         if (stillMissing.length > 0) {
-          // Search for each missing ingredient by name
-          const searchPromises = stillMissing.map(({ row, idx, ingredientName }) => {
-            return apiCall(`/recipes/ingredients/search?query=${encodeURIComponent(ingredientName)}&limit=5`)
-              .then((response) => {
-                const items = response.items || [];
-                // Find exact match by name (case-insensitive)
-                const exactMatch = items.find(
-                  (item) => item.name && item.name.toLowerCase() === ingredientName.toLowerCase()
-                );
-                const match = exactMatch || items[0];
-                if (match) {
-                  upsertInventoryItems([match]);
-                  // Update the recipe item to use the correct inventory key
-                  const currentRecipe = recipeRef.current || recipe;
-                  const updatedItems = [...(currentRecipe.items || [])];
-                  if (updatedItems[idx]) {
-                    updatedItems[idx] = {
-                      ...updatedItems[idx],
-                      inventoryKey: match.id,
-                      ingredient: {
-                        ...updatedItems[idx].ingredient,
-                        inventoryKey: match.id,
-                        sheetKey: match.sheetKey,
-                        rowId: match.rowId,
-                        name: match.name
-                      }
-                    };
-                    updateRecipe({ ...currentRecipe, items: updatedItems });
+          // Search for missing ingredients sequentially to avoid 429 rate limiting
+          // Collect all matches first, then do a single recipe update
+          const allMatches = [];
+          for (const { row, idx, ingredientName } of stillMissing) {
+            try {
+              const response = await apiCall(`/recipes/ingredients/search?query=${encodeURIComponent(ingredientName)}&limit=5`);
+              const items = response.items || [];
+              const exactMatch = items.find(
+                (item) => item.name && item.name.toLowerCase() === ingredientName.toLowerCase()
+              );
+              const match = exactMatch || items[0];
+              if (match) {
+                upsertInventoryItems([match]);
+                allMatches.push({ idx, match });
+              } else {
+                console.warn(`⚠️ No match found for ingredient "${ingredientName}"`);
+              }
+            } catch (error) {
+              console.error(`Failed to search for ingredient "${ingredientName}":`, error);
+            }
+          }
+          // Apply all matches in a single recipe update
+          if (allMatches.length > 0) {
+            const currentRecipe = recipeRef.current || recipe;
+            const updatedItems = [...(currentRecipe.items || [])];
+            allMatches.forEach(({ idx, match }) => {
+              if (updatedItems[idx]) {
+                updatedItems[idx] = {
+                  ...updatedItems[idx],
+                  inventoryKey: match.id,
+                  ingredient: {
+                    ...updatedItems[idx].ingredient,
+                    inventoryKey: match.id,
+                    sheetKey: match.sheetKey,
+                    rowId: match.rowId,
+                    name: match.name
                   }
-                } else {
-                  console.warn(`⚠️ No match found for ingredient "${ingredientName}"`);
-                }
-              })
-              .catch((error) => {
-                console.error(`Failed to search for ingredient "${ingredientName}":`, error);
-              });
-          });
-          // Wait for all searches to complete
-          Promise.all(searchPromises).catch((error) => {
-            console.error('Error during ingredient name searches:', error);
-          });
+                };
+              }
+            });
+            updateRecipe({ ...currentRecipe, items: updatedItems });
+          }
         }
       });
     }
