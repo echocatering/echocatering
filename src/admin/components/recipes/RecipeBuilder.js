@@ -435,7 +435,7 @@ const labelForSheet = (sheetKey) => {
   }
 };
 
-const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disableTitleEdit = false, hideActions = false, forceUppercaseTitle = false, showOnlyName = false }) => {
+const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNewItem, disableTitleEdit = false, hideActions = false, forceUppercaseTitle = false, showOnlyName = false }) => {
   const { apiCall } = useAuth();
   const [inventoryCache, setInventoryCache] = useState({});
   const [ingredientSearch, setIngredientSearch] = useState({});
@@ -1895,6 +1895,16 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
         </div>
         {!hideActions && (
         <div className="recipe-actions" style={{ backgroundColor }}>
+          {type === 'premix' && onNewItem && (
+            <button
+              type="button"
+              className="recipes-primary-btn"
+              disabled={saving}
+              onClick={() => onNewItem()}
+            >
+              NEW RECIPE
+            </button>
+          )}
           <button type="button" className="recipes-primary-btn" disabled={saving} onClick={onSave}>
             {saving ? 'Saving…' : saveButtonLabel}
           </button>
@@ -1917,9 +1927,14 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, disab
                 type="button"
                 className="recipes-primary-btn"
                 onClick={() => {
-                  // Create a new blank recipe with the same type
-                  const blankRecipe = createBlankRecipe('premix');
-                  updateRecipe(blankRecipe);
+                  if (onNewItem) {
+                    // Full new item flow: creates inventory row + blank cocktail + blank recipe
+                    onNewItem();
+                  } else {
+                    // Fallback: just reset the recipe locally
+                    const blankRecipe = createBlankRecipe('premix');
+                    updateRecipe(blankRecipe);
+                  }
                 }}
                 style={{ 
                   position: 'relative',

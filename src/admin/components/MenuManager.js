@@ -2845,6 +2845,7 @@ const MenuManager = () => {
                     handleDelete(editingCocktail._id);
                   }
                 }}
+                onNewItem={handleNewItem}
                 disableTitleEdit={false}
                 hideActions={false}
                 forceUppercaseTitle={false}
