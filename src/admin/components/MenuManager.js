@@ -1991,8 +1991,9 @@ const MenuManager = () => {
               if (itemNumber && Number.isFinite(Number(itemNumber))) {
                 console.log('[MenuManager] Fetching inventory sheet from:', `/inventory/${sheetKey}`);
                 // Single API call to get sheet (includes rows and version)
-                const inventorySheet = await apiCall(`/inventory/${sheetKey}`);
-                console.log('[MenuManager] Inventory sheet response:', inventorySheet);
+                const inventoryResponse = await apiCall(`/inventory/${sheetKey}`);
+                console.log('[MenuManager] Inventory sheet response:', inventoryResponse);
+                const inventorySheet = inventoryResponse?.sheet;
                 console.log('[MenuManager] Has rows?', !!inventorySheet?.rows, 'Row count:', inventorySheet?.rows?.length);
                 inventoryVersion = inventorySheet?.version;
                 if (inventorySheet?.rows) {
