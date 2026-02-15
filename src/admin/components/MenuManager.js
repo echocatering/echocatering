@@ -1846,8 +1846,7 @@ const MenuManager = () => {
       return prev;
     };
     const nextIndex = computeIndex(currentIndex);
-    setCurrentIndex(nextIndex);
-
+    
     // Immediately switch the editing cocktail (keeps RecipeBuilder + form in sync)
     // Do not override a new draft.
     if (!isNewDraft) {
@@ -1857,12 +1856,22 @@ const MenuManager = () => {
         // Otherwise the previous request can finish and overwrite `recipe`, leaving RecipeBuilder stale.
         recipeRequestIdRef.current += 1;
         activeCocktailIdRef.current = nextCocktail?._id || null;
+        
+        // Clear editing cocktail first to prevent showing stale data during navigation
+        setEditingCocktail(null);
         setRecipeLoading(false);
+        setRecipe(null);
+        
+        // Then set the new index and cocktail data
+        setCurrentIndex(nextIndex);
         setEditingCocktail({ ...nextCocktail });
         // Sync mapType when switching cocktails (use saved value or default to 'world')
         setMapType(nextCocktail.mapType || 'world');
-        setRecipe(null);
+      } else {
+        setCurrentIndex(nextIndex);
       }
+    } else {
+      setCurrentIndex(nextIndex);
     }
   };
 
