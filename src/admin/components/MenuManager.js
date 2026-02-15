@@ -2041,9 +2041,6 @@ const MenuManager = () => {
                   itemNumber: cocktailData.itemNumber,
                   sheetKey: sheetKey
                 });
-                
-                // Log the API response to see what we're getting
-                console.log('[MenuManager] Full inventory sheet response:', inventorySheet);
               }
                 
               if (inventoryRowId) {
