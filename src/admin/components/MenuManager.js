@@ -1990,9 +1990,19 @@ const MenuManager = () => {
                 const inventorySheet = await apiCall(`/inventory/${sheetKey}`);
                 inventoryVersion = inventorySheet?.version;
                 if (inventorySheet?.rows) {
+                  console.log('[MenuManager] Looking for inventory row with itemNumber:', itemNumber);
+                  console.log('[MenuManager] Available inventory rows:', inventorySheet.rows.map(r => ({ 
+                    id: r._id, 
+                    name: r.values?.name, 
+                    itemNumber: r.values?.itemNumber 
+                  })));
                   const found = inventorySheet.rows.find(r => {
                     const values = r.values || {};
-                    return Number(values.itemNumber) === Number(itemNumber);
+                    const match = Number(values.itemNumber) === Number(itemNumber);
+                    if (match) {
+                      console.log('[MenuManager] Found matching inventory row:', r);
+                    }
+                    return match;
                   });
                   if (found?._id) {
                     inventoryRowId = found._id;
