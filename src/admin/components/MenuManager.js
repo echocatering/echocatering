@@ -1925,9 +1925,16 @@ const MenuManager = () => {
       const sheetKey = getSheetKeyFromCategory(targetCategory);
       if (sheetKey) {
         try {
-          // Include mapType from component state in cocktailData for inventory sync
-          const cocktailDataWithMapType = { ...cocktailData, mapType };
+          // Include mapType and current regions from component state in cocktailData for inventory sync
+          const cocktailDataWithMapType = { 
+            ...cocktailData, 
+            mapType,
+            regions: selectedRegions // Use current selectedRegions, not stale cocktailData.regions
+          };
+          console.log('[MenuManager] Saving to inventory - cocktailData.regions (old):', cocktailData.regions);
+          console.log('[MenuManager] Saving to inventory - selectedRegions (current):', selectedRegions);
           const sharedFields = extractSharedFieldsForInventory(cocktailDataWithMapType, targetCategory);
+          console.log('[MenuManager] Extracted sharedFields for inventory:', sharedFields);
           // For new items, we only need name - other fields can be empty
           if (sharedFields && sharedFields.name) {
             if (isNew) {
