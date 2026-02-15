@@ -840,20 +840,28 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
 
       // Find matching cocktail (including newly created ones)
       let cocktail = null;
+      console.log(`[menu-manager] Looking up cocktail for inventory row: name="${name}", itemNumber=${itemNumber}, menuManagerId=${menuManagerId}`);
+      
       if (menuManagerId) {
         cocktail = cocktailById.get(String(menuManagerId));
+        console.log(`[menu-manager] Lookup by menuManagerId:`, cocktail ? 'FOUND' : 'NOT FOUND');
       }
       if (!cocktail && itemNumber) {
         cocktail = cocktailByItemNumber.get(Number(itemNumber));
+        console.log(`[menu-manager] Lookup by itemNumber:`, cocktail ? 'FOUND' : 'NOT FOUND');
         // Also check newly created cocktails
         if (!cocktail && savedCocktailsMap.has(Number(itemNumber))) {
           cocktail = savedCocktailsMap.get(Number(itemNumber));
+          console.log(`[menu-manager] Lookup in savedCocktailsMap:`, cocktail ? 'FOUND' : 'NOT FOUND');
         }
       }
       if (!cocktail && name) {
         const key = `${category}:${name.toLowerCase().trim()}`;
         cocktail = cocktailByName.get(key);
+        console.log(`[menu-manager] Lookup by name "${key}":`, cocktail ? 'FOUND' : 'NOT FOUND');
       }
+      
+      console.log(`[menu-manager] Final cocktail result:`, cocktail ? { _id: cocktail._id, name: cocktail.name, itemNumber: cocktail.itemNumber } : 'NULL');
 
       // Find matching recipe - NEW: Try itemNumber first
       let recipe = null;
