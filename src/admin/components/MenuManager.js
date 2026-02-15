@@ -827,7 +827,7 @@ const MenuManager = () => {
     // Use direct SVG ref - the actual SVG element (no searching)
     let svg = svgRef.current;
     let attempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 50; // Increased from 20 to 50 (5 seconds max)
     
     // Wait for SVG to be ready
     while (!svg && attempts < maxAttempts) {
@@ -837,6 +837,7 @@ const MenuManager = () => {
     }
     
     if (!svg) {
+      console.error(`[MenuManager] Map SVG not ready after ${attempts} attempts (${attempts * 100}ms). svgRef.current:`, svgRef.current);
       throw new Error('Map SVG not ready. Please ensure the map is fully loaded.');
     }
 
@@ -909,11 +910,13 @@ const MenuManager = () => {
       const formData = new FormData();
       formData.append('map', blob, `${itemNumber}.png`);
       
+      console.log(`[MenuManager] Uploading map snapshot for item ${itemNumber}, blob size: ${blob.size} bytes`);
       const response = await apiCall(`/menu-items/map/${itemNumber}`, {
         method: 'POST',
         body: formData
       });
       
+      console.log(`[MenuManager] Map upload response:`, response);
       if (!response || !response.success) {
         throw new Error(response?.message || 'Server did not confirm map save');
       }
@@ -1413,11 +1416,19 @@ const MenuManager = () => {
           const status = await apiCall(`/video-jobs/${currentItemNumber}/status`);
           
           if (status && status.active) {
-              // Item is still processing - restore status and start polling
-              console.log('[MenuManager] Restoring processing status for item', currentItemNumber, status);
-              setProcessingStatus({
-                ...status,
-                itemNumber: currentItemNumber, // Ensure itemNumber is set
+              // Guard: don't overwrite a locally-initiated upload that started
+              // while this async call was in flight (race condition).
+              setProcessingStatus((prev) => {
+                if (prev && prev.itemNumber === currentItemNumber &&
+                    (prev.stage === 'creating-job' || prev.stage === 'uploading-to-worker')) {
+                  console.log('[MenuManager] Skipping server restore — local upload already in progress for item', currentItemNumber);
+                  return prev;
+                }
+                console.log('[MenuManager] Restoring processing status for item', currentItemNumber, status);
+                return {
+                  ...status,
+                  itemNumber: currentItemNumber,
+                };
               });
               if (!processingPollIntervalRef.current) {
                 startProcessingPoll(currentItemNumber);
@@ -2061,6 +2072,9 @@ const MenuManager = () => {
       const categoryKey = normalizeCategoryKey(savedCocktail?.category || targetCategory);
       const isPremix = categoryKey === 'premix';
       const finalItemNumber = savedCocktail?.itemNumber || cocktailData.itemNumber;
+      
+      console.log(`[MenuManager] Save cocktail - category: ${categoryKey}, isPremix: ${isPremix}, itemNumber: ${finalItemNumber}`);
+      console.log(`[MenuManager] Regions being saved:`, cocktailData.regions || selectedRegions || []);
       
       // Map snapshot is mandatory for all non-premix items
       if (!isPremix && finalItemNumber && Number.isFinite(finalItemNumber)) {

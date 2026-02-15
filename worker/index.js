@@ -104,7 +104,7 @@ const upload = multer({
   storage: uploadStorage,
   limits: {
     files: 1,
-    fileSize: 250 * 1024 * 1024, // 250MB guardrail
+    fileSize: 500 * 1024 * 1024, // 500MB guardrail
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /mp4|mov|avi|webm|mkv/i;
