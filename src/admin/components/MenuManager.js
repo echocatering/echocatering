@@ -1991,21 +1991,41 @@ const MenuManager = () => {
                 inventoryVersion = inventorySheet?.version;
                 if (inventorySheet?.rows) {
                   console.log('[MenuManager] Looking for inventory row with itemNumber:', itemNumber);
-                  console.log('[MenuManager] Available inventory rows:', inventorySheet.rows.map(r => ({ 
-                    id: r._id, 
-                    name: r.values?.name, 
-                    itemNumber: r.values?.itemNumber 
-                  })));
+                  console.log('[MenuManager] itemNumber type:', typeof itemNumber);
+                  console.log('[MenuManager] Number(itemNumber):', Number(itemNumber), 'type:', typeof Number(itemNumber));
+                  
+                  // Log all inventory rows with their itemNumbers and types
+                  inventorySheet.rows.forEach(r => {
+                    const values = r.values || {};
+                    console.log(`[MenuManager] Row ${r._id} - name: ${values.name}, itemNumber: ${values.itemNumber}, type: ${typeof values.itemNumber}`);
+                    if (values.itemNumber) {
+                      console.log(`[MenuManager] - Number(values.itemNumber): ${Number(values.itemNumber)}, type: ${typeof Number(values.itemNumber)}`);
+                      console.log(`[MenuManager] - Comparison: ${Number(values.itemNumber)} === ${Number(itemNumber)} = ${Number(values.itemNumber) === Number(itemNumber)}`);
+                    }
+                  });
+                  
+                  // Use a more reliable comparison method that handles both string and number types
                   const found = inventorySheet.rows.find(r => {
                     const values = r.values || {};
-                    const match = Number(values.itemNumber) === Number(itemNumber);
+                    if (!values.itemNumber) return false;
+                    
+                    // Convert both to strings and compare (most reliable)
+                    const match = String(values.itemNumber).trim() === String(itemNumber).trim();
+                    
+                    console.log(`[MenuManager] Comparing row ${r._id} - itemNumber: ${values.itemNumber} (${typeof values.itemNumber}) with ${itemNumber} (${typeof itemNumber}) = ${match}`);
+                    
                     if (match) {
                       console.log('[MenuManager] Found matching inventory row:', r);
+                      return true;
                     }
-                    return match;
+                    return false;
                   });
+                  
                   if (found?._id) {
                     inventoryRowId = found._id;
+                    console.log('[MenuManager] Using inventory row ID:', inventoryRowId);
+                  } else {
+                    console.log('[MenuManager] No matching inventory row found!');
                   }
                 }
               }
