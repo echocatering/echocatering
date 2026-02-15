@@ -2038,43 +2038,8 @@ const MenuManager = () => {
                   sheetKey: sheetKey
                 });
                 
-                // FALLBACK: Create a new inventory row if one doesn't exist
-                console.log('[MenuManager] Creating new inventory row as fallback for item:', itemNumber);
-                
-                try {
-                  // Create new inventory row
-                  const inventoryResponse = await apiCall(`/inventory/${sheetKey}/rows`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      values: {
-                        ...sharedFields,
-                        itemNumber: itemNumber,
-                        menuManagerId: String(cocktailData._id || '')
-                      },
-                      updatedBy: 'menumanager'
-                    }),
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  });
-                  
-                  console.log('[MenuManager] Created new inventory row:', inventoryResponse);
-                  
-                  // Get the row ID from the created inventory row
-                  if (inventoryResponse?.sheet?.rows) {
-                    const newRow = inventoryResponse.sheet.rows.find(r => 
-                      r.values?.itemNumber && String(r.values.itemNumber).trim() === String(itemNumber).trim()
-                    );
-                    if (newRow?._id) {
-                      inventoryRowId = newRow._id;
-                      inventoryVersion = inventoryResponse.sheet.version;
-                      console.log('[MenuManager] Using new inventory row ID:', inventoryRowId);
-                    }
-                  }
-                } catch (createErr) {
-                  console.error('Error creating inventory row:', createErr);
-                  showNotification(`Could not find or create inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
-                }
+                // Log the API response to see what we're getting
+                console.log('[MenuManager] Full inventory sheet response:', inventorySheet);
               }
                 
               if (inventoryRowId) {
