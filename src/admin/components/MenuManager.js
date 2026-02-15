@@ -1891,6 +1891,15 @@ const MenuManager = () => {
   }, [selectedCategory, filteredCocktails.length]);
 
   const handleSave = async (cocktailData) => {
+    console.log('[MenuManager] handleSave called with:', {
+      hasData: !!cocktailData,
+      name: cocktailData?.name,
+      category: cocktailData?.category,
+      regions: cocktailData?.regions,
+      _id: cocktailData?._id,
+      itemNumber: cocktailData?.itemNumber
+    });
+    
     if (!cocktailData) return;
 
     // Only require name for all categories - other fields can be added later
@@ -2061,11 +2070,13 @@ const MenuManager = () => {
         method = 'POST';
       }
 
+      console.log(`[MenuManager] Saving cocktail to ${endpoint} with method ${method}`);
       const savedCocktail = await apiCall(endpoint, {
         method,
         body: formData
       });
-
+      
+      console.log(`[MenuManager] Save API response:`, savedCocktail);
       
       // Save map snapshot (mandatory) - always generate PNG, even with no selections (blank map)
       // Works for all categories except premix: cocktails, mocktails, wine, beer, spirits
@@ -2225,6 +2236,12 @@ const MenuManager = () => {
       recipeBuilderInteractedRef.current = false;
     } catch (error) {
       console.error('Error saving cocktail:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        stack: error.stack
+      });
       showNotification(`Error saving cocktail: ${error.message}`, 'error');
     } finally {
       setLoading(false);
