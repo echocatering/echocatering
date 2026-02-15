@@ -2193,15 +2193,28 @@ const MenuManager = () => {
       }
       
       // Fetch cocktails to refresh the list first and rehydrate from inventory (source of truth)
+      // Small delay to ensure backend has time to update after save
+      console.log('[MenuManager] Waiting 500ms for backend to update...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[MenuManager] Fetching cocktails to refresh after save...');
       const refreshedCocktails = await fetchCocktails();
+      console.log('[MenuManager] Refreshed cocktails count:', refreshedCocktails?.length || 0);
+      
       const refreshedMatch = Array.isArray(refreshedCocktails)
         ? refreshedCocktails.find(c => {
             if (finalItemNumber && Number.isFinite(finalItemNumber)) {
-              return Number(c.itemNumber) === Number(finalItemNumber);
+              const match = Number(c.itemNumber) === Number(finalItemNumber);
+              if (match) console.log('[MenuManager] Found refreshed match by itemNumber:', finalItemNumber, c);
+              return match;
             }
-            return savedCocktail?._id && c._id === savedCocktail._id;
+            const match = savedCocktail?._id && c._id === savedCocktail._id;
+            if (match) console.log('[MenuManager] Found refreshed match by _id:', savedCocktail._id, c);
+            return match;
           })
         : null;
+      
+      console.log('[MenuManager] refreshedMatch:', refreshedMatch);
+      console.log('[MenuManager] savedCocktail:', savedCocktail);
       
       setEditingCocktail(refreshedMatch ? { ...refreshedMatch } : (savedCocktail ? { ...savedCocktail } : null));
       setVideoUpload(null);
