@@ -2037,7 +2037,44 @@ const MenuManager = () => {
                   itemNumber: cocktailData.itemNumber,
                   sheetKey: sheetKey
                 });
-                showNotification(`Could not find inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
+                
+                // FALLBACK: Create a new inventory row if one doesn't exist
+                console.log('[MenuManager] Creating new inventory row as fallback for item:', itemNumber);
+                
+                try {
+                  // Create new inventory row
+                  const inventoryResponse = await apiCall(`/inventory/${sheetKey}/rows`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      values: {
+                        ...sharedFields,
+                        itemNumber: itemNumber,
+                        menuManagerId: String(cocktailData._id || '')
+                      },
+                      updatedBy: 'menumanager'
+                    }),
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  console.log('[MenuManager] Created new inventory row:', inventoryResponse);
+                  
+                  // Get the row ID from the created inventory row
+                  if (inventoryResponse?.sheet?.rows) {
+                    const newRow = inventoryResponse.sheet.rows.find(r => 
+                      r.values?.itemNumber && String(r.values.itemNumber).trim() === String(itemNumber).trim()
+                    );
+                    if (newRow?._id) {
+                      inventoryRowId = newRow._id;
+                      inventoryVersion = inventoryResponse.sheet.version;
+                      console.log('[MenuManager] Using new inventory row ID:', inventoryRowId);
+                    }
+                  }
+                } catch (createErr) {
+                  console.error('Error creating inventory row:', createErr);
+                  showNotification(`Could not find or create inventory row for ${cocktailData.name} (item #${cocktailData.itemNumber || '?'}). Please link it in Inventory Manager.`, 'warning');
+                }
               }
                 
               if (inventoryRowId) {
@@ -2047,20 +2084,30 @@ const MenuManager = () => {
                   menuManagerId: String(cocktailData._id || '')
                 };
                 
-                await apiCall(`/inventory/${sheetKey}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify({
-                    version: inventoryVersion,
-                    rows: [{
-                      _id: inventoryRowId,
-                      values: updatedSharedFields
-                    }],
-                    updatedBy: 'menumanager'
-                  }),
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
-                });
+                console.log('[MenuManager] Updating inventory row with ID:', inventoryRowId);
+                console.log('[MenuManager] Updated shared fields:', updatedSharedFields);
+                
+                try {
+                  const updateResponse = await apiCall(`/inventory/${sheetKey}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                      version: inventoryVersion,
+                      rows: [{
+                        _id: inventoryRowId,
+                        values: updatedSharedFields
+                      }],
+                      updatedBy: 'menumanager'
+                    }),
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  console.log('[MenuManager] Inventory update response:', updateResponse);
+                } catch (updateError) {
+                  console.error('[MenuManager] Error updating inventory:', updateError);
+                  throw updateError; // Re-throw to be caught by the outer catch
+                }
               }
             }
           }
