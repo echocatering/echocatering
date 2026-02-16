@@ -61,14 +61,6 @@ class WebViewActivity : AppCompatActivity() {
                 // Enable aggressive caching for videos and media
                 cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                 
-                // Enable app cache for offline media
-                val cachePath = applicationContext.cacheDir.absolutePath
-                setAppCachePath(cachePath)
-                setAppCacheEnabled(true)
-                
-                // Allow larger cache size for videos (100MB)
-                setAppCacheMaxSize(100 * 1024 * 1024)
-                
                 // Enable media playback without user gesture
                 mediaPlaybackRequiresUserGesture = false
                 
