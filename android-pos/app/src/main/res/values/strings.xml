@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ECHO POS</string>
+    <string name="reader_setup">Reader Setup</string>
+    <string name="connect_reader">Connect Reader</string>
+    <string name="disconnect_reader">Disconnect</string>
+    <string name="scanning">Scanning for readers…</string>
+    <string name="connecting">Connecting…</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="no_readers_found">No readers found</string>
+    <string name="checkout">Checkout</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="processing_payment">Processing payment…</string>
+    <string name="payment_successful">Payment successful!</string>
+    <string name="payment_failed">Payment failed</string>
+    <string name="tap_insert_swipe">Tap, insert, or swipe card</string>
+    <string name="total">Total</string>
+    <string name="subtotal">Subtotal</string>
+    <string name="tip">Tip</string>
+    <string name="add_tip">Add Tip</string>
+    <string name="no_tip">No Tip</string>
+    <string name="custom_tip">Custom</string>
+    <string name="retry">Retry</string>
+    <string name="done">Done</string>
+</resources>
