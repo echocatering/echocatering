@@ -547,8 +547,8 @@ function EchoCocktailSubpage2({
 
   const isVertical = layout.orientation === 'vertical';
   const innerLeft = (size.width - layout.inner.width) / 2;
-  // Move video up 5% screen height in vertical web mode
-  const verticalOffset = isVertical && viewMode === 'web' ? -size.height * 0.05 : 0;
+  // Move video up 10% screen height in vertical web mode
+  const verticalOffset = isVertical && viewMode === 'web' ? -size.height * 0.10 : 0;
   const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
