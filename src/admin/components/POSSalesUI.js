@@ -473,12 +473,11 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         webkit-playsinline="true"
                         style={{ 
                           position: 'absolute',
-                          top: 0,
+                          top: '-18%',
                           left: 0,
                           width: '100%',
-                          height: '100%',
+                          height: '136%',
                           objectFit: 'cover',
-                          objectPosition: 'center 32%',
                           zIndex: 1
                         }}
                       >
@@ -543,8 +542,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   <span style={{
                     fontSize: `${Math.max(10, outerWidth / 28)}px`,
                     fontWeight: 500,
-                    color: '#d0d0d0',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                    color: '#000',
                     display: 'block',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
