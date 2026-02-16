@@ -334,15 +334,15 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
       }}
       style={{
         position: 'absolute',
-        top: isVertical && viewMode === 'web' ? '-10%' : 0,
+        top: 0,
         left: 0,
         width: '100%',
-        height: isVertical && viewMode === 'web' ? '120%' : '100%',
+        height: '100%',
         objectFit: 'cover',
-        objectPosition: 'center',
+        objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.20)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
+        transform: isVertical && viewMode === 'web' ? 'scale(1.20) translateY(-5vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
       }}
     >
       <source src={safeVideoSrc} type="video/mp4" />
