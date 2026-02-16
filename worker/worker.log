@@ -177,3 +177,30 @@
 🚀 Starting processing for job 6991ebc3e9705da7fbe7a469, item 10...
 🎬 Starting FULL pipeline for job 6991ebc3e9705da7fbe7a469, item 10
 ✅ Job 6991ebc3e9705da7fbe7a469 finished processing
+📤 Upload request received for job 69924422e9705da7fbe850e0
+🔐 Verifying upload token for job 69924422e9705da7fbe850e0...
+✅ Token verified for job 69924422e9705da7fbe850e0, file received: DSCF0028.MOV (139.20 MB)
+📥 Upload received for job 69924422e9705da7fbe850e0, item 24, file size: 139.20 MB, path: /Users/andybernegger/echo-catering/worker/uploads/69924422e9705da7fbe850e0/source.MOV
+🚀 Starting processing for job 69924422e9705da7fbe850e0, item 24...
+🎬 Starting FULL pipeline for job 69924422e9705da7fbe850e0, item 24
+✅ Job 69924422e9705da7fbe850e0 finished processing
+📤 Upload request received for job 699259cfe9705da7fbe85248
+🔐 Verifying upload token for job 699259cfe9705da7fbe85248...
+✅ Token verified for job 699259cfe9705da7fbe85248, file received: DSCF0031.MOV (124.03 MB)
+📥 Upload received for job 699259cfe9705da7fbe85248, item 25, file size: 124.03 MB, path: /Users/andybernegger/echo-catering/worker/uploads/699259cfe9705da7fbe85248/source.MOV
+🚀 Starting processing for job 699259cfe9705da7fbe85248, item 25...
+🎬 Starting FULL pipeline for job 699259cfe9705da7fbe85248, item 25
+✅ Job 699259cfe9705da7fbe85248 finished processing
+📤 Upload request received for job 69925e64e9705da7fbe88765
+🔐 Verifying upload token for job 69925e64e9705da7fbe88765...
+✅ Token verified for job 69925e64e9705da7fbe88765, file received: DSCF0037.MOV (142.81 MB)
+📥 Upload received for job 69925e64e9705da7fbe88765, item 20, file size: 142.81 MB, path: /Users/andybernegger/echo-catering/worker/uploads/69925e64e9705da7fbe88765/source.MOV
+🚀 Starting processing for job 69925e64e9705da7fbe88765, item 20...
+🎬 Starting FULL pipeline for job 69925e64e9705da7fbe88765, item 20
+✅ Job 69925e64e9705da7fbe88765 finished processing
+📤 Upload request received for job 69926262e9705da7fbe8d3dc
+🔐 Verifying upload token for job 69926262e9705da7fbe8d3dc...
+✅ Token verified for job 69926262e9705da7fbe8d3dc, file received: DSCF0041.MOV (145.73 MB)
+📥 Upload received for job 69926262e9705da7fbe8d3dc, item 1, file size: 145.73 MB, path: /Users/andybernegger/echo-catering/worker/uploads/69926262e9705da7fbe8d3dc/source.MOV
+🚀 Starting processing for job 69926262e9705da7fbe8d3dc, item 1...
+🎬 Starting FULL pipeline for job 69926262e9705da7fbe8d3dc, item 1
