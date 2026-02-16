@@ -339,7 +339,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         width: '100%',
         height: '100%',
         objectFit: 'cover',
-        objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
+        objectPosition: isVertical && viewMode === 'web' ? 'center 30%' : 'center',
         pointerEvents: 'none',
         zIndex: 0,
         transform: isVertical && viewMode === 'web' ? 'scale(1.45)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
