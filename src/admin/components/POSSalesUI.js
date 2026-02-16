@@ -478,6 +478,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
+                          objectPosition: 'center 32%',
                           zIndex: 1
                         }}
                       >
@@ -536,15 +537,14 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
                   padding: '8px 4px 4px 4px',
                   zIndex: 2
                 }}>
                   <span style={{
                     fontSize: `${Math.max(10, outerWidth / 28)}px`,
                     fontWeight: 500,
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    color: '#d0d0d0',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.8)',
                     display: 'block',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
