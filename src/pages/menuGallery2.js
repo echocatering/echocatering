@@ -334,15 +334,15 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
       }}
       style={{
         position: 'absolute',
-        top: 0,
+        top: isVertical && viewMode === 'web' ? '-10%' : 0,
         left: 0,
         width: '100%',
-        height: '100%',
+        height: isVertical && viewMode === 'web' ? '120%' : '100%',
         objectFit: 'cover',
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.45) translateY(-10vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
+        transform: isVertical && viewMode === 'web' ? 'scale(1.45)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
       }}
     >
       <source src={safeVideoSrc} type="video/mp4" />
@@ -565,7 +565,6 @@ function EchoCocktailSubpage2({
   const [countriesVisible, setCountriesVisible] = useState([]);
   const [countriesSidebarVisible, setCountriesSidebarVisible] = useState(true);
   const [conceptVisible, setConceptVisible] = useState(false);
-  const [ingredientLines, setIngredientLines] = useState([]);
 
   const currentFile = videoFiles[currentIndex];
   const info = currentFile ? cocktailInfo[currentFile] : null;
@@ -580,7 +579,6 @@ function EchoCocktailSubpage2({
     setCountriesVisible([]);
     setCountriesSidebarVisible(false);
     setConceptVisible(false);
-    setIngredientLines([]);
   }, []);
 
   // Reset index to 0 when category changes
@@ -1187,11 +1185,8 @@ function EchoCocktailSubpage2({
         return;
       }
       
-      // Get all ingredient spans and separators
-      const allSpans = Array.from(container.querySelectorAll('span[data-ingredient-idx]'));
       const separators = Array.from(container.querySelectorAll('.ingredient-separator'));
-      
-      if (allSpans.length === 0) {
+      if (separators.length === 0) {
         resolve();
         return;
       }
@@ -1207,49 +1202,22 @@ function EchoCocktailSubpage2({
         }
       });
 
-      // Group ingredients by row (based on their top position)
+      // Group separators by row (based on their top position)
       const getRowTop = (el) => Math.round(el.getBoundingClientRect().top);
-      const lines = [];
-      let currentRowTop = null;
-      let currentLineIndices = [];
-
-      allSpans.forEach((span) => {
-        const spanTop = getRowTop(span);
-        const idx = parseInt(span.getAttribute('data-ingredient-idx'), 10);
-        
-        if (currentRowTop === null || Math.abs(spanTop - currentRowTop) <= 5) {
-          currentRowTop = currentRowTop ?? spanTop;
-          currentLineIndices.push(idx);
-        } else {
-          if (currentLineIndices.length > 0) {
-            lines.push([...currentLineIndices]);
-          }
-          currentRowTop = spanTop;
-          currentLineIndices = [idx];
-        }
-      });
-      if (currentLineIndices.length > 0) {
-        lines.push([...currentLineIndices]);
-      }
-      
-      // Update state with line groupings
-      setIngredientLines(lines);
-
-      // Group separators by row for hiding logic
       const rows = [];
-      let currentRowTopSep = null;
+      let currentRowTop = null;
       let currentRowSeparators = [];
 
       separators.forEach((sep) => {
         const sepTop = getRowTop(sep);
-        if (currentRowTopSep === null || Math.abs(sepTop - currentRowTopSep) <= 5) {
-          currentRowTopSep = currentRowTopSep ?? sepTop;
+        if (currentRowTop === null || Math.abs(sepTop - currentRowTop) <= 5) {
+          currentRowTop = currentRowTop ?? sepTop;
           currentRowSeparators.push(sep);
         } else {
           if (currentRowSeparators.length > 0) {
             rows.push(currentRowSeparators);
           }
-          currentRowTopSep = sepTop;
+          currentRowTop = sepTop;
           currentRowSeparators = [sep];
         }
       });
@@ -1561,35 +1529,17 @@ function EchoCocktailSubpage2({
             lineHeight: isVertical ? '1.2' : '1.4',
           }}
         >
-          {ingredientLines.length > 0 && isVertical ? (
-            // Render as grouped lines (vertical mode after adjustment)
-            ingredientLines.map((lineIndices, lineIdx) => (
-              <div key={lineIdx} style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-                {lineIndices.map((itemIdx, posInLine) => (
-                  <React.Fragment key={itemIdx}>
-                    <span>{items[itemIdx]}</span>
-                    {posInLine < lineIndices.length - 1 && (
-                      <span> - </span>
-                    )}
-                  </React.Fragment>
-                ))}
-                {lineIdx < ingredientLines.length - 1 && ' '}
-              </div>
-            ))
-          ) : (
-            // Initial render or horizontal mode
-            items.map((item, idx) => (
-              <React.Fragment key={idx}>
-                <span data-ingredient-idx={idx} style={{ whiteSpace: 'nowrap' }}>{item}</span>
-                {idx < items.length - 1 && (
-                  <span className="ingredient-separator">
-                    <span className="sep-space"> </span>
-                    <span className="sep-dash">- </span>
-                  </span>
-                )}
-              </React.Fragment>
-            ))
-          )}
+          {items.map((item, idx) => (
+            <React.Fragment key={idx}>
+              <span style={{ whiteSpace: 'nowrap' }}>{item}</span>
+              {idx < items.length - 1 && (
+                <span className="ingredient-separator">
+                  <span className="sep-space"> </span>
+                  <span className="sep-dash">- </span>
+                </span>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     );
