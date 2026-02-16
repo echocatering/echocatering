@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.echocatering.pos.BuildConfig
 import com.echocatering.pos.EchoPosApplication
+import com.echocatering.pos.cache.VideoCacheManager
 import com.echocatering.pos.databinding.ActivityWebviewBinding
 import com.echocatering.pos.terminal.PaymentItem
 import com.echocatering.pos.terminal.PaymentState
@@ -15,6 +16,8 @@ import com.echocatering.pos.terminal.ReaderState
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileInputStream
 
 class WebViewActivity : AppCompatActivity() {
     
@@ -22,12 +25,16 @@ class WebViewActivity : AppCompatActivity() {
     private val terminalManager by lazy { EchoPosApplication.instance.terminalManager }
     private val gson = Gson()
     private var hasRedirected = false
+    private lateinit var videoCacheManager: VideoCacheManager
     
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityWebviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Initialize video cache manager
+        videoCacheManager = VideoCacheManager(applicationContext)
         
         setupWebView()
         observeTerminalState()
@@ -46,7 +53,21 @@ class WebViewActivity : AppCompatActivity() {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 databaseEnabled = true
-                cacheMode = WebSettings.LOAD_DEFAULT
+                
+                // Enable aggressive caching for videos and media
+                cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                
+                // Enable app cache for offline media
+                val cachePath = applicationContext.cacheDir.absolutePath
+                setAppCachePath(cachePath)
+                setAppCacheEnabled(true)
+                
+                // Allow larger cache size for videos (100MB)
+                setAppCacheMaxSize(100 * 1024 * 1024)
+                
+                // Enable media playback without user gesture
+                mediaPlaybackRequiresUserGesture = false
+                
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             }
             
@@ -65,6 +86,38 @@ class WebViewActivity : AppCompatActivity() {
                         // Inject reader status on page load
                         updateReaderStatus()
                     }
+                }
+                
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val url = request?.url?.toString() ?: return null
+                    
+                    // Intercept video requests from Cloudinary
+                    if (url.contains("cloudinary") && (url.endsWith(".mp4") || url.contains("/video/"))) {
+                        val cachedPath = videoCacheManager.getCachedVideoPath(url)
+                        
+                        if (cachedPath != null) {
+                            // Serve from cache
+                            try {
+                                val file = File(cachedPath)
+                                val inputStream = FileInputStream(file)
+                                return WebResourceResponse(
+                                    "video/mp4",
+                                    "UTF-8",
+                                    inputStream
+                                )
+                            } catch (e: Exception) {
+                                // Fall through to network request
+                            }
+                        } else {
+                            // Cache the video for next time
+                            videoCacheManager.cacheVideo(url)
+                        }
+                    }
+                    
+                    return super.shouldInterceptRequest(view, request)
                 }
                 
                 override fun onReceivedError(
