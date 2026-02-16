@@ -65,6 +65,7 @@ function App() {
     const initialWidth = window.innerWidth;
     const initialHeight = window.innerHeight;
     const initialIsLandscape = initialWidth > initialHeight;
+    const loadTime = Date.now();
     
     const checkScreenSize = () => {
       // More flexible mobile detection - consider both width and height
@@ -87,6 +88,14 @@ function App() {
     
     // Handle resize with full page refresh on orientation or significant size change
     const handleResize = () => {
+      // Prevent reload during initial page load (first 2 seconds)
+      const timeSinceLoad = Date.now() - loadTime;
+      if (timeSinceLoad < 2000) {
+        console.log('📱 Ignoring resize during initial load');
+        checkScreenSize();
+        return;
+      }
+      
       const width = window.innerWidth;
       const height = window.innerHeight;
       const isLandscape = width > height;
@@ -111,14 +120,22 @@ function App() {
       checkScreenSize();
     };
     
-    checkScreenSize();
-    window.addEventListener('resize', handleResize);
-    
-    // Also listen for orientation change event (more reliable on mobile)
+    // Handle orientation change
     const handleOrientationChange = () => {
+      // Prevent reload during initial page load (first 2 seconds)
+      const timeSinceLoad = Date.now() - loadTime;
+      if (timeSinceLoad < 2000) {
+        console.log('📱 Ignoring orientation change during initial load');
+        checkScreenSize();
+        return;
+      }
+      
       console.log('📱 Orientation change event - refreshing page');
       window.location.reload();
     };
+    
+    checkScreenSize();
+    window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleOrientationChange);
     
     return () => {
