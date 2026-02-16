@@ -2860,6 +2860,69 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     load();
   }, []);
 
+  // Preload videos: first video immediately, rest in background
+  useEffect(() => {
+    if (isLoading || !subpages) return;
+
+    const allVideoUrls = [];
+    
+    // Collect all video URLs from all categories
+    Object.values(subpages).forEach((category) => {
+      if (category?.videoFiles && Array.isArray(category.videoFiles)) {
+        category.videoFiles.forEach((file) => {
+          const info = category.cocktailInfo?.[file];
+          if (info?.cloudinaryVideoUrl) {
+            const safeUrl = getIosSafeCloudinaryVideoUrl(info.cloudinaryVideoUrl);
+            allVideoUrls.push(safeUrl);
+          }
+        });
+      }
+    });
+
+    if (allVideoUrls.length === 0) return;
+
+    // Load first video immediately (high priority)
+    const firstVideo = document.createElement('video');
+    firstVideo.preload = 'auto';
+    firstVideo.src = allVideoUrls[0];
+    firstVideo.muted = true;
+    firstVideo.load();
+
+    // Preload remaining videos in batches after a short delay
+    const remainingUrls = allVideoUrls.slice(1);
+    
+    const preloadTimer = setTimeout(() => {
+      const preloadBatch = (urls, batchSize = 3, delayMs = 1000) => {
+        let currentIndex = 0;
+
+        const loadNextBatch = () => {
+          const batch = urls.slice(currentIndex, currentIndex + batchSize);
+          if (batch.length === 0) return;
+
+          batch.forEach((url) => {
+            const video = document.createElement('video');
+            video.preload = 'auto';
+            video.src = url;
+            video.muted = true;
+            video.load();
+          });
+
+          currentIndex += batchSize;
+          if (currentIndex < urls.length) {
+            setTimeout(loadNextBatch, delayMs);
+          }
+        };
+
+        loadNextBatch();
+      };
+
+      // Start preloading remaining videos
+      preloadBatch(remainingUrls, 3, 1000);
+    }, 1000); // Wait 1 second before preloading remaining videos
+
+    return () => clearTimeout(preloadTimer);
+  }, [isLoading, subpages]);
+
   // Navigate to initial item when provided
   useEffect(() => {
     if (initialItem && !isLoading && !initialItemProcessed && Object.keys(subpages).length > 0) {
