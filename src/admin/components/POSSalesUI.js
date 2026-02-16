@@ -1941,6 +1941,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars (local only)
   const [showTabView, setShowTabView] = useState(false); // Toggle between tip view and receipt view
   
+  // Stripe Terminal M2 Reader state
+  const [showReaderSetup, setShowReaderSetup] = useState(false);
+  const [readerConnected, setReaderConnected] = useState(false);
+  const [readerInfo, setReaderInfo] = useState(null);
+  const [discoveredReaders, setDiscoveredReaders] = useState([]);
+  const [scanningReaders, setScanningReaders] = useState(false);
+  
   // WebSocket handlers for checkout sync across devices
   const handleWsCheckoutStart = useCallback((data) => {
     console.log('[POS] WebSocket checkout_start received:', data);
@@ -2015,6 +2022,86 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setCheckoutLoading(false);
     }
   }, [currentCheckoutId]);
+  
+  // ============================================
+  // STRIPE TERMINAL M2 READER MANAGEMENT
+  // ============================================
+  
+  // Check reader status on mount
+  useEffect(() => {
+    if (window.stripeBridge) {
+      try {
+        const status = JSON.parse(window.stripeBridge.getReaderStatus());
+        if (status.connected) {
+          setReaderConnected(true);
+          setReaderInfo(status);
+        }
+      } catch (e) {
+        console.error('[POS] Error getting reader status:', e);
+      }
+    }
+  }, []);
+  
+  // Set up reader status update callback
+  useEffect(() => {
+    window.onReaderStatusUpdate = (status) => {
+      console.log('[POS] Reader status update:', status);
+      setReaderConnected(status.connected);
+      setReaderInfo(status.connected ? status : null);
+    };
+    
+    return () => {
+      window.onReaderStatusUpdate = null;
+    };
+  }, []);
+  
+  const handleDiscoverReaders = useCallback(() => {
+    if (!window.stripeBridge) {
+      alert('Stripe Terminal not available. Please use the native Android app.');
+      return;
+    }
+    
+    setScanningReaders(true);
+    setDiscoveredReaders([]);
+    
+    try {
+      window.stripeBridge.discoverReaders();
+      
+      // Stop scanning after 10 seconds
+      setTimeout(() => {
+        setScanningReaders(false);
+      }, 10000);
+    } catch (e) {
+      console.error('[POS] Error discovering readers:', e);
+      alert('Error scanning for readers: ' + e.message);
+      setScanningReaders(false);
+    }
+  }, []);
+  
+  const handleConnectReader = useCallback((readerIndex) => {
+    if (!window.stripeBridge) return;
+    
+    try {
+      window.stripeBridge.connectReader(readerIndex);
+      setShowReaderSetup(false);
+    } catch (e) {
+      console.error('[POS] Error connecting to reader:', e);
+      alert('Error connecting to reader: ' + e.message);
+    }
+  }, []);
+  
+  const handleDisconnectReader = useCallback(() => {
+    if (!window.stripeBridge) return;
+    
+    try {
+      window.stripeBridge.disconnectReader();
+      setReaderConnected(false);
+      setReaderInfo(null);
+    } catch (e) {
+      console.error('[POS] Error disconnecting reader:', e);
+      alert('Error disconnecting reader: ' + e.message);
+    }
+  }, []);
   
   // ============================================
   // VISIBILITY CHANGE DETECTION
@@ -3546,23 +3633,50 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             )}
           </div>
           
-          {/* Center: TEST MODE toggle */}
-          <button
-            onClick={() => setSquareTestMode(prev => !prev)}
-            style={{
-              background: squareTestMode ? '#ff9800' : '#4caf50',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 8px',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              marginRight: '12px',
-            }}
-          >
-            {squareTestMode ? 'TEST' : 'LIVE'}
-          </button>
+          {/* Center: Card Reader Status + TEST MODE toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Card Reader Status Button */}
+            {window.stripeBridge && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReaderSetup(true);
+                }}
+                style={{
+                  background: readerConnected ? '#4caf50' : '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>{readerConnected ? '●' : '○'}</span>
+                <span>READER</span>
+              </button>
+            )}
+            
+            <button
+              onClick={() => setSquareTestMode(prev => !prev)}
+              style={{
+                background: squareTestMode ? '#ff9800' : '#4caf50',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              {squareTestMode ? 'TEST' : 'LIVE'}
+            </button>
+          </div>
           
           {/* Right side: Event name/time OR End Event button */}
           <div style={{ 
@@ -3834,6 +3948,161 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   ✕ NO
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reader Setup Modal */}
+        {showReaderSetup && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2002,
+          }}>
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0, fontSize: '24px' }}>Card Reader Setup</h2>
+                <button
+                  onClick={() => setShowReaderSetup(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {readerConnected ? (
+                <div>
+                  <div style={{
+                    background: '#e8f5e9',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2e7d32', marginBottom: '8px' }}>
+                      ✓ Reader Connected
+                    </div>
+                    <div style={{ color: '#666' }}>
+                      Serial: {readerInfo?.serialNumber || 'Unknown'}
+                    </div>
+                    {readerInfo?.batteryLevel && (
+                      <div style={{ color: '#666' }}>
+                        Battery: {Math.round(readerInfo.batteryLevel * 100)}%
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleDisconnectReader}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      background: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Disconnect Reader
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    background: '#fff3cd',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    fontSize: '14px',
+                    color: '#856404'
+                  }}>
+                    <strong>Setup Instructions:</strong>
+                    <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                      <li>Power on your M2 reader</li>
+                      <li>Hold power button for 5+ seconds until LED flashes blue</li>
+                      <li>Click "Scan for Readers" below</li>
+                      <li>Select your reader from the list</li>
+                    </ol>
+                  </div>
+
+                  <button
+                    onClick={handleDiscoverReaders}
+                    disabled={scanningReaders}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      background: scanningReaders ? '#9ca3af' : '#800080',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: scanningReaders ? 'not-allowed' : 'pointer',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    {scanningReaders ? 'Scanning...' : 'Scan for Readers'}
+                  </button>
+
+                  {discoveredReaders.length > 0 && (
+                    <div>
+                      <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Available Readers:</h3>
+                      {discoveredReaders.map((reader, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleConnectReader(index)}
+                          style={{
+                            width: '100%',
+                            padding: '16px',
+                            marginBottom: '8px',
+                            background: '#f3f4f6',
+                            border: '2px solid #800080',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>Reader #{index + 1}</div>
+                          <div style={{ fontSize: '14px', color: '#666' }}>Click to connect</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!scanningReaders && discoveredReaders.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '32px',
+                      color: '#9ca3af',
+                      fontSize: '14px'
+                    }}>
+                      No readers found. Make sure your M2 reader is in pairing mode.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
