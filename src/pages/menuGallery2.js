@@ -527,6 +527,11 @@ function EchoCocktailSubpage2({
         innerFit = 'height';
         innerHeight = outerHeight;
         innerWidth = innerHeight * innerAR;
+        // Scale inner container by 1.10x in web mode for vertical orientation
+        if (viewMode === 'web') {
+          innerWidth *= 1.10;
+          innerHeight *= 1.10;
+        }
     }
 
     // Video fit: for vertical, always fit by height; for horizontal, use inverse of inner fit
@@ -540,9 +545,11 @@ function EchoCocktailSubpage2({
     };
   }, [size.width, size.height, orientationOverride, viewMode]);
 
-  const innerLeft = (size.width - layout.inner.width) / 2;
-  const innerTop = (size.height - layout.inner.height) / 2;
   const isVertical = layout.orientation === 'vertical';
+  const innerLeft = (size.width - layout.inner.width) / 2;
+  // Move video up 5% screen height in vertical web mode
+  const verticalOffset = isVertical && viewMode === 'web' ? -size.height * 0.05 : 0;
+  const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
   // Animation states (kept from original)
