@@ -569,6 +569,15 @@ function EchoCocktailSubpage2({
     setConceptVisible(false);
   }, []);
 
+  // Reset index to 0 when category changes
+  useEffect(() => {
+    setCurrentIndex(0);
+    resetAnimations();
+    setBoxesVisible(false);
+    setShowConceptInfo(false);
+    setShowCategories(false);
+  }, [selected, resetAnimations]);
+
   useEffect(() => {
     setVerticalInfoFontScale(1);
   }, [currentIndex, showConceptInfo]);
