@@ -107,11 +107,11 @@ function App() {
         return;
       }
       
-      // Refresh if significant size change (more than 100px in either dimension)
+      // Refresh if significant WIDTH change (more than 200px)
+      // Ignore height changes as they're often just address bar hiding/showing on mobile
       const widthChange = Math.abs(width - initialWidth);
-      const heightChange = Math.abs(height - initialHeight);
-      if (widthChange > 100 || heightChange > 100) {
-        console.log('📱 Significant size change - refreshing page');
+      if (widthChange > 200) {
+        console.log('📱 Significant width change - refreshing page');
         window.location.reload();
         return;
       }
