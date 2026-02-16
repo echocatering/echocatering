@@ -30,9 +30,9 @@
         <activity
             android:name=".ui.WebViewActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:screenOrientation="unspecified"
             android:theme="@style/Theme.EchoPOS"
-            android:configChanges="orientation|screenSize">
+            android:configChanges="orientation|screenSize|screenLayout">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

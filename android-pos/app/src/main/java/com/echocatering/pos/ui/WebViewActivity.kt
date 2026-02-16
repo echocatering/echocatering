@@ -54,6 +54,10 @@ class WebViewActivity : AppCompatActivity() {
                 domStorageEnabled = true
                 databaseEnabled = true
                 
+                // Enable proper viewport sizing for orientation detection
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                
                 // Enable aggressive caching for videos and media
                 cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                 
