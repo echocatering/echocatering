@@ -41,15 +41,13 @@ export function normalizeIngredients(rawIngredients) {
 
   const splitStringIntoTokens = (value) => {
     const out = [];
-    // Split by newlines first (not commas - commas should be converted to dashes)
-    const lineParts = String(value).split('\n');
-    
-    for (const line of lineParts) {
-      const cleaned = cleanToken(line);
-      if (cleaned) {
-        // Apply formatIngredientRow to convert commas to dashes
-        const formatted = formatIngredientRow(cleaned);
-        if (formatted) out.push(formatted);
+    const commaParts = String(value).split(',');
+
+    for (const part of commaParts) {
+      const lineParts = String(part).split('\n');
+      for (const lp of lineParts) {
+        const cleaned = cleanToken(lp);
+        if (cleaned) out.push(cleaned);
       }
     }
 
