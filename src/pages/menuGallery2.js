@@ -56,7 +56,7 @@ const getIosSafeCloudinaryVideoUrl = (url) => {
  * Computes sizes and positions for OuterContainer, InnerContainer, and Video.
  * Maintains fixed aspect ratios and inverse fit rules for the 1:1 video.
  */
-function computeStageLayout(outerWidth, outerHeight) {
+function computeStageLayout(outerWidth, outerHeight, viewMode = 'web') {
   const outerAR = outerWidth / Math.max(outerHeight, 1);
   const orientation = outerAR >= 1 ? 'horizontal' : 'vertical';
   const innerAR = orientation === 'horizontal' ? 16 / 10 : 9 / 19;
@@ -80,6 +80,11 @@ function computeStageLayout(outerWidth, outerHeight) {
       innerFit = 'height';
       innerHeight = outerHeight;
       innerWidth = innerHeight * innerAR;
+      // Scale inner container by 1.10x in web mode for vertical orientation
+      if (viewMode === 'web') {
+        innerWidth *= 1.10;
+        innerHeight *= 1.10;
+      }
   }
 
   // Video fit: for vertical, always fit by height; for horizontal, use inverse of inner fit
@@ -498,7 +503,7 @@ function EchoCocktailSubpage2({
   }, [currentIndex, selected, forceRecalc, viewMode, outerWidthOverride, outerHeightOverride]);
   
   const layout = useMemo(() => {
-    if (!orientationOverride) return computeStageLayout(size.width, size.height);
+    if (!orientationOverride) return computeStageLayout(size.width, size.height, viewMode);
 
     const outerWidth = size.width;
     const outerHeight = size.height;
