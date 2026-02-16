@@ -21,6 +21,7 @@ class WebViewActivity : AppCompatActivity() {
     private lateinit var binding: ActivityWebviewBinding
     private val terminalManager by lazy { EchoPosApplication.instance.terminalManager }
     private val gson = Gson()
+    private var hasRedirected = false
     
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,8 +57,9 @@ class WebViewActivity : AppCompatActivity() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     
-                    // Redirect to POS after login
-                    if (url?.contains("/admin") == true && !url.contains("/admin/pos")) {
+                    // Redirect to POS after login - only redirect once and only if on /admin exactly
+                    if (!hasRedirected && url == "https://echocatering.com/admin") {
+                        hasRedirected = true
                         view?.loadUrl("https://echocatering.com/admin/pos")
                     } else {
                         // Inject reader status on page load
