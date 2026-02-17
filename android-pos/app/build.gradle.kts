@@ -34,12 +34,12 @@ android {
     }
     
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
     
     buildFeatures {
@@ -61,8 +61,8 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     
     // Stripe Terminal SDK
-    implementation("com.stripe:stripeterminal-core:3.3.1")
-    implementation("com.stripe:stripeterminal-localmobile:3.3.1")
+    implementation("com.stripe:stripeterminal:5.2.0")
+    implementation("com.stripe:stripeterminal-ktx:5.2.0")
     
     // Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

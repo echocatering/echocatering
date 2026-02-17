@@ -66,7 +66,8 @@ class TerminalManager(private val context: Context) {
                 context.applicationContext,
                 LogLevel.VERBOSE,
                 EchoTokenProvider(),
-                EchoTerminalListener()
+                EchoTerminalListener(),
+                null // offlineListener - not using offline mode
             )
             _terminalState.value = TerminalState.Initialized
             Log.d(TAG, "Terminal initialized successfully")
@@ -108,7 +109,8 @@ class TerminalManager(private val context: Context) {
         _readerState.value = ReaderState.Discovering
         _discoveredReaders.value = emptyList()
         
-        val config = DiscoveryConfiguration.BluetoothDiscoveryConfiguration(
+        val config = DiscoveryConfiguration(
+            discoveryMethod = DiscoveryMethod.BLUETOOTH_SCAN,
             isSimulated = false
         )
         
@@ -143,7 +145,8 @@ class TerminalManager(private val context: Context) {
         _readerState.value = ReaderState.Connecting(reader.serialNumber ?: "Unknown")
         
         val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
-            locationId = reader.location?.id ?: ""
+            locationId = reader.location?.id ?: "",
+            autoReconnectOnUnexpectedDisconnect = true
         )
         
         Terminal.getInstance().connectBluetoothReader(
