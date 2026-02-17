@@ -2257,7 +2257,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setLoading(false);
         // Use fallback empty items to prevent stuck loading
         setAllItems([]);
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout
       
       try {
         const data = await apiCall('/menu-items?includeArchived=true');
@@ -3791,11 +3791,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               width: '100%',
               height: '100%',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#666',
+              gap: '20px',
             }}>
-              Loading POS...
+              <div>Loading POS...</div>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '12px 24px',
+                  background: '#333',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                Refresh
+              </button>
             </div>
           )}
         </div>
