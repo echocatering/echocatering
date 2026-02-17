@@ -52,7 +52,7 @@ const AdminApp = () => {
         {/* <Header /> */}
         <main className="admin-content">
           <Routes>
-            <Route path="/" element={<LogoManager />} />
+            <Route path="/" element={<Navigate to="/admin/menu" replace />} />
             <Route path="/logo" element={<LogoManager />} />
             <Route path="/menu" element={<MenuManager />} />
             <Route path="/gallery" element={<GalleryManager />} />

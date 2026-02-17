@@ -155,67 +155,7 @@ const Sidebar = () => {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-header">
-        <div 
-          className="sidebar-title"
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center',
-            cursor: 'pointer',
-            gap: '0.5rem'
-          }}
-          onClick={() => logoFileInputRef.current?.click()}
-        >
-          <input
-            type="file"
-            accept=".svg,.png,image/svg+xml,image/svg,application/svg+xml,image/png"
-            ref={logoFileInputRef}
-            onChange={handleLogoFileSelect}
-            style={{ display: 'none' }}
-          />
-          {currentLogo && currentLogo.startsWith('https://res.cloudinary.com/') ? (
-            <img
-              src={currentLogo}
-              alt="Logo"
-              style={{
-                width: '172.8px',
-                height: 'auto',
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                console.error('Logo image failed to load:', currentLogo);
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div style={{
-              width: '172.8px',
-              height: '172.8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#999',
-              fontSize: '0.8rem',
-              border: '1px dashed #ccc',
-              borderRadius: '4px'
-            }}>
-              No logo
-            </div>
-          )}
-          <div style={{
-            color: '#999',
-            fontSize: '0.7rem',
-            fontFamily: 'Montserrat, sans-serif',
-            textAlign: 'center',
-            fontWeight: 'normal'
-          }}>
-            click to replace logo
-          </div>
-        </div>
-      </div>
-      
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" style={{ marginTop: '1rem' }}>
         <div className="nav-section-header">
           ECHO INTERFACE
           <button 
