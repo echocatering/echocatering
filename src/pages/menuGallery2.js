@@ -2113,7 +2113,7 @@ function EchoCocktailSubpage2({
               height: 'auto',
               maxWidth: '120px',
               maxHeight: '120px',
-              filter: 'invert(56%) sepia(89%) saturate(1424%) hue-rotate(338deg) brightness(98%) contrast(88%)',
+              filter: 'brightness(0) invert(0.3)',
               pointerEvents: 'none',
               zIndex: 25,
               transform: 'translateY(15%)',
