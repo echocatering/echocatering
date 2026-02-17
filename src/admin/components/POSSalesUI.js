@@ -3315,7 +3315,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         width: '100vw', 
         height: '100vh', 
         overflow: 'hidden', 
-        background: '#000',
+        background: '#fff',
         fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
       }}>
         <MenuGallery2 
