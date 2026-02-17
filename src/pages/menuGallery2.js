@@ -2088,7 +2088,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft + layout.inner.width - (layout.inner.width * 5) / 12}px`,
-            top: `${originalInnerTop + layout.inner.height / 5}px`,
+            top: `${innerTop + layout.inner.height / 5}px`,
             width: `${(layout.inner.width * 5) / 12}px`,
             padding: 0,
             boxSizing: 'border-box',
