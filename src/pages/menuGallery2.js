@@ -561,8 +561,9 @@ function EchoCocktailSubpage2({
     ? -size.height * 0.10 
     : (!isVertical && viewMode === 'menu' ? -size.height * 0.06 : 0);
   const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
-  // Original innerTop for title/ingredients/garnish (no offset in menu view)
-  const originalInnerTop = (size.height - layout.inner.height) / 2;
+  // Title/ingredients/garnish offset: half of map/countries/concept offset in menu view
+  const titleOffset = !isVertical && viewMode === 'menu' ? -size.height * 0.03 : 0;
+  const originalInnerTop = (size.height - layout.inner.height) / 2 + titleOffset;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
   // Animation states (kept from original)
