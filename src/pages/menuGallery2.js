@@ -345,7 +345,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         pointerEvents: 'none',
         zIndex: 0,
         transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-6vh)' : 'scale(1)')),
-        background: viewMode === 'menu' ? '#fff' : '#000',
+        background: (viewMode === 'menu' || viewMode === 'web') ? 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)' : '#000',
       }}
     >
       <source src={safeVideoSrc} type="video/mp4" />
@@ -2774,7 +2774,7 @@ function EchoCocktailSubpage2({
           width: outerWidthOverride ? `${outerWidthOverride}px` : '100%',
           height: outerHeightOverride ? `${outerHeightOverride}px` : '100vh',
           overflow: 'hidden',
-          background: '#fff',
+          background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
           fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
           display: 'flex',
           alignItems: 'center',
@@ -2798,7 +2798,7 @@ function EchoCocktailSubpage2({
         width: outerWidthOverride ? `${outerWidthOverride}px` : (viewMode === 'web' ? `${size.width}px` : '100%'),
         height: outerHeightOverride ? `${outerHeightOverride}px` : (viewMode === 'web' ? `${size.height}px` : '100vh'),
         overflow: 'hidden',
-        background: '#fff',
+        background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
         fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
       }}
     >
