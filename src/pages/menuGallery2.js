@@ -91,12 +91,7 @@ function computeStageLayout(outerWidth, outerHeight, viewMode = 'web') {
   const videoFit = orientation === 'vertical' ? 'height' : (innerFit === 'width' ? 'height' : 'width');
   let videoSize = videoFit === 'width' ? { width: innerWidth, height: innerWidth } : { width: innerHeight, height: innerHeight };
   
-  // Scale video by 1.50x for menu view in horizontal orientation
-  if (viewMode === 'menu' && orientation === 'horizontal') {
-    videoSize.width *= 1.50;
-    videoSize.height *= 1.50;
-  }
-
+  
   return {
     orientation,
     inner: { width: innerWidth, height: innerHeight, fit: innerFit },
@@ -349,7 +344,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
+        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.50)' : 'scale(1)')),
         background: '#000',
       }}
     >
