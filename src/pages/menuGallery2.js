@@ -2117,7 +2117,7 @@ function EchoCocktailSubpage2({
               height: 'auto',
               maxWidth: '120px',
               maxHeight: '120px',
-              filter: 'brightness(0) invert(0.4)',
+              filter: 'brightness(0) invert(0.25)',
               pointerEvents: 'none',
               zIndex: 25,
               transform: 'translateY(15%)',
