@@ -7,8 +7,29 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.echocatering.pos.api.ApiClient
 import com.stripe.stripeterminal.Terminal
-import com.stripe.stripeterminal.external.callable.*
-import com.stripe.stripeterminal.external.models.*
+import com.stripe.stripeterminal.external.callable.Callback
+import com.stripe.stripeterminal.external.callable.Cancelable
+import com.stripe.stripeterminal.external.callable.ConnectionTokenCallback
+import com.stripe.stripeterminal.external.callable.ConnectionTokenProvider
+import com.stripe.stripeterminal.external.callable.DiscoveryListener
+import com.stripe.stripeterminal.external.callable.MobileReaderListener
+import com.stripe.stripeterminal.external.callable.PaymentIntentCallback
+import com.stripe.stripeterminal.external.callable.ReaderCallback
+import com.stripe.stripeterminal.external.callable.TerminalListener
+import com.stripe.stripeterminal.external.models.BatteryStatus
+import com.stripe.stripeterminal.external.models.ConnectionConfiguration
+import com.stripe.stripeterminal.external.models.ConnectionStatus
+import com.stripe.stripeterminal.external.models.ConnectionTokenException
+import com.stripe.stripeterminal.external.models.DisconnectReason
+import com.stripe.stripeterminal.external.models.DiscoveryConfiguration
+import com.stripe.stripeterminal.external.models.PaymentIntent
+import com.stripe.stripeterminal.external.models.PaymentStatus
+import com.stripe.stripeterminal.external.models.Reader
+import com.stripe.stripeterminal.external.models.ReaderDisplayMessage
+import com.stripe.stripeterminal.external.models.ReaderEvent
+import com.stripe.stripeterminal.external.models.ReaderInputOptions
+import com.stripe.stripeterminal.external.models.ReaderSoftwareUpdate
+import com.stripe.stripeterminal.external.models.TerminalException
 import com.stripe.stripeterminal.log.LogLevel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,8 +87,7 @@ class TerminalManager(private val context: Context) {
                 context.applicationContext,
                 LogLevel.VERBOSE,
                 EchoTokenProvider(),
-                EchoTerminalListener(),
-                null // offlineListener - not using offline mode
+                EchoTerminalListener()
             )
             _terminalState.value = TerminalState.Initialized
             Log.d(TAG, "Terminal initialized successfully")
@@ -109,8 +129,8 @@ class TerminalManager(private val context: Context) {
         _readerState.value = ReaderState.Discovering
         _discoveredReaders.value = emptyList()
         
-        val config = DiscoveryConfiguration(
-            discoveryMethod = DiscoveryMethod.BLUETOOTH_SCAN,
+        val config = DiscoveryConfiguration.BluetoothDiscoveryConfiguration(
+            timeout = 0,
             isSimulated = false
         )
         
@@ -144,15 +164,16 @@ class TerminalManager(private val context: Context) {
     fun connectToReader(reader: Reader) {
         _readerState.value = ReaderState.Connecting(reader.serialNumber ?: "Unknown")
         
+        val locationId = reader.location?.id ?: ""
         val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
-            locationId = reader.location?.id ?: "",
-            autoReconnectOnUnexpectedDisconnect = true
+            locationId = locationId,
+            autoReconnectOnUnexpectedDisconnect = true,
+            mobileReaderListener = EchoMobileReaderListener()
         )
         
-        Terminal.getInstance().connectBluetoothReader(
+        Terminal.getInstance().connectReader(
             reader,
             config,
-            EchoReaderListener(),
             object : ReaderCallback {
                 override fun onSuccess(connectedReader: Reader) {
                     Log.d(TAG, "Connected to reader: ${connectedReader.serialNumber}")
@@ -253,8 +274,6 @@ class TerminalManager(private val context: Context) {
     private fun collectPayment(paymentIntent: PaymentIntent) {
         _paymentState.value = PaymentState.CollectingPayment
         
-        val config = CollectConfiguration.Builder().build()
-        
         paymentCancelable = Terminal.getInstance().collectPaymentMethod(
             paymentIntent,
             object : PaymentIntentCallback {
@@ -266,8 +285,7 @@ class TerminalManager(private val context: Context) {
                     Log.e(TAG, "Failed to collect payment", e)
                     _paymentState.value = PaymentState.Failed(e.errorMessage)
                 }
-            },
-            config
+            }
         )
     }
     
@@ -383,24 +401,56 @@ class TerminalManager(private val context: Context) {
     
     // Terminal event listener
     private inner class EchoTerminalListener : TerminalListener {
-        override fun onUnexpectedReaderDisconnect(reader: Reader) {
-            Log.w(TAG, "Reader unexpectedly disconnected: ${reader.serialNumber}")
-            _readerState.value = ReaderState.Disconnected
+        override fun onConnectionStatusChange(status: ConnectionStatus) {
+            Log.d(TAG, "Connection status changed: ${status.name}")
+        }
+        
+        override fun onPaymentStatusChange(status: PaymentStatus) {
+            Log.d(TAG, "Payment status changed: ${status.name}")
         }
     }
     
-    // Reader event listener
-    private inner class EchoReaderListener : ReaderListener {
+    // Mobile reader event listener for Bluetooth readers
+    private inner class EchoMobileReaderListener : MobileReaderListener {
         override fun onReportReaderEvent(event: ReaderEvent) {
             Log.d(TAG, "Reader event: ${event.name}")
         }
         
         override fun onRequestReaderInput(options: ReaderInputOptions) {
-            Log.d(TAG, "Reader input requested: ${options.toString()}")
+            Log.d(TAG, "Reader input requested: $options")
         }
         
         override fun onRequestReaderDisplayMessage(message: ReaderDisplayMessage) {
             Log.d(TAG, "Reader display message: ${message.name}")
+        }
+        
+        override fun onStartInstallingUpdate(update: ReaderSoftwareUpdate, cancelable: Cancelable?) {
+            Log.d(TAG, "Starting reader update: ${update.version}")
+        }
+        
+        override fun onReportReaderSoftwareUpdateProgress(progress: Float) {
+            Log.d(TAG, "Reader update progress: ${(progress * 100).toInt()}%")
+        }
+        
+        override fun onFinishInstallingUpdate(update: ReaderSoftwareUpdate?, e: TerminalException?) {
+            if (e != null) {
+                Log.e(TAG, "Reader update failed", e)
+            } else {
+                Log.d(TAG, "Reader update completed: ${update?.version}")
+            }
+        }
+        
+        override fun onBatteryLevelUpdate(batteryLevel: Float, batteryStatus: BatteryStatus, isCharging: Boolean) {
+            Log.d(TAG, "Battery: ${(batteryLevel * 100).toInt()}%, status: ${batteryStatus.name}, charging: $isCharging")
+        }
+        
+        override fun onReportLowBatteryWarning() {
+            Log.w(TAG, "Low battery warning")
+        }
+        
+        override fun onDisconnect(reason: DisconnectReason) {
+            Log.w(TAG, "Reader disconnected: ${reason.name}")
+            _readerState.value = ReaderState.Disconnected
         }
     }
 }

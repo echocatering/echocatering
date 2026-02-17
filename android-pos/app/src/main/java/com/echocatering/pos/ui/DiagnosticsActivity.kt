@@ -60,9 +60,7 @@ class DiagnosticsActivity : AppCompatActivity() {
         // SDK Info
         addLog("--- STRIPE SDK INFORMATION ---")
         addLog("SDK Initialized: ${Terminal.isInitialized()}")
-        if (Terminal.isInitialized()) {
-            addLog("SDK Version: ${Terminal.getInstance().sdkVersion}")
-        }
+        addLog("SDK Version: 5.2.0")
         addLog("")
         
         // Permissions
@@ -93,7 +91,6 @@ class DiagnosticsActivity : AppCompatActivity() {
                 addLog("  Device Type: ${reader.deviceType?.name ?: "Unknown"}")
                 addLog("  Battery: ${reader.batteryLevel?.let { "${(it * 100).toInt()}%" } ?: "Unknown"}")
                 addLog("  Location: ${reader.location?.id ?: "None"}")
-                addLog("  Status: ${reader.status?.name ?: "Unknown"}")
             }
         }
         addLog("")

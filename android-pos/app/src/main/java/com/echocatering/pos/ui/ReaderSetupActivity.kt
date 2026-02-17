@@ -1,5 +1,6 @@
 package com.echocatering.pos.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
