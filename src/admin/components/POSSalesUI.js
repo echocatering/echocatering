@@ -494,9 +494,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   const buttonWidth = (outerWidth - 16) / 3;
                   const availableWidth = buttonWidth - 24;
                   const availableHeight = buttonWidth - 24;
-                  const fontSizeByWidth = availableWidth / (longestWord * 0.6);
-                  const fontSizeByHeight = availableHeight / (numLines * 1.2);
-                  const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
+                  const fontSizeByWidth = availableWidth / (longestWord * 0.65);
+                  const fontSizeByHeight = availableHeight / (numLines * 1.3);
+                  const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 14);
                   
                   return (
                     <div style={{
@@ -511,7 +511,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       alignItems: 'center',
                       justifyContent: 'center',
                       zIndex: 1,
-                      padding: '12px',
+                      padding: '8px',
                       boxSizing: 'border-box'
                     }}>
                       {words.map((word, idx) => (
