@@ -56,7 +56,7 @@ const Login = () => {
   const buttonStyle = {
     background: 'transparent',
     border: '2px solid #666666',
-    padding: '14px 32px',
+    padding: '10px 32px',
     fontFamily: 'Montserrat, sans-serif',
     fontWeight: 500,
     fontSize: '14px',
@@ -130,12 +130,13 @@ const Login = () => {
             />
           </div>
           
-          {/* Two buttons side by side */}
+          {/* Two buttons stacked */}
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '16px', 
-            alignItems: 'center' 
+            gap: '12px', 
+            alignItems: 'center',
+            marginTop: '16px'
           }}>
             <button
               type="submit"
