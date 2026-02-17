@@ -2103,7 +2103,7 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
-        {/* QR Code - bottom right of inner container (menu view only) - stays in place, dark grey */}
+        {/* QR Code - bottom right of inner container (menu view only) - stays in place */}
         {viewMode === 'menu' && (
           <img
             src="/assets/icons/QR1.png"
@@ -2116,7 +2116,6 @@ function EchoCocktailSubpage2({
               height: 'auto',
               maxWidth: '120px',
               maxHeight: '120px',
-              filter: 'brightness(0) invert(0.3)',
               pointerEvents: 'none',
               zIndex: 25,
               transform: 'translateY(15%)',
