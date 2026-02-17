@@ -344,7 +344,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-6vh)' : 'scale(1)')),
+        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-3vh)' : 'scale(1)')),
         background: (viewMode === 'menu' || viewMode === 'web') ? 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)' : '#000',
       }}
     >
@@ -1801,11 +1801,7 @@ function EchoCocktailSubpage2({
     const gradientHeight = layout?.inner?.height ? (layout.inner.height * 5) / 12 : 300;
     
     // Calculate bottom nav position: 1/16 for web and pos view, 1/32 for menu view
-    // Move bottom nav up by 6vh in horizontal menu view
-    const baseBottomNav = size.height ? (viewMode === 'menu' ? size.height / 32 : size.height / 16) : 0;
-    const bottomNavBottom = viewMode === 'menu' && !isVertical 
-      ? baseBottomNav + (size.height * 0.06) 
-      : baseBottomNav;
+    const bottomNavBottom = size.height ? (viewMode === 'menu' ? size.height / 32 : size.height / 16) : 0;
     
     // Calculate arrow bottom position: innerHeight/5 from the bottom of inner container
     // Distance from bottom of inner container: layout.inner.height / 5
