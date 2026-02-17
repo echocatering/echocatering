@@ -7,6 +7,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import PlaceholderPage from './pages/PlaceholderPage';
 import MenuGallery from './pages/menuGallery2';
+import Menu from './pages/Menu';
 import EventGallery from './pages/event_gallery';
 import VideoEdgeTest from './pages/VideoEdgeTest';
 import CloudinaryTest from './pages/CloudinaryTest';
@@ -176,6 +177,9 @@ function App() {
       {/* Test Routes */}
       <Route path="test/video-edge" element={<VideoEdgeTest />} />
       <Route path="cloudinary-test" element={<CloudinaryTest />} />
+      
+      {/* Menu Route - Standalone vertical view */}
+      <Route path="menu" element={<Menu />} />
       
       {/* Main Website Routes */}
       {isMobile ? (
