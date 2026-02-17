@@ -2106,7 +2106,7 @@ function EchoCocktailSubpage2({
         {/* QR Code - bottom right of inner container (menu view only) - stays in place */}
         {viewMode === 'menu' && (
           <img
-            src="/assets/icons/QR1.png"
+            src="/assets/icons/QR1.png?v=2"
             alt="QR Code"
             style={{
               position: 'absolute',
