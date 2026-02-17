@@ -89,7 +89,13 @@ function computeStageLayout(outerWidth, outerHeight, viewMode = 'web') {
 
   // Video fit: for vertical, always fit by height; for horizontal, use inverse of inner fit
   const videoFit = orientation === 'vertical' ? 'height' : (innerFit === 'width' ? 'height' : 'width');
-  const videoSize = videoFit === 'width' ? { width: innerWidth, height: innerWidth } : { width: innerHeight, height: innerHeight };
+  let videoSize = videoFit === 'width' ? { width: innerWidth, height: innerWidth } : { width: innerHeight, height: innerHeight };
+  
+  // Scale video by 1.20x for menu view in horizontal orientation
+  if (viewMode === 'menu' && orientation === 'horizontal') {
+    videoSize.width *= 1.20;
+    videoSize.height *= 1.20;
+  }
 
   return {
     orientation,
