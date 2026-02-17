@@ -344,7 +344,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20)' : 'scale(1)')),
+        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-6vh)' : 'scale(1)')),
         background: viewMode === 'menu' ? '#fff' : '#000',
       }}
     >
