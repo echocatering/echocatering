@@ -338,6 +338,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
           video.play().catch(() => {});
         });
       }}
+      poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
       style={{
         position: 'absolute',
         top: 0,
@@ -349,6 +350,7 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         pointerEvents: 'none',
         zIndex: 0,
         transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.10)' : 'scale(1)')),
+        background: '#000',
       }}
     >
       <source src={safeVideoSrc} type="video/mp4" />

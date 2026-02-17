@@ -473,11 +473,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         webkit-playsinline="true"
                         style={{ 
                           position: 'absolute',
-                          top: '-18%',
+                          top: 0,
                           left: 0,
                           width: '100%',
-                          height: '136%',
+                          height: '100%',
                           objectFit: 'cover',
+                          objectPosition: 'center 32%',
                           zIndex: 1
                         }}
                       >

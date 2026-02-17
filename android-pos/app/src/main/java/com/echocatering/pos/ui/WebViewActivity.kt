@@ -113,6 +113,29 @@ class WebViewActivity : AppCompatActivity() {
                         }
                     }
                     
+                    // Intercept map images from Cloudinary (PNG files)
+                    if (url.contains("cloudinary") && (url.endsWith(".png") || url.contains("/image/"))) {
+                        val cachedPath = videoCacheManager.getCachedVideoPath(url)
+                        
+                        if (cachedPath != null) {
+                            // Serve from cache
+                            try {
+                                val file = File(cachedPath)
+                                val inputStream = FileInputStream(file)
+                                return WebResourceResponse(
+                                    "image/png",
+                                    "UTF-8",
+                                    inputStream
+                                )
+                            } catch (e: Exception) {
+                                // Fall through to network request
+                            }
+                        } else {
+                            // Cache the image for next time
+                            videoCacheManager.cacheVideo(url)
+                        }
+                    }
+                    
                     return super.shouldInterceptRequest(view, request)
                 }
                 
