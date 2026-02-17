@@ -91,10 +91,10 @@ function computeStageLayout(outerWidth, outerHeight, viewMode = 'web') {
   const videoFit = orientation === 'vertical' ? 'height' : (innerFit === 'width' ? 'height' : 'width');
   let videoSize = videoFit === 'width' ? { width: innerWidth, height: innerWidth } : { width: innerHeight, height: innerHeight };
   
-  // Scale video by 1.20x for menu view in horizontal orientation
+  // Scale video by 1.50x for menu view in horizontal orientation
   if (viewMode === 'menu' && orientation === 'horizontal') {
-    videoSize.width *= 1.20;
-    videoSize.height *= 1.20;
+    videoSize.width *= 1.50;
+    videoSize.height *= 1.50;
   }
 
   return {
@@ -561,10 +561,10 @@ function EchoCocktailSubpage2({
   const isVertical = layout.orientation === 'vertical';
   const innerLeft = (size.width - layout.inner.width) / 2;
   // Move video up 10% screen height in vertical web mode
-  // Move all components up 2vh in horizontal menu view
+  // Move all components up 6vh in horizontal menu view
   const verticalOffset = isVertical && viewMode === 'web' 
     ? -size.height * 0.10 
-    : (!isVertical && viewMode === 'menu' ? -size.height * 0.02 : 0);
+    : (!isVertical && viewMode === 'menu' ? -size.height * 0.06 : 0);
   const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
