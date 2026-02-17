@@ -83,11 +83,12 @@ class TerminalManager(private val context: Context) {
         }
         
         try {
-            Terminal.initTerminal(
+            Terminal.init(
                 context.applicationContext,
                 LogLevel.VERBOSE,
                 EchoTokenProvider(),
-                EchoTerminalListener()
+                EchoTerminalListener(),
+                null // offlineListener - not using offline mode
             )
             _terminalState.value = TerminalState.Initialized
             Log.d(TAG, "Terminal initialized successfully")
@@ -168,7 +169,7 @@ class TerminalManager(private val context: Context) {
         val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
             locationId = locationId,
             autoReconnectOnUnexpectedDisconnect = true,
-            mobileReaderListener = EchoMobileReaderListener()
+            bluetoothReaderListener = EchoMobileReaderListener()
         )
         
         Terminal.getInstance().connectReader(
