@@ -54,6 +54,11 @@ class ReaderSetupActivity : AppCompatActivity() {
         binding.disconnectButton.setOnClickListener {
             terminalManager.disconnectReader()
         }
+        
+        // Diagnostics button
+        binding.diagnosticsButton.setOnClickListener {
+            startActivity(Intent(this, DiagnosticsActivity::class.java))
+        }
     }
     
     private fun setupObservers() {
