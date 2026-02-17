@@ -559,7 +559,10 @@ function EchoCocktailSubpage2({
   const isVertical = layout.orientation === 'vertical';
   const innerLeft = (size.width - layout.inner.width) / 2;
   // Move video up 10% screen height in vertical web mode
-  const verticalOffset = isVertical && viewMode === 'web' ? -size.height * 0.10 : 0;
+  // Move all components up 2vh in horizontal menu view
+  const verticalOffset = isVertical && viewMode === 'web' 
+    ? -size.height * 0.10 
+    : (!isVertical && viewMode === 'menu' ? -size.height * 0.02 : 0);
   const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
@@ -2100,7 +2103,7 @@ function EchoCocktailSubpage2({
         </div>
         </div>
 
-        {/* QR Code - bottom right of inner container (menu view only) */}
+        {/* QR Code - bottom right of inner container (menu view only) - stays in place, dark grey */}
         {viewMode === 'menu' && (
           <img
             src="/assets/icons/QR.png"
@@ -2113,7 +2116,7 @@ function EchoCocktailSubpage2({
               height: 'auto',
               maxWidth: '120px',
               maxHeight: '120px',
-              filter: 'brightness(0) invert(1)',
+              filter: 'brightness(0) invert(0.4)',
               pointerEvents: 'none',
               zIndex: 25,
               transform: 'translateY(15%)',
