@@ -556,11 +556,13 @@ function EchoCocktailSubpage2({
   const isVertical = layout.orientation === 'vertical';
   const innerLeft = (size.width - layout.inner.width) / 2;
   // Move video up 10% screen height in vertical web mode
-  // Move all components up 6vh in horizontal menu view
+  // Move video up 6vh in horizontal menu view (but not title/ingredients/garnish)
   const verticalOffset = isVertical && viewMode === 'web' 
     ? -size.height * 0.10 
     : (!isVertical && viewMode === 'menu' ? -size.height * 0.06 : 0);
   const innerTop = (size.height - layout.inner.height) / 2 + verticalOffset;
+  // Original innerTop for title/ingredients/garnish (no offset in menu view)
+  const originalInnerTop = (size.height - layout.inner.height) / 2;
   const arrowY = innerTop + layout.inner.height * 0.8;
 
   // Animation states (kept from original)
@@ -2066,7 +2068,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft}px`,
-            top: `${innerTop + layout.inner.height / 5}px`,
+            top: `${originalInnerTop + layout.inner.height / 5}px`,
             width: `${layout.inner.width / 3}px`,
             paddingLeft: layout?.inner?.height ? `${(layout.inner.height / 16).toFixed(1)}px` : '0.75rem',
             paddingTop: layout?.inner?.height ? `${(layout.inner.height / 42).toFixed(1)}px` : '0.35rem',
@@ -2086,7 +2088,7 @@ function EchoCocktailSubpage2({
           style={{
             position: 'absolute',
             left: `${innerLeft + layout.inner.width - (layout.inner.width * 5) / 12}px`,
-            top: `${innerTop + layout.inner.height / 5}px`,
+            top: `${originalInnerTop + layout.inner.height / 5}px`,
             width: `${(layout.inner.width * 5) / 12}px`,
             padding: 0,
             boxSizing: 'border-box',
