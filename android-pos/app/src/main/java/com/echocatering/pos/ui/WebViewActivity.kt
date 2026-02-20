@@ -312,6 +312,29 @@ class WebViewActivity : AppCompatActivity() {
                 }
             }
         }
+        
+        @JavascriptInterface
+        fun openReaderSetup() {
+            runOnUiThread {
+                startActivity(android.content.Intent(this@WebViewActivity, ReaderSetupActivity::class.java))
+            }
+        }
+        
+        @JavascriptInterface
+        fun openDiagnostics() {
+            runOnUiThread {
+                startActivity(android.content.Intent(this@WebViewActivity, DiagnosticsActivity::class.java))
+            }
+        }
+        
+        @JavascriptInterface
+        fun getDiscoveredReaders(): String {
+            val readers = terminalManager.discoveredReaders.value
+            val readerList = readers.mapIndexed { index, reader ->
+                """{"index": $index, "serialNumber": "${reader.serialNumber ?: "Unknown"}", "deviceType": "${reader.deviceType?.name ?: "Unknown"}"}"""
+            }
+            return "[${readerList.joinToString(",")}]"
+        }
     }
     
     data class PaymentItemDto(
