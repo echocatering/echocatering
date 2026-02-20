@@ -116,22 +116,36 @@ class TerminalManager(private val context: Context) {
      * Start discovering Bluetooth readers
      */
     fun discoverReaders() {
+        Log.d(TAG, "discoverReaders() called")
+        Log.d(TAG, "Terminal.isInitialized(): ${Terminal.isInitialized()}")
+        Log.d(TAG, "hasRequiredPermissions(): ${hasRequiredPermissions()}")
+        
         if (!Terminal.isInitialized()) {
-            _readerState.value = ReaderState.Error("Terminal not initialized")
-            return
+            Log.e(TAG, "Terminal not initialized - attempting to initialize")
+            initialize()
+            if (!Terminal.isInitialized()) {
+                _readerState.value = ReaderState.Error("Terminal not initialized")
+                return
+            }
         }
         
         // Cancel any existing discovery
         discoveryCancelable?.cancel(object : Callback {
-            override fun onSuccess() {}
-            override fun onFailure(e: TerminalException) {}
+            override fun onSuccess() {
+                Log.d(TAG, "Previous discovery canceled successfully")
+            }
+            override fun onFailure(e: TerminalException) {
+                Log.w(TAG, "Failed to cancel previous discovery: ${e.errorMessage}")
+            }
         })
         
         _readerState.value = ReaderState.Discovering
         _discoveredReaders.value = emptyList()
         
+        Log.d(TAG, "Starting Bluetooth discovery...")
+        
         val config = DiscoveryConfiguration.BluetoothDiscoveryConfiguration(
-            timeout = 0,
+            timeout = 30, // 30 second timeout instead of infinite
             isSimulated = false
         )
         
@@ -139,24 +153,33 @@ class TerminalManager(private val context: Context) {
             config,
             object : DiscoveryListener {
                 override fun onUpdateDiscoveredReaders(readers: List<Reader>) {
-                    Log.d(TAG, "Discovered ${readers.size} readers")
+                    Log.d(TAG, "onUpdateDiscoveredReaders: ${readers.size} readers found")
+                    readers.forEachIndexed { index, reader ->
+                        Log.d(TAG, "  Reader $index: ${reader.serialNumber}, type: ${reader.deviceType?.name}, location: ${reader.location?.id}")
+                    }
                     _discoveredReaders.value = readers
                 }
             },
             object : Callback {
                 override fun onSuccess() {
-                    Log.d(TAG, "Discovery completed")
+                    Log.d(TAG, "Discovery completed successfully")
                     if (_discoveredReaders.value.isEmpty()) {
+                        Log.w(TAG, "No readers found after discovery completed")
                         _readerState.value = ReaderState.NoReadersFound
+                    } else {
+                        Log.d(TAG, "Found ${_discoveredReaders.value.size} readers")
                     }
                 }
                 
                 override fun onFailure(e: TerminalException) {
-                    Log.e(TAG, "Discovery failed", e)
+                    Log.e(TAG, "Discovery failed: ${e.errorMessage}", e)
+                    Log.e(TAG, "Discovery error code: ${e.errorCode}")
                     _readerState.value = ReaderState.Error(e.errorMessage)
                 }
             }
         )
+        
+        Log.d(TAG, "discoverReaders() started discovery process")
     }
     
     /**
@@ -165,32 +188,50 @@ class TerminalManager(private val context: Context) {
     fun connectToReader(reader: Reader) {
         _readerState.value = ReaderState.Connecting(reader.serialNumber ?: "Unknown")
         
-        val locationId = reader.location?.id ?: ""
-        val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
-            locationId = locationId,
-            autoReconnectOnUnexpectedDisconnect = true,
-            bluetoothReaderListener = EchoMobileReaderListener()
-        )
-        
-        Terminal.getInstance().connectReader(
-            reader,
-            config,
-            object : ReaderCallback {
-                override fun onSuccess(connectedReader: Reader) {
-                    Log.d(TAG, "Connected to reader: ${connectedReader.serialNumber}")
-                    _readerState.value = ReaderState.Connected(
-                        serialNumber = connectedReader.serialNumber ?: "Unknown",
-                        batteryLevel = connectedReader.batteryLevel,
-                        deviceType = connectedReader.deviceType.name
-                    )
+        // Fetch location ID from backend for unregistered readers
+        scope.launch {
+            try {
+                val locationResponse = ApiClient.service.getLocation()
+                val locationId = locationResponse.location_id ?: ""
+                
+                if (locationId.isEmpty()) {
+                    Log.e(TAG, "No location configured on backend")
+                    _readerState.value = ReaderState.Error("No location configured. Please set up a Stripe Terminal location.")
+                    return@launch
                 }
                 
-                override fun onFailure(e: TerminalException) {
-                    Log.e(TAG, "Failed to connect to reader", e)
-                    _readerState.value = ReaderState.Error(e.errorMessage)
-                }
+                Log.d(TAG, "Using location ID: $locationId")
+                
+                val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
+                    locationId = locationId,
+                    autoReconnectOnUnexpectedDisconnect = true,
+                    bluetoothReaderListener = EchoMobileReaderListener()
+                )
+                
+                Terminal.getInstance().connectReader(
+                    reader,
+                    config,
+                    object : ReaderCallback {
+                        override fun onSuccess(connectedReader: Reader) {
+                            Log.d(TAG, "Connected to reader: ${connectedReader.serialNumber}")
+                            _readerState.value = ReaderState.Connected(
+                                serialNumber = connectedReader.serialNumber ?: "Unknown",
+                                batteryLevel = connectedReader.batteryLevel,
+                                deviceType = connectedReader.deviceType.name
+                            )
+                        }
+                        
+                        override fun onFailure(e: TerminalException) {
+                            Log.e(TAG, "Failed to connect to reader", e)
+                            _readerState.value = ReaderState.Error(e.errorMessage)
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch location for connection", e)
+                _readerState.value = ReaderState.Error("Failed to fetch location: ${e.message}")
             }
-        )
+        }
     }
     
     /**
