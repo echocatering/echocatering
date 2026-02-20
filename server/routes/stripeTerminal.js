@@ -338,6 +338,33 @@ router.post('/register-reader', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/stripe/locations
+ * @desc    List all Stripe Terminal locations (for debugging)
+ * @access  Public
+ */
+router.get('/locations', async (req, res) => {
+  try {
+    const locations = await stripe.terminal.locations.list({ limit: 10 });
+    
+    res.json({
+      count: locations.data.length,
+      configured_id: getLocationId(),
+      locations: locations.data.map(loc => ({
+        id: loc.id,
+        display_name: loc.display_name,
+        address: loc.address
+      }))
+    });
+  } catch (error) {
+    console.error('[Stripe Terminal] Error listing locations:', error);
+    res.status(500).json({ 
+      error: 'Failed to list locations',
+      message: error.message 
+    });
+  }
+});
+
+/**
  * @route   GET /api/stripe/location
  * @desc    Get configured location info
  * @access  Public

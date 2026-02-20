@@ -542,7 +542,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   zIndex: 2
                 }}>
                   <span style={{
-                    fontSize: `${Math.max(6, outerWidth / 32)}px`,
+                    fontSize: `${Math.max(4, outerWidth / 32)}px`,
                     fontWeight: 500,
                     color: '#000',
                     display: 'block',
