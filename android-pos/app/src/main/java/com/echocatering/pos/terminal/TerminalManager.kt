@@ -201,6 +201,8 @@ class TerminalManager(private val context: Context) {
                 }
                 
                 Log.d(TAG, "Using location ID: $locationId")
+                Log.d(TAG, "Reader serial: ${reader.serialNumber}, deviceType: ${reader.deviceType?.name}")
+                Log.d(TAG, "Reader location before connect: ${reader.location?.id}")
                 
                 val config = ConnectionConfiguration.BluetoothConnectionConfiguration(
                     locationId = locationId,
@@ -208,12 +210,14 @@ class TerminalManager(private val context: Context) {
                     bluetoothReaderListener = EchoMobileReaderListener()
                 )
                 
+                Log.d(TAG, "Calling Terminal.connectReader()...")
+                
                 Terminal.getInstance().connectReader(
                     reader,
                     config,
                     object : ReaderCallback {
                         override fun onSuccess(connectedReader: Reader) {
-                            Log.d(TAG, "Connected to reader: ${connectedReader.serialNumber}")
+                            Log.d(TAG, "SUCCESS! Connected to reader: ${connectedReader.serialNumber}")
                             _readerState.value = ReaderState.Connected(
                                 serialNumber = connectedReader.serialNumber ?: "Unknown",
                                 batteryLevel = connectedReader.batteryLevel,
@@ -222,7 +226,9 @@ class TerminalManager(private val context: Context) {
                         }
                         
                         override fun onFailure(e: TerminalException) {
-                            Log.e(TAG, "Failed to connect to reader", e)
+                            Log.e(TAG, "FAILED to connect to reader: ${e.errorMessage}")
+                            Log.e(TAG, "Error code: ${e.errorCode}")
+                            Log.e(TAG, "Full exception: ", e)
                             _readerState.value = ReaderState.Error(e.errorMessage)
                         }
                     }
