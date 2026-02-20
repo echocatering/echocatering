@@ -3640,7 +3640,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowReaderSetup(true);
+                  // Open native Reader Setup screen
+                  if (window.stripeBridge.openReaderSetup) {
+                    window.stripeBridge.openReaderSetup();
+                  } else {
+                    setShowReaderSetup(true);
+                  }
                 }}
                 style={{
                   background: readerConnected ? '#4caf50' : '#ef4444',
