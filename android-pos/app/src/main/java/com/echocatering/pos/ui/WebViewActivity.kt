@@ -1,10 +1,15 @@
 package com.echocatering.pos.ui
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.webkit.*
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.echocatering.pos.BuildConfig
 import com.echocatering.pos.EchoPosApplication
@@ -27,6 +32,29 @@ class WebViewActivity : AppCompatActivity() {
     private var hasRedirected = false
     private lateinit var videoCacheManager: VideoCacheManager
     
+    private val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
+    
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { it.value }
+        if (allGranted) {
+            terminalManager.initialize()
+        } else {
+            Toast.makeText(this, "Bluetooth permissions required for card reader", Toast.LENGTH_LONG).show()
+        }
+    }
+    
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,11 +67,23 @@ class WebViewActivity : AppCompatActivity() {
         setupWebView()
         observeTerminalState()
         
-        // Initialize Terminal SDK
-        terminalManager.initialize()
+        // Check permissions and initialize Terminal SDK
+        checkPermissionsAndInitialize()
         
         // Load the web POS
         binding.webView.loadUrl("https://echocatering.com/admin/pos")
+    }
+    
+    private fun checkPermissionsAndInitialize() {
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (missingPermissions.isEmpty()) {
+            terminalManager.initialize()
+        } else {
+            permissionLauncher.launch(missingPermissions.toTypedArray())
+        }
     }
     
     @SuppressLint("SetJavaScriptEnabled")
