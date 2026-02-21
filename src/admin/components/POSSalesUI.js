@@ -2939,38 +2939,51 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   height: '100%',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '3vh',
+                  gap: '2vh',
                 }}>
-                  {/* Total amount */}
+                  {/* Total amount at top */}
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#666', marginBottom: '0.5vh' }}>
-                      Total
-                    </div>
-                    <div style={{ fontSize: 'clamp(48px, 10vh, 72px)', fontWeight: '700', color: '#333' }}>
+                    <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
                       ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
                     </div>
                     {selectedTipAmount > 0 && (
-                      <div style={{ fontSize: 'clamp(12px, 1.8vh, 16px)', color: '#888', marginTop: '0.5vh' }}>
+                      <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginTop: '0.5vh' }}>
                         (includes ${selectedTipAmount.toFixed(2)} tip)
                       </div>
                     )}
                   </div>
                   
-                  {/* Card icon and instruction */}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'clamp(48px, 8vh, 64px)', marginBottom: '1vh' }}>
-                      💳
-                    </div>
-                    <div style={{ fontSize: 'clamp(18px, 3vh, 24px)', fontWeight: '600', color: '#800080' }}>
-                      {checkoutLoading ? 'Processing...' : 'Tap or Insert Card'}
-                    </div>
-                    <div style={{ fontSize: 'clamp(12px, 1.8vh, 16px)', color: '#888', marginTop: '0.5vh' }}>
-                      {checkoutLoading ? 'Please wait' : 'Hold card near reader'}
-                    </div>
+                  {/* Instruction text */}
+                  <div style={{ 
+                    fontSize: 'clamp(24px, 4vh, 36px)', 
+                    fontWeight: '600', 
+                    color: '#800080',
+                    textAlign: 'center',
+                    marginTop: '1vh',
+                  }}>
+                    {checkoutLoading ? 'Processing...' : 'Tap, Insert, Swipe'}
+                  </div>
+                  
+                  {/* Contactless icon */}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    marginTop: '1vh',
+                  }}>
+                    <img 
+                      src="/assets/icons/Contactless.png" 
+                      alt="Contactless Payment"
+                      style={{
+                        width: 'clamp(120px, 25vh, 200px)',
+                        height: 'auto',
+                        opacity: checkoutLoading ? 0.5 : 1,
+                      }}
+                    />
                   </div>
                   
                   {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '2vh' }}>
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '3vh' }}>
                     <button
                       onClick={() => {
                         setShowScanCard(false);
