@@ -2639,13 +2639,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
    * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
    * Called when customer selects a tip option
    */
-  // Called when customer selects a tip - shows scan card screen
-  const handleTipSelected = useCallback((tipAmount) => {
-    setSelectedTipAmount(tipAmount);
-    setShowScanCard(true);
-    setShowCustomTip(false);
-  }, []);
-
   const handleProcessPaymentWithTip = useCallback(async (tipAmount) => {
     if (!checkoutTabInfo || checkoutItems.length === 0) {
       alert('No checkout data');
@@ -2748,6 +2741,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setCheckoutLoading(false);
     }
   }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, sendCheckoutComplete]);
+
+  // Called when customer selects a tip - shows scan card screen and auto-charges
+  const handleTipSelected = useCallback((tipAmount) => {
+    setSelectedTipAmount(tipAmount);
+    setShowScanCard(true);
+    setShowCustomTip(false);
+    // Auto-trigger payment after a brief delay to show the screen
+    setTimeout(() => {
+      handleProcessPaymentWithTip(tipAmount);
+    }, 100);
+  }, [handleProcessPaymentWithTip]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -2964,7 +2968,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutLoading ? 'Processing...' : 'Tap, Insert, Swipe'}
                   </div>
                   
-                  {/* Contactless icon */}
+                  {/* Stripe Reader M2 icon */}
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -2972,54 +2976,38 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     marginTop: '1vh',
                   }}>
                     <img 
-                      src="/assets/icons/Contactless.png" 
-                      alt="Contactless Payment"
+                      src="/assets/icons/StripeReaderM2.png" 
+                      alt="Stripe Reader M2"
                       style={{
                         width: 'clamp(120px, 25vh, 200px)',
                         height: 'auto',
                         opacity: checkoutLoading ? 0.5 : 1,
+                        filter: 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)',
                       }}
                     />
                   </div>
                   
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '3vh' }}>
-                    <button
-                      onClick={() => {
-                        setShowScanCard(false);
-                        setSelectedTipAmount(0);
-                      }}
-                      disabled={checkoutLoading}
-                      style={{
-                        padding: '12px 32px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: '#f5f5f5',
-                        color: '#666',
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={() => handleProcessPaymentWithTip(selectedTipAmount)}
-                      disabled={checkoutLoading}
-                      style={{
-                        padding: '12px 32px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: checkoutLoading ? '#ccc' : '#800080',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {checkoutLoading ? 'Processing...' : 'Charge Card'}
-                    </button>
-                  </div>
+                  {/* Back button - styled like View Tab button */}
+                  <button
+                    onClick={() => {
+                      setShowScanCard(false);
+                      setSelectedTipAmount(0);
+                    }}
+                    disabled={checkoutLoading}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      background: 'transparent',
+                      color: '#666',
+                      border: 'none',
+                      cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                      marginTop: '3vh',
+                    }}
+                  >
+                    Back
+                  </button>
                 </div>
               ) : !showTabView ? (
                 /* TIP VIEW or KEYPAD VIEW - fills container height */
