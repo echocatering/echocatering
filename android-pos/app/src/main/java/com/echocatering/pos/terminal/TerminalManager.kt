@@ -271,7 +271,19 @@ class TerminalManager(private val context: Context) {
     ) {
         scope.launch {
             try {
+                Log.d(TAG, "processPayment called: amount=$amountCents, tip=$tipCents")
+                
+                // Check if reader is connected
+                val connectedReader = Terminal.getInstance().connectedReader
+                if (connectedReader == null) {
+                    Log.e(TAG, "No reader connected - cannot process payment")
+                    _paymentState.value = PaymentState.Failed("No reader connected. Please connect a reader first.")
+                    return@launch
+                }
+                Log.d(TAG, "Reader connected: ${connectedReader.serialNumber}")
+                
                 _paymentState.value = PaymentState.CreatingIntent
+                Log.d(TAG, "Creating payment intent...")
                 
                 // Create payment intent via backend
                 val request = com.echocatering.pos.api.PaymentIntentRequest(
@@ -294,9 +306,11 @@ class TerminalManager(private val context: Context) {
                 
                 val response = ApiClient.service.createPaymentIntent(request)
                 currentPaymentIntentId = response.payment_intent_id
+                Log.d(TAG, "Payment intent created: ${response.payment_intent_id}")
                 
                 // Retrieve the payment intent in Terminal
                 _paymentState.value = PaymentState.RetrievingIntent
+                Log.d(TAG, "Retrieving payment intent from Terminal...")
                 
                 Terminal.getInstance().retrievePaymentIntent(
                     response.client_secret,
@@ -320,6 +334,7 @@ class TerminalManager(private val context: Context) {
     }
     
     private fun collectPayment(paymentIntent: PaymentIntent) {
+        Log.d(TAG, "collectPayment: Starting to collect payment method - reader should now be waiting for card")
         _paymentState.value = PaymentState.CollectingPayment
         
         paymentCancelable = Terminal.getInstance().collectPaymentMethod(

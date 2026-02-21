@@ -2740,15 +2740,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
   }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, sendCheckoutComplete]);
 
-  // Called when customer selects a tip - shows scan card screen and auto-charges
+  // Called when customer selects a tip - shows scan card screen and starts payment collection
   const handleTipSelected = useCallback((tipAmount) => {
+    console.log('[POS Checkout] Tip selected:', tipAmount);
     setSelectedTipAmount(tipAmount);
     setShowScanCard(true);
     setShowCustomTip(false);
-    // Auto-trigger payment after a brief delay to show the screen
+    setPaymentStatus(null);
+    setPaymentStatusMessage(null);
+    // Start payment collection after screen renders - reader will wait for card tap
     setTimeout(() => {
+      console.log('[POS Checkout] Starting payment collection...');
       handleProcessPaymentWithTip(tipAmount);
-    }, 100);
+    }, 500);
   }, [handleProcessPaymentWithTip]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
@@ -3121,7 +3125,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         
                         {/* No Tip button */}
                         <button
-                          onClick={() => handleProcessPaymentWithTip(0)}
+                          onClick={() => handleTipSelected(0)}
                           disabled={checkoutLoading}
                           style={{
                             width: '100%',
