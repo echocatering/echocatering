@@ -1940,6 +1940,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCustomTip, setShowCustomTip] = useState(false); // Show custom tip input (local only)
   const [customTipAmount, setCustomTipAmount] = useState(''); // Custom tip in dollars (local only)
   const [showTabView, setShowTabView] = useState(false); // Toggle between tip view and receipt view
+  const [showScanCard, setShowScanCard] = useState(false); // Show scan card screen after tip selection
+  const [selectedTipAmount, setSelectedTipAmount] = useState(0); // Store selected tip for scan card screen
   
   // Stripe Terminal M2 Reader state
   const [showReaderSetup, setShowReaderSetup] = useState(false);
@@ -1966,6 +1968,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutItems([]);
     setCheckoutSubtotal(0);
     setCheckoutTabInfo(null);
+    setShowScanCard(false);
+    setSelectedTipAmount(0);
   }, []);
   
   const handleWsCheckoutCancel = useCallback(() => {
@@ -1974,6 +1978,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutItems([]);
     setCheckoutSubtotal(0);
     setCheckoutTabInfo(null);
+    setShowScanCard(false);
+    setSelectedTipAmount(0);
   }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
@@ -2633,6 +2639,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
    * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
    * Called when customer selects a tip option
    */
+  // Called when customer selects a tip - shows scan card screen
+  const handleTipSelected = useCallback((tipAmount) => {
+    setSelectedTipAmount(tipAmount);
+    setShowScanCard(true);
+    setShowCustomTip(false);
+  }, []);
+
   const handleProcessPaymentWithTip = useCallback(async (tipAmount) => {
     if (!checkoutTabInfo || checkoutItems.length === 0) {
       alert('No checkout data');
@@ -2674,6 +2687,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setCurrentCheckoutId(null);
               setCheckoutMode(false);
               setCheckoutLoading(false);
+              setShowScanCard(false);
+              setSelectedTipAmount(0);
             }, 3000);
           } else {
             setPaymentStatus('payment_failed');
@@ -2682,6 +2697,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCheckoutLoading(false);
+              setShowScanCard(false);
+              setSelectedTipAmount(0);
             }, 3000);
           }
         };
@@ -2694,6 +2711,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatus(null);
             setPaymentStatusMessage(null);
             setCheckoutLoading(false);
+            setShowScanCard(false);
+            setSelectedTipAmount(0);
           }, 3000);
         };
         
@@ -2714,6 +2733,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatusMessage(null);
             setCheckoutMode(false);
             setCheckoutLoading(false);
+            setShowScanCard(false);
+            setSelectedTipAmount(0);
           }, 2000);
         }, 2000);
       }
@@ -2909,7 +2930,85 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               alignItems: 'center',
               overflow: 'hidden',
             }}>
-              {!showTabView ? (
+              {showScanCard ? (
+                /* SCAN CARD SCREEN - shown after tip selection */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '3vh',
+                }}>
+                  {/* Total amount */}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#666', marginBottom: '0.5vh' }}>
+                      Total
+                    </div>
+                    <div style={{ fontSize: 'clamp(48px, 10vh, 72px)', fontWeight: '700', color: '#333' }}>
+                      ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
+                    </div>
+                    {selectedTipAmount > 0 && (
+                      <div style={{ fontSize: 'clamp(12px, 1.8vh, 16px)', color: '#888', marginTop: '0.5vh' }}>
+                        (includes ${selectedTipAmount.toFixed(2)} tip)
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Card icon and instruction */}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 'clamp(48px, 8vh, 64px)', marginBottom: '1vh' }}>
+                      💳
+                    </div>
+                    <div style={{ fontSize: 'clamp(18px, 3vh, 24px)', fontWeight: '600', color: '#800080' }}>
+                      {checkoutLoading ? 'Processing...' : 'Tap or Insert Card'}
+                    </div>
+                    <div style={{ fontSize: 'clamp(12px, 1.8vh, 16px)', color: '#888', marginTop: '0.5vh' }}>
+                      {checkoutLoading ? 'Please wait' : 'Hold card near reader'}
+                    </div>
+                  </div>
+                  
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '2vh' }}>
+                    <button
+                      onClick={() => {
+                        setShowScanCard(false);
+                        setSelectedTipAmount(0);
+                      }}
+                      disabled={checkoutLoading}
+                      style={{
+                        padding: '12px 32px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: '#f5f5f5',
+                        color: '#666',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => handleProcessPaymentWithTip(selectedTipAmount)}
+                      disabled={checkoutLoading}
+                      style={{
+                        padding: '12px 32px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: checkoutLoading ? '#ccc' : '#800080',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {checkoutLoading ? 'Processing...' : 'Charge Card'}
+                    </button>
+                  </div>
+                </div>
+              ) : !showTabView ? (
                 /* TIP VIEW or KEYPAD VIEW - fills container height */
                 <div style={{
                   display: 'flex',
@@ -2939,7 +3038,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             return (
                               <button
                                 key={label}
-                                onClick={() => handleProcessPaymentWithTip(tipAmount)}
+                                onClick={() => handleTipSelected(tipAmount)}
                                 disabled={checkoutLoading}
                                 style={{
                                   flex: 1,
@@ -3155,7 +3254,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             </button>
                             {/* Green check button */}
                             <button
-                              onClick={() => handleProcessPaymentWithTip(parseFloat(customTipAmount) || 0)}
+                              onClick={() => handleTipSelected(parseFloat(customTipAmount) || 0)}
                               disabled={checkoutLoading}
                               style={{
                                 flex: 1,
