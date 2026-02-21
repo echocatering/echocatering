@@ -2965,7 +2965,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     textAlign: 'center',
                     marginTop: '1vh',
                   }}>
-                    {checkoutLoading ? 'Processing...' : 'Tap, Insert, Swipe'}
+                    Tap, Insert, Swipe
                   </div>
                   
                   {/* Stripe Reader M2 icon */}
@@ -2981,7 +2981,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       style={{
                         width: 'clamp(120px, 25vh, 200px)',
                         height: 'auto',
-                        opacity: checkoutLoading ? 0.5 : 1,
                         filter: 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)',
                       }}
                     />
