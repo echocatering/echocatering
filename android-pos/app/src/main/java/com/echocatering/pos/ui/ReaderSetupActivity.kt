@@ -60,6 +60,16 @@ class ReaderSetupActivity : AppCompatActivity() {
         binding.diagnosticsButton.setOnClickListener {
             startActivity(Intent(this, DiagnosticsActivity::class.java))
         }
+        
+        // Simulator button (for testing without physical test card)
+        binding.simulatorButton.setOnClickListener {
+            startSimulatedScanning()
+        }
+    }
+    
+    private fun startSimulatedScanning() {
+        Toast.makeText(this, "Scanning for simulated reader...", Toast.LENGTH_SHORT).show()
+        terminalManager.discoverSimulatedReaders()
     }
     
     private fun setupObservers() {

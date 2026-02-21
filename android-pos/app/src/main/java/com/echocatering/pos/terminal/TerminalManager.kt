@@ -113,6 +113,62 @@ class TerminalManager(private val context: Context) {
     }
     
     /**
+     * Start discovering simulated readers (for testing without physical test card)
+     */
+    fun discoverSimulatedReaders() {
+        Log.d(TAG, "discoverSimulatedReaders() called")
+        
+        if (!Terminal.isInitialized()) {
+            Log.e(TAG, "Terminal not initialized - attempting to initialize")
+            initialize()
+            if (!Terminal.isInitialized()) {
+                _readerState.value = ReaderState.Error("Terminal not initialized")
+                return
+            }
+        }
+        
+        // Cancel any existing discovery
+        discoveryCancelable?.cancel(object : Callback {
+            override fun onSuccess() {}
+            override fun onFailure(e: TerminalException) {}
+        })
+        
+        _readerState.value = ReaderState.Discovering
+        _discoveredReaders.value = emptyList()
+        
+        Log.d(TAG, "Starting simulated reader discovery...")
+        
+        val config = DiscoveryConfiguration.BluetoothDiscoveryConfiguration(
+            timeout = 10,
+            isSimulated = true  // Use simulated reader
+        )
+        
+        discoveryCancelable = Terminal.getInstance().discoverReaders(
+            config,
+            { readers ->
+                Log.d(TAG, "Simulated discovery update: found ${readers.size} readers")
+                _discoveredReaders.value = readers
+                if (readers.isNotEmpty()) {
+                    _readerState.value = ReaderState.Discovered(readers.size)
+                }
+            },
+            object : Callback {
+                override fun onSuccess() {
+                    Log.d(TAG, "Simulated discovery completed successfully")
+                    if (_discoveredReaders.value.isEmpty()) {
+                        _readerState.value = ReaderState.Error("No simulated readers found")
+                    }
+                }
+                
+                override fun onFailure(e: TerminalException) {
+                    Log.e(TAG, "Simulated discovery failed: ${e.errorMessage}")
+                    _readerState.value = ReaderState.Error(e.errorMessage)
+                }
+            }
+        )
+    }
+    
+    /**
      * Start discovering Bluetooth readers
      */
     fun discoverReaders() {

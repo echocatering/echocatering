@@ -294,6 +294,13 @@ class WebViewActivity : AppCompatActivity() {
         }
         
         @JavascriptInterface
+        fun discoverSimulatedReaders() {
+            runOnUiThread {
+                terminalManager.discoverSimulatedReaders()
+            }
+        }
+        
+        @JavascriptInterface
         fun processPayment(amountCents: Int, currency: String) {
             processPaymentWithDetails(amountCents, currency, null, null, null, null, "[]", 0)
         }
