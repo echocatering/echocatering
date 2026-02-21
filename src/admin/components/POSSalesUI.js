@@ -2690,8 +2690,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCheckoutLoading(false);
-              setShowScanCard(false);
-              setSelectedTipAmount(0);
+              // Stay on scan card screen so user can retry
             }, 3000);
           }
         };
@@ -2704,8 +2703,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatus(null);
             setPaymentStatusMessage(null);
             setCheckoutLoading(false);
-            setShowScanCard(false);
-            setSelectedTipAmount(0);
+            // Stay on scan card screen so user can retry
           }, 3000);
         };
         
@@ -2986,6 +2984,42 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     />
                   </div>
                   
+                  {/* Error message if payment failed */}
+                  {paymentStatus === 'payment_failed' && (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      color: '#ef4444',
+                      fontSize: 'clamp(14px, 2vh, 18px)',
+                      marginTop: '1vh',
+                    }}>
+                      {paymentStatusMessage || 'Payment failed. Tap Retry to try again.'}
+                    </div>
+                  )}
+                  
+                  {/* Retry button - shown after payment failure */}
+                  {paymentStatus === 'payment_failed' && !checkoutLoading && (
+                    <button
+                      onClick={() => {
+                        setPaymentStatus(null);
+                        setPaymentStatusMessage(null);
+                        handleProcessPaymentWithTip(selectedTipAmount);
+                      }}
+                      style={{
+                        padding: '12px 32px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: '#800080',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginTop: '2vh',
+                      }}
+                    >
+                      Retry
+                    </button>
+                  )}
+                  
                   {/* Back button - styled like View Tab button */}
                   <button
                     onClick={() => {
@@ -3002,7 +3036,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       color: '#666',
                       border: 'none',
                       cursor: checkoutLoading ? 'not-allowed' : 'pointer',
-                      marginTop: '3vh',
+                      marginTop: '2vh',
                     }}
                   >
                     Back
