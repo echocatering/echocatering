@@ -2767,6 +2767,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // Called when customer selects a tip - shows scan card screen and starts payment collection
   const handleTipSelected = useCallback((tipAmount) => {
     console.log('[POS Checkout] Tip selected:', tipAmount);
+    console.log('[POS Checkout] readerInfo:', JSON.stringify(readerInfo));
+    console.log('[POS Checkout] stripeBridge available:', !!window.stripeBridge);
+    
     setSelectedTipAmount(tipAmount);
     setShowScanCard(true);
     setShowCustomTip(false);
@@ -2774,19 +2777,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatusMessage(null);
     updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
+    // Check if this is a simulated reader (serial number contains SIMULATOR)
+    const isSimulatedReader = readerInfo?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
+    console.log('[POS Checkout] Is simulated reader:', isSimulatedReader);
+    
     // For simulated readers, don't auto-start payment - wait for manual trigger
     // For real readers, auto-start payment collection
-    if (window.stripeBridge && readerInfo?.serialNumber?.includes('SIMULATOR')) {
+    if (window.stripeBridge && isSimulatedReader) {
       console.log('[POS Checkout] Simulated reader detected - waiting for manual card tap');
       // Don't auto-start payment for simulated readers
-    } else {
-      // Start payment collection after screen renders - reader will wait for card tap
+    } else if (window.stripeBridge && readerConnected) {
+      // Real reader connected - auto-start payment collection
       setTimeout(() => {
-        console.log('[POS Checkout] Starting payment collection...');
+        console.log('[POS Checkout] Starting payment collection with real reader...');
         handleProcessPaymentWithTip(tipAmount);
       }, 500);
+    } else {
+      // No reader connected or not in native app - don't auto-start
+      console.log('[POS Checkout] No reader connected or not in native app - waiting for user action');
     }
-  }, [handleProcessPaymentWithTip, readerInfo, updateCheckoutStage]);
+  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -3079,8 +3089,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - only shown in native app with simulated reader */}
-                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerInfo?.serialNumber?.includes('SIMULATOR') && (
+                  {/* Simulate Card Tap button - shown in native app when reader is connected */}
+                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerConnected && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - starting payment collection...');
