@@ -4237,8 +4237,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             position: 'relative',
           }}
         >
-          {/* Left side: Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Left side: Logo + Reader Status Dot */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: '8px' }}>
             {logoUrl && (
               <img 
                 src={logoUrl} 
@@ -4252,63 +4252,25 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 }}
               />
             )}
+            {/* Reader connection status dot */}
+            <div style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: readerConnected ? '#22c55e' : '#ef4444',
+              boxShadow: readerConnected ? '0 0 4px #22c55e' : '0 0 4px #ef4444',
+            }} />
           </div>
           
-          {/* Center: Card Reader Status + TEST MODE toggle */}
+          {/* Center: Empty - Reader and TEST buttons moved to header tap reveal */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Card Reader Status Button */}
-            {window.stripeBridge && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Open native Reader Setup screen
-                  if (window.stripeBridge.openReaderSetup) {
-                    window.stripeBridge.openReaderSetup();
-                  } else {
-                    setShowReaderSetup(true);
-                  }
-                }}
-                style={{
-                  background: readerConnected ? '#4caf50' : '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>{readerConnected ? '●' : '○'}</span>
-                <span>READER</span>
-              </button>
-            )}
-            
-            <button
-              onClick={() => setSquareTestMode(prev => !prev)}
-              style={{
-                background: squareTestMode ? '#ff9800' : '#4caf50',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '4px 8px',
-                fontSize: '10px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
-              {squareTestMode ? 'TEST' : 'LIVE'}
-            </button>
           </div>
           
           {/* Right side: Event name/time OR End Event button */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            position: 'relative',
+            gap: '8px',
             height: '100%',
           }}>
             {/* Event name and time OR Payment Processing indicator */}
@@ -4386,8 +4348,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 }
               }}
               style={{
-                position: 'absolute',
-                right: 0,
                 background: checkoutMode ? '#f59e0b' : '#c62828',
                 color: '#fff',
                 border: 'none',
@@ -4404,6 +4364,66 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               }}
             >
               {checkoutMode ? 'CANCEL PAYMENT' : 'END EVENT'}
+            </button>
+            
+            {/* Reader Button - shown on header tap */}
+            {window.stripeBridge && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.stripeBridge.openReaderSetup) {
+                    window.stripeBridge.openReaderSetup();
+                  } else {
+                    setShowReaderSetup(true);
+                  }
+                }}
+                style={{
+                  background: readerConnected ? '#4caf50' : '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'opacity 0.3s ease, transform 0.3s ease',
+                  opacity: showEndEventButton ? 1 : 0,
+                  transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
+                  pointerEvents: showEndEventButton ? 'auto' : 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span>{readerConnected ? '●' : '○'}</span>
+                <span>READER</span>
+              </button>
+            )}
+            
+            {/* TEST/LIVE Button - shown on header tap */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSquareTestMode(prev => !prev);
+              }}
+              style={{
+                background: squareTestMode ? '#ff9800' : '#4caf50',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                opacity: showEndEventButton ? 1 : 0,
+                transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
+                pointerEvents: showEndEventButton ? 'auto' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {squareTestMode ? 'TEST' : 'LIVE'}
             </button>
           </div>
         </div>
