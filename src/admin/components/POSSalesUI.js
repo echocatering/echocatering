@@ -1944,6 +1944,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [selectedTipAmount, setSelectedTipAmount] = useState(0); // Store selected tip for scan card screen
   const [checkoutStage, setCheckoutStage] = useState(''); // Track checkout stage: 'tip', 'tab', 'payment', 'processing', 'success', 'failed'
   
+  // Checkout timeout - 1 minute idle returns to menu
+  const checkoutTimeoutRef = useRef(null);
+  const CHECKOUT_TIMEOUT_MS = 60000; // 1 minute
+  
   // Stripe Terminal M2 Reader state
   const [showReaderSetup, setShowReaderSetup] = useState(false);
   const [readerConnected, setReaderConnected] = useState(false);
@@ -2246,6 +2250,47 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage(stage);
     sendCheckoutStage(stage);
   }, [sendCheckoutStage]);
+  
+  // Checkout timeout effect - 1 minute idle on horizontal view returns to menu
+  // Only applies to horizontal view (no stripeBridge) and non-processing stages
+  useEffect(() => {
+    // Clear any existing timeout
+    if (checkoutTimeoutRef.current) {
+      clearTimeout(checkoutTimeoutRef.current);
+      checkoutTimeoutRef.current = null;
+    }
+    
+    // Only set timeout if in checkout mode on horizontal view (no stripeBridge)
+    // Don't timeout during processing or success - let those complete naturally
+    if (checkoutMode && !window.stripeBridge && 
+        checkoutStage !== 'processing' && checkoutStage !== 'success') {
+      console.log('[POS] Starting 1-minute checkout timeout');
+      checkoutTimeoutRef.current = setTimeout(() => {
+        console.log('[POS] Checkout timeout - returning to menu');
+        // Cancel checkout and return to menu
+        setCheckoutMode(false);
+        setCheckoutItems([]);
+        setCheckoutSubtotal(0);
+        setCheckoutTabInfo(null);
+        setShowScanCard(false);
+        setShowTabView(false);
+        setShowCustomTip(false);
+        setSelectedTipAmount(0);
+        setCheckoutStage('');
+        setPaymentStatus(null);
+        setPaymentStatusMessage(null);
+        // Broadcast cancel to other devices
+        sendCheckoutCancel();
+      }, CHECKOUT_TIMEOUT_MS);
+    }
+    
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (checkoutTimeoutRef.current) {
+        clearTimeout(checkoutTimeoutRef.current);
+      }
+    };
+  }, [checkoutMode, checkoutStage, showTabView, showScanCard, showCustomTip, sendCheckoutCancel]);
   
   // ============================================
   // SQUARE POS TEST MODE
@@ -4039,7 +4084,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
                   </span>
-                  {(checkoutStage === 'processing' || !checkoutStage) && (
+                  {checkoutStage !== 'success' && checkoutStage !== 'failed' && (
                     <div style={{
                       width: '16px',
                       height: '16px',
@@ -4063,7 +4108,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               )}
             </div>
             
-            {/* End Event button - slides in from right */}
+            {/* End Event / Cancel Payment button - slides in from right */}
+            {/* During checkout: shows Cancel Payment (returns to menu) */}
+            {/* Outside checkout: shows End Event (only when not in payment screens on any device) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -4071,12 +4118,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   clearTimeout(endEventTimeoutRef.current);
                 }
                 setShowEndEventButton(false);
-                setShowEndEventModal(true);
+                
+                if (checkoutMode) {
+                  // Cancel Payment - return to menu
+                  setCheckoutMode(false);
+                  setCheckoutItems([]);
+                  setCheckoutSubtotal(0);
+                  setCheckoutTabInfo(null);
+                  setShowScanCard(false);
+                  setShowTabView(false);
+                  setShowCustomTip(false);
+                  setSelectedTipAmount(0);
+                  setCheckoutStage('');
+                  setPaymentStatus(null);
+                  setPaymentStatusMessage(null);
+                  sendCheckoutCancel();
+                } else {
+                  // End Event - show confirmation modal
+                  setShowEndEventModal(true);
+                }
               }}
               style={{
                 position: 'absolute',
                 right: 0,
-                background: '#c62828',
+                background: checkoutMode ? '#f59e0b' : '#c62828',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -4091,7 +4156,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              END EVENT
+              {checkoutMode ? 'CANCEL PAYMENT' : 'END EVENT'}
             </button>
           </div>
         </div>
