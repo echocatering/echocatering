@@ -478,6 +478,48 @@ class TerminalManager(private val context: Context) {
     }
     
     /**
+     * Manually trigger simulated payment completion (for testing)
+     */
+    fun triggerSimulatedPayment() {
+        Log.d(TAG, "triggerSimulatedPayment called")
+        
+        // Check if we're in collecting payment state with a simulated reader
+        val connectedReader = Terminal.getInstance().connectedReader
+        if (connectedReader?.isSimulated == true && _paymentState.value is PaymentState.CollectingPayment) {
+            Log.d(TAG, "Triggering simulated payment completion")
+            
+            // Cancel the current collection and restart it to trigger completion
+            paymentCancelable?.cancel(object : Callback {
+                override fun onSuccess() {
+                    Log.d(TAG, "Payment collection canceled, restarting...")
+                    // Restart payment collection which should auto-complete
+                    if (currentPaymentIntentId != null) {
+                        Terminal.getInstance().retrievePaymentIntent(
+                            currentPaymentIntentId!!,
+                            object : PaymentIntentCallback {
+                                override fun onSuccess(paymentIntent: PaymentIntent) {
+                                    collectPayment(paymentIntent)
+                                }
+                                
+                                override fun onFailure(e: TerminalException) {
+                                    Log.e(TAG, "Failed to retrieve payment intent for simulated trigger", e)
+                                    _paymentState.value = PaymentState.Failed(e.errorMessage)
+                                }
+                            }
+                        )
+                    }
+                }
+                
+                override fun onFailure(e: TerminalException) {
+                    Log.e(TAG, "Failed to cancel payment collection", e)
+                }
+            })
+        } else {
+            Log.w(TAG, "Cannot trigger simulated payment - not connected to simulated reader or not collecting payment")
+        }
+    }
+    
+    /**
      * Reset payment state to idle
      */
     fun resetPaymentState() {

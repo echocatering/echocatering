@@ -301,6 +301,13 @@ class WebViewActivity : AppCompatActivity() {
         }
         
         @JavascriptInterface
+        fun triggerSimulatedPayment() {
+            runOnUiThread {
+                terminalManager.triggerSimulatedPayment()
+            }
+        }
+        
+        @JavascriptInterface
         fun processPayment(amountCents: Int, currency: String) {
             processPaymentWithDetails(amountCents, currency, null, null, null, null, "[]", 0)
         }

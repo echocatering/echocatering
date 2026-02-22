@@ -3000,6 +3000,31 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   )}
                   
+                  {/* Simulate Card Tap button - only shown in native app with simulated reader */}
+                  {window.stripeBridge && !checkoutLoading && !paymentStatus && (
+                    <button
+                      onClick={() => {
+                        console.log('[POS Checkout] Triggering simulated payment...');
+                        if (window.stripeBridge.triggerSimulatedPayment) {
+                          window.stripeBridge.triggerSimulatedPayment();
+                        }
+                      }}
+                      style={{
+                        padding: '12px 32px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: '#28a745',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginTop: '2vh',
+                      }}
+                    >
+                      Simulate Card Tap
+                    </button>
+                  )}
+                  
                   {/* Retry button - shown after payment failure */}
                   {paymentStatus === 'payment_failed' && !checkoutLoading && (
                     <button
