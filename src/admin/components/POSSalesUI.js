@@ -3237,29 +3237,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - shown on device without local reader when remote device has simulated reader */}
-                  {/* Show when: no local reader AND remote reader is connected AND remote reader is simulated AND payment not yet successful */}
-                  {!readerConnected && remoteReaderConnected && remoteReaderIsSimulated && paymentStatus !== 'payment_success' && (
+                  {/* Simulate Card Tap button - shown on device without local reader when ANY device has a reader */}
+                  {/* Simple logic: if no local reader AND remote reader exists, show button */}
+                  {console.log('[POS DEBUG] Simulate Tap Button Check:', { readerConnected, remoteReaderConnected, showScanCard, checkoutStage, paymentStatus })}
+                  {!readerConnected && remoteReaderConnected && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
                         updateCheckoutStage('processing');
                         sendSimulateTap();
                       }}
-                      disabled={checkoutStage === 'processing'}
+                      disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
                       style={{
                         padding: '12px 32px',
                         fontSize: 'clamp(14px, 2vh, 18px)',
                         fontWeight: '600',
-                        background: checkoutStage === 'processing' ? '#6c757d' : '#28a745',
+                        background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#28a745',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: checkoutStage === 'processing' ? 'not-allowed' : 'pointer',
+                        cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
                         marginTop: '2vh',
                       }}
                     >
-                      {checkoutStage === 'processing' ? 'Processing...' : 'Simulate Card Tap'}
+                      {checkoutStage === 'processing' ? 'Processing...' : paymentStatus === 'payment_success' ? 'Complete' : 'Simulate Card Tap'}
                     </button>
                   )}
                   
