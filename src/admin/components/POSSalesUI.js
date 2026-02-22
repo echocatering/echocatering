@@ -1986,6 +1986,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage('');
   }, []);
   
+  // Handle checkout stage updates from other devices (for vertical screen sync)
+  const handleWsCheckoutStage = useCallback((data) => {
+    console.log('[POS] WebSocket checkout_stage received:', data.stage);
+    setCheckoutStage(data.stage || '');
+  }, []);
+  
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
     console.log('[POS] Payment status received:', message);
@@ -2171,12 +2177,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
-    handlePaymentStatus
+    handlePaymentStatus,
+    handleWsCheckoutStage
   );
+  
+  // Helper to update checkout stage locally AND broadcast via WebSocket
+  const updateCheckoutStage = useCallback((stage) => {
+    setCheckoutStage(stage);
+    sendCheckoutStage(stage);
+  }, [sendCheckoutStage]);
   
   // ============================================
   // SQUARE POS TEST MODE
@@ -2671,7 +2684,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           if (result.success) {
             setPaymentStatus('payment_success');
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
-            setCheckoutStage('success'); // Show "Payment Completed" on vertical screen
+            updateCheckoutStage('success'); // Show "Payment Completed" on vertical screen
             
             // Clear the tab after successful payment
             if (checkoutTabInfo?.id) {
@@ -2687,17 +2700,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setCheckoutLoading(false);
               setShowScanCard(false);
               setSelectedTipAmount(0);
-              setCheckoutStage('');
+              updateCheckoutStage('');
             }, 3000);
           } else {
             setPaymentStatus('payment_failed');
             setPaymentStatusMessage('Payment failed. Please try again.');
-            setCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
+            updateCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
             setTimeout(() => {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCheckoutLoading(false);
-              setCheckoutStage('payment'); // Return to payment screen
+              updateCheckoutStage('payment'); // Return to payment screen
               // Stay on scan card screen so user can retry
             }, 3000);
           }
@@ -2707,18 +2720,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           console.error('[POS Checkout] Payment error:', error);
           setPaymentStatus('payment_failed');
           setPaymentStatusMessage(`Payment error: ${error}`);
-          setCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
+          updateCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
           setTimeout(() => {
             setPaymentStatus(null);
             setPaymentStatusMessage(null);
             setCheckoutLoading(false);
-            setCheckoutStage('payment'); // Return to payment screen
+            updateCheckoutStage('payment'); // Return to payment screen
             // Stay on scan card screen so user can retry
           }, 3000);
         };
         
         // Process payment via Stripe Terminal
-        setCheckoutStage('processing'); // Show "Processing Payment" on vertical screen
+        updateCheckoutStage('processing'); // Show "Processing Payment" on vertical screen
         window.stripeBridge.processPayment(totalCents, 'usd');
         
       } else {
@@ -2749,7 +2762,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       alert(`Checkout failed: ${error.message}`);
       setCheckoutLoading(false);
     }
-  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, sendCheckoutComplete]);
+  }, [checkoutTabInfo, checkoutItems, checkoutSubtotal, sendCheckoutComplete, updateCheckoutStage]);
 
   // Called when customer selects a tip - shows scan card screen and starts payment collection
   const handleTipSelected = useCallback((tipAmount) => {
@@ -2759,7 +2772,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowCustomTip(false);
     setPaymentStatus(null);
     setPaymentStatusMessage(null);
-    setCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
+    updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
     // For simulated readers, don't auto-start payment - wait for manual trigger
     // For real readers, auto-start payment collection
@@ -2773,7 +2786,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         handleProcessPaymentWithTip(tipAmount);
       }, 500);
     }
-  }, [handleProcessPaymentWithTip, readerInfo]);
+  }, [handleProcessPaymentWithTip, readerInfo, updateCheckoutStage]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -3425,7 +3438,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         setCustomTipAmount('');
                       } else {
                         setShowTabView(true);
-                        setCheckoutStage('tab');
+                        updateCheckoutStage('tab');
                       }
                     }}
                     style={{

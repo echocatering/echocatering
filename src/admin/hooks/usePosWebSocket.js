@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -71,6 +71,12 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onPaymentStatus(message);
               }
               break;
+            case 'checkout_stage':
+              // Handle checkout stage updates from other devices
+              if (onCheckoutStage) {
+                onCheckoutStage(message.data);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -105,7 +111,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
@@ -142,6 +148,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send checkout stage update
+  const sendCheckoutStage = useCallback((stage) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'checkout_stage',
+        data: { stage }
+      }));
+      console.log('[POS WebSocket] Sent checkout_stage:', stage);
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -161,6 +178,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     isConnected,
     sendCheckoutStart,
     sendCheckoutComplete,
-    sendCheckoutCancel
+    sendCheckoutCancel,
+    sendCheckoutStage
   };
 }
