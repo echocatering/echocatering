@@ -1998,6 +1998,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const handleWsCheckoutStage = useCallback((data) => {
     console.log('[POS] WebSocket checkout_stage received:', data.stage);
     setCheckoutStage(data.stage || '');
+    
+    // Also update paymentStatus based on stage so H shows success/failed animation
+    if (data.stage === 'success') {
+      setPaymentStatus('payment_success');
+      // Auto-clear after 3 seconds
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setCheckoutMode(false);
+        setShowScanCard(false);
+        setSelectedTipAmount(0);
+      }, 3000);
+    } else if (data.stage === 'failed') {
+      setPaymentStatus('payment_failed');
+      // Auto-clear after 3 seconds
+      setTimeout(() => {
+        setPaymentStatus(null);
+      }, 3000);
+    }
   }, []);
   
   // Handle process_payment request from horizontal device (customer-facing)
@@ -2034,6 +2052,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
   }, [readerConnected]);
   
+  // Ref to hold sendPaymentResult function (to avoid circular dependency)
+  const sendPaymentResultRef = useRef(null);
+  
   // Handle simulate_tap request from horizontal device (customer-facing)
   // This is received by the vertical device (with Stripe reader) to process the payment
   const handleWsSimulateTap = useCallback((data) => {
@@ -2044,10 +2065,66 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       console.log('[POS] This device has reader - starting payment process');
       setCheckoutStage('processing');
       
+      // Broadcast processing status to H
+      if (sendPaymentResultRef.current) {
+        sendPaymentResultRef.current({ status: 'processing', stage: 'processing' });
+      }
+      
       // Use amount from WebSocket message, fallback to local state
       const amountCents = data?.amountCents || Math.round((checkoutSubtotal + selectedTipAmount) * 100);
       
       console.log('[POS] Processing payment for amount:', amountCents, 'cents');
+      
+      // Set up payment callbacks to broadcast result to H
+      window.onPaymentComplete = (result) => {
+        console.log('[POS] Simulated payment completed:', result);
+        if (result.success) {
+          setPaymentStatus('payment_success');
+          setCheckoutStage('success');
+          
+          // Broadcast success to H
+          if (sendPaymentResultRef.current) {
+            sendPaymentResultRef.current({ status: 'payment_success', stage: 'success' });
+          }
+          
+          setTimeout(() => {
+            setPaymentStatus(null);
+            setCheckoutMode(false);
+            setShowScanCard(false);
+            setSelectedTipAmount(0);
+            setCheckoutStage('');
+          }, 3000);
+        } else {
+          setPaymentStatus('payment_failed');
+          setCheckoutStage('failed');
+          
+          // Broadcast failure to H
+          if (sendPaymentResultRef.current) {
+            sendPaymentResultRef.current({ status: 'payment_failed', stage: 'failed' });
+          }
+          
+          setTimeout(() => {
+            setPaymentStatus(null);
+            setCheckoutStage('payment');
+          }, 3000);
+        }
+      };
+      
+      window.onPaymentError = (error) => {
+        console.error('[POS] Simulated payment error:', error);
+        setPaymentStatus('payment_failed');
+        setCheckoutStage('failed');
+        
+        // Broadcast failure to H
+        if (sendPaymentResultRef.current) {
+          sendPaymentResultRef.current({ status: 'payment_failed', stage: 'failed', error: error });
+        }
+        
+        setTimeout(() => {
+          setPaymentStatus(null);
+          setCheckoutStage('payment');
+        }, 3000);
+      };
       
       // Start the actual payment process
       if (window.stripeBridge.processPayment) {
@@ -2064,6 +2141,32 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     console.log('[POS] WebSocket reader_status received:', data);
     setRemoteReaderConnected(data.connected || false);
     setRemoteReaderIsSimulated(data.isSimulated || false);
+  }, []);
+  
+  // Handle payment_result from V device - V always broadcasts payment status to H
+  const handleWsPaymentResult = useCallback((data) => {
+    console.log('[POS] WebSocket payment_result received:', data);
+    
+    // Update local state to match V's payment status
+    setPaymentStatus(data.status);
+    setCheckoutStage(data.stage || '');
+    
+    if (data.status === 'payment_success') {
+      // Show success, then clear after 3 seconds
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setCheckoutMode(false);
+        setShowScanCard(false);
+        setSelectedTipAmount(0);
+        setCheckoutStage('');
+      }, 3000);
+    } else if (data.status === 'payment_failed') {
+      // Show failure, then return to payment screen after 3 seconds
+      setTimeout(() => {
+        setPaymentStatus(null);
+        setCheckoutStage('payment');
+      }, 3000);
+    }
   }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
@@ -2251,7 +2354,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap, sendReaderStatus } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap, sendReaderStatus, sendPaymentResult } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
@@ -2259,8 +2362,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     handleWsCheckoutStage,
     handleWsProcessPayment,
     handleWsSimulateTap,
-    handleWsReaderStatus
+    handleWsReaderStatus,
+    handleWsPaymentResult
   );
+  
+  // Update ref when sendPaymentResult is available (to avoid circular dependency)
+  useEffect(() => {
+    sendPaymentResultRef.current = sendPaymentResult;
+  }, [sendPaymentResult]);
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
   const updateCheckoutStage = useCallback((stage) => {

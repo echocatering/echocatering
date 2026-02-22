@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -98,6 +98,12 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onReaderStatus(message.data);
               }
               break;
+            case 'payment_result':
+              // Handle payment result from V device (V always broadcasts payment status to H)
+              if (onPaymentResult) {
+                onPaymentResult(message.data);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -132,7 +138,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
@@ -213,6 +219,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send payment result from V to H (V always broadcasts payment status to H)
+  const sendPaymentResult = useCallback((resultData) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'payment_result',
+        data: resultData
+      }));
+      console.log('[POS WebSocket] Sent payment_result:', resultData);
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -236,6 +253,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     sendCheckoutStage,
     sendProcessPayment,
     sendSimulateTap,
-    sendReaderStatus
+    sendReaderStatus,
+    sendPaymentResult
   };
 }
