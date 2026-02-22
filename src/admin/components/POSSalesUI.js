@@ -2242,6 +2242,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
   const updateCheckoutStage = useCallback((stage) => {
+    console.log('[POS] updateCheckoutStage called:', stage);
     setCheckoutStage(stage);
     sendCheckoutStage(stage);
   }, [sendCheckoutStage]);
@@ -3161,7 +3162,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   )}
                   
                   {/* Simulate Card Tap button - shown on horizontal view (tablet without reader) to send WebSocket to phone */}
-                  {!window.stripeBridge && !checkoutLoading && !paymentStatus && (
+                  {/* Debug: stripeBridge={!!window.stripeBridge}, checkoutLoading={checkoutLoading}, paymentStatus={paymentStatus} */}
+                  {!window.stripeBridge && !checkoutLoading && !paymentStatus && checkoutStage !== 'processing' && checkoutStage !== 'success' && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
@@ -3213,6 +3215,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     onClick={() => {
                       setShowScanCard(false);
                       setSelectedTipAmount(0);
+                      updateCheckoutStage('tip'); // Broadcast back to tip screen
                     }}
                     disabled={checkoutLoading}
                     style={{
@@ -3510,6 +3513,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       if (showCustomTip) {
                         setShowCustomTip(false);
                         setCustomTipAmount('');
+                        // Stay on tip screen, no stage change needed
                       } else {
                         setShowTabView(true);
                         updateCheckoutStage('tab');
