@@ -2126,9 +2126,25 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         }, 3000);
       };
       
-      // Start the actual payment process
-      if (window.stripeBridge.processPayment) {
-        window.stripeBridge.processPayment(amountCents, 'usd');
+      // Check if this is a simulated reader
+      const status = JSON.parse(window.stripeBridge.getReaderStatus());
+      const isSimulatedReader = status?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
+      
+      if (isSimulatedReader) {
+        // For simulated readers, simulate success after a short delay
+        // The native SDK's auto-complete isn't reliable, so we handle it in JS
+        console.log('[POS] Simulated reader - simulating payment success');
+        setTimeout(() => {
+          // Directly trigger success
+          if (window.onPaymentComplete) {
+            window.onPaymentComplete({ success: true, transactionId: 'SIM-' + Date.now() });
+          }
+        }, 1500); // 1.5 second delay to simulate processing
+      } else {
+        // Real reader - use native payment process
+        if (window.stripeBridge.processPayment) {
+          window.stripeBridge.processPayment(amountCents, 'usd');
+        }
       }
     } else {
       console.log('[POS] This device does not have reader - ignoring simulate_tap');
