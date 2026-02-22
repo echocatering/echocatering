@@ -2177,13 +2177,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       const isSimulatedReader = status?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
       
       if (isSimulatedReader) {
-        // For simulated readers, simulate success after a short delay
+        // For simulated readers, simulate success or failure based on shouldSucceed flag
         // The native SDK's auto-complete isn't reliable, so we handle it in JS
-        console.log('[POS] Simulated reader - simulating payment success');
+        const shouldSucceed = data?.shouldSucceed !== false; // Default to success if not specified
+        console.log('[POS] Simulated reader - simulating payment', shouldSucceed ? 'success' : 'failure');
         setTimeout(() => {
-          // Directly trigger success
-          if (window.onPaymentComplete) {
-            window.onPaymentComplete({ success: true, transactionId: 'SIM-' + Date.now() });
+          if (shouldSucceed) {
+            // Trigger success
+            if (window.onPaymentComplete) {
+              window.onPaymentComplete({ success: true, transactionId: 'SIM-' + Date.now() });
+            }
+          } else {
+            // Trigger failure
+            if (window.onPaymentError) {
+              window.onPaymentError('Simulated payment declined');
+            }
           }
         }, 1500); // 1.5 second delay to simulate processing
       } else {
@@ -3394,30 +3402,47 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         )}
                       </div>
                       
-                      {/* Simulate Card Tap button - ALWAYS VISIBLE for testing */}
-                      <button
-                        onClick={() => {
-                          const totalAmount = checkoutSubtotal + selectedTipAmount;
-                          const amountCents = Math.round(totalAmount * 100);
-                          console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket with amount:', amountCents);
-                          updateCheckoutStage('processing');
-                          sendSimulateTap({ amountCents, tipAmount: selectedTipAmount, subtotal: checkoutSubtotal });
-                        }}
-                        disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
-                        style={{
-                          padding: '12px 32px',
-                          fontSize: 'clamp(14px, 2vh, 18px)',
-                          fontWeight: '600',
-                          background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#28a745',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
-                          marginTop: '2vh',
-                        }}
-                      >
-                        {checkoutStage === 'processing' ? 'Processing...' : paymentStatus === 'payment_success' ? 'Complete' : 'Simulate Card Tap'}
-                      </button>
+                      {/* Simulate Success/Failure Buttons */}
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '2vh', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => {
+                            const amountCents = Math.round((checkoutSubtotal + selectedTipAmount) * 100);
+                            sendSimulateTap({ amountCents, shouldSucceed: true });
+                          }}
+                          disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
+                          style={{
+                            padding: '12px 24px',
+                            fontSize: 'clamp(14px, 2vh, 18px)',
+                            fontWeight: '600',
+                            background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#28a745',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          Simulate Success
+                        </button>
+                        <button
+                          onClick={() => {
+                            const amountCents = Math.round((checkoutSubtotal + selectedTipAmount) * 100);
+                            sendSimulateTap({ amountCents, shouldSucceed: false });
+                          }}
+                          disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
+                          style={{
+                            padding: '12px 24px',
+                            fontSize: 'clamp(14px, 2vh, 18px)',
+                            fontWeight: '600',
+                            background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          Simulate Failure
+                        </button>
+                      </div>
                       
                       {/* Instruction text or Processing */}
                       <div style={{ 
