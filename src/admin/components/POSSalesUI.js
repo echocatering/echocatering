@@ -2152,7 +2152,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setTimeout(() => {
             setPaymentStatus(null);
             setCheckoutStage('payment');
-          }, 3000);
+          }, 1500);
         }
       };
       
@@ -2169,7 +2169,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setTimeout(() => {
           setPaymentStatus(null);
           setCheckoutStage('payment');
-        }, 3000);
+        }, 1500);
       };
       
       // Check if this is a simulated reader
@@ -2223,11 +2223,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setCheckoutStage('');
       }, 3000);
     } else if (data.status === 'payment_failed') {
-      // Show failure, then return to payment screen after 3 seconds
+      // Show failure, then return to payment screen after 1.5 seconds
       setTimeout(() => {
         setPaymentStatus(null);
         setCheckoutStage('payment');
-      }, 3000);
+      }, 1500);
     }
   }, []);
   
@@ -3039,7 +3039,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setCheckoutLoading(false);
               updateCheckoutStage('payment'); // Return to payment screen
               // Stay on scan card screen so user can retry
-            }, 3000);
+            }, 1500);
           }
         };
         
@@ -3054,7 +3054,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setCheckoutLoading(false);
             updateCheckoutStage('payment'); // Return to payment screen
             // Stay on scan card screen so user can retry
-          }, 3000);
+          }, 1500);
         };
         
         // Process payment via Stripe Terminal
@@ -3427,7 +3427,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         textAlign: 'center',
                         marginTop: '1vh',
                       }}>
-                        {checkoutStage === 'processing' ? 'Processing...' : 'Tap, Insert, Swipe'}
+                        {checkoutStage === 'processing' ? 'Processing...' : paymentStatus === 'payment_failed' ? 'Payment Failed' : 'Tap, Insert, Swipe'}
                       </div>
                       
                       {/* Stripe Reader M2 icon */}
@@ -3443,23 +3443,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           style={{
                             width: 'clamp(120px, 25vh, 200px)',
                             height: 'auto',
-                            filter: 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)',
+                            filter: paymentStatus === 'payment_failed' 
+                              ? 'brightness(0) saturate(100%) invert(27%) sepia(98%) saturate(7426%) hue-rotate(356deg) brightness(95%) contrast(114%)' // Red
+                              : 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)', // Purple
                           }}
                         />
                       </div>
-                      
-                      {/* Error message if payment failed */}
-                      {paymentStatus === 'payment_failed' && (
-                        <div style={{ 
-                          textAlign: 'center', 
-                          color: '#ef4444',
-                          fontSize: 'clamp(18px, 3vh, 24px)',
-                          fontWeight: '600',
-                          marginTop: '1vh',
-                        }}>
-                          Payment Failed
-                        </div>
-                      )}
                     </>
                   )}
                   
@@ -4312,7 +4301,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'tip' && 'ADDING TIP'}
                     {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
-                    {checkoutStage === 'processing' && 'TAKING PAYMENT'}
+                    {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
                     {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
@@ -4766,8 +4755,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           </div>
         )}
 
-        {/* Payment Status Overlay - Shows result after confirmation */}
-        {paymentStatus && !showPaymentConfirmDialog && (
+        {/* Payment Status Overlay - Shows result after confirmation (not for 'processing' or 'payment_failed' - those show in header) */}
+        {paymentStatus && paymentStatus !== 'processing' && paymentStatus !== 'payment_failed' && !showPaymentConfirmDialog && (
           <div style={{
             position: 'fixed',
             top: 0,
