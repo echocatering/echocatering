@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ECHO POS</string>
+    <string name="app_name">Echo Pos</string>
     <string name="reader_setup">Reader Setup</string>
     <string name="connect_reader">Connect Reader</string>
     <string name="disconnect_reader">Disconnect</string>
