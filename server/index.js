@@ -746,7 +746,15 @@ wss.on('connection', (ws, req) => {
       console.log('[WebSocket] Received:', message.type);
       
       // Broadcast checkout events to all other connected clients
-      if (message.type === 'checkout_start' || message.type === 'checkout_complete' || message.type === 'checkout_cancel') {
+      const broadcastTypes = [
+        'checkout_start',
+        'checkout_complete', 
+        'checkout_cancel',
+        'checkout_stage',
+        'process_payment',
+        'simulate_tap'
+      ];
+      if (broadcastTypes.includes(message.type)) {
         posClients.forEach((client) => {
           if (client !== ws && client.readyState === 1) { // 1 = OPEN
             client.send(JSON.stringify(message));
