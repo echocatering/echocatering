@@ -3938,12 +3938,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
                   <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'success' ? '#22c55e' : '#800080' }}>
                     {checkoutStage === 'tip' && 'ADDING TIP'}
-                    {checkoutStage === 'tab' && 'VIEWING TAB'}
-                    {checkoutStage === 'payment' && 'ACCEPTING PAYMENT'}
-                    {checkoutStage === 'processing' && 'PROCESSING PAYMENT'}
-                    {checkoutStage === 'success' && 'PAYMENT COMPLETED'}
+                    {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
+                    {checkoutStage === 'payment' && 'TAKING PAYMENT'}
+                    {checkoutStage === 'processing' && 'TAKING PAYMENT'}
+                    {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
-                    {!checkoutStage && 'PAYMENT PROCESSING'}
+                    {!checkoutStage && 'TAKING PAYMENT'}
                   </span>
                   {(checkoutStage === 'processing' || !checkoutStage) && (
                     <div style={{
