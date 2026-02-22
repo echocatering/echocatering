@@ -191,14 +191,14 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
-  // Send simulate tap request to device with reader
-  const sendSimulateTap = useCallback(() => {
+  // Send simulate tap request to device with reader (includes payment amount)
+  const sendSimulateTap = useCallback((paymentData) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'simulate_tap',
-        data: {}
+        data: paymentData || {}
       }));
-      console.log('[POS WebSocket] Sent simulate_tap');
+      console.log('[POS WebSocket] Sent simulate_tap:', paymentData);
     }
   }, []);
   

@@ -2036,17 +2036,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   
   // Handle simulate_tap request from horizontal device (customer-facing)
   // This is received by the vertical device (with Stripe reader) to process the payment
-  const handleWsSimulateTap = useCallback(() => {
-    console.log('[POS] WebSocket simulate_tap received');
+  const handleWsSimulateTap = useCallback((data) => {
+    console.log('[POS] WebSocket simulate_tap received:', data);
     
     // Only process if this device has the Stripe Terminal bridge
     if (window.stripeBridge && readerConnected) {
       console.log('[POS] This device has reader - starting payment process');
       setCheckoutStage('processing');
       
-      // Calculate total amount in cents from current state
-      const totalAmount = checkoutSubtotal + selectedTipAmount;
-      const amountCents = Math.round(totalAmount * 100);
+      // Use amount from WebSocket message, fallback to local state
+      const amountCents = data?.amountCents || Math.round((checkoutSubtotal + selectedTipAmount) * 100);
       
       console.log('[POS] Processing payment for amount:', amountCents, 'cents');
       
@@ -3202,9 +3201,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       {/* Simulate Card Tap button - ALWAYS VISIBLE for testing */}
                       <button
                         onClick={() => {
-                          console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
+                          const totalAmount = checkoutSubtotal + selectedTipAmount;
+                          const amountCents = Math.round(totalAmount * 100);
+                          console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket with amount:', amountCents);
                           updateCheckoutStage('processing');
-                          sendSimulateTap();
+                          sendSimulateTap({ amountCents, tipAmount: selectedTipAmount, subtotal: checkoutSubtotal });
                         }}
                         disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
                         style={{
