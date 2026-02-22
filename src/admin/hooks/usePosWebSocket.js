@@ -40,14 +40,15 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
       wsRef.current = ws;
       
       ws.onopen = () => {
-        console.log('[POS WebSocket] Connected');
+        console.log('[POS WebSocket] Connected to:', wsUrl);
+        console.log('[POS WebSocket] Has stripeBridge:', !!window.stripeBridge);
         setIsConnected(true);
       };
       
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log('[POS WebSocket] Received:', message.type);
+          console.log('[POS WebSocket] Received:', message.type, message.data ? JSON.stringify(message.data).substring(0, 100) : '');
           
           switch (message.type) {
             case 'checkout_start':
@@ -87,8 +88,12 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
             case 'simulate_tap':
               // Handle simulated card tap from horizontal device
               // This is received by the vertical device (with reader) to simulate card presentation
+              console.log('[POS WebSocket] simulate_tap received, has handler:', !!onSimulateTap, 'has stripeBridge:', !!window.stripeBridge);
               if (onSimulateTap) {
+                console.log('[POS WebSocket] Calling onSimulateTap handler');
                 onSimulateTap(message.data);
+              } else {
+                console.log('[POS WebSocket] WARNING: No onSimulateTap handler registered!');
               }
               break;
             case 'reader_status':

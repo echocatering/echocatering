@@ -757,11 +757,15 @@ wss.on('connection', (ws, req) => {
         'payment_result'
       ];
       if (broadcastTypes.includes(message.type)) {
+        console.log(`[WebSocket] Broadcasting ${message.type} to ${posClients.size - 1} other clients (total connected: ${posClients.size})`);
+        let sentCount = 0;
         posClients.forEach((client) => {
           if (client !== ws && client.readyState === 1) { // 1 = OPEN
             client.send(JSON.stringify(message));
+            sentCount++;
           }
         });
+        console.log(`[WebSocket] Actually sent ${message.type} to ${sentCount} clients`);
       }
     } catch (err) {
       console.error('[WebSocket] Error parsing message:', err);
