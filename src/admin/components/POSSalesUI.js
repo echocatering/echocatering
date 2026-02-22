@@ -2035,23 +2035,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [readerConnected]);
   
   // Handle simulate_tap request from horizontal device (customer-facing)
-  // This is received by the vertical device (with Stripe reader) to simulate card presentation
+  // This is received by the vertical device (with Stripe reader) to process the payment
   const handleWsSimulateTap = useCallback(() => {
     console.log('[POS] WebSocket simulate_tap received');
     
     // Only process if this device has the Stripe Terminal bridge
-    if (window.stripeBridge) {
-      console.log('[POS] This device has reader - triggering simulated payment');
+    if (window.stripeBridge && readerConnected) {
+      console.log('[POS] This device has reader - starting payment process');
       setCheckoutStage('processing');
       
-      // Trigger the simulated card presentation
-      if (window.stripeBridge.triggerSimulatedPayment) {
-        window.stripeBridge.triggerSimulatedPayment();
+      // Calculate total amount in cents from current state
+      const totalAmount = checkoutSubtotal + selectedTipAmount;
+      const amountCents = Math.round(totalAmount * 100);
+      
+      console.log('[POS] Processing payment for amount:', amountCents, 'cents');
+      
+      // Start the actual payment process
+      if (window.stripeBridge.processPayment) {
+        window.stripeBridge.processPayment(amountCents, 'usd');
       }
     } else {
       console.log('[POS] This device does not have reader - ignoring simulate_tap');
     }
-  }, []);
+  }, [readerConnected, checkoutSubtotal, selectedTipAmount]);
   
   // Handle reader_status updates from other devices
   // This tells us if another device has a reader connected (and if it's simulated)
