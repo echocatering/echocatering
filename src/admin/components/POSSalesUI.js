@@ -1955,6 +1955,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [discoveredReaders, setDiscoveredReaders] = useState([]);
   const [scanningReaders, setScanningReaders] = useState(false);
   
+  // Remote reader status (from other device via WebSocket)
+  const [remoteReaderConnected, setRemoteReaderConnected] = useState(false);
+  const [remoteReaderIsSimulated, setRemoteReaderIsSimulated] = useState(false);
+  
   // WebSocket handlers for checkout sync across devices
   const handleWsCheckoutStart = useCallback((data) => {
     console.log('[POS] WebSocket checkout_start received:', data);
@@ -2047,6 +2051,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     } else {
       console.log('[POS] This device does not have reader - ignoring simulate_tap');
     }
+  }, []);
+  
+  // Handle reader_status updates from other devices
+  // This tells us if another device has a reader connected (and if it's simulated)
+  const handleWsReaderStatus = useCallback((data) => {
+    console.log('[POS] WebSocket reader_status received:', data);
+    setRemoteReaderConnected(data.connected || false);
+    setRemoteReaderIsSimulated(data.isSimulated || false);
   }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
@@ -2234,14 +2246,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap, sendReaderStatus } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
     handlePaymentStatus,
     handleWsCheckoutStage,
     handleWsProcessPayment,
-    handleWsSimulateTap
+    handleWsSimulateTap,
+    handleWsReaderStatus
   );
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
@@ -2291,6 +2304,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       }
     };
   }, [checkoutMode, checkoutStage, showTabView, showScanCard, showCustomTip, sendCheckoutCancel]);
+  
+  // Broadcast reader status to other devices when local reader connects/disconnects
+  useEffect(() => {
+    if (readerConnected && readerInfo) {
+      const isSimulated = readerInfo?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
+      sendReaderStatus({
+        connected: true,
+        isSimulated: isSimulated,
+        serialNumber: readerInfo?.serialNumber || ''
+      });
+    } else if (!readerConnected) {
+      sendReaderStatus({
+        connected: false,
+        isSimulated: false,
+        serialNumber: ''
+      });
+    }
+  }, [readerConnected, readerInfo, sendReaderStatus]);
   
   // ============================================
   // SQUARE POS TEST MODE
@@ -3206,9 +3237,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - shown on device without connected reader to send WebSocket to phone */}
-                  {/* Show when: no reader connected on this device AND payment not yet successful */}
-                  {!readerConnected && paymentStatus !== 'payment_success' && (
+                  {/* Simulate Card Tap button - shown on device without local reader when remote device has simulated reader */}
+                  {/* Show when: no local reader AND remote reader is connected AND remote reader is simulated AND payment not yet successful */}
+                  {!readerConnected && remoteReaderConnected && remoteReaderIsSimulated && paymentStatus !== 'payment_success' && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');

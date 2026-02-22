@@ -752,7 +752,8 @@ wss.on('connection', (ws, req) => {
         'checkout_cancel',
         'checkout_stage',
         'process_payment',
-        'simulate_tap'
+        'simulate_tap',
+        'reader_status'
       ];
       if (broadcastTypes.includes(message.type)) {
         posClients.forEach((client) => {

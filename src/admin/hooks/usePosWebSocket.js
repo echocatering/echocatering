@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -91,6 +91,13 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onSimulateTap(message.data);
               }
               break;
+            case 'reader_status':
+              // Handle reader status updates from device with reader
+              // This tells other devices if a reader is connected and if it's simulated
+              if (onReaderStatus) {
+                onReaderStatus(message.data);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -125,7 +132,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
@@ -195,6 +202,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send reader status to other devices
+  const sendReaderStatus = useCallback((readerData) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'reader_status',
+        data: readerData
+      }));
+      console.log('[POS WebSocket] Sent reader_status:', readerData);
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -217,6 +235,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     sendCheckoutCancel,
     sendCheckoutStage,
     sendProcessPayment,
-    sendSimulateTap
+    sendSimulateTap,
+    sendReaderStatus
   };
 }
