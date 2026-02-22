@@ -3193,6 +3193,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         )}
                       </div>
                       
+                      {/* Simulate Card Tap button - ALWAYS VISIBLE for testing */}
+                      <button
+                        onClick={() => {
+                          console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
+                          updateCheckoutStage('processing');
+                          sendSimulateTap();
+                        }}
+                        disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
+                        style={{
+                          padding: '12px 32px',
+                          fontSize: 'clamp(14px, 2vh, 18px)',
+                          fontWeight: '600',
+                          background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#28a745',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
+                          marginTop: '2vh',
+                        }}
+                      >
+                        {checkoutStage === 'processing' ? 'Processing...' : paymentStatus === 'payment_success' ? 'Complete' : 'Simulate Card Tap'}
+                      </button>
+                      
                       {/* Instruction text or Processing */}
                       <div style={{ 
                         fontSize: 'clamp(24px, 4vh, 36px)', 
@@ -3237,33 +3260,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - shown on device without local reader when ANY device has a reader */}
-                  {/* Simple logic: if no local reader AND remote reader exists, show button */}
-                  {console.log('[POS DEBUG] Simulate Tap Button Check:', { readerConnected, remoteReaderConnected, showScanCard, checkoutStage, paymentStatus })}
-                  {!readerConnected && remoteReaderConnected && (
-                    <button
-                      onClick={() => {
-                        console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
-                        updateCheckoutStage('processing');
-                        sendSimulateTap();
-                      }}
-                      disabled={checkoutStage === 'processing' || paymentStatus === 'payment_success'}
-                      style={{
-                        padding: '12px 32px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? '#6c757d' : '#28a745',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: checkoutStage === 'processing' || paymentStatus === 'payment_success' ? 'not-allowed' : 'pointer',
-                        marginTop: '2vh',
-                      }}
-                    >
-                      {checkoutStage === 'processing' ? 'Processing...' : paymentStatus === 'payment_success' ? 'Complete' : 'Simulate Card Tap'}
-                    </button>
-                  )}
-                  
+                                    
                   {/* Retry button - shown after payment failure */}
                   {paymentStatus === 'payment_failed' && !checkoutLoading && (
                     <button
