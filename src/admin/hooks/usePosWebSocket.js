@@ -12,6 +12,34 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   
+  // Use refs for callbacks to always get the latest version (avoids stale closures)
+  const callbackRefs = useRef({
+    onCheckoutStart,
+    onCheckoutComplete,
+    onCheckoutCancel,
+    onPaymentStatus,
+    onCheckoutStage,
+    onProcessPayment,
+    onSimulateTap,
+    onReaderStatus,
+    onPaymentResult
+  });
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    callbackRefs.current = {
+      onCheckoutStart,
+      onCheckoutComplete,
+      onCheckoutCancel,
+      onPaymentStatus,
+      onCheckoutStage,
+      onProcessPayment,
+      onSimulateTap,
+      onReaderStatus,
+      onPaymentResult
+    };
+  }, [onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult]);
+  
   // Build WebSocket URL based on current location
   const getWsUrl = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -50,48 +78,51 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
           const message = JSON.parse(event.data);
           console.log('[POS WebSocket] Received:', message.type, message.data ? JSON.stringify(message.data).substring(0, 100) : '');
           
+          // Use callbackRefs.current to always get the latest callback (avoids stale closures)
+          const callbacks = callbackRefs.current;
+          
           switch (message.type) {
             case 'checkout_start':
-              if (onCheckoutStart) {
-                onCheckoutStart(message.data);
+              if (callbacks.onCheckoutStart) {
+                callbacks.onCheckoutStart(message.data);
               }
               break;
             case 'checkout_complete':
-              if (onCheckoutComplete) {
-                onCheckoutComplete(message.data);
+              if (callbacks.onCheckoutComplete) {
+                callbacks.onCheckoutComplete(message.data);
               }
               break;
             case 'checkout_cancel':
-              if (onCheckoutCancel) {
-                onCheckoutCancel(message.data);
+              if (callbacks.onCheckoutCancel) {
+                callbacks.onCheckoutCancel(message.data);
               }
               break;
             case 'payment_status':
               // Handle Square payment status updates from webhook
-              if (onPaymentStatus) {
-                onPaymentStatus(message);
+              if (callbacks.onPaymentStatus) {
+                callbacks.onPaymentStatus(message);
               }
               break;
             case 'checkout_stage':
               // Handle checkout stage updates from other devices
-              if (onCheckoutStage) {
-                onCheckoutStage(message.data);
+              if (callbacks.onCheckoutStage) {
+                callbacks.onCheckoutStage(message.data);
               }
               break;
             case 'process_payment':
               // Handle payment trigger from horizontal device (customer-facing)
               // This is received by the vertical device (with reader) to process payment
-              if (onProcessPayment) {
-                onProcessPayment(message.data);
+              if (callbacks.onProcessPayment) {
+                callbacks.onProcessPayment(message.data);
               }
               break;
             case 'simulate_tap':
               // Handle simulated card tap from horizontal device
               // This is received by the vertical device (with reader) to simulate card presentation
-              console.log('[POS WebSocket] simulate_tap received, has handler:', !!onSimulateTap, 'has stripeBridge:', !!window.stripeBridge);
-              if (onSimulateTap) {
+              console.log('[POS WebSocket] simulate_tap received, has handler:', !!callbacks.onSimulateTap, 'has stripeBridge:', !!window.stripeBridge);
+              if (callbacks.onSimulateTap) {
                 console.log('[POS WebSocket] Calling onSimulateTap handler');
-                onSimulateTap(message.data);
+                callbacks.onSimulateTap(message.data);
               } else {
                 console.log('[POS WebSocket] WARNING: No onSimulateTap handler registered!');
               }
@@ -99,14 +130,14 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
             case 'reader_status':
               // Handle reader status updates from device with reader
               // This tells other devices if a reader is connected and if it's simulated
-              if (onReaderStatus) {
-                onReaderStatus(message.data);
+              if (callbacks.onReaderStatus) {
+                callbacks.onReaderStatus(message.data);
               }
               break;
             case 'payment_result':
               // Handle payment result from V device (V always broadcasts payment status to H)
-              if (onPaymentResult) {
-                onPaymentResult(message.data);
+              if (callbacks.onPaymentResult) {
+                callbacks.onPaymentResult(message.data);
               }
               break;
             case 'connected':
@@ -143,7 +174,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult]);
+  }, [getWsUrl]); // Only depend on getWsUrl - callbacks are accessed via refs
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {

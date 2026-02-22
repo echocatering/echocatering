@@ -2092,12 +2092,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const handleWsSimulateTap = useCallback((data) => {
     console.log('[POS] WebSocket simulate_tap received:', data);
     console.log('[POS] stripeBridge:', !!window.stripeBridge, 'readerConnectedRef:', readerConnectedRef.current);
+    console.log('[POS] checkoutTabInfoRef:', checkoutTabInfoRef.current);
     
     // Only process if this device has the Stripe Terminal bridge
     // Use ref to get current value (avoids stale closure)
     if (window.stripeBridge && readerConnectedRef.current) {
       console.log('[POS] This device has reader - starting payment process');
       setCheckoutStage('processing');
+      setPaymentStatus('processing'); // Also set paymentStatus to show overlay
       
       // Broadcast processing status to H
       if (sendPaymentResultRef.current) {
