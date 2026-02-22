@@ -3162,27 +3162,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   )}
                   
                   {/* Simulate Card Tap button - shown on horizontal view (tablet without reader) to send WebSocket to phone */}
-                  {/* Debug: stripeBridge={!!window.stripeBridge}, checkoutLoading={checkoutLoading}, paymentStatus={paymentStatus} */}
-                  {!window.stripeBridge && !checkoutLoading && !paymentStatus && checkoutStage !== 'processing' && checkoutStage !== 'success' && (
+                  {!window.stripeBridge && paymentStatus !== 'payment_success' && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
                         updateCheckoutStage('processing');
                         sendSimulateTap();
                       }}
+                      disabled={checkoutStage === 'processing'}
                       style={{
                         padding: '12px 32px',
                         fontSize: 'clamp(14px, 2vh, 18px)',
                         fontWeight: '600',
-                        background: '#28a745',
+                        background: checkoutStage === 'processing' ? '#6c757d' : '#28a745',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: 'pointer',
+                        cursor: checkoutStage === 'processing' ? 'not-allowed' : 'pointer',
                         marginTop: '2vh',
                       }}
                     >
-                      Simulate Card Tap
+                      {checkoutStage === 'processing' ? 'Processing...' : 'Simulate Card Tap'}
                     </button>
                   )}
                   
