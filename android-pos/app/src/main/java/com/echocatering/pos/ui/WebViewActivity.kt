@@ -309,6 +309,7 @@ class WebViewActivity : AppCompatActivity() {
         
         @JavascriptInterface
         fun processPayment(amountCents: Int, currency: String) {
+            android.util.Log.d("WebViewActivity", "processPayment called: amountCents=$amountCents, currency=$currency")
             processPaymentWithDetails(amountCents, currency, null, null, null, null, "[]", 0)
         }
         
@@ -323,13 +324,17 @@ class WebViewActivity : AppCompatActivity() {
             itemsJson: String,
             tipCents: Int
         ) {
+            android.util.Log.d("WebViewActivity", "processPaymentWithDetails called: amountCents=$amountCents, tipCents=$tipCents")
             runOnUiThread {
                 try {
+                    android.util.Log.d("WebViewActivity", "processPaymentWithDetails: parsing items and calling terminalManager")
+                    val gson = com.google.gson.Gson()
                     val items = gson.fromJson(itemsJson, Array<PaymentItemDto>::class.java)
                         .map { PaymentItem(it.name, it.category, it.quantity, it.price, it.modifier) }
                     
                     terminalManager.processPayment(
                         amountCents = amountCents,
+                        currency = currency,
                         tabId = tabId,
                         tabName = tabName,
                         eventId = eventId,
