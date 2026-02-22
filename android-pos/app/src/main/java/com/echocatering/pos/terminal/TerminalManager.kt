@@ -29,7 +29,6 @@ import com.stripe.stripeterminal.external.models.ReaderDisplayMessage
 import com.stripe.stripeterminal.external.models.ReaderEvent
 import com.stripe.stripeterminal.external.models.ReaderInputOptions
 import com.stripe.stripeterminal.external.models.ReaderSoftwareUpdate
-import com.stripe.stripeterminal.external.models.SimulateReaderUpdate
 import com.stripe.stripeterminal.external.models.TerminalException
 import com.stripe.stripeterminal.log.LogLevel
 import kotlinx.coroutines.*
@@ -480,6 +479,8 @@ class TerminalManager(private val context: Context) {
     
     /**
      * Manually trigger simulated payment completion (for testing)
+     * Note: Simulated readers in Stripe Terminal SDK auto-complete payments
+     * This method is a placeholder for future manual simulation if needed
      */
     fun triggerSimulatedPayment() {
         Log.d(TAG, "triggerSimulatedPayment called")
@@ -487,15 +488,10 @@ class TerminalManager(private val context: Context) {
         // Check if we're connected to a simulated reader
         val connectedReader = Terminal.getInstance().connectedReader
         if (connectedReader?.isSimulated == true) {
-            Log.d(TAG, "Simulating card presentation on simulated reader")
-            
-            try {
-                // Use Stripe's simulation API to present a test card
-                Terminal.getInstance().simulateReaderUpdate(SimulateReaderUpdate.CARD_INSERTED)
-                Log.d(TAG, "Simulated card inserted")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to simulate card presentation", e)
-            }
+            Log.d(TAG, "Simulated reader detected - payment should auto-complete")
+            Log.d(TAG, "Note: Simulated readers automatically present a test card and complete payment")
+            // Simulated readers in Stripe Terminal SDK automatically complete payments
+            // No manual triggering needed - the collectPaymentMethod call will auto-complete
         } else {
             Log.w(TAG, "Cannot trigger simulated payment - not connected to simulated reader")
         }
