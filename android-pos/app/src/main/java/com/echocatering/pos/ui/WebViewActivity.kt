@@ -226,7 +226,7 @@ class WebViewActivity : AppCompatActivity() {
         val state = terminalManager.readerState.value
         val status = when (state) {
             is ReaderState.Connected -> {
-                """{"connected": true, "serialNumber": "${state.serialNumber}", "batteryLevel": ${state.batteryLevel ?: 0}}"""
+                """{"connected": true, "serialNumber": "${state.serialNumber}", "batteryLevel": ${state.batteryLevel ?: 0}, "deviceType": "${state.deviceType}"}"""
             }
             else -> {
                 """{"connected": false}"""
@@ -359,7 +359,7 @@ class WebViewActivity : AppCompatActivity() {
             val state = terminalManager.readerState.value
             return when (state) {
                 is ReaderState.Connected -> {
-                    """{"connected": true, "serialNumber": "${state.serialNumber}", "batteryLevel": ${state.batteryLevel ?: 0}}"""
+                    """{"connected": true, "serialNumber": "${state.serialNumber}", "batteryLevel": ${state.batteryLevel ?: 0}, "deviceType": "${state.deviceType}"}"""
                 }
                 else -> {
                     """{"connected": false}"""
