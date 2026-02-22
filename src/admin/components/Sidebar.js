@@ -277,6 +277,12 @@ const Sidebar = () => {
             >
               <span className="nav-text">POS UI</span>
             </NavLink>
+            <NavLink
+              to="/admin/sales/events"
+              className={`nav-item ${location.pathname === '/admin/sales/events' ? 'active' : ''}`}
+            >
+              <span className="nav-text">EVENTS</span>
+            </NavLink>
           </>
         )}
         

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const SalesManager = () => {
+const SalesManager = ({ posEventId = null }) => {
   const { apiCall } = useAuth();
   
   // State
@@ -10,7 +10,7 @@ const SalesManager = () => {
   const [dateRange, setDateRange] = useState('30d'); // 7d, 30d, 90d, custom
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(posEventId);
   
   // Data
   const [summary, setSummary] = useState(null);
