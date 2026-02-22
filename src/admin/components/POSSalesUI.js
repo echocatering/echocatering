@@ -67,7 +67,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -777,16 +777,16 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     }}>+</span>
                   </button>
                   
-                  {/* Tab Buttons */}
-                  {tabs.map((tab) => (
+                  {/* Tab Buttons - filter out archived tabs */}
+                  {tabs.filter(tab => tab.status !== 'archived').map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => onSelectTab(tab.id)}
                       style={{
                         aspectRatio: '1 / 1',
                         width: '100%',
-                        border: activeTabId === tab.id ? '2px solid #800080' : 'none',
-                        background: activeTabId === tab.id ? '#f0e6f0' : '#fff',
+                        border: activeTabId === tab.id ? '2px solid #800080' : (tab.status === 'paid' ? '2px solid #22c55e' : 'none'),
+                        background: tab.status === 'paid' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
                         borderRadius: '4px',
                         cursor: 'pointer',
                         display: 'flex',
@@ -1117,77 +1117,97 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         </div>
       )}
       
-      {/* Close Tab Confirmation Popup */}
-      {showCloseTabConfirm && activeTabId && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 200
-        }}>
+      {/* Close Tab / Archive Tab Confirmation Popup */}
+      {showCloseTabConfirm && activeTabId && (() => {
+        const currentTab = tabs.find(t => t.id === activeTabId);
+        const isPaid = currentTab?.status === 'paid';
+        const hasItems = currentTab?.items?.length > 0;
+        const canClose = !hasItems && !isPaid; // Can only close empty, unpaid tabs
+        
+        return (
           <div style={{
-            background: '#fff',
-            borderRadius: '8px',
-            padding: '16px 24px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px',
-            maxWidth: '80%'
+            justifyContent: 'center',
+            zIndex: 200
           }}>
-            <span style={{
-              fontSize: `${Math.max(12, outerWidth / 24)}px`,
-              fontWeight: 500,
-              color: '#333',
-              textAlign: 'center'
+            <div style={{
+              background: '#fff',
+              borderRadius: '8px',
+              padding: '16px 24px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              maxWidth: '80%'
             }}>
-              Close tab "{(tabs.find(t => t.id === activeTabId)?.customName || tabs.find(t => t.id === activeTabId)?.name)?.toUpperCase()}"?
-            </span>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  onDeleteTab(activeTabId);
-                  setShowCloseTabConfirm(false);
-                }}
-                style={{
-                  background: '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '8px 20px',
-                  fontSize: `${Math.max(11, outerWidth / 28)}px`,
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                CLOSE
-              </button>
-              <button
-                onClick={() => setShowCloseTabConfirm(false)}
-                style={{
-                  background: '#e5e5e5',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '8px 20px',
-                  fontSize: `${Math.max(11, outerWidth / 28)}px`,
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                CANCEL
-              </button>
+              <span style={{
+                fontSize: `${Math.max(12, outerWidth / 24)}px`,
+                fontWeight: 500,
+                color: '#333',
+                textAlign: 'center'
+              }}>
+                {isPaid 
+                  ? `Archive tab "${(currentTab?.customName || currentTab?.name)?.toUpperCase()}"?`
+                  : hasItems
+                    ? `Cannot close tab with items. Remove items first.`
+                    : `Close tab "${(currentTab?.customName || currentTab?.name)?.toUpperCase()}"?`
+                }
+              </span>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {(isPaid || canClose) && (
+                  <button
+                    onClick={() => {
+                      if (isPaid) {
+                        // Archive: mark as archived (removes from UI but keeps in data)
+                        onArchiveTab(activeTabId);
+                      } else {
+                        // Close: delete empty tab
+                        onDeleteTab(activeTabId);
+                      }
+                      setShowCloseTabConfirm(false);
+                    }}
+                    style={{
+                      background: isPaid ? '#22c55e' : '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '8px 20px',
+                      fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isPaid ? 'ARCHIVE' : 'CLOSE'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowCloseTabConfirm(false)}
+                  style={{
+                    background: '#e5e5e5',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '8px 20px',
+                    fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {(isPaid || canClose) ? 'CANCEL' : 'OK'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       
       {/* Move Items Modal - Select destination tab */}
       {showMoveModal && (
@@ -1965,6 +1985,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     readerConnectedRef.current = readerConnected;
   }, [readerConnected]);
   
+  // Ref to track current checkoutTabInfo (avoids stale closure in callbacks)
+  const checkoutTabInfoRef = useRef(null);
+  useEffect(() => {
+    checkoutTabInfoRef.current = checkoutTabInfo;
+  }, [checkoutTabInfo]);
+  
   // WebSocket handlers for checkout sync across devices
   const handleWsCheckoutStart = useCallback((data) => {
     console.log('[POS] WebSocket checkout_start received:', data);
@@ -2089,6 +2115,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         if (result.success) {
           setPaymentStatus('payment_success');
           setCheckoutStage('success');
+          
+          // Mark tab as paid (use ref to get current value)
+          if (checkoutTabInfoRef.current?.id) {
+            setTabs(prev => prev.map(t => 
+              t.id === checkoutTabInfoRef.current.id 
+                ? { ...t, status: 'paid', paidAt: new Date().toISOString() }
+                : t
+            ));
+            setActiveTabId(null);
+          }
           
           // Broadcast success to H
           if (sendPaymentResultRef.current) {
@@ -2662,13 +2698,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setActiveTabId(tabId);
   }, []);
 
-  // Delete a tab (not implemented in UI yet, but ready)
+  // Delete a tab (only for empty, unpaid tabs)
   const handleDeleteTab = useCallback((tabId) => {
     setTabs(prev => prev.filter(t => t.id !== tabId));
     if (activeTabId === tabId) {
       setActiveTabId(tabs.length > 1 ? tabs.find(t => t.id !== tabId)?.id : null);
     }
   }, [activeTabId, tabs]);
+  
+  // Archive a tab (for paid tabs - removes from UI but keeps in event data)
+  const handleArchiveTab = useCallback((tabId) => {
+    setTabs(prev => prev.map(t => 
+      t.id === tabId 
+        ? { ...t, status: 'archived', archivedAt: new Date().toISOString() }
+        : t
+    ));
+    if (activeTabId === tabId) {
+      setActiveTabId(null);
+    }
+    console.log(`[POS] Tab ${tabId} archived`);
+  }, [activeTabId]);
 
   // Update tab custom name
   const handleUpdateTabName = useCallback((tabId, customName) => {
@@ -2958,9 +3007,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
             updateCheckoutStage('success'); // Show "Payment Completed" on vertical screen
             
-            // Clear the tab after successful payment
+            // Mark tab as paid instead of deleting it
             if (checkoutTabInfo?.id) {
-              setTabs(prev => prev.filter(t => t.id !== checkoutTabInfo.id));
+              setTabs(prev => prev.map(t => 
+                t.id === checkoutTabInfo.id 
+                  ? { ...t, status: 'paid', paidAt: new Date().toISOString() }
+                  : t
+              ));
               setActiveTabId(null);
             }
             
@@ -3093,6 +3146,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     // If no active tab, auto-create one first
     let targetTabId = activeTabId;
+    
+    // Check if active tab is paid - don't allow adding items to paid tabs
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab?.status === 'paid') {
+      console.log('[POS] Cannot add items to paid tab');
+      return;
+    }
+    
     if (!targetTabId) {
       const newTab = {
         id: `tab-${Date.now()}`,
@@ -4360,6 +4421,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onCreateTab={handleCreateTab}
               onSelectTab={handleSelectTab}
               onDeleteTab={handleDeleteTab}
+              onArchiveTab={handleArchiveTab}
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
               onMoveItems={handleMoveItems}
@@ -4711,23 +4773,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             right: 0,
             bottom: 0,
             background: paymentStatus === 'payment_success' ? 'rgba(0,128,0,0.95)' 
-              : paymentStatus === 'pending' ? 'rgba(128,0,128,0.95)'
-              : 'rgba(200,50,50,0.95)',
+              : (paymentStatus === 'pending' || paymentStatus === 'processing') ? 'rgba(128,0,128,0.95)'
+              : (paymentStatus === 'payment_failed' || paymentStatus === 'payment_canceled') ? 'rgba(200,50,50,0.95)'
+              : 'rgba(128,0,128,0.95)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 2001,
           }}>
             <div style={{ textAlign: 'center', color: '#fff', padding: '40px' }}>
-              {paymentStatus === 'pending' && (
+              {(paymentStatus === 'pending' || paymentStatus === 'processing') && (
                 <>
                   <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
                   <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Processing Payment</h2>
                   <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '20px' }}>
-                    {paymentStatusMessage || 'Waiting for Square POS...'}
+                    {paymentStatusMessage || 'Processing...'}
                   </p>
                   <p style={{ fontSize: '14px', opacity: 0.7 }}>
-                    Complete the payment in Square POS app
+                    Please wait...
                   </p>
                   <button
                     onClick={() => {
@@ -4895,6 +4958,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onCreateTab={handleCreateTab}
                 onSelectTab={handleSelectTab}
                 onDeleteTab={handleDeleteTab}
+                onArchiveTab={handleArchiveTab}
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
                 onMoveItems={handleMoveItems}
