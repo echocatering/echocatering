@@ -334,7 +334,6 @@ class WebViewActivity : AppCompatActivity() {
                     
                     terminalManager.processPayment(
                         amountCents = amountCents,
-                        currency = currency,
                         tabId = tabId,
                         tabName = tabName,
                         eventId = eventId,
