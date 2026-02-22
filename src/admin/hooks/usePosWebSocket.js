@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -84,6 +84,13 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onProcessPayment(message.data);
               }
               break;
+            case 'simulate_tap':
+              // Handle simulated card tap from horizontal device
+              // This is received by the vertical device (with reader) to simulate card presentation
+              if (onSimulateTap) {
+                onSimulateTap(message.data);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -118,7 +125,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
@@ -177,6 +184,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send simulate tap request to device with reader
+  const sendSimulateTap = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'simulate_tap',
+        data: {}
+      }));
+      console.log('[POS WebSocket] Sent simulate_tap');
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -198,6 +216,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     sendCheckoutComplete,
     sendCheckoutCancel,
     sendCheckoutStage,
-    sendProcessPayment
+    sendProcessPayment,
+    sendSimulateTap
   };
 }

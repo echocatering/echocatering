@@ -2000,19 +2000,50 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Only process if this device has the Stripe Terminal bridge (reader connected)
     if (window.stripeBridge && readerConnected) {
       console.log('[POS] This device has reader - processing payment');
-      const { amountCents, tipAmount } = data;
+      const { amountCents, tipAmount, subtotal } = data;
       
       // Update local state to show scan card screen
+      setCheckoutMode(true); // Ensure checkout mode is active
       setShowScanCard(true);
       setSelectedTipAmount(tipAmount || 0);
+      setCheckoutSubtotal(subtotal || 0);
       setCheckoutStage('payment');
       
-      // Process payment via Stripe Terminal
-      window.stripeBridge.processPayment(amountCents, 'usd');
+      // Check if this is a simulated reader - if so, wait for manual tap
+      const status = JSON.parse(window.stripeBridge.getReaderStatus());
+      const isSimulatedReader = status?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
+      
+      if (isSimulatedReader) {
+        console.log('[POS] Simulated reader - waiting for manual Simulate Card Tap');
+        // Don't auto-start payment - wait for user to click Simulate Card Tap button
+      } else {
+        // Real reader - auto-start payment collection
+        console.log('[POS] Real reader - auto-starting payment collection');
+        window.stripeBridge.processPayment(amountCents, 'usd');
+      }
     } else {
       console.log('[POS] This device does not have reader - ignoring process_payment');
     }
   }, [readerConnected]);
+  
+  // Handle simulate_tap request from horizontal device (customer-facing)
+  // This is received by the vertical device (with Stripe reader) to simulate card presentation
+  const handleWsSimulateTap = useCallback(() => {
+    console.log('[POS] WebSocket simulate_tap received');
+    
+    // Only process if this device has the Stripe Terminal bridge
+    if (window.stripeBridge) {
+      console.log('[POS] This device has reader - triggering simulated payment');
+      updateCheckoutStage('processing');
+      
+      // Trigger the simulated card presentation
+      if (window.stripeBridge.triggerSimulatedPayment) {
+        window.stripeBridge.triggerSimulatedPayment();
+      }
+    } else {
+      console.log('[POS] This device does not have reader - ignoring simulate_tap');
+    }
+  }, [updateCheckoutStage]);
   
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
@@ -2199,13 +2230,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
     handlePaymentStatus,
     handleWsCheckoutStage,
-    handleWsProcessPayment
+    handleWsProcessPayment,
+    handleWsSimulateTap
   );
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
@@ -2668,12 +2700,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     // Enter checkout mode locally
     setCheckoutMode(true);
+    setCheckoutStage('tip'); // Set initial stage locally
     
     // Broadcast checkout start via WebSocket to sync horizontal view on other devices
     sendCheckoutStart(checkoutData);
+    sendCheckoutStage('tip'); // Broadcast initial stage to vertical device
     
     console.log(`[POS Checkout] Checkout mode activated. Subtotal: $${total.toFixed(2)}, Items: ${selectedItems.length}`);
-  }, [activeTabId, selectedItems, tabs, total, sendCheckoutStart]);
+  }, [activeTabId, selectedItems, tabs, total, sendCheckoutStart, sendCheckoutStage]);
 
   /**
    * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
@@ -3126,20 +3160,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - shown in native app when reader is connected */}
-                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerConnected && (
+                  {/* Simulate Card Tap button - shown on horizontal view (tablet without reader) to send WebSocket to phone */}
+                  {!window.stripeBridge && !checkoutLoading && !paymentStatus && (
                     <button
                       onClick={() => {
-                        console.log('[POS Checkout] Simulate Card Tap clicked - starting payment collection...');
-                        // First start the payment collection process
-                        handleProcessPaymentWithTip(selectedTipAmount);
-                        // Then trigger the simulated card presentation after a short delay
-                        setTimeout(() => {
-                          console.log('[POS Checkout] Triggering simulated card presentation...');
-                          if (window.stripeBridge.triggerSimulatedPayment) {
-                            window.stripeBridge.triggerSimulatedPayment();
-                          }
-                        }, 1000);
+                        console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
+                        updateCheckoutStage('processing');
+                        sendSimulateTap();
                       }}
                       style={{
                         padding: '12px 32px',
@@ -3571,7 +3598,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   
                   {/* Back button - always visible at bottom */}
                   <button
-                    onClick={() => setShowTabView(false)}
+                    onClick={() => {
+                      setShowTabView(false);
+                      updateCheckoutStage('tip');
+                    }}
                     style={{
                       width: '100%',
                       padding: '12px',
