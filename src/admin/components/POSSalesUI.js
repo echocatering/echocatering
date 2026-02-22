@@ -2760,12 +2760,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatus(null);
     setPaymentStatusMessage(null);
     setCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
-    // Start payment collection after screen renders - reader will wait for card tap
-    setTimeout(() => {
-      console.log('[POS Checkout] Starting payment collection...');
-      handleProcessPaymentWithTip(tipAmount);
-    }, 500);
-  }, [handleProcessPaymentWithTip]);
+    
+    // For simulated readers, don't auto-start payment - wait for manual trigger
+    // For real readers, auto-start payment collection
+    if (window.stripeBridge && readerInfo?.deviceType?.includes('simulated')) {
+      console.log('[POS Checkout] Simulated reader detected - waiting for manual card tap');
+      // Don't auto-start payment for simulated readers
+    } else {
+      // Start payment collection after screen renders - reader will wait for card tap
+      setTimeout(() => {
+        console.log('[POS Checkout] Starting payment collection...');
+        handleProcessPaymentWithTip(tipAmount);
+      }, 500);
+    }
+  }, [handleProcessPaymentWithTip, readerInfo]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -3059,13 +3067,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   )}
                   
                   {/* Simulate Card Tap button - only shown in native app with simulated reader */}
-                  {window.stripeBridge && !checkoutLoading && !paymentStatus && (
+                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerInfo?.deviceType?.includes('simulated') && (
                     <button
                       onClick={() => {
-                        console.log('[POS Checkout] Triggering simulated payment...');
-                        if (window.stripeBridge.triggerSimulatedPayment) {
-                          window.stripeBridge.triggerSimulatedPayment();
-                        }
+                        console.log('[POS Checkout] Simulate Card Tap clicked - starting payment collection...');
+                        // First start the payment collection process
+                        handleProcessPaymentWithTip(selectedTipAmount);
+                        // Then trigger the simulated card presentation after a short delay
+                        setTimeout(() => {
+                          console.log('[POS Checkout] Triggering simulated card presentation...');
+                          if (window.stripeBridge.triggerSimulatedPayment) {
+                            window.stripeBridge.triggerSimulatedPayment();
+                          }
+                        }, 1000);
                       }}
                       style={{
                         padding: '12px 32px',
