@@ -2763,7 +2763,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     // For simulated readers, don't auto-start payment - wait for manual trigger
     // For real readers, auto-start payment collection
-    if (window.stripeBridge && readerInfo?.deviceType?.includes('simulated')) {
+    if (window.stripeBridge && readerInfo?.serialNumber?.includes('SIMULATOR')) {
       console.log('[POS Checkout] Simulated reader detected - waiting for manual card tap');
       // Don't auto-start payment for simulated readers
     } else {
@@ -3067,7 +3067,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   )}
                   
                   {/* Simulate Card Tap button - only shown in native app with simulated reader */}
-                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerInfo?.deviceType?.includes('simulated') && (
+                  {window.stripeBridge && !checkoutLoading && !paymentStatus && readerInfo?.serialNumber?.includes('SIMULATOR') && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - starting payment collection...');
