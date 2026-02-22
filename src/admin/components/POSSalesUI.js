@@ -1942,6 +1942,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showTabView, setShowTabView] = useState(false); // Toggle between tip view and receipt view
   const [showScanCard, setShowScanCard] = useState(false); // Show scan card screen after tip selection
   const [selectedTipAmount, setSelectedTipAmount] = useState(0); // Store selected tip for scan card screen
+  const [checkoutStage, setCheckoutStage] = useState(''); // Track checkout stage: 'tip', 'tab', 'payment', 'processing', 'success', 'failed'
   
   // Stripe Terminal M2 Reader state
   const [showReaderSetup, setShowReaderSetup] = useState(false);
@@ -1960,6 +1961,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowCustomTip(false);
     setCustomTipAmount('');
     setShowTabView(false);
+    setCheckoutStage('tip'); // Start at tip selection stage
   }, []);
   
   const handleWsCheckoutComplete = useCallback((data) => {
@@ -1970,6 +1972,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutTabInfo(null);
     setShowScanCard(false);
     setSelectedTipAmount(0);
+    setCheckoutStage('');
   }, []);
   
   const handleWsCheckoutCancel = useCallback(() => {
@@ -1980,6 +1983,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutTabInfo(null);
     setShowScanCard(false);
     setSelectedTipAmount(0);
+    setCheckoutStage('');
   }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
@@ -2667,6 +2671,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           if (result.success) {
             setPaymentStatus('payment_success');
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
+            setCheckoutStage('success'); // Show "Payment Completed" on vertical screen
             
             // Clear the tab after successful payment
             if (checkoutTabInfo?.id) {
@@ -2682,14 +2687,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setCheckoutLoading(false);
               setShowScanCard(false);
               setSelectedTipAmount(0);
+              setCheckoutStage('');
             }, 3000);
           } else {
             setPaymentStatus('payment_failed');
             setPaymentStatusMessage('Payment failed. Please try again.');
+            setCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
             setTimeout(() => {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCheckoutLoading(false);
+              setCheckoutStage('payment'); // Return to payment screen
               // Stay on scan card screen so user can retry
             }, 3000);
           }
@@ -2699,15 +2707,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           console.error('[POS Checkout] Payment error:', error);
           setPaymentStatus('payment_failed');
           setPaymentStatusMessage(`Payment error: ${error}`);
+          setCheckoutStage('failed'); // Show "Payment Failed" on vertical screen
           setTimeout(() => {
             setPaymentStatus(null);
             setPaymentStatusMessage(null);
             setCheckoutLoading(false);
+            setCheckoutStage('payment'); // Return to payment screen
             // Stay on scan card screen so user can retry
           }, 3000);
         };
         
         // Process payment via Stripe Terminal
+        setCheckoutStage('processing'); // Show "Processing Payment" on vertical screen
         window.stripeBridge.processPayment(totalCents, 'usd');
         
       } else {
@@ -2748,6 +2759,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowCustomTip(false);
     setPaymentStatus(null);
     setPaymentStatusMessage(null);
+    setCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     // Start payment collection after screen renders - reader will wait for card tap
     setTimeout(() => {
       console.log('[POS Checkout] Starting payment collection...');
@@ -3353,6 +3365,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         setCustomTipAmount('');
                       } else {
                         setShowTabView(true);
+                        setCheckoutStage('tab');
                       }
                     }}
                     style={{
@@ -3863,15 +3876,25 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
-                  <span style={{ fontWeight: 'bold', color: '#800080' }}>PAYMENT PROCESSING</span>
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid #e0e0e0',
-                    borderTopColor: '#800080',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }} />
+                  <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'success' ? '#22c55e' : '#800080' }}>
+                    {checkoutStage === 'tip' && 'ADDING TIP'}
+                    {checkoutStage === 'tab' && 'VIEWING TAB'}
+                    {checkoutStage === 'payment' && 'ACCEPTING PAYMENT'}
+                    {checkoutStage === 'processing' && 'PROCESSING PAYMENT'}
+                    {checkoutStage === 'success' && 'PAYMENT COMPLETED'}
+                    {checkoutStage === 'failed' && 'PAYMENT FAILED'}
+                    {!checkoutStage && 'PAYMENT PROCESSING'}
+                  </span>
+                  {(checkoutStage === 'processing' || !checkoutStage) && (
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid #e0e0e0',
+                      borderTopColor: '#800080',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                    }} />
+                  )}
                   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </div>
               ) : (
