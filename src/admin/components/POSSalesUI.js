@@ -1992,6 +1992,28 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage(data.stage || '');
   }, []);
   
+  // Handle process_payment request from horizontal device (customer-facing)
+  // This is received by the vertical device (with Stripe reader) to process payment
+  const handleWsProcessPayment = useCallback((data) => {
+    console.log('[POS] WebSocket process_payment received:', data);
+    
+    // Only process if this device has the Stripe Terminal bridge (reader connected)
+    if (window.stripeBridge && readerConnected) {
+      console.log('[POS] This device has reader - processing payment');
+      const { amountCents, tipAmount } = data;
+      
+      // Update local state to show scan card screen
+      setShowScanCard(true);
+      setSelectedTipAmount(tipAmount || 0);
+      setCheckoutStage('payment');
+      
+      // Process payment via Stripe Terminal
+      window.stripeBridge.processPayment(amountCents, 'usd');
+    } else {
+      console.log('[POS] This device does not have reader - ignoring process_payment');
+    }
+  }, [readerConnected]);
+  
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
     console.log('[POS] Payment status received:', message);
@@ -2177,12 +2199,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
     handlePaymentStatus,
-    handleWsCheckoutStage
+    handleWsCheckoutStage,
+    handleWsProcessPayment
   );
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
@@ -2769,6 +2792,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     console.log('[POS Checkout] Tip selected:', tipAmount);
     console.log('[POS Checkout] readerInfo:', JSON.stringify(readerInfo));
     console.log('[POS Checkout] stripeBridge available:', !!window.stripeBridge);
+    console.log('[POS Checkout] readerConnected:', readerConnected);
     
     setSelectedTipAmount(tipAmount);
     setShowScanCard(true);
@@ -2777,26 +2801,39 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatusMessage(null);
     updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
-    // Check if this is a simulated reader (serial number contains SIMULATOR)
-    const isSimulatedReader = readerInfo?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
-    console.log('[POS Checkout] Is simulated reader:', isSimulatedReader);
+    // Calculate total amount in cents
+    const totalAmount = checkoutSubtotal + tipAmount;
+    const amountCents = Math.round(totalAmount * 100);
     
-    // For simulated readers, don't auto-start payment - wait for manual trigger
-    // For real readers, auto-start payment collection
-    if (window.stripeBridge && isSimulatedReader) {
-      console.log('[POS Checkout] Simulated reader detected - waiting for manual card tap');
-      // Don't auto-start payment for simulated readers
-    } else if (window.stripeBridge && readerConnected) {
-      // Real reader connected - auto-start payment collection
-      setTimeout(() => {
-        console.log('[POS Checkout] Starting payment collection with real reader...');
-        handleProcessPaymentWithTip(tipAmount);
-      }, 500);
+    // Check if this device has the reader connected
+    if (window.stripeBridge && readerConnected) {
+      // This device has the reader - process payment directly
+      console.log('[POS Checkout] This device has reader - processing payment directly');
+      
+      // Check if this is a simulated reader
+      const isSimulatedReader = readerInfo?.serialNumber?.toUpperCase()?.includes('SIMULATOR');
+      if (isSimulatedReader) {
+        console.log('[POS Checkout] Simulated reader detected - waiting for manual card tap');
+        // Don't auto-start payment for simulated readers
+      } else {
+        // Real reader - auto-start payment collection
+        setTimeout(() => {
+          console.log('[POS Checkout] Starting payment collection with real reader...');
+          handleProcessPaymentWithTip(tipAmount);
+        }, 500);
+      }
     } else {
-      // No reader connected or not in native app - don't auto-start
-      console.log('[POS Checkout] No reader connected or not in native app - waiting for user action');
+      // This device does NOT have the reader - send WebSocket message to device with reader
+      console.log('[POS Checkout] This device does not have reader - sending process_payment via WebSocket');
+      sendProcessPayment({
+        amountCents,
+        tipAmount,
+        tabId: checkoutTabInfo?.id,
+        tabName: checkoutTabInfo?.name,
+        subtotal: checkoutSubtotal
+      });
     }
-  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage]);
+  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();

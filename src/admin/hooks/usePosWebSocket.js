@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -77,6 +77,13 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
                 onCheckoutStage(message.data);
               }
               break;
+            case 'process_payment':
+              // Handle payment trigger from horizontal device (customer-facing)
+              // This is received by the vertical device (with reader) to process payment
+              if (onProcessPayment) {
+                onProcessPayment(message.data);
+              }
+              break;
             case 'connected':
               console.log('[POS WebSocket]', message.message);
               break;
@@ -111,7 +118,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
         connect();
       }, 5000);
     }
-  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage]);
+  }, [getWsUrl, onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment]);
   
   // Send checkout start event
   const sendCheckoutStart = useCallback((checkoutData) => {
@@ -159,6 +166,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send process payment request to device with reader
+  const sendProcessPayment = useCallback((paymentData) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'process_payment',
+        data: paymentData
+      }));
+      console.log('[POS WebSocket] Sent process_payment:', paymentData);
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -179,6 +197,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     sendCheckoutStart,
     sendCheckoutComplete,
     sendCheckoutCancel,
-    sendCheckoutStage
+    sendCheckoutStage,
+    sendProcessPayment
   };
 }
