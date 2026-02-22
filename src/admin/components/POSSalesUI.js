@@ -3206,8 +3206,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </>
                   )}
                   
-                  {/* Simulate Card Tap button - shown on horizontal view (tablet without reader) to send WebSocket to phone */}
-                  {!window.stripeBridge && paymentStatus !== 'payment_success' && (
+                  {/* Simulate Card Tap button - shown on device without connected reader to send WebSocket to phone */}
+                  {/* Show when: no reader connected on this device AND payment not yet successful */}
+                  {!readerConnected && paymentStatus !== 'payment_success' && (
                     <button
                       onClick={() => {
                         console.log('[POS Checkout] Simulate Card Tap clicked - sending WebSocket to phone...');
