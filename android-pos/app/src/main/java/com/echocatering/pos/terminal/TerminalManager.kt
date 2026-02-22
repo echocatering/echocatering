@@ -29,6 +29,7 @@ import com.stripe.stripeterminal.external.models.ReaderDisplayMessage
 import com.stripe.stripeterminal.external.models.ReaderEvent
 import com.stripe.stripeterminal.external.models.ReaderInputOptions
 import com.stripe.stripeterminal.external.models.ReaderSoftwareUpdate
+import com.stripe.stripeterminal.external.models.SimulateReaderUpdate
 import com.stripe.stripeterminal.external.models.TerminalException
 import com.stripe.stripeterminal.log.LogLevel
 import kotlinx.coroutines.*
@@ -483,39 +484,20 @@ class TerminalManager(private val context: Context) {
     fun triggerSimulatedPayment() {
         Log.d(TAG, "triggerSimulatedPayment called")
         
-        // Check if we're in collecting payment state with a simulated reader
+        // Check if we're connected to a simulated reader
         val connectedReader = Terminal.getInstance().connectedReader
-        if (connectedReader?.isSimulated == true && _paymentState.value is PaymentState.CollectingPayment) {
-            Log.d(TAG, "Triggering simulated payment completion")
+        if (connectedReader?.isSimulated == true) {
+            Log.d(TAG, "Simulating card presentation on simulated reader")
             
-            // Cancel the current collection and restart it to trigger completion
-            paymentCancelable?.cancel(object : Callback {
-                override fun onSuccess() {
-                    Log.d(TAG, "Payment collection canceled, restarting...")
-                    // Restart payment collection which should auto-complete
-                    if (currentPaymentIntentId != null) {
-                        Terminal.getInstance().retrievePaymentIntent(
-                            currentPaymentIntentId!!,
-                            object : PaymentIntentCallback {
-                                override fun onSuccess(paymentIntent: PaymentIntent) {
-                                    collectPayment(paymentIntent)
-                                }
-                                
-                                override fun onFailure(e: TerminalException) {
-                                    Log.e(TAG, "Failed to retrieve payment intent for simulated trigger", e)
-                                    _paymentState.value = PaymentState.Failed(e.errorMessage)
-                                }
-                            }
-                        )
-                    }
-                }
-                
-                override fun onFailure(e: TerminalException) {
-                    Log.e(TAG, "Failed to cancel payment collection", e)
-                }
-            })
+            try {
+                // Use Stripe's simulation API to present a test card
+                Terminal.getInstance().simulateReaderUpdate(SimulateReaderUpdate.CARD_INSERTED)
+                Log.d(TAG, "Simulated card inserted")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to simulate card presentation", e)
+            }
         } else {
-            Log.w(TAG, "Cannot trigger simulated payment - not connected to simulated reader or not collecting payment")
+            Log.w(TAG, "Cannot trigger simulated payment - not connected to simulated reader")
         }
     }
     
