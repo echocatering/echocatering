@@ -145,18 +145,17 @@ class TerminalManager(private val context: Context) {
         
         discoveryCancelable = Terminal.getInstance().discoverReaders(
             config,
-            { readers ->
-                Log.d(TAG, "Simulated discovery update: found ${readers.size} readers")
-                _discoveredReaders.value = readers
-                if (readers.isNotEmpty()) {
-                    _readerState.value = ReaderState.Discovered(readers.size)
+            object : DiscoveryListener {
+                override fun onUpdateDiscoveredReaders(readers: List<Reader>) {
+                    Log.d(TAG, "Simulated discovery update: found ${readers.size} readers")
+                    _discoveredReaders.value = readers
                 }
             },
             object : Callback {
                 override fun onSuccess() {
                     Log.d(TAG, "Simulated discovery completed successfully")
                     if (_discoveredReaders.value.isEmpty()) {
-                        _readerState.value = ReaderState.Error("No simulated readers found")
+                        _readerState.value = ReaderState.NoReadersFound
                     }
                 }
                 
