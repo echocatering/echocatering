@@ -2959,57 +2959,103 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   justifyContent: 'center',
                   gap: '2vh',
                 }}>
-                  {/* Total amount at top */}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
-                      ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
-                    </div>
-                    {selectedTipAmount > 0 && (
-                      <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginTop: '0.5vh' }}>
-                        (includes ${selectedTipAmount.toFixed(2)} tip)
+                  {/* CSS Animations */}
+                  <style>{`
+                    @keyframes success-checkmark {
+                      0% { transform: scale(0); opacity: 0; }
+                      50% { transform: scale(1.2); opacity: 1; }
+                      100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes success-circle {
+                      0% { stroke-dashoffset: 166; }
+                      100% { stroke-dashoffset: 0; }
+                    }
+                    .success-animation {
+                      animation: success-checkmark 0.6s ease-out;
+                    }
+                  `}</style>
+                  
+                  {paymentStatus === 'payment_success' ? (
+                    /* SUCCESS ANIMATION */
+                    <>
+                      <div className="success-animation" style={{ textAlign: 'center' }}>
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                          <circle cx="60" cy="60" r="54" fill="none" stroke="#22c55e" strokeWidth="4" 
+                            strokeDasharray="339.292" strokeDashoffset="0"
+                            style={{ animation: 'success-circle 0.6s ease-out' }} />
+                          <path d="M34 60 L52 78 L86 44" fill="none" stroke="#22c55e" strokeWidth="6" 
+                            strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Instruction text */}
-                  <div style={{ 
-                    fontSize: 'clamp(24px, 4vh, 36px)', 
-                    fontWeight: '600', 
-                    color: '#800080',
-                    textAlign: 'center',
-                    marginTop: '1vh',
-                  }}>
-                    Tap, Insert, Swipe
-                  </div>
-                  
-                  {/* Stripe Reader M2 icon */}
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    marginTop: '1vh',
-                  }}>
-                    <img 
-                      src="/assets/icons/StripeReaderM2.png" 
-                      alt="Stripe Reader M2"
-                      style={{
-                        width: 'clamp(120px, 25vh, 200px)',
-                        height: 'auto',
-                        filter: 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)',
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Error message if payment failed */}
-                  {paymentStatus === 'payment_failed' && (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      color: '#ef4444',
-                      fontSize: 'clamp(14px, 2vh, 18px)',
-                      marginTop: '1vh',
-                    }}>
-                      {paymentStatusMessage || 'Payment failed. Tap Retry to try again.'}
-                    </div>
+                      <div style={{ 
+                        fontSize: 'clamp(28px, 5vh, 42px)', 
+                        fontWeight: '700', 
+                        color: '#22c55e',
+                        textAlign: 'center',
+                      }}>
+                        Payment Complete!
+                      </div>
+                      <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
+                        ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
+                      </div>
+                    </>
+                  ) : (
+                    /* PAYMENT SCREEN (waiting or failed) */
+                    <>
+                      {/* Total amount at top */}
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
+                          ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
+                        </div>
+                        {selectedTipAmount > 0 && (
+                          <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginTop: '0.5vh' }}>
+                            (includes ${selectedTipAmount.toFixed(2)} tip)
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Instruction text or Processing */}
+                      <div style={{ 
+                        fontSize: 'clamp(24px, 4vh, 36px)', 
+                        fontWeight: '600', 
+                        color: paymentStatus === 'payment_failed' ? '#ef4444' : '#800080',
+                        textAlign: 'center',
+                        marginTop: '1vh',
+                      }}>
+                        {checkoutStage === 'processing' ? 'Processing...' : 'Tap, Insert, Swipe'}
+                      </div>
+                      
+                      {/* Stripe Reader M2 icon */}
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        marginTop: '1vh',
+                      }}>
+                        <img 
+                          src="/assets/icons/StripeReaderM2.png" 
+                          alt="Stripe Reader M2"
+                          style={{
+                            width: 'clamp(120px, 25vh, 200px)',
+                            height: 'auto',
+                            filter: 'brightness(0) saturate(100%) invert(12%) sepia(100%) saturate(5000%) hue-rotate(280deg) brightness(80%)',
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Error message if payment failed */}
+                      {paymentStatus === 'payment_failed' && (
+                        <div style={{ 
+                          textAlign: 'center', 
+                          color: '#ef4444',
+                          fontSize: 'clamp(18px, 3vh, 24px)',
+                          fontWeight: '600',
+                          marginTop: '1vh',
+                        }}>
+                          Payment Failed
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   {/* Simulate Card Tap button - only shown in native app with simulated reader */}
@@ -4364,7 +4410,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               )}
               {paymentStatus === 'payment_success' && (
                 <>
-                  <div style={{ fontSize: '64px', marginBottom: '20px' }}>✓</div>
+                  <style>{`
+                    @keyframes success-checkmark-vertical {
+                      0% { transform: scale(0); opacity: 0; }
+                      50% { transform: scale(1.2); opacity: 1; }
+                      100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes success-circle-vertical {
+                      0% { stroke-dashoffset: 166; }
+                      100% { stroke-dashoffset: 0; }
+                    }
+                    .success-animation-vertical {
+                      animation: success-checkmark-vertical 0.6s ease-out;
+                    }
+                  `}</style>
+                  <div className="success-animation-vertical" style={{ marginBottom: '20px' }}>
+                    <svg width="80" height="80" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="54" fill="none" stroke="#22c55e" strokeWidth="4" 
+                        strokeDasharray="339.292" strokeDashoffset="0"
+                        style={{ animation: 'success-circle-vertical 0.6s ease-out' }} />
+                      <path d="M34 60 L52 78 L86 44" fill="none" stroke="#22c55e" strokeWidth="6" 
+                        strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
                   <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Successful!</h2>
                   <p style={{ fontSize: '18px', opacity: 0.9 }}>
                     {paymentStatusMessage}
