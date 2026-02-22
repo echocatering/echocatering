@@ -1959,6 +1959,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [remoteReaderConnected, setRemoteReaderConnected] = useState(false);
   const [remoteReaderIsSimulated, setRemoteReaderIsSimulated] = useState(false);
   
+  // Ref to track current readerConnected state (avoids stale closure in callbacks)
+  const readerConnectedRef = useRef(false);
+  useEffect(() => {
+    readerConnectedRef.current = readerConnected;
+  }, [readerConnected]);
+  
   // WebSocket handlers for checkout sync across devices
   const handleWsCheckoutStart = useCallback((data) => {
     console.log('[POS] WebSocket checkout_start received:', data);
@@ -2059,9 +2065,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // This is received by the vertical device (with Stripe reader) to process the payment
   const handleWsSimulateTap = useCallback((data) => {
     console.log('[POS] WebSocket simulate_tap received:', data);
+    console.log('[POS] stripeBridge:', !!window.stripeBridge, 'readerConnectedRef:', readerConnectedRef.current);
     
     // Only process if this device has the Stripe Terminal bridge
-    if (window.stripeBridge && readerConnected) {
+    // Use ref to get current value (avoids stale closure)
+    if (window.stripeBridge && readerConnectedRef.current) {
       console.log('[POS] This device has reader - starting payment process');
       setCheckoutStage('processing');
       
@@ -2149,7 +2157,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     } else {
       console.log('[POS] This device does not have reader - ignoring simulate_tap');
     }
-  }, [readerConnected, checkoutSubtotal, selectedTipAmount]);
+  }, [checkoutSubtotal, selectedTipAmount]);
   
   // Handle reader_status updates from other devices
   // This tells us if another device has a reader connected (and if it's simulated)
