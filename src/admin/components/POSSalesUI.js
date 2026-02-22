@@ -2034,7 +2034,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Only process if this device has the Stripe Terminal bridge
     if (window.stripeBridge) {
       console.log('[POS] This device has reader - triggering simulated payment');
-      updateCheckoutStage('processing');
+      setCheckoutStage('processing');
       
       // Trigger the simulated card presentation
       if (window.stripeBridge.triggerSimulatedPayment) {
@@ -2043,7 +2043,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     } else {
       console.log('[POS] This device does not have reader - ignoring simulate_tap');
     }
-  }, [updateCheckoutStage]);
+  }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
