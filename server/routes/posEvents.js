@@ -157,7 +157,7 @@ router.put('/:id/sync', authenticateToken, async (req, res) => {
     const dbTabs = (tabs || []).map(tab => ({
       localId: tab.id,
       name: tab.name,
-      status: 'open',
+      status: tab.status === 'paid' ? 'closed' : 'open',
       items: (tab.items || []).map(item => ({
         menuItemId: item._id || null,
         name: item.name,
@@ -171,6 +171,7 @@ router.put('/:id/sync', authenticateToken, async (req, res) => {
       })),
       subtotal: (tab.items || []).reduce((sum, item) => sum + (item.price || 0), 0),
       itemCount: (tab.items || []).length,
+      tipAmount: tab.tipAmount || 0,
       createdAt: tab.createdAt ? new Date(tab.createdAt) : new Date()
     }));
 
@@ -231,6 +232,7 @@ router.put('/:id/end', authenticateToken, async (req, res) => {
       })),
       subtotal: (tab.items || []).reduce((sum, item) => sum + (item.price || 0), 0),
       itemCount: (tab.items || []).length,
+      tipAmount: tab.tipAmount || 0,
       createdAt: tab.createdAt ? new Date(tab.createdAt) : new Date(),
       closedAt: new Date()
     }));

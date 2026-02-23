@@ -3003,11 +3003,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
             updateCheckoutStage('success'); // Show "Payment Completed" on vertical screen
             
-            // Mark tab as paid instead of deleting it
+            // Mark tab as paid and store tip amount
             if (checkoutTabInfo?.id) {
               setTabs(prev => prev.map(t => 
                 t.id === checkoutTabInfo.id 
-                  ? { ...t, status: 'paid', paidAt: new Date().toISOString() }
+                  ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
                   : t
               ));
               setActiveTabId(null);
@@ -3060,7 +3060,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         console.log('[POS Checkout] Stripe Terminal not available - showing test mode');
         alert('Stripe Terminal requires native app with connected reader. This is web testing mode.');
         
-        // Simulate payment for testing
+        // Simulate payment for testing - also store tip on tab
+        if (checkoutTabInfo?.id) {
+          setTabs(prev => prev.map(t => 
+            t.id === checkoutTabInfo.id 
+              ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
+              : t
+          ));
+          setActiveTabId(null);
+        }
+        
         setTimeout(() => {
           setPaymentStatus('payment_success');
           setPaymentStatusMessage('Test payment successful (web mode)');
@@ -3999,22 +4008,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
-                      ${(eventSummary.totalRevenue || 0).toFixed(2)}
+                      ${((eventSummary.totalRevenue || 0) - (eventSummary.totalTips || 0)).toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>Total Revenue</div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>Sales</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
+                      ${(eventSummary.totalTips || 0).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>Tips</div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
                       {eventSummary.totalItems || 0}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Total Items</div>
                   </div>
-                </div>
-                <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
-                    {eventSummary.totalTabs || 0}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
+                      {eventSummary.totalTabs || 0}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>Total Tabs</div>
                   </div>
-                  <div style={{ fontSize: '14px', color: '#666' }}>Total Tabs</div>
                 </div>
               </div>
               
@@ -4096,8 +4113,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
                     },
                   }));
-                  console.log('[Event Summary] Setting showEventSetup to true');
-                  setShowEventSetup(true);
+                  console.log('[Event Summary] FINALIZE EVENT - navigating to Event Summary page');
+                  setShowSummaryView(false); // Hide brief summary page
+                  setShowEventSetup(true);   // Show full Event Summary page
                 }}
                 style={{
                   width: '100%',

@@ -97,6 +97,11 @@ const PosTabSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Tip amount for this tab (added when payment completes)
+  tipAmount: {
+    type: Number,
+    default: 0
+  },
   // Timestamps
   createdAt: {
     type: Date,
@@ -133,6 +138,10 @@ const PosEventSchema = new mongoose.Schema({
   // Event-level aggregations (calculated on end)
   summary: {
     totalRevenue: {
+      type: Number,
+      default: 0
+    },
+    totalTips: {
       type: Number,
       default: 0
     },
@@ -182,11 +191,15 @@ PosEventSchema.index({ 'tabs.localId': 1 });
 // Method to calculate summary aggregations
 PosEventSchema.methods.calculateSummary = function() {
   let totalRevenue = 0;
+  let totalTips = 0;
   let totalItems = 0;
   const categoryBreakdown = new Map();
   const timelineMap = new Map();
 
   this.tabs.forEach(tab => {
+    // Add tip amount from this tab
+    totalTips += tab.tipAmount || 0;
+    
     tab.items.forEach(item => {
       totalItems += item.quantity || 1;
       totalRevenue += (item.finalPrice || 0) * (item.quantity || 1);
@@ -228,6 +241,7 @@ PosEventSchema.methods.calculateSummary = function() {
 
   this.summary = {
     totalRevenue,
+    totalTips,
     totalItems,
     totalTabs: this.tabs.length,
     categoryBreakdown,
