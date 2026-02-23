@@ -3006,8 +3006,16 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#666' }}>
-        Loading menu data...
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid #e0e0e0',
+          borderTop: '4px solid #999',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
