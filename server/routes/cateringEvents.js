@@ -110,4 +110,128 @@ router.post('/:id/recalculate', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/catering-events/finalize
+ * Finalize an event with setup data and summary from POS
+ */
+router.post('/finalize', async (req, res) => {
+  try {
+    const { eventId, setupData, summary } = req.body;
+    
+    // Build the event data from setup and summary
+    const eventData = {
+      name: setupData.eventName || 'Unnamed Event',
+      date: setupData.eventDate ? new Date(setupData.eventDate) : new Date(),
+      startTime: setupData.startTime || '',
+      endTime: setupData.endTime || '',
+      travelCost: setupData.transportationCosts || 0,
+      status: summary ? 'completed' : 'draft',
+    };
+    
+    // Add glassware data
+    if (setupData.glasswareSent || setupData.glasswareReturned) {
+      eventData.glassware = [];
+      if (setupData.glasswareSent?.rox || setupData.glasswareReturned?.rox) {
+        eventData.glassware.push({
+          type: 'ROX',
+          sent: setupData.glasswareSent?.rox || 0,
+          returnedClean: setupData.glasswareReturned?.rox || 0,
+          returnedDirty: 0,
+          broken: Math.max(0, (setupData.glasswareSent?.rox || 0) - (setupData.glasswareReturned?.rox || 0)),
+        });
+      }
+      if (setupData.glasswareSent?.tmbl || setupData.glasswareReturned?.tmbl) {
+        eventData.glassware.push({
+          type: 'TMBL',
+          sent: setupData.glasswareSent?.tmbl || 0,
+          returnedClean: setupData.glasswareReturned?.tmbl || 0,
+          returnedDirty: 0,
+          broken: Math.max(0, (setupData.glasswareSent?.tmbl || 0) - (setupData.glasswareReturned?.tmbl || 0)),
+        });
+      }
+    }
+    
+    // Add beverage inventory as bottlesPrepped
+    const bottlesPrepped = [];
+    const categories = ['cocktails', 'mocktails', 'beer', 'wine'];
+    for (const cat of categories) {
+      if (setupData.inventory?.[cat]) {
+        for (const item of setupData.inventory[cat]) {
+          if (item.name) {
+            bottlesPrepped.push({
+              name: item.name,
+              category: cat,
+              unitsPrepared: item.sent || 0,
+              unitsReturned: item.returned || 0,
+              unitsUsed: Math.max(0, (item.sent || 0) - (item.returned || 0)),
+            });
+          }
+        }
+      }
+    }
+    eventData.bottlesPrepped = bottlesPrepped;
+    
+    // Add summary data if available (post-event finalization)
+    if (summary) {
+      eventData.totalSales = summary.totalRevenue || 0;
+      eventData.totalTips = summary.totalTips || 0;
+      eventData.totalRevenue = (summary.totalRevenue || 0) + (summary.totalTips || 0);
+      
+      // Add drink sales from category breakdown
+      if (summary.categoryBreakdown) {
+        const breakdown = summary.categoryBreakdown instanceof Map 
+          ? Object.fromEntries(summary.categoryBreakdown)
+          : summary.categoryBreakdown;
+        eventData.drinkSales = Object.entries(breakdown).map(([cat, data]) => ({
+          name: cat,
+          category: cat.toLowerCase(),
+          quantity: data.count || 0,
+          unitPrice: data.count > 0 ? (data.revenue || 0) / data.count : 0,
+          revenue: data.revenue || 0,
+        }));
+      }
+      
+      // Add timeline data
+      if (summary.timelineBreakdown) {
+        eventData.timeline = summary.timelineBreakdown.map(interval => ({
+          intervalStart: new Date(interval.intervalStart),
+          intervalEnd: new Date(interval.intervalEnd || interval.intervalStart),
+          items: interval.items || [],
+        }));
+      }
+    }
+    
+    // Link to POS event if we have an eventId
+    if (eventId) {
+      eventData.posEventId = eventId;
+    }
+    
+    // Check if we're updating an existing event or creating new
+    let event;
+    if (eventId) {
+      // Try to find existing event linked to this POS event
+      event = await CateringEvent.findOne({ posEventId: eventId });
+    }
+    
+    if (event) {
+      // Update existing
+      Object.assign(event, eventData);
+      event.recalculate();
+      await event.save();
+      console.log('[CateringEvents] Updated event:', event._id);
+    } else {
+      // Create new
+      event = new CateringEvent(eventData);
+      event.recalculate();
+      await event.save();
+      console.log('[CateringEvents] Created new event:', event._id);
+    }
+    
+    res.json({ success: true, event });
+  } catch (err) {
+    console.error('[CateringEvents] POST /finalize error:', err);
+    res.status(500).json({ error: 'Failed to finalize event', message: err.message });
+  }
+});
+
 module.exports = router;

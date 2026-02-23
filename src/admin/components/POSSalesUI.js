@@ -1934,11 +1934,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showEndEventModal, setShowEndEventModal] = useState(false);
   const [showSummaryView, setShowSummaryView] = useState(false);
+  const [showEventSetup, setShowEventSetup] = useState(false);
   const [eventSummary, setEventSummary] = useState(null);
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [showEndEventButton, setShowEndEventButton] = useState(false);
   const endEventTimeoutRef = useRef(null);
+  
+  // Event Setup data
+  const [eventSetupData, setEventSetupData] = useState({
+    eventName: '',
+    eventDate: new Date().toISOString().split('T')[0],
+    startTime: '',
+    endTime: '',
+    transportationCosts: 0,
+    glasswareSent: { rox: 0, tmbl: 0 },
+    glasswareReturned: { rox: 0, tmbl: 0 },
+    inventory: {
+      cocktails: [],
+      mocktails: [],
+      beer: [],
+      wine: [],
+    },
+  });
   
   // Checkout state
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -4103,11 +4121,370 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   fontSize: '18px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
+                  marginBottom: '12px',
                 }}
               >
                 HOME
               </button>
+              
+              {/* Edit Summary Button */}
+              <button
+                onClick={() => {
+                  // Pre-populate setup data from event summary
+                  setEventSetupData(prev => ({
+                    ...prev,
+                    eventName: eventName || '',
+                    eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
+                    endTime: eventSummary?.endTime ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) : '',
+                  }));
+                  setShowEventSetup(true);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: '#fff',
+                  color: '#800080',
+                  border: '2px solid #800080',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                EDIT SUMMARY
+              </button>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Event Setup/Edit page
+    if (showEventSetup) {
+      const isPostEvent = showSummaryView && eventSummary;
+      const glasswareLost = {
+        rox: Math.max(0, (eventSetupData.glasswareSent?.rox || 0) - (eventSetupData.glasswareReturned?.rox || 0)),
+        tmbl: Math.max(0, (eventSetupData.glasswareSent?.tmbl || 0) - (eventSetupData.glasswareReturned?.tmbl || 0)),
+      };
+      const glasswareNetLoss = (glasswareLost.rox + glasswareLost.tmbl) * 3;
+      
+      const updateInventoryItem = (category, index, field, value) => {
+        setEventSetupData(prev => {
+          const newInventory = { ...prev.inventory };
+          newInventory[category] = [...newInventory[category]];
+          newInventory[category][index] = { ...newInventory[category][index], [field]: value };
+          return { ...prev, inventory: newInventory };
+        });
+      };
+      
+      const addInventoryItem = (category) => {
+        setEventSetupData(prev => {
+          const newInventory = { ...prev.inventory };
+          newInventory[category] = [...newInventory[category], { name: '', sent: 0, returned: 0 }];
+          return { ...prev, inventory: newInventory };
+        });
+      };
+      
+      const removeInventoryItem = (category, index) => {
+        setEventSetupData(prev => {
+          const newInventory = { ...prev.inventory };
+          newInventory[category] = newInventory[category].filter((_, i) => i !== index);
+          return { ...prev, inventory: newInventory };
+        });
+      };
+      
+      const handleFinalizeEvent = async () => {
+        setSyncing(true);
+        try {
+          const response = await fetch('/api/catering-events/finalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId,
+              setupData: eventSetupData,
+              summary: eventSummary,
+            }),
+          });
+          if (response.ok) {
+            setShowEventSetup(false);
+            // If post-event, go back to summary
+            if (!isPostEvent) {
+              // Pre-event: start the event with setup data
+              handleStartEvent(eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to finalize event:', err);
+        } finally {
+          setSyncing(false);
+        }
+      };
+      
+      const renderInventorySection = (title, category) => (
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#333', marginBottom: '12px', textTransform: 'uppercase' }}>
+            {title}
+          </h3>
+          {eventSetupData.inventory[category]?.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => updateInventoryItem(category, idx, 'name', e.target.value)}
+                placeholder="Name"
+                style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
+              />
+              <input
+                type="number"
+                value={item.sent}
+                onChange={(e) => updateInventoryItem(category, idx, 'sent', parseFloat(e.target.value) || 0)}
+                placeholder="Sent"
+                style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+              />
+              <input
+                type="number"
+                value={item.returned}
+                onChange={(e) => updateInventoryItem(category, idx, 'returned', parseFloat(e.target.value) || 0)}
+                placeholder="Returned"
+                style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+              />
+              <button
+                onClick={() => removeInventoryItem(category, idx)}
+                style={{ padding: '8px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => addInventoryItem(category)}
+            style={{ padding: '8px 16px', background: '#800080', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
+          >
+            + Add {title.slice(0, -1)}
+          </button>
+        </div>
+      );
+      
+      return (
+        <div style={{
+          width: '100%',
+          height: '100vh',
+          background: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{
+            background: '#800080',
+            color: '#fff',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+          }}>
+            <button
+              onClick={() => setShowEventSetup(false)}
+              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer' }}
+            >
+              ←
+            </button>
+            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>
+              {isPostEvent ? 'Edit Summary' : 'Event Setup'}
+            </h1>
+            <div style={{ width: '24px' }} />
+          </div>
+          
+          {/* Scrollable Content */}
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+            {/* Details Section */}
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Details</h2>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Event Name</label>
+                <input
+                  type="text"
+                  value={eventSetupData.eventName}
+                  onChange={(e) => setEventSetupData(prev => ({ ...prev, eventName: e.target.value }))}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Event Date</label>
+                <input
+                  type="date"
+                  value={eventSetupData.eventDate}
+                  onChange={(e) => setEventSetupData(prev => ({ ...prev, eventDate: e.target.value }))}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Start Time</label>
+                  <input
+                    type="time"
+                    value={eventSetupData.startTime}
+                    onChange={(e) => setEventSetupData(prev => ({ ...prev, startTime: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>End Time</label>
+                  <input
+                    type="time"
+                    value={eventSetupData.endTime}
+                    onChange={(e) => setEventSetupData(prev => ({ ...prev, endTime: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              
+              {/* Read-only stats from event summary */}
+              {isPostEvent && eventSummary && (
+                <>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>{eventSummary.totalTabs || 0}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Total Tabs</div>
+                    </div>
+                    <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>{eventSummary.totalItems || 0}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Items Sold</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>${(eventSummary.totalRevenue || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Total Revenue</div>
+                    </div>
+                    <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2196F3' }}>${(eventSummary.totalTips || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Total Tips</div>
+                    </div>
+                  </div>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>${(eventSummary.totalSpillage || 0).toFixed(2)}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Total Spillage</div>
+                  </div>
+                </>
+              )}
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation Costs ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={eventSetupData.transportationCosts}
+                  onChange={(e) => setEventSetupData(prev => ({ ...prev, transportationCosts: parseFloat(e.target.value) || 0 }))}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+            
+            {/* Inventory Section */}
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Inventory</h2>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>Glassware Sent</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
+                    <input
+                      type="number"
+                      value={eventSetupData.glasswareSent?.rox || 0}
+                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, rox: parseInt(e.target.value) || 0 } }))}
+                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
+                    <input
+                      type="number"
+                      value={eventSetupData.glasswareSent?.tmbl || 0}
+                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, tmbl: parseInt(e.target.value) || 0 } }))}
+                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>Glassware Returned</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
+                    <input
+                      type="number"
+                      value={eventSetupData.glasswareReturned?.rox || 0}
+                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, rox: parseInt(e.target.value) || 0 } }))}
+                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
+                    <input
+                      type="number"
+                      value={eventSetupData.glasswareReturned?.tmbl || 0}
+                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, tmbl: parseInt(e.target.value) || 0 } }))}
+                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Calculated fields */}
+              <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#666' }}>Glassware Lost:</span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>{glasswareLost.rox} ROX + {glasswareLost.tmbl} TMBL</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#666' }}>Glassware Net Loss:</span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>${glasswareNetLoss.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Beverage Inventory Sections */}
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Beverage Inventory</h2>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '16px', display: 'flex', gap: '8px' }}>
+                <span style={{ flex: 2 }}>Name</span>
+                <span style={{ flex: 1, textAlign: 'center' }}>Sent</span>
+                <span style={{ flex: 1, textAlign: 'center' }}>Returned</span>
+                <span style={{ width: '40px' }}></span>
+              </div>
+              {renderInventorySection('Cocktails', 'cocktails')}
+              {renderInventorySection('Mocktails', 'mocktails')}
+              {renderInventorySection('Beer', 'beer')}
+              {renderInventorySection('Wine', 'wine')}
+            </div>
+            
+            {/* Action Button */}
+            <button
+              onClick={handleFinalizeEvent}
+              disabled={syncing}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: syncing ? '#ccc' : '#800080',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: syncing ? 'not-allowed' : 'pointer',
+                marginBottom: '32px',
+              }}
+            >
+              {syncing ? 'SAVING...' : (isPostEvent ? 'FINALIZE EVENT' : 'START EVENT')}
+            </button>
           </div>
         </div>
       );
@@ -4193,9 +4570,36 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   fontSize: '18px',
                   fontWeight: 'bold',
                   cursor: syncing ? 'not-allowed' : 'pointer',
+                  marginBottom: '12px',
                 }}
               >
                 {syncing ? 'STARTING...' : 'START EVENT'}
+              </button>
+              
+              {/* Event Setup Button */}
+              <button
+                onClick={() => {
+                  // Pre-populate with event name from input
+                  setEventSetupData(prev => ({
+                    ...prev,
+                    eventName: newEventName || '',
+                    eventDate: new Date().toISOString().split('T')[0],
+                  }));
+                  setShowEventSetup(true);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: '#fff',
+                  color: '#800080',
+                  border: '2px solid #800080',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                EVENT SETUP
               </button>
             </div>
           </div>
