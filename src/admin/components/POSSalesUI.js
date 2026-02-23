@@ -1913,6 +1913,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     transportationCosts: '',
     permitCost: '',
     liabilityInsuranceCost: '',
+    labor: [], // Array of { job: 'Bartender'|'Barback'|'Server'|'Photographer'|'Other', rate: '', hours: '' }
     glasswareSent: { rox: '', tmbl: '' },
     glasswareReturned: { rox: '', tmbl: '' },
     iceSent: '',
@@ -4345,9 +4346,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               
             </div>
             
-            {/* Additional Costs Section */}
+            {/* Operating Expenses Section */}
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Additional Costs</h2>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Operating Expenses</h2>
               
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation ($)</label>
@@ -4402,6 +4403,137 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
                 />
               </div>
+              
+              {/* Labor Section */}
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <label style={{ fontSize: '14px', color: '#666' }}>Labor</label>
+                  <button
+                    onClick={() => {
+                      // Calculate default hours from event duration
+                      let defaultHours = '';
+                      if (eventSetupData.startTime && eventSetupData.endTime) {
+                        const [startH, startM] = eventSetupData.startTime.split(':').map(Number);
+                        const [endH, endM] = eventSetupData.endTime.split(':').map(Number);
+                        const startMinutes = startH * 60 + startM;
+                        const endMinutes = endH * 60 + endM;
+                        const durationMinutes = endMinutes >= startMinutes ? endMinutes - startMinutes : (24 * 60 - startMinutes + endMinutes);
+                        defaultHours = (durationMinutes / 60).toFixed(2);
+                      }
+                      setEventSetupData(prev => ({
+                        ...prev,
+                        labor: [...(prev.labor || []), { job: 'Bartender', rate: '', hours: defaultHours }]
+                      }));
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#800080',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Add Labor
+                  </button>
+                </div>
+                
+                {eventSetupData.labor && eventSetupData.labor.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '8px' }}>
+                      <span style={{ flex: 2 }}>Job</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Rate ($/hr)</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Hours</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Pay</span>
+                      <span style={{ width: '32px' }}></span>
+                    </div>
+                    {eventSetupData.labor.map((laborer, idx) => {
+                      const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
+                      return (
+                        <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                          <select
+                            value={laborer.job}
+                            onChange={(e) => {
+                              setEventSetupData(prev => {
+                                const newLabor = [...prev.labor];
+                                newLabor[idx] = { ...newLabor[idx], job: e.target.value };
+                                return { ...prev, labor: newLabor };
+                              });
+                            }}
+                            style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
+                          >
+                            <option value="Bartender">Bartender</option>
+                            <option value="Barback">Barback</option>
+                            <option value="Server">Server</option>
+                            <option value="Photographer">Photographer</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={laborer.rate === '0' || laborer.rate === 0 ? '' : laborer.rate}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                setEventSetupData(prev => {
+                                  const newLabor = [...prev.labor];
+                                  newLabor[idx] = { ...newLabor[idx], rate: val };
+                                  return { ...prev, labor: newLabor };
+                                });
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            placeholder="$0.00"
+                            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                          />
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={laborer.hours === '0' || laborer.hours === 0 ? '' : laborer.hours}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                setEventSetupData(prev => {
+                                  const newLabor = [...prev.labor];
+                                  newLabor[idx] = { ...newLabor[idx], hours: val };
+                                  return { ...prev, labor: newLabor };
+                                });
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            placeholder="0.00"
+                            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                          />
+                          <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                            ${pay.toFixed(2)}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEventSetupData(prev => ({
+                                ...prev,
+                                labor: prev.labor.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                            style={{ width: '32px', height: '32px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                      <div style={{ flex: 2 }}></div>
+                      <div style={{ flex: 1 }}></div>
+                      <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
+                      <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                        ${eventSetupData.labor.reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
+                      </div>
+                      <div style={{ width: '32px' }}></div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             
             {/* Inventory Section */}
@@ -4416,10 +4548,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <span style={{ flex: 1, textAlign: 'center' }}>Net</span>
               </div>
               
-              {/* Glassware ROX */}
+              {/* Glassware Rox */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
-                  ROX
+                  Rox
                 </div>
                 <input
                   type="text"
@@ -4454,10 +4586,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Glassware TMBL */}
+              {/* Glassware Tmbl */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
-                  TMBL
+                  Tmbl
                 </div>
                 <input
                   type="text"
@@ -4536,6 +4668,202 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {renderInventorySection('Beer', 'beer')}
               {renderInventorySection('Wine', 'wine')}
             </div>
+            
+            {/* Income Statement Section - Only show for post-event */}
+            {isPostEvent && eventSummary && (
+              <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Income Statement</h2>
+                
+                {/* Sales */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Sales</span>
+                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalRevenue || 0).toFixed(2)}</span>
+                </div>
+                
+                {/* Tips */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Tips</span>
+                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalTips || 0).toFixed(2)}</span>
+                </div>
+                
+                {/* COGS Section */}
+                <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
+                    <span style={{ fontWeight: 'bold', color: '#333' }}>Cost of Goods Sold (COGS)</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee' }}>
+                    <span style={{ flex: 2 }}>Item</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}># Sold</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Cost/Unit</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Total</span>
+                  </div>
+                  {eventSummary.categoryBreakdown && Object.entries(
+                    eventSummary.categoryBreakdown instanceof Map 
+                      ? Object.fromEntries(eventSummary.categoryBreakdown)
+                      : eventSummary.categoryBreakdown
+                  ).flatMap(([category, data]) => {
+                    if (!data.items) return [];
+                    return Object.entries(data.items).map(([itemName, itemData]) => {
+                      const quantity = itemData.count || 0;
+                      // Find cost per unit from allItems by matching name
+                      const menuItem = allItems.find(i => i.name === itemName);
+                      // Use recipe cost if available, otherwise estimate based on category
+                      let costPerUnit = 0;
+                      const costLabel = category === 'wine' ? '$/Glass' : category === 'beer' ? '$/Unit' : '$/Unit';
+                      // For now, use a placeholder - this would need to be fetched from recipes
+                      if (menuItem?.costPerUnit) {
+                        costPerUnit = menuItem.costPerUnit;
+                      }
+                      const totalCost = quantity * costPerUnit;
+                      return (
+                        <div key={`${category}-${itemName}`} style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
+                          <div style={{ flex: 2, fontSize: '14px', color: '#333' }}>{itemName}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>{quantity}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', color: '#666' }}>${costPerUnit.toFixed(2)}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>-${totalCost.toFixed(2)}</div>
+                        </div>
+                      );
+                    });
+                  })}
+                  <div style={{ display: 'flex', gap: '8px', padding: '12px', background: '#f9f9f9', alignItems: 'center' }}>
+                    <div style={{ flex: 2, fontWeight: 'bold', color: '#333' }}>Total COGS</div>
+                    <div style={{ flex: 1 }}></div>
+                    <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
+                    <div style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
+                      -${(() => {
+                        let total = 0;
+                        if (eventSummary.categoryBreakdown) {
+                          const breakdown = eventSummary.categoryBreakdown instanceof Map 
+                            ? Object.fromEntries(eventSummary.categoryBreakdown)
+                            : eventSummary.categoryBreakdown;
+                          Object.entries(breakdown).forEach(([category, data]) => {
+                            if (data.items) {
+                              Object.entries(data.items).forEach(([itemName, itemData]) => {
+                                const menuItem = allItems.find(i => i.name === itemName);
+                                const costPerUnit = menuItem?.costPerUnit || 0;
+                                total += (itemData.count || 0) * costPerUnit;
+                              });
+                            }
+                          });
+                        }
+                        return total.toFixed(2);
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Operating Expenses */}
+                <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
+                    <span style={{ fontWeight: 'bold', color: '#333' }}>Operating Expenses</span>
+                  </div>
+                  {/* Fixed costs */}
+                  {parseFloat(eventSetupData.transportationCosts) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <span style={{ color: '#333' }}>Transportation</span>
+                      <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.transportationCosts).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {parseFloat(eventSetupData.permitCost) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <span style={{ color: '#333' }}>Permit</span>
+                      <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.permitCost).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {parseFloat(eventSetupData.liabilityInsuranceCost) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <span style={{ color: '#333' }}>Liability Insurance</span>
+                      <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {/* Labor costs */}
+                  {eventSetupData.labor && eventSetupData.labor.length > 0 && (
+                    <>
+                      <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee', background: '#fafafa' }}>
+                        <span style={{ flex: 2 }}>Title</span>
+                        <span style={{ flex: 1, textAlign: 'center' }}>Rate</span>
+                        <span style={{ flex: 1, textAlign: 'center' }}>Hours</span>
+                        <span style={{ flex: 1, textAlign: 'center' }}>Pay</span>
+                      </div>
+                      {eventSetupData.labor.map((laborer, idx) => {
+                        const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
+                        return (
+                          <div key={idx} style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
+                            <div style={{ flex: 2, fontSize: '14px', color: '#333' }}>{laborer.job}</div>
+                            <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>${parseFloat(laborer.rate || 0).toFixed(2)}</div>
+                            <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>{parseFloat(laborer.hours || 0).toFixed(2)}</div>
+                            <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>-${pay.toFixed(2)}</div>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center', background: '#fafafa' }}>
+                        <div style={{ flex: 2 }}></div>
+                        <div style={{ flex: 1 }}></div>
+                        <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
+                        <div style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
+                          -${eventSetupData.labor.reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
+                    <span style={{ fontWeight: 'bold', color: '#333' }}>Total Operating Expenses</span>
+                    <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
+                      -${(
+                        (parseFloat(eventSetupData.transportationCosts) || 0) +
+                        (parseFloat(eventSetupData.permitCost) || 0) +
+                        (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
+                        (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Taxes */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
+                    -${(((eventSummary.totalRevenue || 0) + (eventSummary.totalTips || 0)) * 0.3).toFixed(2)}
+                  </span>
+                </div>
+                
+                {/* Net Income */}
+                {(() => {
+                  const sales = eventSummary.totalRevenue || 0;
+                  const tips = eventSummary.totalTips || 0;
+                  const taxes = (sales + tips) * 0.3;
+                  const operatingExpenses = (parseFloat(eventSetupData.transportationCosts) || 0) +
+                    (parseFloat(eventSetupData.permitCost) || 0) +
+                    (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
+                    (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0);
+                  // COGS calculation
+                  let cogs = 0;
+                  if (eventSummary.categoryBreakdown) {
+                    const breakdown = eventSummary.categoryBreakdown instanceof Map 
+                      ? Object.fromEntries(eventSummary.categoryBreakdown)
+                      : eventSummary.categoryBreakdown;
+                    Object.entries(breakdown).forEach(([category, data]) => {
+                      if (data.items) {
+                        Object.entries(data.items).forEach(([itemName, itemData]) => {
+                          const menuItem = allItems.find(i => i.name === itemName);
+                          const costPerUnit = menuItem?.costPerUnit || 0;
+                          cogs += (itemData.count || 0) * costPerUnit;
+                        });
+                      }
+                    });
+                  }
+                  const netIncome = sales + tips - cogs - operatingExpenses - taxes;
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#333' }}>Net Income</span>
+                      <span style={{ fontWeight: 'bold', fontSize: '18px', color: netIncome >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {netIncome >= 0 ? '' : '-'}${Math.abs(netIncome).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             
             {/* Action Button */}
             <button
