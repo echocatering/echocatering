@@ -4076,9 +4076,61 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               )}
               
+              {/* Income Statement Section */}
+              <div style={{
+                background: '#f5f5f5',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px',
+                border: '1px solid #e0e0e0',
+              }}>
+                <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
+                
+                {/* Sales */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Sales</span>
+                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalRevenue || 0).toFixed(2)}</span>
+                </div>
+                
+                {/* Tips */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Tips</span>
+                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalTips || 0).toFixed(2)}</span>
+                </div>
+                
+                {/* Taxes */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
+                    -${(((eventSummary.totalRevenue || 0) + (eventSummary.totalTips || 0)) * 0.3).toFixed(2)}
+                  </span>
+                </div>
+                
+                {/* Net (simplified - full breakdown in Event Setup) */}
+                {(() => {
+                  const sales = eventSummary.totalRevenue || 0;
+                  const tips = eventSummary.totalTips || 0;
+                  const taxes = (sales + tips) * 0.3;
+                  const netIncome = sales + tips - taxes;
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>Net (before expenses)</span>
+                      <span style={{ fontWeight: 'bold', fontSize: '16px', color: netIncome >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {netIncome >= 0 ? '' : '-'}${Math.abs(netIncome).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })()}
+                
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '12px', textAlign: 'center' }}>
+                  Full breakdown with COGS & Operating Expenses available in Finalize Event
+                </div>
+              </div>
+              
               {/* Finalize Event Button - goes directly to event setup/finalize page */}
               <button
                 onClick={() => {
+                  console.log('[Event Summary] FINALIZE EVENT clicked');
                   // Pre-populate setup data from event summary
                   const endTimeValue = eventSummary?.endTime 
                     ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
@@ -4102,6 +4154,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
                     },
                   }));
+                  console.log('[Event Summary] Setting showEventSetup to true');
                   setShowEventSetup(true);
                 }}
                 style={{
@@ -4406,8 +4459,97 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               
               {/* Labor Section */}
               <div style={{ marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <label style={{ fontSize: '14px', color: '#666' }}>Labor</label>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '8px' }}>Labor</label>
+                
+                {/* Column Headers - only show if there are labor entries */}
+                {eventSetupData.labor && eventSetupData.labor.length > 0 && (
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ flex: 2, textAlign: 'left' }}>Job</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Rate ($/hr)</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Hours</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Pay</span>
+                    <span style={{ width: '20px' }}></span>
+                  </div>
+                )}
+                
+                {/* Labor Rows */}
+                {eventSetupData.labor && eventSetupData.labor.map((laborer, idx) => {
+                  const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
+                  return (
+                    <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                      <select
+                        value={laborer.job}
+                        onChange={(e) => {
+                          setEventSetupData(prev => {
+                            const newLabor = [...prev.labor];
+                            newLabor[idx] = { ...newLabor[idx], job: e.target.value };
+                            return { ...prev, labor: newLabor };
+                          });
+                        }}
+                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
+                      >
+                        <option value="Bartender">Bartender</option>
+                        <option value="Barback">Barback</option>
+                        <option value="Server">Server</option>
+                        <option value="Photographer">Photographer</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={laborer.rate === '0' || laborer.rate === 0 ? '' : laborer.rate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                            setEventSetupData(prev => {
+                              const newLabor = [...prev.labor];
+                              newLabor[idx] = { ...newLabor[idx], rate: val };
+                              return { ...prev, labor: newLabor };
+                            });
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="$0.00"
+                        style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                      />
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={laborer.hours === '0' || laborer.hours === 0 ? '' : laborer.hours}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                            setEventSetupData(prev => {
+                              const newLabor = [...prev.labor];
+                              newLabor[idx] = { ...newLabor[idx], hours: val };
+                              return { ...prev, labor: newLabor };
+                            });
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="0.00"
+                        style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                      />
+                      <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                        ${pay.toFixed(2)}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEventSetupData(prev => ({
+                            ...prev,
+                            labor: prev.labor.filter((_, i) => i !== idx)
+                          }));
+                        }}
+                        style={{ width: '20px', background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0, lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+                
+                {/* Total Row with Add Labor Button */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
                   <button
                     onClick={() => {
                       // Calculate default hours from event duration
@@ -4426,6 +4568,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       }));
                     }}
                     style={{
+                      flex: 2,
                       padding: '8px 16px',
                       background: '#800080',
                       color: '#fff',
@@ -4437,102 +4580,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   >
                     + Add Labor
                   </button>
+                  <div style={{ flex: 1 }}></div>
+                  <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
+                  <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                    ${(eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
+                  </div>
+                  <div style={{ width: '20px' }}></div>
                 </div>
-                
-                {eventSetupData.labor && eventSetupData.labor.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '8px' }}>
-                      <span style={{ flex: 2 }}>Job</span>
-                      <span style={{ flex: 1, textAlign: 'center' }}>Rate ($/hr)</span>
-                      <span style={{ flex: 1, textAlign: 'center' }}>Hours</span>
-                      <span style={{ flex: 1, textAlign: 'center' }}>Pay</span>
-                      <span style={{ width: '32px' }}></span>
-                    </div>
-                    {eventSetupData.labor.map((laborer, idx) => {
-                      const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
-                      return (
-                        <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                          <select
-                            value={laborer.job}
-                            onChange={(e) => {
-                              setEventSetupData(prev => {
-                                const newLabor = [...prev.labor];
-                                newLabor[idx] = { ...newLabor[idx], job: e.target.value };
-                                return { ...prev, labor: newLabor };
-                              });
-                            }}
-                            style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
-                          >
-                            <option value="Bartender">Bartender</option>
-                            <option value="Barback">Barback</option>
-                            <option value="Server">Server</option>
-                            <option value="Photographer">Photographer</option>
-                            <option value="Other">Other</option>
-                          </select>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={laborer.rate === '0' || laborer.rate === 0 ? '' : laborer.rate}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-                                setEventSetupData(prev => {
-                                  const newLabor = [...prev.labor];
-                                  newLabor[idx] = { ...newLabor[idx], rate: val };
-                                  return { ...prev, labor: newLabor };
-                                });
-                              }
-                            }}
-                            onFocus={(e) => e.target.select()}
-                            placeholder="$0.00"
-                            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
-                          />
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={laborer.hours === '0' || laborer.hours === 0 ? '' : laborer.hours}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-                                setEventSetupData(prev => {
-                                  const newLabor = [...prev.labor];
-                                  newLabor[idx] = { ...newLabor[idx], hours: val };
-                                  return { ...prev, labor: newLabor };
-                                });
-                              }
-                            }}
-                            onFocus={(e) => e.target.select()}
-                            placeholder="0.00"
-                            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
-                          />
-                          <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
-                            ${pay.toFixed(2)}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setEventSetupData(prev => ({
-                                ...prev,
-                                labor: prev.labor.filter((_, i) => i !== idx)
-                              }));
-                            }}
-                            style={{ width: '32px', height: '32px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    })}
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                      <div style={{ flex: 2 }}></div>
-                      <div style={{ flex: 1 }}></div>
-                      <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
-                      <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
-                        ${eventSetupData.labor.reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
-                      </div>
-                      <div style={{ width: '32px' }}></div>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
             
