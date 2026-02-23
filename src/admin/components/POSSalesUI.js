@@ -3985,7 +3985,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           }}>
             <div style={{ maxWidth: '600px', margin: '0 auto' }}>
               <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center', color: '#333' }}>
-                Event Summary
+                {eventName || 'Event'}
               </h1>
               
               {/* Totals */}
@@ -4157,7 +4157,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setSyncing(true);
         try {
           if (isPostEvent) {
-            // Post-event: Save setup data and go back to summary
+            // Post-event: Save setup data and go back to brief summary
             const response = await fetch('/api/catering-events/finalize', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -4169,23 +4169,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             });
             if (response.ok) {
               setShowEventSetup(false);
-              // Stay on summary view
-            }
-          } else if (eventId) {
-            // Active event exists: End the event and show summary
-            const response = await apiCall(`/pos-events/${eventId}/end`, {
-              method: 'PUT',
-              body: { tabs },
-            });
-            
-            if (response && response.event) {
-              setEventSummary(response.event.summary);
-              setShowEventSetup(false);
-              setShowSummaryView(true);
-              console.log(`[POS] Ended event from setup page: ${eventName}`);
+              // Stay on brief summary view
             }
           } else {
-            // No event: Start a new event with the setup data
+            // Pre-event: Start a new event with the setup data
             const newEventName = eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`;
             setShowEventSetup(false);
             await handleStartEvent(newEventName);
@@ -4274,7 +4261,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           }}>
           {/* Title */}
           <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#333', textAlign: 'center' }}>
-            {isPostEvent ? 'Event Summary' : 'Event Setup'}
+            Event Summary
           </h1>
           
           {/* Details Section */}
@@ -4903,7 +4890,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 marginBottom: '32px',
               }}
             >
-              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : (eventId ? 'FINALIZE EVENT' : 'START EVENT'))}
+              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : 'START EVENT')}
             </button>
         </div>
       );
