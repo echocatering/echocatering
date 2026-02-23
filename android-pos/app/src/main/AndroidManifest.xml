@@ -31,7 +31,7 @@
             android:name=".ui.WebViewActivity"
             android:exported="true"
             android:screenOrientation="unspecified"
-            android:theme="@style/Theme.EchoPOS"
+            android:theme="@style/Theme.EchoPOS.Splash"
             android:configChanges="orientation|screenSize|screenLayout">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

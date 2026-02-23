@@ -60,6 +60,9 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     
+    // Splash Screen API
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    
     // Stripe Terminal SDK
     implementation("com.stripe:stripeterminal:5.2.0")
     implementation("com.stripe:stripeterminal-ktx:5.2.0")
