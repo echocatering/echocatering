@@ -1992,6 +1992,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   
   const handleWsCheckoutComplete = useCallback((data) => {
     console.log('[POS] WebSocket checkout_complete received:', data);
+    
+    // Mark tab as paid and store tip amount
+    if (data.tabId) {
+      setTabs(prev => prev.map(t => 
+        t.id === data.tabId 
+          ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: data.tipAmount || 0 }
+          : t
+      ));
+      setActiveTabId(null);
+    }
+    
     setCheckoutMode(false);
     setCheckoutItems([]);
     setCheckoutSubtotal(0);
@@ -1999,7 +2010,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowScanCard(false);
     setSelectedTipAmount(0);
     setCheckoutStage('');
-  }, []);
+  }, [setTabs, setActiveTabId]);
   
   const handleWsCheckoutCancel = useCallback(() => {
     console.log('[POS] WebSocket checkout_cancel received');
@@ -4891,25 +4902,101 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               })()}
             </div>
             
-            {/* Action Button */}
-            <button
-              onClick={handleFinalizeEvent}
-              disabled={syncing}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: syncing ? '#ccc' : '#800080',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: syncing ? 'not-allowed' : 'pointer',
-                marginBottom: '32px',
-              }}
-            >
-              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : 'START EVENT')}
-            </button>
+            {/* Action Buttons */}
+            {isPostEvent ? (
+              // Post-event: Show EDIT EVENT and SAVE RESULTS buttons
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+                <button
+                  onClick={() => {
+                    console.log('[Event Summary] EDIT EVENT - returning to POS view');
+                    setShowEventSetup(false);
+                    setShowSummaryView(false);
+                    // This will return to the POS view with the active event
+                  }}
+                  disabled={syncing}
+                  style={{
+                    flex: 1,
+                    padding: '16px',
+                    background: syncing ? '#ccc' : '#666',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  EDIT EVENT
+                </button>
+                <button
+                  onClick={async () => {
+                    console.log('[Event Summary] SAVE RESULTS - saving to database');
+                    setSyncing(true);
+                    try {
+                      const response = await fetch('/api/catering-events/finalize', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          eventId,
+                          setupData: eventSetupData,
+                          summary: eventSummary,
+                        }),
+                      });
+                      if (response.ok) {
+                        alert('Event saved successfully!');
+                        // Return to home/event list
+                        setShowEventSetup(false);
+                        setShowSummaryView(false);
+                        setEventId(null);
+                        setEventName('');
+                        setEventSummary(null);
+                      } else {
+                        alert('Failed to save event');
+                      }
+                    } catch (err) {
+                      console.error('Failed to save event:', err);
+                      alert('Failed to save event');
+                    } finally {
+                      setSyncing(false);
+                    }
+                  }}
+                  disabled={syncing}
+                  style={{
+                    flex: 1,
+                    padding: '16px',
+                    background: syncing ? '#ccc' : '#800080',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {syncing ? 'SAVING...' : 'SAVE RESULTS'}
+                </button>
+              </div>
+            ) : (
+              // Pre-event: Show START EVENT button
+              <button
+                onClick={handleFinalizeEvent}
+                disabled={syncing}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: syncing ? '#ccc' : '#800080',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: syncing ? 'not-allowed' : 'pointer',
+                  marginBottom: '32px',
+                }}
+              >
+                {syncing ? 'STARTING...' : 'START EVENT'}
+              </button>
+            )}
         </div>
       );
     }
