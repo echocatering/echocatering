@@ -4661,22 +4661,22 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           </div>
           
-          {/* Right side: Event name/time OR End Event button */}
+          {/* Right side: Event name/time - always positioned at right edge */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'flex-end',
-            gap: '8px',
             height: '100%',
             flex: 1,
-            position: 'relative',
           }}>
             {/* Event name and time OR Payment Processing indicator */}
-            {!showEndEventButton && (
-              <div style={{ 
-                fontSize: '14px',
-                textAlign: 'right',
-              }}>
+            <div style={{ 
+              fontSize: '14px',
+              textAlign: 'right',
+              transition: 'opacity 0.3s ease',
+              opacity: showEndEventButton ? 0 : 1,
+              pointerEvents: showEndEventButton ? 'none' : 'auto',
+            }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
                   <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'success' ? '#22c55e' : '#800080' }}>
@@ -4717,15 +4717,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }} />
                   </div>
                   {eventStarted && (
-                    <span style={{ color: '#666', fontSize: '12px' }}>
+                    <span style={{ color: '#666', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       {new Date(eventStarted).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(eventStarted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                 </div>
               )}
-              </div>
-            )}
-            
+            </div>
+          </div>
+          
+          {/* Buttons container - absolutely positioned to overlay when shown */}
+          <div style={{
+            position: 'absolute',
+            right: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'opacity 0.3s ease',
+            opacity: showEndEventButton ? 1 : 0,
+            pointerEvents: showEndEventButton ? 'auto' : 'none',
+            zIndex: 10,
+          }}>
             {/* TEST/LIVE Button - shown on header tap */}
             <button
               onClick={(e) => {
@@ -4741,13 +4755,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 fontSize: '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                transition: 'opacity 0.3s ease, transform 0.3s ease',
-                opacity: showEndEventButton ? 1 : 0,
-                transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
-                pointerEvents: showEndEventButton ? 'auto' : 'none',
                 whiteSpace: 'nowrap',
-                flexShrink: 0,
-                zIndex: 10,
               }}
             >
               {squareTestMode ? 'TEST' : 'LIVE'}
@@ -4776,13 +4784,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  transition: 'opacity 0.3s ease, transform 0.3s ease',
-                  opacity: showEndEventButton ? 1 : 0,
-                  transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
-                  pointerEvents: showEndEventButton ? 'auto' : 'none',
                   whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  zIndex: 10,
                 }}
               >
                 <span>{readerConnected ? '●' : '○'}</span>
@@ -4829,13 +4831,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 fontSize: '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                transition: 'opacity 0.3s ease, transform 0.3s ease',
-                opacity: showEndEventButton ? 1 : 0,
-                transform: showEndEventButton ? 'translateX(0)' : 'translateX(50px)',
-                pointerEvents: showEndEventButton ? 'auto' : 'none',
                 whiteSpace: 'nowrap',
-                flexShrink: 0,
-                zIndex: 10,
               }}
             >
               {checkoutMode ? 'CANCEL PAYMENT' : 'END EVENT'}
