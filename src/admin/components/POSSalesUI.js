@@ -1913,6 +1913,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     transportationCosts: '',
     glasswareSent: { rox: '', tmbl: '' },
     glasswareReturned: { rox: '', tmbl: '' },
+    iceSent: '',
+    iceReturned: '',
     inventory: {
       cocktails: [],
       mocktails: [],
@@ -4358,108 +4360,129 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Inventory</h2>
               
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>Glassware Sent</h3>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={eventSetupData.glasswareSent?.rox === '0' || eventSetupData.glasswareSent?.rox === 0 ? '' : (eventSetupData.glasswareSent?.rox ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) {
-                          setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, rox: val } }));
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="0"
-                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={eventSetupData.glasswareSent?.tmbl === '0' || eventSetupData.glasswareSent?.tmbl === 0 ? '' : (eventSetupData.glasswareSent?.tmbl ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) {
-                          setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, tmbl: val } }));
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="0"
-                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>Glassware Returned</h3>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={eventSetupData.glasswareReturned?.rox === '0' || eventSetupData.glasswareReturned?.rox === 0 ? '' : (eventSetupData.glasswareReturned?.rox ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) {
-                          setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, rox: val } }));
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="0"
-                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={eventSetupData.glasswareReturned?.tmbl === '0' || eventSetupData.glasswareReturned?.tmbl === 0 ? '' : (eventSetupData.glasswareReturned?.tmbl ?? '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) {
-                          setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, tmbl: val } }));
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="0"
-                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Calculated fields */}
-              <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#666' }}>Glassware Lost:</span>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>{glasswareLost.rox} ROX + {glasswareLost.tmbl} TMBL</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Glassware Net Loss:</span>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>${glasswareNetLoss.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Beverage Inventory Sections */}
-            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Beverage Inventory</h2>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '16px', display: 'flex', gap: '8px' }}>
-                <span style={{ flex: 2 }}>Name</span>
+              {/* Column Headers */}
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px', display: 'flex', gap: '8px' }}>
+                <span style={{ flex: 2 }}>Item</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>Sent</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>Returned</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>Net</span>
               </div>
+              
+              {/* Glassware ROX */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                  ROX
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.glasswareSent?.rox === '0' || eventSetupData.glasswareSent?.rox === 0 ? '' : (eventSetupData.glasswareSent?.rox ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, rox: val } }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.glasswareReturned?.rox === '0' || eventSetupData.glasswareReturned?.rox === 0 ? '' : (eventSetupData.glasswareReturned?.rox ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, rox: val } }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.rox > 0 ? '#ef4444' : '#333' }}>
+                  {glasswareLost.rox}
+                </div>
+              </div>
+              
+              {/* Glassware TMBL */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                  TMBL
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.glasswareSent?.tmbl === '0' || eventSetupData.glasswareSent?.tmbl === 0 ? '' : (eventSetupData.glasswareSent?.tmbl ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, tmbl: val } }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.glasswareReturned?.tmbl === '0' || eventSetupData.glasswareReturned?.tmbl === 0 ? '' : (eventSetupData.glasswareReturned?.tmbl ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, tmbl: val } }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.tmbl > 0 ? '#ef4444' : '#333' }}>
+                  {glasswareLost.tmbl}
+                </div>
+              </div>
+              
+              {/* Ice */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                  Ice (lbs)
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.iceSent === '0' || eventSetupData.iceSent === 0 ? '' : (eventSetupData.iceSent ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, iceSent: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={eventSetupData.iceReturned === '0' || eventSetupData.iceReturned === 0 ? '' : (eventSetupData.iceReturned ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, iceReturned: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                />
+                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: ((parseFloat(eventSetupData.iceSent) || 0) - (parseFloat(eventSetupData.iceReturned) || 0)) > 0 ? '#ef4444' : '#333' }}>
+                  {((parseFloat(eventSetupData.iceSent) || 0) - (parseFloat(eventSetupData.iceReturned) || 0)).toFixed(0)}
+                </div>
+              </div>
+              
+              {/* Beverage Inventory */}
               {renderInventorySection('Cocktails', 'cocktails')}
               {renderInventorySection('Mocktails', 'mocktails')}
               {renderInventorySection('Beer', 'beer')}
