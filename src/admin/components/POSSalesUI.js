@@ -4171,11 +4171,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setShowEventSetup(false);
               // Stay on summary view
             }
+          } else if (eventId) {
+            // Active event exists: End the event and show summary
+            const response = await apiCall(`/pos-events/${eventId}/end`, {
+              method: 'PUT',
+              body: { tabs },
+            });
+            
+            if (response && response.event) {
+              setEventSummary(response.event.summary);
+              setShowEventSetup(false);
+              setShowSummaryView(true);
+              console.log(`[POS] Ended event from setup page: ${eventName}`);
+            }
           } else {
-            // Pre-event: Start a new event with the setup data
-            const eventName = eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`;
+            // No event: Start a new event with the setup data
+            const newEventName = eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`;
             setShowEventSetup(false);
-            await handleStartEvent(eventName);
+            await handleStartEvent(newEventName);
           }
         } catch (err) {
           console.error('Failed to finalize event:', err);
@@ -4727,11 +4740,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     No items sold yet
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '8px', padding: '12px', background: '#f9f9f9', alignItems: 'center' }}>
-                  <div style={{ flex: 2 }}></div>
-                  <div style={{ flex: 1 }}></div>
-                  <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
-                  <div style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
+                  <span style={{ flex: 1 }}></span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
                     -${(() => {
                       let total = 0;
                       if (eventSummary?.categoryBreakdown) {
@@ -4750,7 +4761,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       }
                       return total.toFixed(2);
                     })()}
-                  </div>
+                  </span>
                 </div>
               </div>
               
@@ -4892,7 +4903,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 marginBottom: '32px',
               }}
             >
-              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : 'START EVENT')}
+              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : (eventId ? 'FINALIZE EVENT' : 'START EVENT'))}
             </button>
         </div>
       );
