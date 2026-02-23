@@ -3951,8 +3951,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
   // Standalone mode: render POSContent directly filling the viewport
   if (isStandalone) {
-    // If showing summary view after event end
-    if (showSummaryView && eventSummary) {
+    // If showing brief summary view after event end (only if showEventSetup is false)
+    if (showSummaryView && eventSummary && !showEventSetup) {
       return (
         <div style={{
           width: '100%',
