@@ -4279,35 +4279,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           width: '100%',
           height: '100vh',
           background: '#fff',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          overflow: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: '16px',
+          boxSizing: 'border-box',
         }}>
-          {/* Header */}
-          <div style={{
-            background: '#fff',
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-            borderBottom: '1px solid #e0e0e0',
-          }}>
-            <button
-              onClick={() => setShowEventSetup(false)}
-              style={{ background: 'transparent', border: 'none', color: '#333', fontSize: '24px', cursor: 'pointer' }}
-            >
-              ←
-            </button>
-            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#333' }}>
-              {isPostEvent ? 'Event Summary' : 'Event Setup'}
-            </h1>
-            <div style={{ width: '24px' }} />
-          </div>
+          {/* Title */}
+          <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#333', textAlign: 'center' }}>
+            {isPostEvent ? 'Event Summary' : 'Event Setup'}
+          </h1>
           
-          {/* Scrollable Content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px', WebkitOverflowScrolling: 'touch' }}>
-            {/* Details Section */}
+          {/* Details Section */}
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Details</h2>
               
@@ -4532,7 +4514,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             >
               {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : 'START EVENT')}
             </button>
-          </div>
         </div>
       );
     }
