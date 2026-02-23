@@ -346,7 +346,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             style={{
               flex: 1,
               aspectRatio: '1 / 1',
-              border: activeCategory === category.id ? 'none' : '1px solid #fff',
+              border: '1px solid #fff',
               background: activeCategory === category.id ? '#800080' : '#999',
               color: '#fff',
               fontSize: `${outerWidth / 12}px`,
@@ -4233,7 +4233,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             boxSizing: 'border-box',
             borderBottom: '1px solid #e0e0e0',
             cursor: 'pointer',
-            overflow: 'hidden',
             position: 'relative',
           }}
         >
@@ -4262,18 +4261,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
+            justifyContent: 'flex-end',
             gap: '8px',
             height: '100%',
+            flex: 1,
+            position: 'relative',
           }}>
             {/* Event name and time OR Payment Processing indicator */}
-            <div style={{ 
-              fontSize: '14px',
-              textAlign: 'right',
-              transition: 'opacity 0.3s ease, transform 0.3s ease',
-              opacity: showEndEventButton ? 0 : 1,
-              transform: showEndEventButton ? 'translateX(20px)' : 'translateX(0)',
-              pointerEvents: showEndEventButton ? 'none' : 'auto',
-            }}>
+            {!showEndEventButton && (
+              <div style={{ 
+                fontSize: '14px',
+                textAlign: 'right',
+              }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
                   <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'success' ? '#22c55e' : '#800080' }}>
@@ -4305,9 +4304,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <div style={{
                       width: '10px',
                       height: '10px',
+                      minWidth: '10px',
+                      minHeight: '10px',
                       borderRadius: '50%',
                       background: readerConnected ? '#22c55e' : '#ef4444',
                       boxShadow: readerConnected ? '0 0 4px #22c55e' : '0 0 4px #ef4444',
+                      flexShrink: 0,
                     }} />
                   </div>
                   {eventStarted && (
@@ -4317,7 +4319,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            )}
             
             {/* TEST/LIVE Button - shown on header tap */}
             <button
@@ -4340,6 +4343,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 pointerEvents: showEndEventButton ? 'auto' : 'none',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
+                zIndex: 10,
               }}
             >
               {squareTestMode ? 'TEST' : 'LIVE'}
@@ -4374,6 +4378,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   pointerEvents: showEndEventButton ? 'auto' : 'none',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
+                  zIndex: 10,
                 }}
               >
                 <span>{readerConnected ? '●' : '○'}</span>
@@ -4426,6 +4431,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 pointerEvents: showEndEventButton ? 'auto' : 'none',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
+                zIndex: 10,
               }}
             >
               {checkoutMode ? 'CANCEL PAYMENT' : 'END EVENT'}
