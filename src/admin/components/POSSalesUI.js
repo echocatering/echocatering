@@ -471,6 +471,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         loop
                         playsInline
                         webkit-playsinline="true"
+                        poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                         style={{ 
                           position: 'absolute',
                           bottom: 0,
@@ -480,56 +481,15 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          zIndex: 1
+                          zIndex: 1,
+                          background: '#fff'
                         }}
                       >
                         <source src={videoSrc} type="video/mp4" />
                       </video>
                     );
                   }
-                  const displayName = (item.name || 'Item').toUpperCase();
-                  const words = displayName.split(' ');
-                  const longestWord = Math.max(...words.map(w => w.length));
-                  const numLines = words.length;
-                  const buttonWidth = (outerWidth - 16) / 3;
-                  const availableWidth = buttonWidth - 24;
-                  const availableHeight = buttonWidth - 24;
-                  const fontSizeByWidth = availableWidth / (longestWord * 0.65);
-                  const fontSizeByHeight = availableHeight / (numLines * 1.3);
-                  const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 14);
-                  
-                  return (
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: '#f0f0f0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 1,
-                      padding: '8px',
-                      boxSizing: 'border-box'
-                    }}>
-                      {words.map((word, idx) => (
-                        <span 
-                          key={idx}
-                          style={{ 
-                            fontSize: `${fontSize}px`,
-                            fontWeight: 600,
-                            color: '#999',
-                            lineHeight: 1.1,
-                            textAlign: 'center'
-                          }}
-                        >
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  );
+                  return null;
                 })()}
                 
                 {/* Item name overlay at bottom */}
@@ -4239,7 +4199,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={item.sent}
+                    value={item.sent === '0' || item.sent === 0 ? '' : item.sent}
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
@@ -4253,7 +4213,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={item.returned}
+                    value={item.returned === '0' || item.returned === 0 ? '' : item.returned}
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
@@ -4377,7 +4337,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <input
                   type="text"
                   inputMode="decimal"
-                  value={eventSetupData.transportationCosts ?? ''}
+                  value={eventSetupData.transportationCosts === '0' || eventSetupData.transportationCosts === 0 ? '' : (eventSetupData.transportationCosts ?? '')}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
@@ -4403,7 +4363,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={eventSetupData.glasswareSent?.rox ?? ''}
+                      value={eventSetupData.glasswareSent?.rox === '0' || eventSetupData.glasswareSent?.rox === 0 ? '' : (eventSetupData.glasswareSent?.rox ?? '')}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === '' || /^\d*$/.test(val)) {
@@ -4420,7 +4380,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={eventSetupData.glasswareSent?.tmbl ?? ''}
+                      value={eventSetupData.glasswareSent?.tmbl === '0' || eventSetupData.glasswareSent?.tmbl === 0 ? '' : (eventSetupData.glasswareSent?.tmbl ?? '')}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === '' || /^\d*$/.test(val)) {
@@ -4443,7 +4403,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={eventSetupData.glasswareReturned?.rox ?? ''}
+                      value={eventSetupData.glasswareReturned?.rox === '0' || eventSetupData.glasswareReturned?.rox === 0 ? '' : (eventSetupData.glasswareReturned?.rox ?? '')}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === '' || /^\d*$/.test(val)) {
@@ -4460,7 +4420,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={eventSetupData.glasswareReturned?.tmbl ?? ''}
+                      value={eventSetupData.glasswareReturned?.tmbl === '0' || eventSetupData.glasswareReturned?.tmbl === 0 ? '' : (eventSetupData.glasswareReturned?.tmbl ?? '')}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === '' || /^\d*$/.test(val)) {
