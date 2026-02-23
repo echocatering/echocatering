@@ -4275,21 +4275,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       };
       
       return (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: '#fff',
-          overflowY: 'scroll',
-          overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
-          padding: '16px',
-          boxSizing: 'border-box',
-          zIndex: 1000,
-        }}>
+        <div 
+          className="scrollable-content"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: '#fff',
+            overflowY: 'scroll',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+            padding: '16px',
+            boxSizing: 'border-box',
+            zIndex: 1000,
+          }}>
           {/* Title */}
           <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#333', textAlign: 'center' }}>
             {isPostEvent ? 'Event Summary' : 'Event Setup'}
