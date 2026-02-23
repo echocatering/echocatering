@@ -4464,11 +4464,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 {/* Column Headers - only show if there are labor entries */}
                 {eventSetupData.labor && eventSetupData.labor.length > 0 && (
                   <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ flex: 2, textAlign: 'left' }}>Job</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>Rate ($/hr)</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>Hours</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>Pay</span>
-                    <span style={{ width: '20px' }}></span>
+                    <span style={{ width: '16px' }}></span>
+                    <span style={{ flex: 3, textAlign: 'left' }}>Job</span>
+                    <span style={{ flex: 2, textAlign: 'center' }}>Rate ($/hr)</span>
+                    <span style={{ flex: 2, textAlign: 'center' }}>Hours</span>
+                    <span style={{ flex: 2, textAlign: 'center' }}>Pay</span>
                   </div>
                 )}
                 
@@ -4477,6 +4477,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
                   return (
                     <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => {
+                          setEventSetupData(prev => ({
+                            ...prev,
+                            labor: prev.labor.filter((_, i) => i !== idx)
+                          }));
+                        }}
+                        style={{ width: '16px', background: 'transparent', color: '#999', border: 'none', cursor: 'pointer', fontSize: '14px', padding: 0, lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
                       <select
                         value={laborer.job}
                         onChange={(e) => {
@@ -4486,7 +4497,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             return { ...prev, labor: newLabor };
                           });
                         }}
-                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
+                        style={{ flex: 3, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
                       >
                         <option value="Bartender">Bartender</option>
                         <option value="Barback">Barback</option>
@@ -4510,7 +4521,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         }}
                         onFocus={(e) => e.target.select()}
                         placeholder="$0.00"
-                        style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
                       />
                       <input
                         type="text"
@@ -4528,28 +4539,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         }}
                         onFocus={(e) => e.target.select()}
                         placeholder="0.00"
-                        style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
                       />
-                      <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                      <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
                         ${pay.toFixed(2)}
                       </div>
-                      <button
-                        onClick={() => {
-                          setEventSetupData(prev => ({
-                            ...prev,
-                            labor: prev.labor.filter((_, i) => i !== idx)
-                          }));
-                        }}
-                        style={{ width: '20px', background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0, lineHeight: 1 }}
-                      >
-                        ×
-                      </button>
                     </div>
                   );
                 })}
                 
                 {/* Total Row with Add Labor Button */}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                  <div style={{ width: '16px' }}></div>
                   <button
                     onClick={() => {
                       // Calculate default hours from event duration
@@ -4568,11 +4569,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       }));
                     }}
                     style={{
-                      flex: 2,
-                      padding: '8px 16px',
-                      background: '#800080',
-                      color: '#fff',
-                      border: 'none',
+                      flex: 3,
+                      padding: '8px',
+                      background: 'transparent',
+                      color: '#800080',
+                      border: '1px solid #800080',
                       borderRadius: '6px',
                       fontSize: '14px',
                       cursor: 'pointer',
@@ -4580,12 +4581,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   >
                     + Add Labor
                   </button>
-                  <div style={{ flex: 1 }}></div>
-                  <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
-                  <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                  <div style={{ flex: 2 }}></div>
+                  <div style={{ flex: 2, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
+                  <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
                     ${(eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
                   </div>
-                  <div style={{ width: '20px' }}></div>
                 </div>
               </div>
             </div>
