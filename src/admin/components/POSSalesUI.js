@@ -88,6 +88,10 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const receiptLongPressTimerRef = useRef(null);
   const receiptLongPressTriggeredRef = useRef(false);
   
+  // Archived tabs view state
+  const [showArchivedTabs, setShowArchivedTabs] = useState(false);
+  const addTabLongPressRef = useRef(null);
+  
   // Modifier system state
   const [editingItem, setEditingItem] = useState(null); // Item being edited (long-press)
   const [showAddModifierModal, setShowAddModifierModal] = useState(false); // Add modifier modal
@@ -716,14 +720,43 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   paddingBottom: '8px',
                   alignContent: 'start'
                 }}>
-                  {/* Add Tab Button - always first */}
+                  {/* Add Tab Button - always first, long-press toggles archived view */}
                   <button
-                    onClick={onCreateTab}
+                    onClick={() => {
+                      if (!showArchivedTabs) {
+                        onCreateTab();
+                      }
+                    }}
+                    onTouchStart={() => {
+                      addTabLongPressRef.current = setTimeout(() => {
+                        setShowArchivedTabs(prev => !prev);
+                      }, 500);
+                    }}
+                    onTouchEnd={() => {
+                      if (addTabLongPressRef.current) {
+                        clearTimeout(addTabLongPressRef.current);
+                      }
+                    }}
+                    onMouseDown={() => {
+                      addTabLongPressRef.current = setTimeout(() => {
+                        setShowArchivedTabs(prev => !prev);
+                      }, 500);
+                    }}
+                    onMouseUp={() => {
+                      if (addTabLongPressRef.current) {
+                        clearTimeout(addTabLongPressRef.current);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (addTabLongPressRef.current) {
+                        clearTimeout(addTabLongPressRef.current);
+                      }
+                    }}
                     style={{
                       aspectRatio: '1 / 1',
                       width: '100%',
-                      border: 'none',
-                      background: '#fff',
+                      border: showArchivedTabs ? '2px solid #666' : 'none',
+                      background: showArchivedTabs ? '#f0f0f0' : '#fff',
                       borderRadius: '4px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -733,15 +766,15 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     }}
                   >
                     <span style={{
-                      color: '#d0d0d0',
+                      color: showArchivedTabs ? '#666' : '#d0d0d0',
                       fontSize: `${outerWidth / 6}px`,
                       fontWeight: 300,
                       lineHeight: 1
-                    }}>+</span>
+                    }}>{showArchivedTabs ? '📦' : '+'}</span>
                   </button>
                   
-                  {/* Tab Buttons - filter out archived tabs */}
-                  {tabs.filter(tab => tab.status !== 'archived').map((tab) => (
+                  {/* Tab Buttons - show archived or unarchived based on toggle */}
+                  {tabs.filter(tab => showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived').map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => onSelectTab(tab.id)}
@@ -2023,6 +2056,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage('');
   }, []);
   
+  // Handle tip updates from horizontal device - sync tip amount across all devices
+  const handleWsTipUpdate = useCallback((data) => {
+    console.log('[POS] WebSocket tip_update received:', data);
+    if (data.tipAmount !== undefined) {
+      setSelectedTipAmount(data.tipAmount);
+    }
+  }, []);
+  
   // Handle checkout stage updates from other devices (for vertical screen sync)
   const handleWsCheckoutStage = useCallback((data) => {
     console.log('[POS] WebSocket checkout_stage received:', data.stage);
@@ -2421,7 +2462,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [checkoutTabInfo, setTabs, setActiveTabId]);
   
   // Connect to WebSocket for cross-device checkout sync
-  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap, sendReaderStatus, sendPaymentResult } = usePosWebSocket(
+  const { isConnected: wsConnected, sendCheckoutStart, sendCheckoutComplete, sendCheckoutCancel, sendCheckoutStage, sendProcessPayment, sendSimulateTap, sendReaderStatus, sendPaymentResult, sendTipUpdate } = usePosWebSocket(
     handleWsCheckoutStart,
     handleWsCheckoutComplete,
     handleWsCheckoutCancel,
@@ -2430,7 +2471,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     handleWsProcessPayment,
     handleWsSimulateTap,
     handleWsReaderStatus,
-    handleWsPaymentResult
+    handleWsPaymentResult,
+    handleWsTipUpdate
   );
   
   // Update ref when sendPaymentResult is available (to avoid circular dependency)
@@ -3119,6 +3161,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatusMessage(null);
     updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
+    // Broadcast tip amount to all devices via WebSocket
+    sendTipUpdate({ tipAmount, tabId: checkoutTabInfo?.id });
+    
     // Calculate total amount in cents
     const totalAmount = checkoutSubtotal + tipAmount;
     const amountCents = Math.round(totalAmount * 100);
@@ -3151,7 +3196,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         subtotal: checkoutSubtotal
       });
     }
-  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment]);
+  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment, sendTipUpdate]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -4150,7 +4195,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
     // Event Setup/Edit page
     if (showEventSetup) {
-      const isPostEvent = showSummaryView && eventSummary;
+      const isPostEvent = eventSummary != null; // Post-event if we have event summary data
       const glasswareLost = {
         rox: Math.max(0, (eventSetupData.glasswareSent?.rox || 0) - (eventSetupData.glasswareReturned?.rox || 0)),
         tmbl: Math.max(0, (eventSetupData.glasswareSent?.tmbl || 0) - (eventSetupData.glasswareReturned?.tmbl || 0)),
@@ -4909,6 +4954,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <button
                   onClick={() => {
                     console.log('[Event Summary] EDIT EVENT - returning to POS view');
+                    // Unarchive all tabs so they are visible again
+                    setTabs(prev => prev.map(tab => 
+                      tab.status === 'archived' ? { ...tab, status: 'open' } : tab
+                    ));
                     setShowEventSetup(false);
                     setShowSummaryView(false);
                     // This will return to the POS view with the active event

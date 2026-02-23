@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult) {
+export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult, onTipUpdate) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -22,7 +22,8 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     onProcessPayment,
     onSimulateTap,
     onReaderStatus,
-    onPaymentResult
+    onPaymentResult,
+    onTipUpdate
   });
   
   // Update refs when callbacks change
@@ -36,9 +37,10 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
       onProcessPayment,
       onSimulateTap,
       onReaderStatus,
-      onPaymentResult
+      onPaymentResult,
+      onTipUpdate
     };
-  }, [onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult]);
+  }, [onCheckoutStart, onCheckoutComplete, onCheckoutCancel, onPaymentStatus, onCheckoutStage, onProcessPayment, onSimulateTap, onReaderStatus, onPaymentResult, onTipUpdate]);
   
   // Build WebSocket URL based on current location
   const getWsUrl = useCallback(() => {
@@ -138,6 +140,12 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
               // Handle payment result from V device (V always broadcasts payment status to H)
               if (callbacks.onPaymentResult) {
                 callbacks.onPaymentResult(message.data);
+              }
+              break;
+            case 'tip_update':
+              // Handle tip amount updates from horizontal device
+              if (callbacks.onTipUpdate) {
+                callbacks.onTipUpdate(message.data);
               }
               break;
             case 'connected':
@@ -266,6 +274,17 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     }
   }, []);
   
+  // Send tip update to all devices (H broadcasts tip selection to V and other devices)
+  const sendTipUpdate = useCallback((tipData) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'tip_update',
+        data: tipData
+      }));
+      console.log('[POS WebSocket] Sent tip_update:', tipData);
+    }
+  }, []);
+  
   // Connect on mount, cleanup on unmount
   useEffect(() => {
     connect();
@@ -290,6 +309,7 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
     sendProcessPayment,
     sendSimulateTap,
     sendReaderStatus,
-    sendPaymentResult
+    sendPaymentResult,
+    sendTipUpdate
   };
 }
