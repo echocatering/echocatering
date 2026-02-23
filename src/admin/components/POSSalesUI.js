@@ -1947,9 +1947,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     eventDate: new Date().toISOString().split('T')[0],
     startTime: '',
     endTime: '',
-    transportationCosts: 0,
-    glasswareSent: { rox: 0, tmbl: 0 },
-    glasswareReturned: { rox: 0, tmbl: 0 },
+    transportationCosts: '',
+    glasswareSent: { rox: '', tmbl: '' },
+    glasswareReturned: { rox: '', tmbl: '' },
     inventory: {
       cocktails: [],
       mocktails: [],
@@ -4115,12 +4115,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   const endTimeValue = eventSummary?.endTime 
                     ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
                     : new Date().toTimeString().slice(0, 5);
+                  
+                  // Build inventory from menu items
+                  const buildInventory = (cat) => allItems
+                    .filter(item => normalizeCategoryKey(item.category) === cat)
+                    .map(item => ({ name: item.name, sent: '', returned: '' }));
+                  
                   setEventSetupData(prev => ({
                     ...prev,
                     eventName: eventName || '',
                     eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                     startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
                     endTime: endTimeValue,
+                    inventory: {
+                      cocktails: prev.inventory?.cocktails?.length > 0 ? prev.inventory.cocktails : buildInventory('cocktails'),
+                      mocktails: prev.inventory?.mocktails?.length > 0 ? prev.inventory.mocktails : buildInventory('mocktails'),
+                      beer: prev.inventory?.beer?.length > 0 ? prev.inventory.beer : buildInventory('beer'),
+                      wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
+                    },
                   }));
                   setShowEventSetup(true);
                 }}
@@ -4205,50 +4217,62 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         }
       };
       
-      const renderInventorySection = (title, category) => (
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#333', marginBottom: '12px', textTransform: 'uppercase' }}>
-            {title}
-          </h3>
-          {eventSetupData.inventory[category]?.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={item.name}
-                onChange={(e) => updateInventoryItem(category, idx, 'name', e.target.value)}
-                placeholder="Name"
-                style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
-              />
-              <input
-                type="number"
-                value={item.sent}
-                onChange={(e) => updateInventoryItem(category, idx, 'sent', parseFloat(e.target.value) || 0)}
-                placeholder="Sent"
-                style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
-              />
-              <input
-                type="number"
-                value={item.returned}
-                onChange={(e) => updateInventoryItem(category, idx, 'returned', parseFloat(e.target.value) || 0)}
-                placeholder="Returned"
-                style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
-              />
-              <button
-                onClick={() => removeInventoryItem(category, idx)}
-                style={{ padding: '8px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() => addInventoryItem(category)}
-            style={{ padding: '8px 16px', background: '#800080', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
-          >
-            + Add {title.slice(0, -1)}
-          </button>
-        </div>
-      );
+      const renderInventorySection = (title, category) => {
+        const items = eventSetupData.inventory[category] || [];
+        if (items.length === 0) return null;
+        
+        return (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#333', marginBottom: '12px', textTransform: 'uppercase' }}>
+              {title}
+            </h3>
+            {items.map((item, idx) => {
+              const sent = parseFloat(item.sent) || 0;
+              const returned = parseFloat(item.returned) || 0;
+              const net = (sent - returned).toFixed(2);
+              
+              return (
+                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                    {item.name}
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={item.sent}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                        updateInventoryItem(category, idx, 'sent', val);
+                      }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={item.returned}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                        updateInventoryItem(category, idx, 'returned', val);
+                      }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  />
+                  <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: parseFloat(net) > 0 ? '#ef4444' : '#333' }}>
+                    {net}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      };
       
       return (
         <div style={{
@@ -4361,10 +4385,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation Costs ($)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={eventSetupData.transportationCosts}
-                  onChange={(e) => setEventSetupData(prev => ({ ...prev, transportationCosts: parseFloat(e.target.value) || 0 }))}
+                  type="text"
+                  inputMode="decimal"
+                  value={eventSetupData.transportationCosts ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, transportationCosts: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
                   style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
                 />
               </div>
@@ -4380,18 +4411,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
                     <input
-                      type="number"
-                      value={eventSetupData.glasswareSent?.rox || 0}
-                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, rox: parseInt(e.target.value) || 0 } }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={eventSetupData.glasswareSent?.rox ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) {
+                          setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, rox: val } }));
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="0"
                       style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
                     <input
-                      type="number"
-                      value={eventSetupData.glasswareSent?.tmbl || 0}
-                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, tmbl: parseInt(e.target.value) || 0 } }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={eventSetupData.glasswareSent?.tmbl ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) {
+                          setEventSetupData(prev => ({ ...prev, glasswareSent: { ...prev.glasswareSent, tmbl: val } }));
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="0"
                       style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
                     />
                   </div>
@@ -4404,18 +4451,34 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>ROX</label>
                     <input
-                      type="number"
-                      value={eventSetupData.glasswareReturned?.rox || 0}
-                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, rox: parseInt(e.target.value) || 0 } }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={eventSetupData.glasswareReturned?.rox ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) {
+                          setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, rox: val } }));
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="0"
                       style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>TMBL</label>
                     <input
-                      type="number"
-                      value={eventSetupData.glasswareReturned?.tmbl || 0}
-                      onChange={(e) => setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, tmbl: parseInt(e.target.value) || 0 } }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={eventSetupData.glasswareReturned?.tmbl ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) {
+                          setEventSetupData(prev => ({ ...prev, glasswareReturned: { ...prev.glasswareReturned, tmbl: val } }));
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="0"
                       style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
                     />
                   </div>
@@ -4442,7 +4505,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <span style={{ flex: 2 }}>Name</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>Sent</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>Returned</span>
-                <span style={{ width: '40px' }}></span>
+                <span style={{ flex: 1, textAlign: 'center' }}>Net</span>
               </div>
               {renderInventorySection('Cocktails', 'cocktails')}
               {renderInventorySection('Mocktails', 'mocktails')}
@@ -4563,11 +4626,22 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {/* Event Setup Button */}
               <button
                 onClick={() => {
+                  // Build inventory from menu items
+                  const buildInventory = (cat) => allItems
+                    .filter(item => normalizeCategoryKey(item.category) === cat)
+                    .map(item => ({ name: item.name, sent: '', returned: '' }));
+                  
                   // Pre-populate with event name from input
                   setEventSetupData(prev => ({
                     ...prev,
                     eventName: newEventName || '',
                     eventDate: new Date().toISOString().split('T')[0],
+                    inventory: {
+                      cocktails: prev.inventory?.cocktails?.length > 0 ? prev.inventory.cocktails : buildInventory('cocktails'),
+                      mocktails: prev.inventory?.mocktails?.length > 0 ? prev.inventory.mocktails : buildInventory('mocktails'),
+                      beer: prev.inventory?.beer?.length > 0 ? prev.inventory.beer : buildInventory('beer'),
+                      wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
+                    },
                   }));
                   setShowEventSetup(true);
                 }}
