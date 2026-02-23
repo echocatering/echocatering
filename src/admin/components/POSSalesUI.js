@@ -4018,64 +4018,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Category Breakdown */}
-              <div style={{
-                background: '#f5f5f5',
-                borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '20px',
-                border: '1px solid #e0e0e0',
-              }}>
-                <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>By Category</h2>
-                {eventSummary.categoryBreakdown && Object.entries(
-                  eventSummary.categoryBreakdown instanceof Map 
-                    ? Object.fromEntries(eventSummary.categoryBreakdown)
-                    : eventSummary.categoryBreakdown
-                ).map(([cat, data]) => (
-                  <div key={cat} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 0',
-                    borderBottom: '1px solid #ddd',
-                    color: '#333',
-                  }}>
-                    <span style={{ textTransform: 'capitalize' }}>{cat}</span>
-                    <span>
-                      {data.count} items • ${(data.revenue || 0).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Timeline Breakdown */}
-              {eventSummary.timelineBreakdown && eventSummary.timelineBreakdown.length > 0 && (
-                <div style={{
-                  background: '#f5f5f5',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: '1px solid #e0e0e0',
-                }}>
-                  <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Timeline (15-min intervals)</h2>
-                  {eventSummary.timelineBreakdown.map((interval, idx) => (
-                    <div key={idx} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '8px 0',
-                      borderBottom: '1px solid #ddd',
-                      color: '#333',
-                    }}>
-                      <span>
-                        {new Date(interval.intervalStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <span>
-                        {interval.itemCount} items • ${(interval.revenue || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
               {/* Income Statement Section */}
               <div style={{
                 background: '#f5f5f5',
