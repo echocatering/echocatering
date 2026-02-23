@@ -1911,6 +1911,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     startTime: '',
     endTime: '',
     transportationCosts: '',
+    permitCost: '',
+    liabilityInsuranceCost: '',
     glasswareSent: { rox: '', tmbl: '' },
     glasswareReturned: { rox: '', tmbl: '' },
     iceSent: '',
@@ -4158,22 +4160,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       const handleFinalizeEvent = async () => {
         setSyncing(true);
         try {
-          const response = await fetch('/api/catering-events/finalize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              eventId,
-              setupData: eventSetupData,
-              summary: eventSummary,
-            }),
-          });
-          if (response.ok) {
-            setShowEventSetup(false);
-            // If post-event, go back to summary
-            if (!isPostEvent) {
-              // Pre-event: start the event with setup data
-              handleStartEvent(eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`);
+          if (isPostEvent) {
+            // Post-event: Save setup data and go back to summary
+            const response = await fetch('/api/catering-events/finalize', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                eventId,
+                setupData: eventSetupData,
+                summary: eventSummary,
+              }),
+            });
+            if (response.ok) {
+              setShowEventSetup(false);
+              // Stay on summary view
             }
+          } else {
+            // Pre-event: Start a new event with the setup data
+            const eventName = eventSetupData.eventName || `Event ${new Date().toLocaleDateString()}`;
+            setShowEventSetup(false);
+            await handleStartEvent(eventName);
           }
         } catch (err) {
           console.error('Failed to finalize event:', err);
@@ -4337,8 +4343,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </>
               )}
               
+            </div>
+            
+            {/* Additional Costs Section */}
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Additional Costs</h2>
+              
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation Costs ($)</label>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation ($)</label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -4347,6 +4359,42 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     const val = e.target.value;
                     if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
                       setEventSetupData(prev => ({ ...prev, transportationCosts: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Permit ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={eventSetupData.permitCost === '0' || eventSetupData.permitCost === 0 ? '' : (eventSetupData.permitCost ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, permitCost: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Liability Insurance ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={eventSetupData.liabilityInsuranceCost === '0' || eventSetupData.liabilityInsuranceCost === 0 ? '' : (eventSetupData.liabilityInsuranceCost ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, liabilityInsuranceCost: val }));
                     }
                   }}
                   onFocus={(e) => e.target.select()}
