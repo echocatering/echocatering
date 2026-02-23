@@ -4947,9 +4947,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         // Return to home/event list
                         setShowEventSetup(false);
                         setShowSummaryView(false);
-                        setEventId(null);
-                        setEventName('');
                         setEventSummary(null);
+                        clearEvent(); // Clear event from localStorage
                       } else {
                         alert('Failed to save event');
                       }
