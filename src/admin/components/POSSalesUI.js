@@ -4514,11 +4514,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       flex: 3,
                       padding: '8px',
                       background: 'transparent',
-                      color: '#800080',
-                      border: '1px solid #800080',
+                      color: '#666',
+                      border: 'none',
                       borderRadius: '6px',
                       fontSize: '14px',
                       cursor: 'pointer',
+                      textAlign: 'left',
                     }}
                   >
                     + Add Labor
@@ -4684,7 +4685,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {/* COGS Section */}
               <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
                 <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Cost of Goods Sold (COGS)</span>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>COGS</span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee' }}>
                   <span style={{ flex: 2 }}>Item</span>
@@ -4727,7 +4728,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '8px', padding: '12px', background: '#f9f9f9', alignItems: 'center' }}>
-                  <div style={{ flex: 2, fontWeight: 'bold', color: '#333' }}>Total COGS</div>
+                  <div style={{ flex: 2 }}></div>
                   <div style={{ flex: 1 }}></div>
                   <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
                   <div style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
@@ -4756,7 +4757,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {/* Operating Expenses */}
               <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
                 <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Operating Expenses</span>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Overhead</span>
                 </div>
                 {/* Fixed costs */}
                 {parseFloat(eventSetupData.transportationCosts) > 0 && (
@@ -4817,7 +4818,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Total Operating Expenses</span>
+                  <span style={{ flex: 1 }}></span>
                   <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
                     -${(
                       (parseFloat(eventSetupData.transportationCosts) || 0) +
