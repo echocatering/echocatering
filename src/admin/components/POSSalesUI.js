@@ -327,6 +327,11 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             opacity: 0;
           }
         }
+        @keyframes spin {
+          to { 
+            transform: rotate(360deg); 
+          }
+        }
       `}</style>
       {/* Sticky Category Header - 5 buttons, 1:1 aspect ratio, edge-to-edge */}
       <div style={{
@@ -379,18 +384,16 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            height: '100%',
-            color: '#666',
-            flexDirection: 'column',
-            gap: '20px'
+            height: '100%'
           }}>
-            <div style={{ fontSize: '24px' }}>Loading items...</div>
-            {window.location.search.includes('app=native') && (
-              <div style={{ fontSize: '14px', opacity: 0.7, textAlign: 'center', maxWidth: '300px' }}>
-                If this takes too long, the API might be blocked in the native app.
-                The app will continue with empty items after 10 seconds.
-              </div>
-            )}
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid #e0e0e0',
+              borderTop: '4px solid #999',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
           </div>
         ) : items.length === 0 ? (
           <div style={{ 
