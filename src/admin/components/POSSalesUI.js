@@ -4276,13 +4276,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       return (
         <div style={{
-          width: '100%',
-          height: '100vh',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: '#fff',
-          overflow: 'auto',
+          overflowY: 'scroll',
+          overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
           padding: '16px',
           boxSizing: 'border-box',
+          zIndex: 1000,
         }}>
           {/* Title */}
           <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#333', textAlign: 'center' }}>
