@@ -4723,8 +4723,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {renderInventorySection('Wine', 'wine')}
             </div>
             
-            {/* Income Statement Section - Only show for post-event */}
-            {isPostEvent && eventSummary && (
+            {/* Income Statement Section - Show when there's an active event with summary data */}
+            {eventId && eventSummary && (
               <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
                 <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Income Statement</h2>
                 
