@@ -4108,9 +4108,22 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               )}
               
-              {/* Home Button */}
+              {/* Finalize Event Button - goes directly to event setup/finalize page */}
               <button
-                onClick={handleCloseSummary}
+                onClick={() => {
+                  // Pre-populate setup data from event summary
+                  const endTimeValue = eventSummary?.endTime 
+                    ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
+                    : new Date().toTimeString().slice(0, 5);
+                  setEventSetupData(prev => ({
+                    ...prev,
+                    eventName: eventName || '',
+                    eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
+                    endTime: endTimeValue,
+                  }));
+                  setShowEventSetup(true);
+                }}
                 style={{
                   width: '100%',
                   padding: '16px',
@@ -4121,38 +4134,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   fontSize: '18px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
-                  marginBottom: '12px',
                 }}
               >
-                HOME
-              </button>
-              
-              {/* Edit Summary Button */}
-              <button
-                onClick={() => {
-                  // Pre-populate setup data from event summary
-                  setEventSetupData(prev => ({
-                    ...prev,
-                    eventName: eventName || '',
-                    eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                    startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
-                    endTime: eventSummary?.endTime ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) : '',
-                  }));
-                  setShowEventSetup(true);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  background: '#fff',
-                  color: '#800080',
-                  border: '2px solid #800080',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                EDIT SUMMARY
+                FINALIZE EVENT
               </button>
             </div>
           </div>
@@ -4298,7 +4282,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           </div>
           
           {/* Scrollable Content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px', WebkitOverflowScrolling: 'touch' }}>
             {/* Details Section */}
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Details</h2>
@@ -4483,7 +4467,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 marginBottom: '32px',
               }}
             >
-              {syncing ? 'SAVING...' : (isPostEvent ? 'FINALIZE EVENT' : 'START EVENT')}
+              {syncing ? 'SAVING...' : (isPostEvent ? 'SAVE EVENT' : 'START EVENT')}
             </button>
           </div>
         </div>
