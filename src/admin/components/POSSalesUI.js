@@ -4261,22 +4261,22 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         }}>
           {/* Header */}
           <div style={{
-            background: '#800080',
-            color: '#fff',
+            background: '#fff',
             padding: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexShrink: 0,
+            borderBottom: '1px solid #e0e0e0',
           }}>
             <button
               onClick={() => setShowEventSetup(false)}
-              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer' }}
+              style={{ background: 'transparent', border: 'none', color: '#333', fontSize: '24px', cursor: 'pointer' }}
             >
               ←
             </button>
-            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>
-              {isPostEvent ? 'Edit Summary' : 'Event Setup'}
+            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#333' }}>
+              {isPostEvent ? 'Event Summary' : 'Event Setup'}
             </h1>
             <div style={{ width: '24px' }} />
           </div>
