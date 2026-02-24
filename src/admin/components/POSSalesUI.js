@@ -720,83 +720,81 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   paddingBottom: '8px',
                   alignContent: 'start'
                 }}>
-                  {/* Control Buttons Column - BIN (Spillage), PAID/TABS (Archive toggle), ADD_TAB (Create tab) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {/* BIN - Spillage Tab */}
-                    <button
-                      onClick={() => {
-                        // Select or create the spillage tab
-                        const spillageTab = tabs.find(t => t.isSpillage);
-                        if (spillageTab) {
-                          onSelectTab(spillageTab.id);
-                        }
-                      }}
-                      style={{
-                        aspectRatio: '2 / 1',
-                        width: '100%',
-                        border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
-                        background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        padding: '4px'
-                      }}
-                    >
-                      <img src="/assets/icons/BIN.png" alt="Spillage" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
-                    </button>
-                    
-                    {/* PAID/TABS - Archive Toggle */}
-                    <button
-                      onClick={() => setShowArchivedTabs(prev => !prev)}
-                      style={{
-                        aspectRatio: '2 / 1',
-                        width: '100%',
-                        border: showArchivedTabs ? '2px solid #22c55e' : 'none',
-                        background: showArchivedTabs ? '#dcfce7' : '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        padding: '4px'
-                      }}
-                    >
-                      <img 
-                        src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
-                        alt={showArchivedTabs ? "All Tabs" : "Archived"} 
-                        style={{ height: '80%', width: 'auto', opacity: 0.6 }} 
-                      />
-                    </button>
-                    
-                    {/* ADD_TAB - Create New Tab */}
-                    <button
-                      onClick={() => {
-                        if (!showArchivedTabs) {
-                          onCreateTab();
-                        }
-                      }}
-                      style={{
-                        aspectRatio: '2 / 1',
-                        width: '100%',
-                        border: 'none',
-                        background: '#fff',
-                        borderRadius: '4px',
-                        cursor: showArchivedTabs ? 'default' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        padding: '4px',
-                        opacity: showArchivedTabs ? 0.4 : 1
-                      }}
-                    >
-                      <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
-                    </button>
-                  </div>
+                  {/* Control Buttons Row - BIN (Spillage), PAID/TABS (Archive toggle), ADD_TAB (Create tab) */}
+                  {/* BIN - Spillage Tab */}
+                  <button
+                    onClick={() => {
+                      // Select or create the spillage tab
+                      const spillageTab = tabs.find(t => t.isSpillage);
+                      if (spillageTab) {
+                        onSelectTab(spillageTab.id);
+                      }
+                    }}
+                    style={{
+                      aspectRatio: '1 / 0.5',
+                      width: '100%',
+                      border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
+                      background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      padding: '4px'
+                    }}
+                  >
+                    <img src="/assets/icons/BIN.png" alt="Spillage" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
+                  </button>
+                  
+                  {/* PAID/TABS - Archive Toggle */}
+                  <button
+                    onClick={() => setShowArchivedTabs(prev => !prev)}
+                    style={{
+                      aspectRatio: '1 / 0.5',
+                      width: '100%',
+                      border: showArchivedTabs ? '2px solid #22c55e' : 'none',
+                      background: showArchivedTabs ? '#dcfce7' : '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      padding: '4px'
+                    }}
+                  >
+                    <img 
+                      src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
+                      alt={showArchivedTabs ? "All Tabs" : "Archived"} 
+                      style={{ height: '80%', width: 'auto', opacity: 0.6 }} 
+                    />
+                  </button>
+                  
+                  {/* ADD_TAB - Create New Tab */}
+                  <button
+                    onClick={() => {
+                      if (!showArchivedTabs) {
+                        onCreateTab();
+                      }
+                    }}
+                    style={{
+                      aspectRatio: '1 / 0.5',
+                      width: '100%',
+                      border: 'none',
+                      background: '#fff',
+                      borderRadius: '4px',
+                      cursor: showArchivedTabs ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      padding: '4px',
+                      opacity: showArchivedTabs ? 0.4 : 1
+                    }}
+                  >
+                    <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
+                  </button>
                   
                   {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
                   {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => (
