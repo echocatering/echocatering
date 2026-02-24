@@ -720,71 +720,101 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   paddingBottom: '8px',
                   alignContent: 'start'
                 }}>
-                  {/* Add Tab Button - always first, long-press toggles archived view */}
-                  <button
-                    onClick={() => {
-                      if (!showArchivedTabs) {
-                        onCreateTab();
-                      }
-                    }}
-                    onTouchStart={() => {
-                      addTabLongPressRef.current = setTimeout(() => {
-                        setShowArchivedTabs(prev => !prev);
-                      }, 500);
-                    }}
-                    onTouchEnd={() => {
-                      if (addTabLongPressRef.current) {
-                        clearTimeout(addTabLongPressRef.current);
-                      }
-                    }}
-                    onMouseDown={() => {
-                      addTabLongPressRef.current = setTimeout(() => {
-                        setShowArchivedTabs(prev => !prev);
-                      }, 500);
-                    }}
-                    onMouseUp={() => {
-                      if (addTabLongPressRef.current) {
-                        clearTimeout(addTabLongPressRef.current);
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      if (addTabLongPressRef.current) {
-                        clearTimeout(addTabLongPressRef.current);
-                      }
-                    }}
-                    style={{
-                      aspectRatio: '1 / 1',
-                      width: '100%',
-                      border: showArchivedTabs ? '2px solid #666' : 'none',
-                      background: showArchivedTabs ? '#f0f0f0' : '#fff',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                    }}
-                  >
-                    <span style={{
-                      color: showArchivedTabs ? '#666' : '#d0d0d0',
-                      fontSize: `${outerWidth / 6}px`,
-                      fontWeight: 300,
-                      lineHeight: 1
-                    }}>{showArchivedTabs ? '📦' : '+'}</span>
-                  </button>
+                  {/* Control Buttons Column - BIN (Spillage), PAID/TABS (Archive toggle), ADD_TAB (Create tab) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {/* BIN - Spillage Tab */}
+                    <button
+                      onClick={() => {
+                        // Select or create the spillage tab
+                        const spillageTab = tabs.find(t => t.isSpillage);
+                        if (spillageTab) {
+                          onSelectTab(spillageTab.id);
+                        }
+                      }}
+                      style={{
+                        aspectRatio: '2 / 1',
+                        width: '100%',
+                        border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
+                        background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        padding: '4px'
+                      }}
+                    >
+                      <img src="/assets/icons/BIN.png" alt="Spillage" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
+                    </button>
+                    
+                    {/* PAID/TABS - Archive Toggle */}
+                    <button
+                      onClick={() => setShowArchivedTabs(prev => !prev)}
+                      style={{
+                        aspectRatio: '2 / 1',
+                        width: '100%',
+                        border: showArchivedTabs ? '2px solid #22c55e' : 'none',
+                        background: showArchivedTabs ? '#dcfce7' : '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        padding: '4px'
+                      }}
+                    >
+                      <img 
+                        src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
+                        alt={showArchivedTabs ? "All Tabs" : "Archived"} 
+                        style={{ height: '80%', width: 'auto', opacity: 0.6 }} 
+                      />
+                    </button>
+                    
+                    {/* ADD_TAB - Create New Tab */}
+                    <button
+                      onClick={() => {
+                        if (!showArchivedTabs) {
+                          onCreateTab();
+                        }
+                      }}
+                      style={{
+                        aspectRatio: '2 / 1',
+                        width: '100%',
+                        border: 'none',
+                        background: '#fff',
+                        borderRadius: '4px',
+                        cursor: showArchivedTabs ? 'default' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        padding: '4px',
+                        opacity: showArchivedTabs ? 0.4 : 1
+                      }}
+                    >
+                      <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
+                    </button>
+                  </div>
                   
-                  {/* Tab Buttons - show archived or unarchived based on toggle */}
-                  {tabs.filter(tab => showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived').map((tab) => (
+                  {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
+                  {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => onSelectTab(tab.id)}
+                      onClick={() => {
+                        // Don't allow selecting archived tabs for editing (but spillage tab is always selectable)
+                        if (tab.status !== 'archived' || tab.isSpillage) {
+                          onSelectTab(tab.id);
+                        }
+                      }}
                       style={{
                         aspectRatio: '1 / 1',
                         width: '100%',
-                        border: activeTabId === tab.id ? '2px solid #800080' : (tab.status === 'paid' ? '2px solid #22c55e' : 'none'),
-                        background: tab.status === 'paid' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
+                        border: activeTabId === tab.id ? '2px solid #800080' : (tab.status === 'archived' ? '2px solid #22c55e' : 'none'),
+                        background: tab.status === 'archived' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
                         borderRadius: '4px',
-                        cursor: 'pointer',
+                        cursor: tab.status === 'archived' && !tab.isSpillage ? 'default' : 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -793,7 +823,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
                         padding: '24px',
                         overflow: 'hidden',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        opacity: tab.status === 'archived' ? 0.8 : 1
                       }}
                     >
                       {(() => {
@@ -1935,6 +1966,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [showEndEventButton, setShowEndEventButton] = useState(false);
+  const [isPostEventEdit, setIsPostEventEdit] = useState(false); // Track if user returned to POS via EDIT EVENT
   const endEventTimeoutRef = useRef(null);
   
   // Event Setup data
@@ -2030,7 +2062,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     if (data.tabId) {
       setTabs(prev => prev.map(t => 
         t.id === data.tabId 
-          ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: data.tipAmount || 0 }
+          ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: data.tipAmount || 0 }
           : t
       ));
       setActiveTabId(null);
@@ -2056,13 +2088,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage('');
   }, []);
   
-  // Handle tip updates from horizontal device - sync tip amount across all devices
+  // Handle tip updates from horizontal device - sync tip amount across all devices and save to tab
   const handleWsTipUpdate = useCallback((data) => {
     console.log('[POS] WebSocket tip_update received:', data);
     if (data.tipAmount !== undefined) {
       setSelectedTipAmount(data.tipAmount);
+      // Save tip to the tab (only if tab is not already paid)
+      if (data.tabId) {
+        setTabs(prev => prev.map(t => 
+          t.id === data.tabId && t.status !== 'paid'
+            ? { ...t, tipAmount: data.tipAmount }
+            : t
+        ));
+      }
     }
-  }, []);
+  }, [setTabs]);
   
   // Handle checkout stage updates from other devices (for vertical screen sync)
   const handleWsCheckoutStage = useCallback((data) => {
@@ -2160,7 +2200,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           if (checkoutTabInfoRef.current?.id) {
             setTabs(prev => prev.map(t => 
               t.id === checkoutTabInfoRef.current.id 
-                ? { ...t, status: 'paid', paidAt: new Date().toISOString() }
+                ? { ...t, status: 'archived', paidAt: new Date().toISOString() }
                 : t
             ));
             setActiveTabId(null);
@@ -2835,6 +2875,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       if (response && response._id) {
         startEvent(response._id, response.name);
+        // Create the spillage tab if it doesn't exist
+        setTabs(prev => {
+          if (!prev.find(t => t.isSpillage)) {
+            return [...prev, { id: 'spillage-tab', name: 'Spillage', isSpillage: true, items: [], status: 'open' }];
+          }
+          return prev;
+        });
         setShowEventModal(false);
         setNewEventName('');
         console.log(`[POS] Started event: ${response.name} (${response._id})`);
@@ -3060,7 +3107,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             if (checkoutTabInfo?.id) {
               setTabs(prev => prev.map(t => 
                 t.id === checkoutTabInfo.id 
-                  ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
+                  ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
                   : t
               ));
               setActiveTabId(null);
@@ -3117,7 +3164,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         if (checkoutTabInfo?.id) {
           setTabs(prev => prev.map(t => 
             t.id === checkoutTabInfo.id 
-              ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
+              ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
               : t
           ));
           setActiveTabId(null);
@@ -3161,6 +3208,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatusMessage(null);
     updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
+    // Save tip to the tab locally (only if not paid)
+    if (checkoutTabInfo?.id) {
+      setTabs(prev => prev.map(t => 
+        t.id === checkoutTabInfo.id && t.status !== 'paid'
+          ? { ...t, tipAmount }
+          : t
+      ));
+    }
+    
     // Broadcast tip amount to all devices via WebSocket
     sendTipUpdate({ tipAmount, tabId: checkoutTabInfo?.id });
     
@@ -3196,7 +3252,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         subtotal: checkoutSubtotal
       });
     }
-  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment, sendTipUpdate]);
+  }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment, sendTipUpdate, setTabs]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
     const timestamp = new Date().toISOString();
@@ -4113,6 +4169,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalTips || 0).toFixed(2)}</span>
                 </div>
                 
+                {/* Spillage */}
+                {(() => {
+                  const spillageTab = tabs.find(t => t.isSpillage);
+                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0;
+                  if (spillageTotal > 0) {
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#333' }}>Spillage</span>
+                        <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
                 {/* Taxes */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
@@ -4595,7 +4666,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </button>
                   <div style={{ flex: 2 }}></div>
                   <div style={{ flex: 2 }}></div>
-                  <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                  <div style={{ flex: 2, padding: '8px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
                     ${(eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
                   </div>
                 </div>
@@ -4845,6 +4916,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
                   </div>
                 )}
+                {/* Spillage - items from spillage tab */}
+                {(() => {
+                  const spillageTab = tabs.find(t => t.isSpillage);
+                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0;
+                  if (spillageTotal > 0) {
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                        <span style={{ color: '#333' }}>Spillage</span>
+                        <span style={{ color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {/* Labor costs */}
                 {eventSetupData.labor && eventSetupData.labor.length > 0 && (
                   <>
@@ -4865,14 +4950,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         </div>
                       );
                     })}
-                    <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center', background: '#fafafa' }}>
-                      <div style={{ flex: 2 }}></div>
-                      <div style={{ flex: 1 }}></div>
-                      <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: '#666' }}>Total =</div>
-                      <div style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
-                        -${eventSetupData.labor.reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0).toFixed(2)}
-                      </div>
-                    </div>
                   </>
                 )}
                 {/* Show empty state if no expenses */}
@@ -4891,7 +4968,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       (parseFloat(eventSetupData.transportationCosts) || 0) +
                       (parseFloat(eventSetupData.permitCost) || 0) +
                       (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
-                      (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0)
+                      (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
+                      (tabs.find(t => t.isSpillage)?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0)
                     ).toFixed(2)}
                   </span>
                 </div>
@@ -4955,6 +5033,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     ));
                     setShowEventSetup(false);
                     setShowSummaryView(false);
+                    setIsPostEventEdit(true); // Mark that we're in post-event edit mode
                     // This will return to the POS view with the active event
                   }}
                   disabled={syncing}
@@ -5359,7 +5438,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             
             {/* End Event / Cancel Payment button - slides in from right */}
             {/* During checkout: shows Cancel Payment (returns to menu) */}
-            {/* Outside checkout: shows End Event (only when not in payment screens on any device) */}
+            {/* Outside checkout: shows End Event or Summary (if in post-event edit mode) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -5382,13 +5461,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   setPaymentStatus(null);
                   setPaymentStatusMessage(null);
                   sendCheckoutCancel();
+                } else if (isPostEventEdit) {
+                  // Summary - return to Event Summary page
+                  setShowEventSetup(true);
+                  setShowSummaryView(false);
                 } else {
                   // End Event - show confirmation modal
                   setShowEndEventModal(true);
                 }
               }}
               style={{
-                background: checkoutMode ? '#f59e0b' : '#c62828',
+                background: checkoutMode ? '#f59e0b' : (isPostEventEdit ? '#f59e0b' : '#c62828'),
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -5399,7 +5482,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              {checkoutMode ? 'CANCEL PAYMENT' : 'END EVENT'}
+              {checkoutMode ? 'CANCEL PAYMENT' : (isPostEventEdit ? 'SUMMARY' : 'END EVENT')}
             </button>
             
           </div>
