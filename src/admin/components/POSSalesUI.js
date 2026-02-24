@@ -90,6 +90,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   
   // Archived tabs view state
   const [showArchivedTabs, setShowArchivedTabs] = useState(false);
+  const [showSpillageView, setShowSpillageView] = useState(false); // Spillage tab view mode
   const addTabLongPressRef = useRef(null);
   
   // Modifier system state
@@ -568,6 +569,104 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
         {/* Drawer Content - switches between Receipt and Tabs views */}
         {currentDrawerHeight > handleBarHeight + 20 && (
           <>
+            {/* Control Buttons Row - always show when on tabs view */}
+            {drawerView === 'tabs' && (
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '4px 8px',
+                background: '#fff',
+                borderBottom: '1px solid #eee',
+                flexShrink: 0
+              }}>
+                {/* PAID/TABS - Archive Toggle (first position) */}
+                <button
+                  onClick={() => {
+                    setShowArchivedTabs(prev => !prev);
+                    setShowSpillageView(false); // Exit spillage view when toggling archive
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    border: 'none',
+                    background: '#f5f5f5',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <img 
+                    src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
+                    alt={showArchivedTabs ? "All Tabs" : "Archived"} 
+                    style={{ height: '70%', width: 'auto', opacity: 0.6 }} 
+                  />
+                </button>
+                
+                {/* BIN/TABS - Spillage View Toggle (second position) */}
+                <button
+                  onClick={() => {
+                    if (showSpillageView) {
+                      // Exit spillage view - spillage tab stays selected (highlighted purple)
+                      setShowSpillageView(false);
+                    } else {
+                      // Enter spillage view and select spillage tab
+                      const spillageTab = tabs.find(t => t.isSpillage);
+                      if (spillageTab) {
+                        onSelectTab(spillageTab.id);
+                        setShowSpillageView(true);
+                        setShowArchivedTabs(false); // Exit archive view
+                      }
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    border: showSpillageView ? '2px solid #800080' : 'none',
+                    background: showSpillageView ? '#f0e6f0' : '#f5f5f5',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <img 
+                    src={showSpillageView ? "/assets/icons/TABS.png" : "/assets/icons/BIN.png"} 
+                    alt={showSpillageView ? "All Tabs" : "Spillage"} 
+                    style={{ height: '70%', width: 'auto', opacity: 0.6 }} 
+                  />
+                </button>
+                
+                {/* ADD_TAB - Create New Tab */}
+                <button
+                  onClick={() => {
+                    if (!showArchivedTabs && !showSpillageView) {
+                      onCreateTab();
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    border: 'none',
+                    background: '#f5f5f5',
+                    borderRadius: '4px',
+                    cursor: (showArchivedTabs || showSpillageView) ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    opacity: (showArchivedTabs || showSpillageView) ? 0.4 : 1
+                  }}
+                >
+                  <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '70%', width: 'auto', opacity: 0.6 }} />
+                </button>
+              </div>
+            )}
+            
             {/* Tab Name Input Row - only show when on tabs view and a tab is selected */}
             {drawerView === 'tabs' && activeTabId && (
               <div style={{
@@ -705,8 +804,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               </div>
             )}
             
-            {/* Tabs View - Tab Grid */}
-            {drawerView === 'tabs' && (
+            {/* Tabs View - Tab Grid (hide when in spillage view) */}
+            {drawerView === 'tabs' && !showSpillageView && (
               <div className="scrollable-content" style={{
                 flex: 1,
                 overflowY: 'auto',
@@ -720,82 +819,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   paddingBottom: '8px',
                   alignContent: 'start'
                 }}>
-                  {/* Control Buttons Row - BIN (Spillage), PAID/TABS (Archive toggle), ADD_TAB (Create tab) */}
-                  {/* BIN - Spillage Tab */}
-                  <button
-                    onClick={() => {
-                      // Select or create the spillage tab
-                      const spillageTab = tabs.find(t => t.isSpillage);
-                      if (spillageTab) {
-                        onSelectTab(spillageTab.id);
-                      }
-                    }}
-                    style={{
-                      aspectRatio: '1 / 0.5',
-                      width: '100%',
-                      border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
-                      background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#fff',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      padding: '4px'
-                    }}
-                  >
-                    <img src="/assets/icons/BIN.png" alt="Spillage" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
-                  </button>
-                  
-                  {/* PAID/TABS - Archive Toggle */}
-                  <button
-                    onClick={() => setShowArchivedTabs(prev => !prev)}
-                    style={{
-                      aspectRatio: '1 / 0.5',
-                      width: '100%',
-                      border: showArchivedTabs ? '2px solid #22c55e' : 'none',
-                      background: showArchivedTabs ? '#dcfce7' : '#fff',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      padding: '4px'
-                    }}
-                  >
-                    <img 
-                      src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
-                      alt={showArchivedTabs ? "All Tabs" : "Archived"} 
-                      style={{ height: '80%', width: 'auto', opacity: 0.6 }} 
-                    />
-                  </button>
-                  
-                  {/* ADD_TAB - Create New Tab */}
-                  <button
-                    onClick={() => {
-                      if (!showArchivedTabs) {
-                        onCreateTab();
-                      }
-                    }}
-                    style={{
-                      aspectRatio: '1 / 0.5',
-                      width: '100%',
-                      border: 'none',
-                      background: '#fff',
-                      borderRadius: '4px',
-                      cursor: showArchivedTabs ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      padding: '4px',
-                      opacity: showArchivedTabs ? 0.4 : 1
-                    }}
-                  >
-                    <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '80%', width: 'auto', opacity: 0.6 }} />
-                  </button>
-                  
                   {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
                   {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => (
                     <button
@@ -804,6 +827,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         // Don't allow selecting archived tabs for editing (but spillage tab is always selectable)
                         if (tab.status !== 'archived' || tab.isSpillage) {
                           onSelectTab(tab.id);
+                          setShowSpillageView(false); // Exit spillage view when selecting a different tab
                         }
                       }}
                       style={{
