@@ -1062,23 +1062,42 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               </span>
             ))}
           </div>
-          {/* Action Visualizer - right */}
-          {lastAction && (
-            <span 
-              key={actionKey}
-              style={{
-                fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
-                fontWeight: 500,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                animation: 'fadeSlideIn 0.5s ease-out'
-              }}>
-              {lastAction.tabName && (
-                <span style={{ color: '#d0d0d0' }}>{lastAction.tabName} </span>
-              )}
-              <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
-                {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
+          {/* Action Visualizer - right: show Tip for archived tabs, Last Action for others */}
+          {showArchivedTabs ? (
+            // Show tip total for archived tabs
+            (() => {
+              const totalTips = tabs.filter(t => t.status === 'archived').reduce((sum, t) => sum + (t.tipAmount || 0), 0);
+              return (
+                <span style={{
+                  fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
+                  fontWeight: 500,
+                  fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                }}>
+                  <span style={{ color: '#d0d0d0' }}>Tip </span>
+                  <span style={{ color: totalTips > 0 ? '#22c55e' : '#d0d0d0' }}>
+                    ${totalTips.toFixed(2)}
+                  </span>
+                </span>
+              );
+            })()
+          ) : (
+            lastAction && (
+              <span 
+                key={actionKey}
+                style={{
+                  fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
+                  fontWeight: 500,
+                  fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                  animation: 'fadeSlideIn 0.5s ease-out'
+                }}>
+                {lastAction.tabName && (
+                  <span style={{ color: '#d0d0d0' }}>{lastAction.tabName} </span>
+                )}
+                <span style={{ color: lastAction.type === 'add' ? '#22c55e' : '#ef4444' }}>
+                  {lastAction.type === 'add' ? '+' : '-'} {lastAction.itemName}
+                </span>
               </span>
-            </span>
+            )
           )}
         </div>
       </div>
@@ -2115,10 +2134,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     console.log('[POS] WebSocket tip_update received:', data);
     if (data.tipAmount !== undefined) {
       setSelectedTipAmount(data.tipAmount);
-      // Save tip to the tab (only if tab is not already paid)
+      // Save tip to the tab (only if tab is not already archived)
       if (data.tabId) {
         setTabs(prev => prev.map(t => 
-          t.id === data.tabId && t.status !== 'paid'
+          t.id === data.tabId && t.status !== 'archived'
             ? { ...t, tipAmount: data.tipAmount }
             : t
         ));
@@ -2900,7 +2919,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         // Create the spillage tab if it doesn't exist
         setTabs(prev => {
           if (!prev.find(t => t.isSpillage)) {
-            return [...prev, { id: 'spillage-tab', name: 'Spillage', isSpillage: true, items: [], status: 'open' }];
+            return [...prev, { id: 'spillage-tab', name: 'S', isSpillage: true, items: [], status: 'open' }];
           }
           return prev;
         });
@@ -2977,6 +2996,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     try {
       setSyncing(true);
+      // Log tabs with tip amounts for debugging
+      console.log('[POS] Ending event with tabs:', tabs.map(t => ({ id: t.id, name: t.name, tipAmount: t.tipAmount, status: t.status, itemCount: t.items?.length })));
       const response = await apiCall(`/pos-events/${eventId}/end`, {
         method: 'PUT',
         body: { tabs },
@@ -3230,10 +3251,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatusMessage(null);
     updateCheckoutStage('payment'); // Show "Accepting Payment" on vertical screen
     
-    // Save tip to the tab locally (only if not paid)
+    // Save tip to the tab locally (only if not already archived)
     if (checkoutTabInfo?.id) {
       setTabs(prev => prev.map(t => 
-        t.id === checkoutTabInfo.id && t.status !== 'paid'
+        t.id === checkoutTabInfo.id && t.status !== 'archived'
           ? { ...t, tipAmount }
           : t
       ));
@@ -5049,10 +5070,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <button
                   onClick={() => {
                     console.log('[Event Summary] EDIT EVENT - returning to POS view');
-                    // Unarchive all tabs so they are visible again
-                    setTabs(prev => prev.map(tab => 
-                      tab.status === 'archived' ? { ...tab, status: 'open' } : tab
-                    ));
+                    // Keep paid/archived tabs as archived (green and uneditable)
+                    // Only return to POS view without changing tab statuses
                     setShowEventSetup(false);
                     setShowSummaryView(false);
                     setIsPostEventEdit(true); // Mark that we're in post-event edit mode
@@ -5076,6 +5095,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <button
                   onClick={async () => {
                     console.log('[Event Summary] SAVE RESULTS - saving to database');
+                    console.log('[Event Summary] eventId:', eventId);
+                    console.log('[Event Summary] eventSetupData:', eventSetupData);
+                    console.log('[Event Summary] eventSummary:', eventSummary);
+                    console.log('[Event Summary] tabs with tips:', tabs.map(t => ({ id: t.id, name: t.name, tipAmount: t.tipAmount })));
+                    
+                    // Calculate total tips from tabs (in case eventSummary doesn't have it)
+                    const totalTipsFromTabs = tabs.reduce((sum, t) => sum + (t.tipAmount || 0), 0);
+                    const summaryWithTips = {
+                      ...eventSummary,
+                      totalTips: eventSummary?.totalTips || totalTipsFromTabs
+                    };
+                    
                     setSyncing(true);
                     try {
                       const response = await fetch('/api/catering-events/finalize', {
@@ -5084,9 +5115,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         body: JSON.stringify({
                           eventId,
                           setupData: eventSetupData,
-                          summary: eventSummary,
+                          summary: summaryWithTips,
+                          tabs: tabs, // Include tabs for tip data
                         }),
                       });
+                      const data = await response.json();
                       if (response.ok) {
                         alert('Event saved successfully!');
                         // Return to home/event list
@@ -5095,11 +5128,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         setEventSummary(null);
                         clearEvent(); // Clear event from localStorage
                       } else {
-                        alert('Failed to save event');
+                        console.error('[Event Summary] Save failed:', data);
+                        alert(`Failed to save event: ${data.message || 'Unknown error'}`);
                       }
                     } catch (err) {
                       console.error('Failed to save event:', err);
-                      alert('Failed to save event');
+                      alert(`Failed to save event: ${err.message}`);
                     } finally {
                       setSyncing(false);
                     }
