@@ -830,7 +830,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       style={{
                         aspectRatio: '1 / 1',
                         width: '100%',
-                        border: activeTabId === tab.id ? '2px solid #800080' : (tab.status === 'archived' ? '2px solid #22c55e' : 'none'),
+                        border: tab.status === 'archived' 
+                          ? (activeTabId === tab.id ? '2px solid #22c55e' : 'none') 
+                          : (activeTabId === tab.id ? '2px solid #800080' : 'none'),
                         background: tab.status === 'archived' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -843,7 +845,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         padding: '24px',
                         overflow: 'hidden',
                         boxSizing: 'border-box',
-                        opacity: tab.status === 'archived' ? 0.8 : 1
+                        opacity: 1
                       }}
                     >
                       {(() => {
@@ -862,7 +864,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           <span 
                             key={idx}
                             style={{
-                              color: activeTabId === tab.id ? '#800080' : '#333',
+                              color: tab.status === 'archived' 
+                                ? (activeTabId === tab.id ? '#166534' : '#333') 
+                                : (activeTabId === tab.id ? '#800080' : '#333'),
                               fontSize: `${fontSize}px`,
                               fontWeight: 600,
                               lineHeight: 1.2
@@ -1067,11 +1071,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               </span>
             ))}
           </div>
-          {/* Action Visualizer - right: show Tip for archived tabs, Last Action for others */}
+          {/* Action Visualizer - right: show Tip for selected archived tab, Last Action for others */}
           {showArchivedTabs ? (
-            // Show tip total for archived tabs
+            // Show tip for the selected archived tab
             (() => {
-              const totalTips = tabs.filter(t => t.status === 'archived').reduce((sum, t) => sum + (t.tipAmount || 0), 0);
+              const activeTab = tabs.find(t => t.id === activeTabId);
+              const tabTip = activeTab?.tipAmount || 0;
               return (
                 <span style={{
                   fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
@@ -1079,8 +1084,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
                 }}>
                   <span style={{ color: '#d0d0d0' }}>Tip </span>
-                  <span style={{ color: totalTips > 0 ? '#22c55e' : '#d0d0d0' }}>
-                    ${totalTips.toFixed(2)}
+                  <span style={{ color: tabTip > 0 ? '#22c55e' : '#d0d0d0' }}>
+                    ${tabTip.toFixed(2)}
                   </span>
                 </span>
               );
@@ -4168,7 +4173,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
-                      ${((eventSummary.totalRevenue || 0) - (eventSummary.totalTips || 0)).toFixed(2)}
+                      ${(eventSummary.totalRevenue || 0).toFixed(2)}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Sales</div>
                   </div>
@@ -4204,18 +4209,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 border: '1px solid #e0e0e0',
               }}>
                 <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
-                
-                {/* Sales */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Sales</span>
-                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalRevenue || 0).toFixed(2)}</span>
-                </div>
-                
-                {/* Tips */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Tips</span>
-                  <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary.totalTips || 0).toFixed(2)}</span>
-                </div>
                 
                 {/* Spillage */}
                 {(() => {
