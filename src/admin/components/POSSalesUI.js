@@ -582,7 +582,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 <button
                   onClick={() => {
                     setShowArchivedTabs(prev => !prev);
-                    setShowSpillageView(false); // Exit spillage view when toggling archive
                   }}
                   style={{
                     flex: 1,
