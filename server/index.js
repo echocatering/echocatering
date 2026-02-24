@@ -755,7 +755,8 @@ wss.on('connection', (ws, req) => {
         'process_payment',
         'simulate_tap',
         'reader_status',
-        'payment_result'
+        'payment_result',
+        'tip_update'
       ];
       if (broadcastTypes.includes(message.type)) {
         console.log(`[WebSocket] Broadcasting ${message.type} to ${posClients.size - 1} other clients (total connected: ${posClients.size})`);

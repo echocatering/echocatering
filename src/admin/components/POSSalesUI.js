@@ -728,71 +728,78 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     No items added yet
                   </div>
                 ) : (
-                  selectedItems.map((item, index) => {
-                    const isSelected = selectedReceiptIndices.has(index);
-                    return (
-                      <div 
-                        key={`${item._id}-${index}`}
-                        onMouseDown={(e) => handleReceiptItemPressStart(index, e)}
-                        onMouseUp={handleReceiptItemPressEnd}
-                        onMouseLeave={handleReceiptItemPressEnd}
-                        onTouchStart={(e) => handleReceiptItemPressStart(index, e)}
-                        onTouchEnd={handleReceiptItemPressEnd}
-                        onTouchCancel={handleReceiptItemPressEnd}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          padding: '6px 8px',
-                          marginBottom: '2px',
-                          borderRadius: '4px',
-                          background: isSelected ? '#f0f0f0' : 'transparent',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                          WebkitUserSelect: 'none',
-                          transition: 'background 0.15s ease'
-                        }}
-                      >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: `${Math.max(10, outerWidth / 28)}px`,
-                          color: isSelected ? '#fff' : '#333'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 500, color: isSelected ? '#333' : '#333' }}>{(item.name || 'Item').toUpperCase()}</span>
-                            <span style={{ color: isSelected ? '#666' : '#999' }}>-</span>
-                            <span style={{ color: isSelected ? '#666' : '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
+                  (() => {
+                    const activeTab = tabs.find(t => t.id === activeTabId);
+                    const isArchivedTab = activeTab?.status === 'archived';
+                    return selectedItems.map((item, index) => {
+                      const isSelected = selectedReceiptIndices.has(index);
+                      return (
+                        <div 
+                          key={`${item._id}-${index}`}
+                          onMouseDown={isArchivedTab ? undefined : (e) => handleReceiptItemPressStart(index, e)}
+                          onMouseUp={isArchivedTab ? undefined : handleReceiptItemPressEnd}
+                          onMouseLeave={isArchivedTab ? undefined : handleReceiptItemPressEnd}
+                          onTouchStart={isArchivedTab ? undefined : (e) => handleReceiptItemPressStart(index, e)}
+                          onTouchEnd={isArchivedTab ? undefined : handleReceiptItemPressEnd}
+                          onTouchCancel={isArchivedTab ? undefined : handleReceiptItemPressEnd}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '6px 8px',
+                            marginBottom: '2px',
+                            borderRadius: '4px',
+                            background: isSelected ? '#f0f0f0' : 'transparent',
+                            cursor: isArchivedTab ? 'default' : 'pointer',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            transition: 'background 0.15s ease'
+                          }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: `${Math.max(10, outerWidth / 28)}px`,
+                            color: isSelected ? '#fff' : '#333'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 500, color: isSelected ? '#333' : '#333' }}>{(item.name || 'Item').toUpperCase()}</span>
+                              <span style={{ color: isSelected ? '#666' : '#999' }}>-</span>
+                              <span style={{ color: isSelected ? '#666' : '#999' }}>{item.modifier || CATEGORIES.find(c => c.id === normalizeCategoryKey(item.category))?.fullName || item.category || '—'}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: isSelected ? '#666' : '#999' }}>{formatTimestamp(item.addedAt)}</span>
+                              {/* Hide remove button for archived tabs */}
+                              {!isArchivedTab && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setItemToRemove({ item, index }); }}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isSelected ? '#666' : '#d0d0d0',
+                                    fontSize: `${Math.max(18, outerWidth / 16)}px`,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    padding: '0 4px',
+                                    lineHeight: 1
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: isSelected ? '#666' : '#999' }}>{formatTimestamp(item.addedAt)}</span>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setItemToRemove({ item, index }); }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: isSelected ? '#666' : '#d0d0d0',
-                                fontSize: `${Math.max(18, outerWidth / 16)}px`,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                padding: '0 4px',
-                                lineHeight: 1
-                              }}
-                            >
-                              ×
-                            </button>
+                          <div style={{
+                            fontSize: `${Math.max(9, outerWidth / 32)}px`,
+                            color: isSelected ? '#666' : '#666',
+                            marginTop: '2px'
+                          }}>
+                            ${(parseFloat(item.price) || 0).toFixed(2)}
                           </div>
                         </div>
-                        <div style={{
-                          fontSize: `${Math.max(9, outerWidth / 32)}px`,
-                          color: isSelected ? '#666' : '#666',
-                          marginTop: '2px'
-                        }}>
-                          ${(parseFloat(item.price) || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    );
-                  })
+                      );
+                    });
+                  })()
                 )}
               </div>
             )}
@@ -817,10 +824,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     <button
                       key={tab.id}
                       onClick={() => {
-                        // Don't allow selecting archived tabs for editing (but spillage tab is always selectable)
-                        if (tab.status !== 'archived' || tab.isSpillage) {
-                          onSelectTab(tab.id);
-                        }
+                        // Allow selecting any tab (archived tabs will be read-only)
+                        onSelectTab(tab.id);
                       }}
                       style={{
                         aspectRatio: '1 / 1',
@@ -828,7 +833,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         border: activeTabId === tab.id ? '2px solid #800080' : (tab.status === 'archived' ? '2px solid #22c55e' : 'none'),
                         background: tab.status === 'archived' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
                         borderRadius: '4px',
-                        cursor: tab.status === 'archived' && !tab.isSpillage ? 'default' : 'pointer',
+                        cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
