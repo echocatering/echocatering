@@ -672,41 +672,66 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 flexShrink: 0,
                 height: `${Math.max(60, footerHeight * 0.9)}px`
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '12px' }}>
-                  <span style={{
-                    color: '#d0d0d0',
-                    fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
-                    fontWeight: 500,
-                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                  }}>
-                    NAME:
-                  </span>
-                  <input
-                    type="text"
-                    value={tabs.find(t => t.id === activeTabId)?.customName || ''}
-                    onChange={(e) => onUpdateTabName(activeTabId, e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      color: '#000',
+                {(() => {
+                const activeTab = tabs.find(t => t.id === activeTabId);
+                const isSpillageTab = activeTab?.isSpillage;
+                
+                if (isSpillageTab) {
+                  // Spillage tab: show "SPILL TAB" in grey, no name input
+                  return (
+                    <span style={{
+                      color: '#999',
                       fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
                       fontWeight: 600,
                       fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                      background: 'transparent',
-                      flex: 1,
-                      minWidth: 0,
-                      textTransform: 'uppercase'
-                    }}
-                  />
-                </div>
-                <span style={{
-                  color: '#800080',
-                  fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
-                  fontWeight: 600,
-                  fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                }}>
-                  {tabs.find(t => t.id === activeTabId)?.name}
-                </span>
+                      flex: 1
+                    }}>
+                      SPILL TAB
+                    </span>
+                  );
+                }
+                
+                // Regular tab: show NAME input and tab name
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '12px' }}>
+                      <span style={{
+                        color: '#d0d0d0',
+                        fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
+                        fontWeight: 500,
+                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                      }}>
+                        NAME:
+                      </span>
+                      <input
+                        type="text"
+                        value={activeTab?.customName || ''}
+                        onChange={(e) => onUpdateTabName(activeTabId, e.target.value)}
+                        style={{
+                          border: 'none',
+                          outline: 'none',
+                          color: '#000',
+                          fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
+                          fontWeight: 600,
+                          fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                          background: 'transparent',
+                          flex: 1,
+                          minWidth: 0,
+                          textTransform: 'uppercase'
+                        }}
+                      />
+                    </div>
+                    <span style={{
+                      color: '#800080',
+                      fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
+                      fontWeight: 600,
+                      fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                    }}>
+                      {activeTab?.name}
+                    </span>
+                  </>
+                );
+              })()}
               </div>
             )}
             
@@ -894,31 +919,38 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             flexShrink: 0
           }}>
             {/* Page Switcher Button - TABS/MOVE when on receipt, VIEW when on tabs */}
-            <button
-              onClick={() => {
-                if (drawerView === 'receipt' && selectedReceiptIndices.size > 0) {
-                  // MOVE mode - open tab selection modal
-                  setShowMoveModal(true);
-                } else {
-                  // Normal mode - switch views
-                  setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt');
-                }
-              }}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: '#f0f0f0',
-                color: '#333',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              {drawerView === 'receipt' ? (selectedReceiptIndices.size > 0 ? 'MOVE' : 'TABS') : 'VIEW'}
-            </button>
+            {(() => {
+              const activeTab = tabs.find(t => t.id === activeTabId);
+              const isArchivedTab = activeTab?.status === 'archived';
+              const canMove = drawerView === 'receipt' && selectedReceiptIndices.size > 0 && !isArchivedTab;
+              return (
+                <button
+                  onClick={() => {
+                    if (canMove) {
+                      // MOVE mode - open tab selection modal
+                      setShowMoveModal(true);
+                    } else if (!isArchivedTab || drawerView === 'tabs') {
+                      // Normal mode - switch views
+                      setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: '#f0f0f0',
+                    color: '#333',
+                    fontSize: `${Math.max(12, outerWidth / 25)}px`,
+                    fontWeight: 600,
+                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    cursor: 'pointer',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {drawerView === 'receipt' ? (selectedReceiptIndices.size > 0 && !isArchivedTab ? 'MOVE' : 'TABS') : 'VIEW'}
+                </button>
+              );
+            })()}
             {/* Close/Cancel Button - disabled when spillage tab is selected */}
             <button
               onClick={() => {
@@ -1342,7 +1374,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 flexDirection: 'column',
                 gap: '8px'
               }}>
-                {tabs.filter(t => t.id !== activeTabId).map((tab) => (
+                {tabs.filter(t => t.id !== activeTabId && t.status !== 'archived').map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => {
@@ -5610,69 +5642,108 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
         {/* End Event Confirmation Modal */}
         {showEndEventModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}>
-            <div style={{
-              background: '#2a2a2a',
-              borderRadius: '16px',
-              padding: '30px',
-              maxWidth: '400px',
-              width: '90%',
-              textAlign: 'center',
-            }}>
-              <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '16px' }}>
-                End Event?
-              </h2>
-              <p style={{ color: '#888', marginBottom: '24px' }}>
-                This will sync all tabs to the database and show the event summary.
-                You have {tabs.length} tab(s) with {selectedItems.length} total item(s).
-              </p>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => setShowEndEventModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: '#444',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={handleEndEvent}
-                  disabled={syncing}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: syncing ? '#555' : '#c62828',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    cursor: syncing ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {syncing ? 'SYNCING...' : 'END EVENT'}
-                </button>
+          (() => {
+            // Check for open tabs (excluding spillage tab)
+            const openTabs = tabs.filter(t => !t.isSpillage && t.status !== 'archived');
+            const hasOpenTabs = openTabs.length > 0;
+            
+            return (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}>
+                <div style={{
+                  background: '#2a2a2a',
+                  borderRadius: '16px',
+                  padding: '30px',
+                  maxWidth: '400px',
+                  width: '90%',
+                  textAlign: 'center',
+                }}>
+                  {hasOpenTabs ? (
+                    <>
+                      <h2 style={{ color: '#ef4444', fontSize: '20px', marginBottom: '16px' }}>
+                        Cannot End Event
+                      </h2>
+                      <p style={{ color: '#888', marginBottom: '16px' }}>
+                        Please close or pay all tabs before ending the event.
+                      </p>
+                      <p style={{ color: '#ef4444', marginBottom: '24px', fontWeight: 'bold' }}>
+                        {openTabs.length} open tab{openTabs.length > 1 ? 's' : ''}: {openTabs.map(t => t.customName || t.name).join(', ')}
+                      </p>
+                      <button
+                        onClick={() => setShowEndEventModal(false)}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: '#444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        OK
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '16px' }}>
+                        End Event?
+                      </h2>
+                      <p style={{ color: '#888', marginBottom: '24px' }}>
+                        This will sync all tabs to the database and show the event summary.
+                        You have {tabs.filter(t => !t.isSpillage).length} tab(s) with {selectedItems.length} total item(s).
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          onClick={() => setShowEndEventModal(false)}
+                          style={{
+                            flex: 1,
+                            padding: '14px',
+                            background: '#444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          CANCEL
+                        </button>
+                        <button
+                          onClick={handleEndEvent}
+                          disabled={syncing}
+                          style={{
+                            flex: 1,
+                            padding: '14px',
+                            background: syncing ? '#555' : '#c62828',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            cursor: syncing ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {syncing ? 'SYNCING...' : 'END EVENT'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()
         )}
 
         {/* Checkout Success Overlay */}
