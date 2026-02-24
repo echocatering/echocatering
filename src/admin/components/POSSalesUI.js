@@ -90,7 +90,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   
   // Archived tabs view state
   const [showArchivedTabs, setShowArchivedTabs] = useState(false);
-  const [showSpillageView, setShowSpillageView] = useState(false); // Spillage tab view mode
   const addTabLongPressRef = useRef(null);
   
   // Modifier system state
@@ -601,31 +600,26 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   <img 
                     src={showArchivedTabs ? "/assets/icons/TABS.png" : "/assets/icons/PAID.png"} 
                     alt={showArchivedTabs ? "All Tabs" : "Archived"} 
-                    style={{ height: '70%', width: 'auto', opacity: 0.6 }} 
+                    style={{ height: '90%', width: 'auto', opacity: 0.6 }} 
                   />
                 </button>
                 
-                {/* BIN/TABS - Spillage View Toggle (second position) */}
+                {/* BIN - Spillage Tab (second position) */}
                 <button
                   onClick={() => {
-                    if (showSpillageView) {
-                      // Exit spillage view - spillage tab stays selected (highlighted purple)
-                      setShowSpillageView(false);
-                    } else {
-                      // Enter spillage view and select spillage tab
-                      const spillageTab = tabs.find(t => t.isSpillage);
-                      if (spillageTab) {
-                        onSelectTab(spillageTab.id);
-                        setShowSpillageView(true);
-                        setShowArchivedTabs(false); // Exit archive view
-                      }
+                    // Select spillage tab and go to receipt view
+                    const spillageTab = tabs.find(t => t.isSpillage);
+                    if (spillageTab) {
+                      onSelectTab(spillageTab.id);
+                      setDrawerView('receipt'); // Switch to receipt view
+                      setShowArchivedTabs(false); // Exit archive view
                     }
                   }}
                   style={{
                     flex: 1,
                     height: '40px',
-                    border: showSpillageView ? '2px solid #800080' : 'none',
-                    background: showSpillageView ? '#f0e6f0' : '#f5f5f5',
+                    border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
+                    background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#f5f5f5',
                     borderRadius: '4px',
                     cursor: 'pointer',
                     display: 'flex',
@@ -635,16 +629,16 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }}
                 >
                   <img 
-                    src={showSpillageView ? "/assets/icons/TABS.png" : "/assets/icons/BIN.png"} 
-                    alt={showSpillageView ? "All Tabs" : "Spillage"} 
-                    style={{ height: '70%', width: 'auto', opacity: 0.6 }} 
+                    src="/assets/icons/BIN.png"
+                    alt="Spillage" 
+                    style={{ height: '90%', width: 'auto', opacity: 0.6 }} 
                   />
                 </button>
                 
                 {/* ADD_TAB - Create New Tab */}
                 <button
                   onClick={() => {
-                    if (!showArchivedTabs && !showSpillageView) {
+                    if (!showArchivedTabs) {
                       onCreateTab();
                     }
                   }}
@@ -654,15 +648,15 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     border: 'none',
                     background: '#f5f5f5',
                     borderRadius: '4px',
-                    cursor: (showArchivedTabs || showSpillageView) ? 'default' : 'pointer',
+                    cursor: showArchivedTabs ? 'default' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    opacity: (showArchivedTabs || showSpillageView) ? 0.4 : 1
+                    opacity: showArchivedTabs ? 0.4 : 1
                   }}
                 >
-                  <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '70%', width: 'auto', opacity: 0.6 }} />
+                  <img src="/assets/icons/ADD_TAB.png" alt="Add Tab" style={{ height: '90%', width: 'auto', opacity: 0.6 }} />
                 </button>
               </div>
             )}
@@ -804,8 +798,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               </div>
             )}
             
-            {/* Tabs View - Tab Grid (hide when in spillage view) */}
-            {drawerView === 'tabs' && !showSpillageView && (
+            {/* Tabs View - Tab Grid */}
+            {drawerView === 'tabs' && (
               <div className="scrollable-content" style={{
                 flex: 1,
                 overflowY: 'auto',
@@ -827,7 +821,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         // Don't allow selecting archived tabs for editing (but spillage tab is always selectable)
                         if (tab.status !== 'archived' || tab.isSpillage) {
                           onSelectTab(tab.id);
-                          setShowSpillageView(false); // Exit spillage view when selecting a different tab
                         }
                       }}
                       style={{
@@ -918,9 +911,11 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             >
               {drawerView === 'receipt' ? (selectedReceiptIndices.size > 0 ? 'MOVE' : 'TABS') : 'VIEW'}
             </button>
-            {/* Close/Cancel Button */}
+            {/* Close/Cancel Button - disabled when spillage tab is selected */}
             <button
               onClick={() => {
+                const isSpillageTab = tabs.find(t => t.isSpillage && t.id === activeTabId);
+                if (isSpillageTab) return; // Disabled for spillage tab
                 if (selectedReceiptIndices.size > 0) {
                   // CANCEL mode - deselect all items
                   setSelectedReceiptIndices(new Set());
@@ -934,31 +929,37 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 padding: '12px',
                 border: 'none',
                 background: '#f0f0f0',
-                color: (selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999',
+                color: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999'),
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: (selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed',
-                borderRadius: '4px'
+                cursor: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 'not-allowed' : ((selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed'),
+                borderRadius: '4px',
+                opacity: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 0.4 : 1
               }}
             >
               {selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE'}
             </button>
-            {/* Checkout Button */}
+            {/* Checkout Button - disabled when spillage tab is selected */}
             <button
-              onClick={() => onCheckout && onCheckout()}
-              disabled={checkoutLoading || selectedItems.length === 0}
+              onClick={() => {
+                const isSpillageTab = tabs.find(t => t.isSpillage && t.id === activeTabId);
+                if (isSpillageTab) return; // Disabled for spillage tab
+                onCheckout && onCheckout();
+              }}
+              disabled={checkoutLoading || selectedItems.length === 0 || tabs.find(t => t.isSpillage && t.id === activeTabId)}
               style={{
                 flex: 1,
                 padding: '12px',
                 border: 'none',
-                background: checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'),
+                background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080')),
                 color: '#fff',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: checkoutLoading || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
-                borderRadius: '4px'
+                cursor: (checkoutLoading || selectedItems.length === 0 || tabs.find(t => t.isSpillage && t.id === activeTabId)) ? 'not-allowed' : 'pointer',
+                borderRadius: '4px',
+                opacity: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 0.4 : 1
               }}
             >
               {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
