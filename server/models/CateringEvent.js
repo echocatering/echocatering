@@ -77,10 +77,34 @@ const cateringEventSchema = new mongoose.Schema({
   totalSales: { type: Number, default: 0 },
   totalTips: { type: Number, default: 0 },
   totalCost: { type: Number, default: 0 },
-  travelCost: { type: Number, default: 0 },
-  totalRevenue: { type: Number, default: 0 },  // sales + tips
-  totalProfit: { type: Number, default: 0 },   // revenue - cost - travel
-  totalLoss: { type: Number, default: 0 },     // if negative profit
+  travelCost: { type: Number, default: 0 },      // $ Transportation
+  permitCost: { type: Number, default: 0 },      // $ Permit
+  insuranceCost: { type: Number, default: 0 },   // $ Insurance
+  laborCost: { type: Number, default: 0 },       // $ Labor (total)
+  spillageCost: { type: Number, default: 0 },    // $ Spillage (using costPerUnit)
+  taxesCost: { type: Number, default: 0 },       // $ Taxes
+  cogsCost: { type: Number, default: 0 },        // $ COGS (cost of goods sold)
+  totalRevenue: { type: Number, default: 0 },    // sales + tips
+  totalProfit: { type: Number, default: 0 },     // revenue - all costs
+  totalLoss: { type: Number, default: 0 },       // if negative profit
+  netIncome: { type: Number, default: 0 },       // final income after all deductions
+  
+  // Labor breakdown
+  laborDetails: [{
+    title: { type: String, default: '' },
+    rate: { type: Number, default: 0 },
+    hours: { type: Number, default: 0 },
+    total: { type: Number, default: 0 }
+  }],
+  
+  // Spillage items (items wasted)
+  spillageItems: [{
+    name: { type: String },
+    category: { type: String },
+    quantity: { type: Number, default: 0 },
+    costPerUnit: { type: Number, default: 0 },
+    totalCost: { type: Number, default: 0 }
+  }],
 
   // Drink sales breakdown (items sold)
   drinkSales: [drinkSaleSchema],
@@ -145,9 +169,20 @@ cateringEventSchema.methods.recalculate = function () {
   }
 
   this.totalRevenue = this.totalSales + this.totalTips;
-  const netProfit = this.totalRevenue - this.totalCost - this.travelCost;
-  this.totalProfit = Math.max(0, netProfit);
-  this.totalLoss = Math.max(0, -netProfit);
+  
+  // Calculate total costs
+  const totalExpenses = (this.travelCost || 0) + 
+    (this.permitCost || 0) + 
+    (this.insuranceCost || 0) + 
+    (this.laborCost || 0) + 
+    (this.spillageCost || 0) + 
+    (this.taxesCost || 0) + 
+    (this.cogsCost || 0);
+  
+  this.totalCost = totalExpenses;
+  this.netIncome = this.totalRevenue - totalExpenses;
+  this.totalProfit = Math.max(0, this.netIncome);
+  this.totalLoss = Math.max(0, -this.netIncome);
 };
 
 module.exports = mongoose.model('CateringEvent', cateringEventSchema);

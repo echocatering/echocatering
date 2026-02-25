@@ -116,7 +116,26 @@ router.post('/:id/recalculate', async (req, res) => {
  */
 router.post('/finalize', async (req, res) => {
   try {
-    const { eventId, setupData, summary } = req.body;
+    const { eventId, setupData, summary, tabs, spillageData, cogsData } = req.body;
+    
+    // Calculate duration in hours from start/end time
+    let durationHours = 0;
+    if (setupData.startTime && setupData.endTime) {
+      const [startH, startM] = setupData.startTime.split(':').map(Number);
+      const [endH, endM] = setupData.endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      durationHours = Math.max(0, (endMinutes - startMinutes) / 60);
+    }
+    
+    // Calculate labor cost from labor array
+    const laborDetails = (setupData.labor || []).map(l => ({
+      title: l.title || '',
+      rate: parseFloat(l.rate) || 0,
+      hours: parseFloat(l.hours) || 0,
+      total: (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0)
+    }));
+    const laborCost = laborDetails.reduce((sum, l) => sum + l.total, 0);
     
     // Build the event data from setup and summary
     const eventData = {
@@ -124,7 +143,17 @@ router.post('/finalize', async (req, res) => {
       date: setupData.eventDate ? new Date(setupData.eventDate) : new Date(),
       startTime: setupData.startTime || '',
       endTime: setupData.endTime || '',
-      travelCost: setupData.transportationCosts || 0,
+      durationHours,
+      guestCount: parseInt(setupData.patronCount) || 0,
+      travelCost: parseFloat(setupData.transportationCosts) || 0,
+      permitCost: parseFloat(setupData.permitCost) || 0,
+      insuranceCost: parseFloat(setupData.liabilityInsuranceCost) || 0,
+      laborCost,
+      laborDetails,
+      spillageCost: parseFloat(spillageData?.total) || 0,
+      spillageItems: spillageData?.items || [],
+      taxesCost: parseFloat(summary?.taxes) || 0,
+      cogsCost: parseFloat(cogsData?.total) || 0,
       status: summary ? 'completed' : 'draft',
     };
     

@@ -5150,9 +5150,56 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     
                     // Calculate total tips from tabs (in case eventSummary doesn't have it)
                     const totalTipsFromTabs = tabs.reduce((sum, t) => sum + (t.tipAmount || 0), 0);
+                    
+                    // Calculate spillage data from spillage tab using costPerUnit
+                    const spillageTab = tabs.find(t => t.isSpillage);
+                    const spillageItems = [];
+                    let spillageTotal = 0;
+                    if (spillageTab?.items) {
+                      // Group items by name and count
+                      const itemCounts = {};
+                      spillageTab.items.forEach(item => {
+                        if (!itemCounts[item.name]) {
+                          itemCounts[item.name] = { name: item.name, category: item.category, quantity: 0 };
+                        }
+                        itemCounts[item.name].quantity += 1;
+                      });
+                      // Calculate cost for each item
+                      Object.values(itemCounts).forEach(item => {
+                        const menuItem = allItems.find(i => i.name === item.name);
+                        const costPerUnit = menuItem?.costPerUnit || 0;
+                        const totalCost = item.quantity * costPerUnit;
+                        spillageItems.push({ ...item, costPerUnit, totalCost });
+                        spillageTotal += totalCost;
+                      });
+                    }
+                    
+                    // Calculate COGS from category breakdown
+                    let cogsTotal = 0;
+                    if (eventSummary?.categoryBreakdown) {
+                      const breakdown = eventSummary.categoryBreakdown instanceof Map 
+                        ? Object.fromEntries(eventSummary.categoryBreakdown)
+                        : eventSummary.categoryBreakdown;
+                      Object.entries(breakdown).forEach(([category, data]) => {
+                        if (data.items) {
+                          Object.entries(data.items).forEach(([itemName, itemData]) => {
+                            const menuItem = allItems.find(i => i.name === itemName);
+                            const costPerUnit = menuItem?.costPerUnit || 0;
+                            cogsTotal += (itemData.count || 0) * costPerUnit;
+                          });
+                        }
+                      });
+                    }
+                    
+                    // Calculate taxes (30% of sales + tips)
+                    const sales = eventSummary?.totalRevenue || 0;
+                    const tips = eventSummary?.totalTips || totalTipsFromTabs;
+                    const taxes = (sales + tips) * 0.3;
+                    
                     const summaryWithTips = {
                       ...eventSummary,
-                      totalTips: eventSummary?.totalTips || totalTipsFromTabs
+                      totalTips: tips,
+                      taxes: taxes
                     };
                     
                     setSyncing(true);
@@ -5164,7 +5211,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           eventId,
                           setupData: eventSetupData,
                           summary: summaryWithTips,
-                          tabs: tabs, // Include tabs for tip data
+                          tabs: tabs,
+                          spillageData: { items: spillageItems, total: spillageTotal },
+                          cogsData: { total: cogsTotal },
                         }),
                       });
                       const data = await response.json();
