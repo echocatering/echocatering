@@ -4242,10 +4242,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               }}>
                 <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
                 
-                {/* Spillage */}
+                {/* Spillage - calculated using $/Unit from menu items */}
                 {(() => {
                   const spillageTab = tabs.find(t => t.isSpillage);
-                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0;
+                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
+                    const menuItem = allItems.find(i => i.name === item.name);
+                    const costPerUnit = menuItem?.costPerUnit || 0;
+                    return sum + costPerUnit;
+                  }, 0) || 0;
                   if (spillageTotal > 0) {
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
@@ -4837,7 +4841,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {/* Ice */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
                 <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
-                  Ice (lbs)
+                  Ice (blocks)
                 </div>
                 <input
                   type="text"
@@ -4989,10 +4993,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
                   </div>
                 )}
-                {/* Spillage - items from spillage tab */}
+                {/* Spillage - items from spillage tab, using $/Unit from menu items */}
                 {(() => {
                   const spillageTab = tabs.find(t => t.isSpillage);
-                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0;
+                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
+                    const menuItem = allItems.find(i => i.name === item.name);
+                    const costPerUnit = menuItem?.costPerUnit || 0;
+                    return sum + costPerUnit;
+                  }, 0) || 0;
                   if (spillageTotal > 0) {
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
@@ -5042,7 +5050,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       (parseFloat(eventSetupData.permitCost) || 0) +
                       (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
                       (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
-                      (tabs.find(t => t.isSpillage)?.items?.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0) || 0)
+                      (tabs.find(t => t.isSpillage)?.items?.reduce((sum, item) => {
+                        const menuItem = allItems.find(i => i.name === item.name);
+                        return sum + (menuItem?.costPerUnit || 0);
+                      }, 0) || 0)
                     ).toFixed(2)}
                   </span>
                 </div>
@@ -5061,10 +5072,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 const sales = eventSummary?.totalRevenue || 0;
                 const tips = eventSummary?.totalTips || 0;
                 const taxes = (sales + tips) * 0.3;
+                // Spillage using costPerUnit from menu items
+                const spillageTab = tabs.find(t => t.isSpillage);
+                const spillageCost = spillageTab?.items?.reduce((sum, item) => {
+                  const menuItem = allItems.find(i => i.name === item.name);
+                  return sum + (menuItem?.costPerUnit || 0);
+                }, 0) || 0;
                 const operatingExpenses = (parseFloat(eventSetupData.transportationCosts) || 0) +
                   (parseFloat(eventSetupData.permitCost) || 0) +
                   (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
-                  (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0);
+                  (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
+                  spillageCost;
                 // COGS calculation
                 let cogs = 0;
                 if (eventSummary?.categoryBreakdown) {
