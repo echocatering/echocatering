@@ -3,13 +3,11 @@ const router = express.Router();
 const CateringEvent = require('../models/CateringEvent');
 const { authenticateToken } = require('../middleware/auth');
 
-router.use(authenticateToken);
-
 /**
  * GET /api/catering-events
  * List all catering events, sorted by date desc
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, limit = 50, page = 1 } = req.query;
     const query = {};
@@ -32,7 +30,7 @@ router.get('/', async (req, res) => {
  * GET /api/catering-events/:id
  * Get a single event by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const event = await CateringEvent.findById(req.params.id).lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -47,7 +45,7 @@ router.get('/:id', async (req, res) => {
  * POST /api/catering-events
  * Create a new catering event
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const event = new CateringEvent(req.body);
     event.recalculate();
@@ -63,7 +61,7 @@ router.post('/', async (req, res) => {
  * PUT /api/catering-events/:id
  * Update a catering event (full replace of provided fields)
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const event = await CateringEvent.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -82,7 +80,7 @@ router.put('/:id', async (req, res) => {
  * DELETE /api/catering-events/:id
  * Delete a catering event
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const event = await CateringEvent.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -97,7 +95,7 @@ router.delete('/:id', async (req, res) => {
  * POST /api/catering-events/:id/recalculate
  * Trigger a recalculation of financials for an event
  */
-router.post('/:id/recalculate', async (req, res) => {
+router.post('/:id/recalculate', authenticateToken, async (req, res) => {
   try {
     const event = await CateringEvent.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
