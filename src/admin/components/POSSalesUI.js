@@ -4381,9 +4381,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         try {
           if (isPostEvent) {
             // Post-event: Save setup data and go back to brief summary
+            const token = localStorage.getItem('adminToken');
             const response = await fetch('/api/catering-events/finalize', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
               body: JSON.stringify({
                 eventId,
                 setupData: eventSetupData,
@@ -5210,9 +5214,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     
                     setSyncing(true);
                     try {
+                      const token = localStorage.getItem('adminToken');
                       const response = await fetch('/api/catering-events/finalize', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
                         body: JSON.stringify({
                           eventId,
                           setupData: eventSetupData,
