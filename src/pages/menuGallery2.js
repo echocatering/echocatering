@@ -2903,6 +2903,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const [isLoading, setIsLoading] = useState(true);
   const [initialItemProcessed, setInitialItemProcessed] = useState(false);
   const [showFullMenu, setShowFullMenu] = useState(false);
+  const [fullMenuSelectedItem, setFullMenuSelectedItem] = useState(null);
 
   const subpageOrder = useMemo(() => [
     { key: 'cocktails', label: 'Cocktails' },
@@ -3027,7 +3028,13 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const { title, videoFiles, cocktailInfo } = currentCategory;
 
   // Calculate initial index if initialItem is provided and matches current category
+  // Also handles navigation from full menu view via fullMenuSelectedItem
   const initialIndex = useMemo(() => {
+    // Check for fullMenuSelectedItem first (navigation from full menu view)
+    if (fullMenuSelectedItem && fullMenuSelectedItem.category === selected && fullMenuSelectedItem.index !== undefined) {
+      return fullMenuSelectedItem.index;
+    }
+    
     if (!initialItem || isLoading || !videoFiles.length || initialItemProcessed === false) return null;
     
     const normalizeCategoryKey = (value = '') => {
@@ -3050,7 +3057,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     });
 
     return itemIndex !== -1 ? itemIndex : null;
-  }, [initialItem, isLoading, videoFiles, cocktailInfo, selected, initialItemProcessed]);
+  }, [initialItem, isLoading, videoFiles, cocktailInfo, selected, initialItemProcessed, fullMenuSelectedItem]);
 
   if (isLoading) {
     return (
@@ -3115,6 +3122,38 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
           hideSearch={true} 
           containerHeight={outerHeight}
           hiddenCategories={['spirits', 'premix']}
+          onItemClick={(item) => {
+            // Navigate to the item in the original menu view
+            const normalizeCategoryKey = (value = '') => {
+              const key = String(value).toLowerCase();
+              const categoryMap = { 'classics': 'cocktails' };
+              return categoryMap[key] || key;
+            };
+            const itemCategory = normalizeCategoryKey(item.category || 'cocktails');
+            
+            // Set the category if different
+            if (itemCategory !== selected && subpages[itemCategory]) {
+              setSelected(itemCategory);
+            }
+            
+            // Find the index of the item in the category's videoFiles
+            const categoryData = subpages[itemCategory] || subpages[selected];
+            if (categoryData) {
+              const itemIndex = categoryData.videoFiles.findIndex((file) => {
+                const info = categoryData.cocktailInfo[file] || {};
+                return info.name === item.name || 
+                       (item.itemNumber && info.itemNumber === item.itemNumber) ||
+                       (item._id && info._id === item._id);
+              });
+              
+              if (itemIndex !== -1) {
+                setFullMenuSelectedItem({ ...item, index: itemIndex, category: itemCategory });
+              }
+            }
+            
+            // Close full menu view
+            setShowFullMenu(false);
+          }}
         />
       </div>
     );
@@ -3137,7 +3176,15 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       selectedCocktails={selectedCocktails}
       setSelectedCocktails={setSelectedCocktails}
       initialIndex={initialIndex}
-      onIndexSet={onItemNavigated}
+      onIndexSet={(index) => {
+        // Clear fullMenuSelectedItem after navigation is complete
+        if (fullMenuSelectedItem) {
+          setFullMenuSelectedItem(null);
+        }
+        if (onItemNavigated) {
+          onItemNavigated(index);
+        }
+      }}
       onAllItemsClick={onAllItemsClick}
       onFullMenuClick={() => setShowFullMenu(true)}
     />

@@ -629,16 +629,23 @@ router.delete('/:id', async (req, res, next) => {
         let hasChanges = false;
         
         preMixSheet.rows.forEach((row) => {
-          const recipeId = getRowRecipeId(row);
-          if (!recipeId) return; // Only update recipe rows
+          if (row.isDeleted) return;
           
           const valuesMap = ensureRowValuesMap(row);
-          const currentCocktail = valuesMap instanceof Map 
-            ? valuesMap.get('cocktail')
-            : (row.values instanceof Map ? row.values.get('cocktail') : row.values?.cocktail);
+          const currentCocktails = valuesMap instanceof Map 
+            ? (valuesMap.get('cocktails') || '')
+            : (row.values instanceof Map ? (row.values.get('cocktails') || '') : (row.values?.cocktails || ''));
           
-          if (currentCocktail === cocktailTitle) {
-            applyRowValues(row, { cocktail: '' }, columnsByKey);
+          // Parse current cocktails into array and remove the deleted cocktail
+          const cocktailsList = currentCocktails
+            ? currentCocktails.split(',').map(c => c.trim()).filter(Boolean)
+            : [];
+          
+          const idx = cocktailsList.indexOf(cocktailTitle);
+          if (idx !== -1) {
+            cocktailsList.splice(idx, 1);
+            const newCocktails = cocktailsList.join(', ');
+            applyRowValues(row, { cocktails: newCocktails }, columnsByKey);
             hasChanges = true;
           }
         });
@@ -803,7 +810,7 @@ const syncRecipeInventoryRow = async (recipe, payloadTotals = null) => {
 
   if (sheetKey === 'preMix') {
     updateValues.type = recipe.metadata?.type || '';
-    updateValues.cocktail = recipe.metadata?.cocktail || '';
+    // Note: 'cocktails' column is managed by syncCocktailToPreMixRows, not here
     
     // Get volume and cost totals - prefer payloadTotals if provided (most up-to-date)
     let volumeOz = payloadTotals?.volumeOz;
@@ -973,40 +980,45 @@ const syncCocktailToPreMixRows = async (cocktailRecipe) => {
     // Find the pre-mix inventory row that matches this rowId
     const preMixRow = preMixSheet.rows.find((row) => String(row._id) === preMixRowId);
     if (preMixRow) {
-      // Check if this row has a recipeId (meaning it's a recipe, not just an inventory item)
-      const recipeId = getRowRecipeId(preMixRow);
-      if (recipeId) {
-        preMixRowIdsUsed.add(preMixRowId);
-      }
+      preMixRowIdsUsed.add(preMixRowId);
     }
   }
 
-  // Update all pre-mix recipe rows
+  // Update all pre-mix rows (not just recipe rows)
   let hasChanges = false;
   const cocktailTitle = cocktailRecipe.title || '';
   
   preMixSheet.rows.forEach((row) => {
+    if (row.isDeleted) return;
+    
     const rowId = String(row._id);
-    const recipeId = getRowRecipeId(row);
-    
-    // Only update rows that are recipes (have a recipeId)
-    if (!recipeId) return;
-    
     const valuesMap = ensureRowValuesMap(row);
-    const currentCocktail = valuesMap instanceof Map 
-      ? valuesMap.get('cocktail')
-      : (row.values instanceof Map ? row.values.get('cocktail') : row.values?.cocktail);
+    
+    // Get current cocktails list (comma-separated string)
+    const currentCocktails = valuesMap instanceof Map 
+      ? (valuesMap.get('cocktails') || '')
+      : (row.values instanceof Map ? (row.values.get('cocktails') || '') : (row.values?.cocktails || ''));
+    
+    // Parse current cocktails into array
+    const cocktailsList = currentCocktails
+      ? currentCocktails.split(',').map(c => c.trim()).filter(Boolean)
+      : [];
     
     if (preMixRowIdsUsed.has(rowId)) {
-      // This pre-mix is used in the cocktail - set the cocktail name
-      if (currentCocktail !== cocktailTitle) {
-        applyRowValues(row, { cocktail: cocktailTitle }, columnsByKey);
+      // This pre-mix is used in the cocktail - add to list if not already there
+      if (!cocktailsList.includes(cocktailTitle)) {
+        cocktailsList.push(cocktailTitle);
+        const newCocktails = cocktailsList.join(', ');
+        applyRowValues(row, { cocktails: newCocktails }, columnsByKey);
         hasChanges = true;
       }
     } else {
-      // This pre-mix is not used in the cocktail - clear the reference if it was set
-      if (currentCocktail === cocktailTitle) {
-        applyRowValues(row, { cocktail: '' }, columnsByKey);
+      // This pre-mix is not used in the cocktail - remove from list if present
+      const idx = cocktailsList.indexOf(cocktailTitle);
+      if (idx !== -1) {
+        cocktailsList.splice(idx, 1);
+        const newCocktails = cocktailsList.join(', ');
+        applyRowValues(row, { cocktails: newCocktails }, columnsByKey);
         hasChanges = true;
       }
     }

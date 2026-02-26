@@ -166,8 +166,8 @@ const SHEET_DEFINITIONS = [
     columns: [
       { key: 'name', label: 'Name', type: 'text', required: true },
       { key: 'type', label: 'Type', type: 'dropdown', datasetId: 'premix.type' },
-      { key: 'cocktail', label: 'Cocktail', type: 'dropdown', datasetId: 'cocktails.name' },
-      { key: 'ounceCost', label: '$ / oz', type: 'currency', unit: 'USD', precision: 2 },
+      { key: 'cocktails', label: 'Cocktails', type: 'text', readOnly: true },
+      { key: 'ounceCost', label: '$ / oz', type: 'currency', unit: 'USD', precision: 2, readOnly: true },
       { key: 'salesPrice', label: '$ Sales', type: 'currency', unit: 'USD', precision: 2 },
       { key: 'itemNumber', label: 'Item#', type: 'number', precision: 0 },
       { key: 'menu', label: 'Menu', type: 'text' }
