@@ -3063,41 +3063,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // ============================================
 
   /**
-   * Handle header tap to reveal END EVENT button or cancel payment
+   * Handle header tap to reveal buttons
    * Button auto-hides after 3 seconds if not clicked
-   * During checkout: always cancels payment instead of showing end event button
+   * Shows: Test, Reader, Cancel Payment (during checkout) or End Event (outside checkout)
    */
   const handleHeaderTap = useCallback(() => {
-    if (checkoutMode) {
-      // During checkout: always cancel payment
-      setCheckoutMode(false);
-      setCheckoutItems([]);
-      setCheckoutSubtotal(0);
-      setCheckoutTabInfo(null);
-      setShowScanCard(false);
-      setShowTabView(false);
-      setShowCustomTip(false);
-      setSelectedTipAmount(0);
-      setCheckoutStage('');
-      setPaymentStatus(null);
-      setPaymentStatusMessage(null);
-      sendCheckoutCancel();
-      return;
-    }
-    
     // Clear any existing timeout
     if (endEventTimeoutRef.current) {
       clearTimeout(endEventTimeoutRef.current);
     }
     
-    // Show the END EVENT button
+    // Show the buttons
     setShowEndEventButton(true);
     
     // Auto-hide after 3 seconds
     endEventTimeoutRef.current = setTimeout(() => {
       setShowEndEventButton(false);
     }, 3000);
-  }, [checkoutMode, sendCheckoutCancel]);
+  }, []);
 
   /**
    * Start a new POS event
@@ -5813,7 +5796,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           </div>
           
           {/* Buttons container - absolutely positioned to overlay when shown */}
-          {/* Hidden during checkout - header tap cancels payment instead */}
+          {/* During checkout: always visible with CANCEL PAYMENT button */}
+          {/* Outside checkout: shown on header tap with END EVENT button */}
           <div style={{
             position: 'absolute',
             right: '16px',
@@ -5823,8 +5807,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             alignItems: 'center',
             gap: '8px',
             transition: 'opacity 0.3s ease',
-            opacity: (showEndEventButton && !checkoutMode) ? 1 : 0,
-            pointerEvents: (showEndEventButton && !checkoutMode) ? 'auto' : 'none',
+            opacity: showEndEventButton ? 1 : 0,
+            pointerEvents: showEndEventButton ? 'auto' : 'none',
             zIndex: 10,
           }}>
             {/* TEST/LIVE Button - shown on header tap */}
@@ -5879,18 +5863,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </button>
             )}
             
-            {/* End Event / Cancel Payment button - slides in from right */}
-            {/* During checkout: shows Cancel Payment (returns to menu) */}
-            {/* Outside checkout: shows End Event or Summary (if in post-event edit mode) */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (endEventTimeoutRef.current) {
-                  clearTimeout(endEventTimeoutRef.current);
-                }
-                setShowEndEventButton(false);
-                
-                if (checkoutMode) {
+            {/* Cancel Payment button - only shown during checkout */}
+            {checkoutMode && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (endEventTimeoutRef.current) {
+                    clearTimeout(endEventTimeoutRef.current);
+                  }
+                  setShowEndEventButton(false);
                   // Cancel Payment - return to menu
                   setCheckoutMode(false);
                   setCheckoutItems([]);
@@ -5904,29 +5885,57 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   setPaymentStatus(null);
                   setPaymentStatusMessage(null);
                   sendCheckoutCancel();
-                } else if (isPostEventEdit) {
-                  // Summary - return to Event Summary page
-                  setShowEventSetup(true);
-                  setShowSummaryView(false);
-                } else {
-                  // End Event - show confirmation modal
-                  setShowEndEventModal(true);
-                }
-              }}
-              style={{
-                background: checkoutMode ? '#f59e0b' : (isPostEventEdit ? '#f59e0b' : '#c62828'),
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {checkoutMode ? 'CANCEL PAYMENT' : (isPostEventEdit ? 'SUMMARY' : 'END EVENT')}
-            </button>
+                }}
+                style={{
+                  background: '#f59e0b',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                CANCEL PAYMENT
+              </button>
+            )}
+            
+            {/* End Event / Summary button - hidden during checkout */}
+            {!checkoutMode && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (endEventTimeoutRef.current) {
+                    clearTimeout(endEventTimeoutRef.current);
+                  }
+                  setShowEndEventButton(false);
+                  
+                  if (isPostEventEdit) {
+                    // Summary - return to Event Summary page
+                    setShowEventSetup(true);
+                    setShowSummaryView(false);
+                  } else {
+                    // End Event - show confirmation modal
+                    setShowEndEventModal(true);
+                  }
+                }}
+                style={{
+                  background: isPostEventEdit ? '#f59e0b' : '#c62828',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {isPostEventEdit ? 'SUMMARY' : 'END EVENT'}
+              </button>
+            )}
             
           </div>
         </div>
