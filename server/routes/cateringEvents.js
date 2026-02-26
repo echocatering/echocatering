@@ -110,27 +110,50 @@ router.post('/:id/recalculate', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/catering-events/:id/autosave
- * Auto-save POS state (tabs, items, setup data) every minute
+ * Auto-save POS state with rolling backup (keeps last 5 saves)
  */
 router.post('/:id/autosave', authenticateToken, async (req, res) => {
   try {
-    const { tabs, eventSetupData, uiState } = req.body;
+    const { tabs, eventSetupData, uiState, reason } = req.body;
     
     const event = await CateringEvent.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
     
-    // Store the POS state as a JSON blob for recovery
-    event.posState = {
+    // Initialize posSaves array if it doesn't exist
+    if (!event.posSaves) {
+      event.posSaves = [];
+    }
+    
+    // Create new save entry
+    const newSave = {
+      saveNumber: event.nextSaveNumber || 1,
       tabs: tabs || [],
       eventSetupData: eventSetupData || {},
       uiState: uiState || {},
-      lastSaved: new Date().toISOString()
+      savedAt: new Date(),
+      reason: reason || 'auto'
     };
+    
+    // Add to saves array
+    event.posSaves.push(newSave);
+    
+    // Keep only the last 5 saves (rolling backup)
+    if (event.posSaves.length > 5) {
+      event.posSaves = event.posSaves.slice(-5);
+    }
+    
+    // Increment save number for next save
+    event.nextSaveNumber = (event.nextSaveNumber || 1) + 1;
     
     await event.save();
     
-    console.log(`[CateringEvents] Auto-saved POS state for event ${req.params.id}`);
-    res.json({ success: true, lastSaved: event.posState.lastSaved });
+    console.log(`[CateringEvents] Auto-saved POS state #${newSave.saveNumber} for event ${req.params.id} (${reason || 'auto'})`);
+    res.json({ 
+      success: true, 
+      saveNumber: newSave.saveNumber,
+      savedAt: newSave.savedAt,
+      totalSaves: event.posSaves.length
+    });
   } catch (err) {
     console.error('[CateringEvents] POST /:id/autosave error:', err);
     res.status(500).json({ error: 'Failed to auto-save', message: err.message });

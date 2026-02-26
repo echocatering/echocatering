@@ -139,13 +139,18 @@ const cateringEventSchema = new mongoose.Schema({
     sparse: true
   },
 
-  // POS state for auto-save and recovery
-  posState: {
+  // POS state saves - rolling backup array (keeps last 5 saves)
+  posSaves: [{
+    saveNumber: { type: Number, required: true },
     tabs: { type: mongoose.Schema.Types.Mixed, default: [] },
     eventSetupData: { type: mongoose.Schema.Types.Mixed, default: {} },
     uiState: { type: mongoose.Schema.Types.Mixed, default: {} },
-    lastSaved: { type: Date, default: null }
-  }
+    savedAt: { type: Date, default: Date.now },
+    reason: { type: String, default: 'auto' } // 'auto-5min', 'item-added', 'payment-complete', etc.
+  }],
+  
+  // Track the next save number for this event
+  nextSaveNumber: { type: Number, default: 1 }
 }, {
   timestamps: true
 });

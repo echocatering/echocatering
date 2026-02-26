@@ -2822,7 +2822,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     loadItems();
   }, [apiCall]);
 
-  // Reusable function to save POS state to server
+  // Reusable function to save POS state to server (rolling backup - keeps last 5 saves)
   const saveToServer = useCallback(async (reason = 'manual') => {
     if (!eventId) return;
     
@@ -2835,12 +2835,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           tabs,
           eventSetupData,
           uiState,
+          reason, // Track why this save was triggered
         }),
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`[POS] Save successful (${reason}):`, data.lastSaved);
+        console.log(`[POS] Save #${data.saveNumber} successful (${reason}), ${data.totalSaves} backups stored`);
       } else {
         console.error(`[POS] Save failed (${reason}):`, response.status);
       }
@@ -2869,6 +2870,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const hasRestoredRef = useRef(false);
   
   // Restore state from server when app loads with an active event
+  // Uses rolling backup - tries most recent save first, falls back to older saves if corrupted
   useEffect(() => {
     const restoreFromServer = async () => {
       if (!eventId || hasRestoredRef.current) return;
@@ -2881,43 +2883,63 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         
         if (response.ok) {
           const data = await response.json();
-          const posState = data.event?.posState;
+          const posSaves = data.event?.posSaves;
           
-          if (posState && posState.lastSaved) {
-            console.log('[POS] Found saved state from:', posState.lastSaved);
+          if (posSaves && posSaves.length > 0) {
+            // Sort by saveNumber descending to get most recent first
+            const sortedSaves = [...posSaves].sort((a, b) => b.saveNumber - a.saveNumber);
             
-            // Restore tabs if server has newer data or local is empty
-            if (posState.tabs && posState.tabs.length > 0) {
-              const serverTime = new Date(posState.lastSaved).getTime();
-              const localTabsJson = localStorage.getItem('pos_tabs');
-              const localTabs = localTabsJson ? JSON.parse(localTabsJson) : [];
-              
-              // If local is empty or server data is recent (within last 5 minutes), restore from server
-              if (localTabs.length === 0 || serverTime > Date.now() - 300000) {
-                console.log('[POS] Restoring tabs from server...');
-                setTabs(posState.tabs);
+            console.log(`[POS] Found ${sortedSaves.length} backup saves, trying most recent first...`);
+            
+            // Try each save starting from most recent
+            for (const save of sortedSaves) {
+              try {
+                console.log(`[POS] Trying save #${save.saveNumber} from ${save.savedAt} (${save.reason})`);
+                
+                // Validate save data
+                if (!save.tabs || !Array.isArray(save.tabs)) {
+                  console.warn(`[POS] Save #${save.saveNumber} has invalid tabs, trying next...`);
+                  continue;
+                }
+                
+                const localTabsJson = localStorage.getItem('pos_tabs');
+                const localTabs = localTabsJson ? JSON.parse(localTabsJson) : [];
+                const serverTime = new Date(save.savedAt).getTime();
+                
+                // If local is empty or server data is recent, restore from server
+                if (localTabs.length === 0 || serverTime > Date.now() - 300000) {
+                  console.log(`[POS] Restoring from save #${save.saveNumber}...`);
+                  setTabs(save.tabs);
+                  
+                  // Restore eventSetupData if available
+                  if (save.eventSetupData && Object.keys(save.eventSetupData).length > 0) {
+                    setEventSetupData(prev => ({
+                      ...prev,
+                      ...save.eventSetupData,
+                    }));
+                  }
+                  
+                  // Restore uiState if available
+                  if (save.uiState && Object.keys(save.uiState).length > 0) {
+                    setUiState(prev => ({
+                      ...prev,
+                      ...save.uiState,
+                    }));
+                  }
+                  
+                  console.log(`[POS] State restored from save #${save.saveNumber} successfully`);
+                  break; // Successfully restored, exit loop
+                } else {
+                  console.log('[POS] Local data is newer, skipping server restore');
+                  break;
+                }
+              } catch (saveErr) {
+                console.error(`[POS] Error restoring save #${save.saveNumber}:`, saveErr);
+                // Continue to next save
               }
             }
-            
-            // Restore eventSetupData if available
-            if (posState.eventSetupData && Object.keys(posState.eventSetupData).length > 0) {
-              setEventSetupData(prev => ({
-                ...prev,
-                ...posState.eventSetupData,
-              }));
-            }
-            
-            // Restore uiState if available
-            if (posState.uiState && Object.keys(posState.uiState).length > 0) {
-              setUiState(prev => ({
-                ...prev,
-                ...posState.uiState,
-              }));
-            }
-            
-            console.log('[POS] State restored from server successfully');
           } else {
-            console.log('[POS] No saved state found on server');
+            console.log('[POS] No saved states found on server');
           }
         }
       } catch (err) {
