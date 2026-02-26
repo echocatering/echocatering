@@ -159,24 +159,36 @@ router.post('/finalize', async (req, res) => {
     // Add glassware data
     if (setupData.glasswareSent || setupData.glasswareReturned) {
       eventData.glassware = [];
-      if (setupData.glasswareSent?.rox || setupData.glasswareReturned?.rox) {
+      const roxSent = parseInt(setupData.glasswareSent?.rox) || 0;
+      const roxReturned = parseInt(setupData.glasswareReturned?.rox) || 0;
+      if (roxSent > 0 || roxReturned > 0) {
         eventData.glassware.push({
           type: 'ROX',
-          sent: setupData.glasswareSent?.rox || 0,
-          returnedClean: setupData.glasswareReturned?.rox || 0,
+          sent: roxSent,
+          returnedClean: roxReturned,
           returnedDirty: 0,
-          broken: Math.max(0, (setupData.glasswareSent?.rox || 0) - (setupData.glasswareReturned?.rox || 0)),
+          broken: Math.max(0, roxSent - roxReturned),
         });
       }
-      if (setupData.glasswareSent?.tmbl || setupData.glasswareReturned?.tmbl) {
+      const tmblSent = parseInt(setupData.glasswareSent?.tmbl) || 0;
+      const tmblReturned = parseInt(setupData.glasswareReturned?.tmbl) || 0;
+      if (tmblSent > 0 || tmblReturned > 0) {
         eventData.glassware.push({
           type: 'TMBL',
-          sent: setupData.glasswareSent?.tmbl || 0,
-          returnedClean: setupData.glasswareReturned?.tmbl || 0,
+          sent: tmblSent,
+          returnedClean: tmblReturned,
           returnedDirty: 0,
-          broken: Math.max(0, (setupData.glasswareSent?.tmbl || 0) - (setupData.glasswareReturned?.tmbl || 0)),
+          broken: Math.max(0, tmblSent - tmblReturned),
         });
       }
+    }
+    
+    // Add ice data
+    const iceSent = parseInt(setupData.iceSent) || 0;
+    const iceReturned = parseInt(setupData.iceReturned) || 0;
+    if (iceSent > 0 || iceReturned > 0) {
+      eventData.iceBlocksBrought = iceSent;
+      eventData.iceBlocksReturned = iceReturned;
     }
     
     // Add beverage inventory as bottlesPrepped

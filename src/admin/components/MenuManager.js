@@ -339,6 +339,7 @@ const MenuManager = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const prevEditingCocktailIdRef = useRef(null);
   const activeCocktailIdRef = useRef(null);
+  const isNavigatingRef = useRef(false); // Prevents useEffect from overwriting during navigation
   const recipeRef = useRef(null);
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
@@ -702,6 +703,13 @@ const MenuManager = () => {
   }, [setSelectedRegions]);
 
   useEffect(() => {
+    // Skip if we're in the middle of a programmatic navigation (row click or arrow navigation)
+    // The navigation handler already set editingCocktail directly
+    if (isNavigatingRef.current) {
+      isNavigatingRef.current = false;
+      return;
+    }
+    
     // Don't overwrite new drafts - let user continue editing
     if (editingCocktailId && String(editingCocktailId).startsWith('new-')) {
       // Update category if it changed, but keep the draft
@@ -1489,11 +1497,30 @@ const MenuManager = () => {
         key={`${cocktail._id}-${resolvedIndex}`}
         onClick={() => {
           if (resolvedIndex >= 0) {
-            setCurrentIndex(resolvedIndex);
-            // Sync mapType when clicking on a cocktail row (use saved value or default to 'world')
             const clickedCocktail = filteredCocktails[resolvedIndex];
             if (clickedCocktail) {
+              // Set navigation flag to prevent useEffect from interfering
+              isNavigatingRef.current = true;
+              
+              // Cancel any in-flight recipe fetch before switching
+              recipeRequestIdRef.current += 1;
+              activeCocktailIdRef.current = clickedCocktail._id || null;
+              
+              // Clear recipe state
+              setRecipeLoading(false);
+              setRecipe(null);
+              
+              // Set new index and cocktail data - editingCocktail set directly to prevent stale data
+              setCurrentIndex(resolvedIndex);
+              setEditingCocktail({ ...clickedCocktail });
               setMapType(clickedCocktail.mapType || 'world');
+              
+              // Clear video preview
+              setVideoUpload(null);
+              setVideoPreviewUrl(prev => {
+                if (prev) URL.revokeObjectURL(prev);
+                return '';
+              });
             }
           }
         }}
@@ -1852,21 +1879,28 @@ const MenuManager = () => {
     if (!isNewDraft) {
       const nextCocktail = filteredCocktails[nextIndex];
       if (nextCocktail) {
-        // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
-        // Otherwise the previous request can finish and overwrite `recipe`, leaving RecipeBuilder stale.
-        recipeRequestIdRef.current += 1;
-        activeCocktailIdRef.current = nextCocktail?._id || null;
+        // Set navigation flag to prevent useEffect from interfering
+        isNavigatingRef.current = true;
         
-        // Clear editing cocktail first to prevent showing stale data during navigation
-        setEditingCocktail(null);
+        // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
+        recipeRequestIdRef.current += 1;
+        activeCocktailIdRef.current = nextCocktail._id || null;
+        
+        // Clear recipe state
         setRecipeLoading(false);
         setRecipe(null);
         
-        // Then set the new index and cocktail data
+        // Set new index and cocktail data directly - no intermediate null state
         setCurrentIndex(nextIndex);
         setEditingCocktail({ ...nextCocktail });
-        // Sync mapType when switching cocktails (use saved value or default to 'world')
         setMapType(nextCocktail.mapType || 'world');
+        
+        // Clear video preview
+        setVideoUpload(null);
+        setVideoPreviewUrl(prev => {
+          if (prev) URL.revokeObjectURL(prev);
+          return '';
+        });
       } else {
         setCurrentIndex(nextIndex);
       }

@@ -137,10 +137,10 @@ const EventSales = () => {
         { key: 'delete', label: '×', width: '40px', editable: false },
         { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name' },
         { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date' },
-        { key: 'patrons', label: '# Patrons', width: '80px', editable: true, field: 'guestCount' },
+        { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount' },
         { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime' },
         { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime' },
-        { key: 'hours', label: 'Total Hours', width: '90px', editable: true, field: 'durationHours' },
+        { key: 'hours', label: 'Total Hours', width: '90px', editable: false, field: 'durationHours' },
       ]
     },
     {
@@ -148,22 +148,22 @@ const EventSales = () => {
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
-        { key: 'accommodation', label: '$ Accommodation', width: '110px', editable: true, field: 'accommodationCost' },
-        { key: 'transportation', label: '$ Transportation', width: '110px', editable: true, field: 'travelCost' },
-        { key: 'permit', label: '$ Permit', width: '80px', editable: true, field: 'permitCost' },
-        { key: 'insurance', label: '$ Insurance', width: '90px', editable: true, field: 'insuranceCost' },
-        { key: 'labor', label: '$ Labor', width: '80px', editable: true, field: 'laborCost' },
-        { key: 'spillage', label: '$ Spillage', width: '90px', editable: true, field: 'spillageCost' },
-        { key: 'cogs', label: '$ COGS', width: '80px', editable: true, field: 'cogsCost' },
-        { key: 'sales', label: '$ Sales', width: '90px', editable: true, field: 'totalSales' },
+        { key: 'accommodation', label: 'Accommodation', width: '110px', editable: true, field: 'accommodationCost' },
+        { key: 'transportation', label: 'Transportation', width: '110px', editable: true, field: 'travelCost' },
+        { key: 'permit', label: 'Permit', width: '80px', editable: true, field: 'permitCost' },
+        { key: 'insurance', label: 'Insurance', width: '90px', editable: true, field: 'insuranceCost' },
+        { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost' },
+        { key: 'spillage', label: 'Spillage', width: '90px', editable: true, field: 'spillageCost' },
+        { key: 'cogs', label: 'COGS', width: '80px', editable: true, field: 'cogsCost' },
       ]
     },
     {
       name: 'Revenue',
       collapsable: false,
       columns: [
-        { key: 'tips', label: '$ Tips', width: '80px', editable: true, field: 'totalTips' },
-        { key: 'profit', label: '$ Profit', width: '100px', editable: false },
+        { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
+        { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
+        { key: 'profit', label: 'Profit', width: '100px', editable: false },
       ]
     }
   ];
@@ -302,8 +302,8 @@ const EventSales = () => {
             </div>
           )}
 
-          {/* Glassware (Rox, Tumbl) */}
-          {event.glassware && event.glassware.length > 0 && (
+          {/* Glassware (Rox, Tumbl) - only show if there's data with non-zero values */}
+          {event.glassware && event.glassware.filter(g => g.sent > 0 || g.returnedClean > 0).length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Glassware</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -317,7 +317,7 @@ const EventSales = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {event.glassware.map((item, idx) => (
+                  {event.glassware.filter(g => g.sent > 0 || g.returnedClean > 0).map((item, idx) => (
                     <tr key={idx}>
                       <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{item.type}</td>
                       <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.sent}</td>
@@ -331,14 +331,14 @@ const EventSales = () => {
             </div>
           )}
 
-          {/* Ice Blocks */}
-          {(event.iceBlocksSent || event.iceBlocksReturned) && (
+          {/* Ice Blocks - only show if there's non-zero data */}
+          {((event.iceBlocksBrought || 0) > 0 || (event.iceBlocksReturned || 0) > 0) && (
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Ice Blocks</h3>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1, background: '#f5f5f5', padding: '12px', borderRadius: '8px' }}>
                   <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Sent</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{event.iceBlocksSent || 0}</div>
+                  <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{event.iceBlocksBrought || 0}</div>
                 </div>
                 <div style={{ flex: 1, background: '#f5f5f5', padding: '12px', borderRadius: '8px' }}>
                   <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Returned</div>
@@ -347,7 +347,7 @@ const EventSales = () => {
                 <div style={{ flex: 1, background: '#f5f5f5', padding: '12px', borderRadius: '8px' }}>
                   <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Used</div>
                   <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#800080' }}>
-                    {(event.iceBlocksSent || 0) - (event.iceBlocksReturned || 0)}
+                    {(event.iceBlocksBrought || 0) - (event.iceBlocksReturned || 0)}
                   </div>
                 </div>
               </div>
@@ -439,6 +439,20 @@ const EventSales = () => {
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>Event Sales</h1>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
+            onClick={() => setOverheadCollapsed(!overheadCollapsed)}
+            style={{
+              padding: '8px 16px',
+              background: overheadCollapsed ? '#999' : '#666',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Overhead
+          </button>
+          <button
             onClick={isEditMode ? () => setShowSaveConfirm(true) : handleEnterEditMode}
             style={{
               padding: '8px 16px',
@@ -496,19 +510,9 @@ const EventSales = () => {
                         fontWeight: '700',
                         color: '#555',
                         textTransform: 'uppercase',
-                        cursor: group.collapsable ? 'pointer' : 'default',
                       }}
-                      onClick={() => group.collapsable && setOverheadCollapsed(!overheadCollapsed)}
                     >
-                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {group.collapsable && group.collapsed && (
-                          <span style={{ color: '#800080', fontSize: '14px' }}>▶</span>
-                        )}
-                        {group.name}
-                        {group.collapsable && !group.collapsed && (
-                          <span style={{ color: '#800080', fontSize: '14px' }}>▼</span>
-                        )}
-                      </span>
+                      {group.name}
                     </th>
                   );
                 })}
@@ -618,7 +622,6 @@ const EventSales = () => {
             maxWidth: '400px',
             textAlign: 'center',
           }}>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>This action can't be undone…</p>
             <p style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '24px' }}>Are you sure?</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
