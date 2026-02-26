@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * EventSales Component
  * Spreadsheet-style table displaying all catering events with financial data
  */
 const EventSales = () => {
+  const { apiCall } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,12 +17,7 @@ const EventSales = () => {
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/catering-events?limit=100', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
+      const data = await apiCall('/catering-events?limit=100');
       setEvents(data.events || []);
       setError(null);
     } catch (err) {
@@ -29,7 +26,7 @@ const EventSales = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiCall]);
 
   useEffect(() => {
     fetchEvents();
@@ -38,12 +35,7 @@ const EventSales = () => {
   // Delete event
   const handleDelete = async (eventId) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/catering-events/${eventId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to delete event');
+      await apiCall(`/catering-events/${eventId}`, { method: 'DELETE' });
       setEvents(prev => prev.filter(e => e._id !== eventId));
       setDeleteConfirm(null);
     } catch (err) {
