@@ -172,6 +172,7 @@ router.put('/:id/sync', authenticateToken, async (req, res) => {
       subtotal: (tab.items || []).reduce((sum, item) => sum + (item.price || 0), 0),
       itemCount: (tab.items || []).length,
       tipAmount: tab.tipAmount || 0,
+      isSpillage: tab.isSpillage || false,
       createdAt: tab.createdAt ? new Date(tab.createdAt) : new Date()
     }));
 
@@ -233,6 +234,7 @@ router.put('/:id/end', authenticateToken, async (req, res) => {
       subtotal: (tab.items || []).reduce((sum, item) => sum + (item.price || 0), 0),
       itemCount: (tab.items || []).length,
       tipAmount: tab.tipAmount || 0,
+      isSpillage: tab.isSpillage || false,
       createdAt: tab.createdAt ? new Date(tab.createdAt) : new Date(),
       closedAt: new Date()
     }));

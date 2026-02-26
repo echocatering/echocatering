@@ -95,15 +95,15 @@ export default function POSDualViewer() {
   const totalWidthRatio = (16/10) + (9/19); // ~2.07
   const heightFromWidth = availableWidth / totalWidthRatio;
   
-  // Use the smaller of height-constrained or width-constrained
-  const viewerHeight = Math.min(availableHeight, heightFromWidth, 700);
+  // Use the smaller of height-constrained or width-constrained (no arbitrary max)
+  const viewerHeight = Math.min(availableHeight, heightFromWidth);
   const horizontalWidth = viewerHeight * (16 / 10);
   const verticalWidth = viewerHeight * (9 / 19);
 
   return (
     <div style={{ 
       padding: '20px', 
-      height: '100vh',
+      height: '100%',
       boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
@@ -115,6 +115,7 @@ export default function POSDualViewer() {
           fontWeight: 400, 
           margin: '0 0 16px 0',
           letterSpacing: '0.05em',
+          flexShrink: 0,
         }}
       >
         POS UI

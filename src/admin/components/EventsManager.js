@@ -29,8 +29,8 @@ const EMPTY_EVENT = {
   drinkSales: [],
   bottlesPrepped: [],
   glassware: [
-    { type: 'ROX',  sent: 0, returnedClean: 0, returnedDirty: 0, broken: 0 },
-    { type: 'TMBL', sent: 0, returnedClean: 0, returnedDirty: 0, broken: 0 }
+    { type: 'ROX',  sent: 0, returned: 0 },
+    { type: 'TMBL', sent: 0, returned: 0 }
   ],
   iceBlocksBrought: 0, iceBlocksReturned: 0, posEventId: null, status: 'draft'
 };

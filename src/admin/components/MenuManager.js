@@ -344,6 +344,7 @@ const MenuManager = () => {
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
   const recipeRequestIdRef = useRef(0);
+  const recipeForCocktailIdRef = useRef(null); // Tracks which cocktail ID the current recipe belongs to
   const [newCocktail, setNewCocktail] = useState({
     name: '',
     concept: '',
@@ -1494,6 +1495,7 @@ const MenuManager = () => {
               // Cancel any in-flight recipe fetch before switching
               recipeRequestIdRef.current += 1;
               activeCocktailIdRef.current = clickedCocktail._id || null;
+              recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
               
               // Clear recipe state
               setRecipeLoading(false);
@@ -1874,6 +1876,7 @@ const MenuManager = () => {
         // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
         recipeRequestIdRef.current += 1;
         activeCocktailIdRef.current = nextCocktail._id || null;
+        recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
         
         // Clear recipe state
         setRecipeLoading(false);
@@ -2481,6 +2484,7 @@ const MenuManager = () => {
       if (targetCocktailId && activeCocktailIdRef.current && activeCocktailIdRef.current !== targetCocktailId) return;
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
+      recipeForCocktailIdRef.current = targetCocktailId; // Track which cocktail this recipe belongs to
       setRecipe(nextRecipe);
     };
     if (!cocktail || !cocktail._id || String(cocktail._id).startsWith('new-')) {
@@ -2569,6 +2573,7 @@ const MenuManager = () => {
     
     // Cancel any in-flight recipe fetch when cocktail changes
     recipeRequestIdRef.current += 1;
+    recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
     
     if (editingCocktail && shouldShowRecipeBuilder(editingCocktail.category)) {
       setRecipe(null);
@@ -2583,6 +2588,9 @@ const MenuManager = () => {
     if (recipe && recipe.metadata?.garnish !== undefined && editingCocktail) {
       // Guard: Only sync if recipe belongs to current editingCocktail
       // This prevents stale recipe data from a previous item from updating the current item
+      if (recipeForCocktailIdRef.current && editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
+        return;
+      }
       if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
         return;
       }
@@ -2594,7 +2602,7 @@ const MenuManager = () => {
         }));
       }
     }
-  }, [recipe?.metadata?.garnish, recipe?._id, editingCocktail?.itemNumber]);
+  }, [recipe?.metadata?.garnish, recipe?._id, editingCocktail?.itemNumber, editingCocktail?._id]);
 
   // Sync name bidirectionally between MenuManager and RecipeBuilder
   // For PRE-MIX, recipe title drives the cocktail name (Title Case)
@@ -2602,6 +2610,9 @@ const MenuManager = () => {
     if (recipe && editingCocktail) {
       // Guard: Only sync if recipe belongs to current editingCocktail
       // This prevents stale recipe data from a previous item from updating the current item
+      if (recipeForCocktailIdRef.current && editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
+        return;
+      }
       if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
         return;
       }

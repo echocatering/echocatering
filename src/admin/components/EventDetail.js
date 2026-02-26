@@ -72,22 +72,24 @@ const GlasswareSection = ({ glassware=[], onChange }) => {
     <Card title="Glassware">
       <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
         <thead><tr>
-          {['Type','Sent','Returned Clean','Returned Dirty','Broken','Used'].map(h =>
+          {['Type','Sent','Returned','Lost'].map(h =>
             <th key={h} style={{ padding:'6px 8px', color:'#aaa', fontWeight:'600', fontSize:'11px', textAlign: h==='Type'?'left':'center' }}>{h}</th>
           )}
         </tr></thead>
         <tbody>
           {glassware.map((g, i) => {
-            const used = (g.sent||0) - (g.returnedClean||0) - (g.returnedDirty||0) - (g.broken||0);
+            const returned = g.returned || (g.returnedClean||0) + (g.returnedDirty||0);
+            const lost = Math.max(0, (g.sent||0) - returned);
             return (
               <tr key={g.type} style={{ borderTop:'1px solid #f0f0f0' }}>
                 <td style={{ padding:'8px', fontWeight:'700', color:'#444' }}>{g.type}</td>
-                {['sent','returnedClean','returnedDirty','broken'].map(f =>
-                  <td key={f} style={{ padding:'4px 6px' }}>
-                    <NumInput value={g[f]} onChange={v=>upd(i,f,v)} style={{ width:'72px', textAlign:'center' }} />
-                  </td>
-                )}
-                <td style={{ padding:'8px', textAlign:'center', fontWeight:'700', color: used<0?'#f44336':'#333' }}>{used}</td>
+                <td style={{ padding:'4px 6px' }}>
+                  <NumInput value={g.sent} onChange={v=>upd(i,'sent',v)} style={{ width:'72px', textAlign:'center' }} />
+                </td>
+                <td style={{ padding:'4px 6px' }}>
+                  <NumInput value={returned} onChange={v=>upd(i,'returned',v)} style={{ width:'72px', textAlign:'center' }} />
+                </td>
+                <td style={{ padding:'8px', textAlign:'center', fontWeight:'700', color: lost>0?'#f44336':'#333' }}>{lost}</td>
               </tr>
             );
           })}

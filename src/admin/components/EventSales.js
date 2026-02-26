@@ -16,13 +16,21 @@ const EventSales = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedEvents, setEditedEvents] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [graphEventId, setGraphEventId] = useState(null); // Event selected for graph view
+  const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiCall('/catering-events?limit=100');
-      setEvents(data.events || []);
+      // Sort events by date with most recent first
+      const sortedEvents = (data.events || []).sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB - dateA; // Most recent first
+      });
+      setEvents(sortedEvents);
       setError(null);
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -303,7 +311,7 @@ const EventSales = () => {
           )}
 
           {/* Glassware (Rox, Tumbl) - only show if there's data with non-zero values */}
-          {event.glassware && event.glassware.filter(g => g.sent > 0 || g.returnedClean > 0).length > 0 && (
+          {event.glassware && event.glassware.filter(g => g.sent > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0).length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Glassware</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -311,21 +319,23 @@ const EventSales = () => {
                   <tr style={{ background: '#f5f5f5' }}>
                     <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Type</th>
                     <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Sent</th>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Returned Clean</th>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Returned Dirty</th>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Broken</th>
+                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Returned</th>
+                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Lost</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {event.glassware.filter(g => g.sent > 0 || g.returnedClean > 0).map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{item.type}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.sent}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.returnedClean}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.returnedDirty}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee', color: item.broken > 0 ? '#ef4444' : '#333', fontWeight: item.broken > 0 ? 'bold' : 'normal' }}>{item.broken}</td>
-                    </tr>
-                  ))}
+                  {event.glassware.filter(g => g.sent > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0).map((item, idx) => {
+                    const returned = item.returned || (item.returnedClean || 0) + (item.returnedDirty || 0);
+                    const lost = Math.max(0, (item.sent || 0) - returned);
+                    return (
+                      <tr key={idx}>
+                        <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{item.type}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.sent}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{returned}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee', color: lost > 0 ? '#ef4444' : '#333', fontWeight: lost > 0 ? 'bold' : 'normal' }}>{lost}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -498,7 +508,110 @@ const EventSales = () => {
           <p style={{ fontSize: '14px' }}>Events will appear here after being saved from the POS system.</p>
         </div>
       ) : (
-        <div style={{ flex: 1, overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <>
+          {/* Graph View - Top Half */}
+          <div style={{ height: '45%', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}>
+            {/* Graph Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #eee', background: '#f9f9f9' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>View:</span>
+                {['all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'].map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setGraphViewMode(mode)}
+                    style={{
+                      padding: '6px 12px',
+                      background: graphViewMode === mode ? '#800080' : '#e5e5e5',
+                      color: graphViewMode === mode ? '#fff' : '#333',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {mode === 'all' ? 'All Categories' : mode}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: '14px', color: '#666' }}>
+                {graphEventId ? events.find(e => e._id === graphEventId)?.name || 'Select an event' : 'Select an event from the table below'}
+              </div>
+            </div>
+            
+            {/* Graph Content */}
+            <div style={{ height: 'calc(100% - 50px)', padding: '16px', overflow: 'auto' }}>
+              {graphEventId ? (() => {
+                const graphEvent = events.find(e => e._id === graphEventId);
+                if (!graphEvent || !graphEvent.timeline || graphEvent.timeline.length === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
+                      No timeline data available for this event
+                    </div>
+                  );
+                }
+                
+                // Process timeline data based on view mode
+                const processedData = graphEvent.timeline.map(interval => {
+                  const startTime = new Date(interval.intervalStart);
+                  const timeLabel = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                  
+                  let itemCount = 0;
+                  let revenue = 0;
+                  
+                  if (interval.items && interval.items.length > 0) {
+                    interval.items.forEach(item => {
+                      const category = (item.category || '').toLowerCase();
+                      if (graphViewMode === 'all' || category === graphViewMode) {
+                        itemCount += item.quantity || 1;
+                        revenue += item.revenue || 0;
+                      }
+                    });
+                  }
+                  
+                  return { timeLabel, itemCount, revenue };
+                });
+                
+                const maxCount = Math.max(...processedData.map(d => d.itemCount), 1);
+                
+                return (
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '100%', paddingBottom: '30px' }}>
+                    {processedData.map((data, idx) => (
+                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: `${(data.itemCount / maxCount) * 100}%`,
+                              minHeight: data.itemCount > 0 ? '4px' : '0',
+                              background: graphViewMode === 'all' ? '#800080' : 
+                                graphViewMode === 'cocktails' ? '#9333ea' :
+                                graphViewMode === 'mocktails' ? '#22c55e' :
+                                graphViewMode === 'beer' ? '#f59e0b' :
+                                graphViewMode === 'wine' ? '#ef4444' : '#3b82f6',
+                              borderRadius: '2px 2px 0 0',
+                              transition: 'height 0.3s ease',
+                            }}
+                            title={`${data.itemCount} items - $${data.revenue.toFixed(2)}`}
+                          />
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>
+                          {data.timeLabel}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })() : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
+                  Click on an event row below to view its sales timeline
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Spreadsheet - Bottom Half */}
+          <div style={{ height: '50%', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}>
             <thead>
               {/* Group headers */}
@@ -556,7 +669,7 @@ const EventSales = () => {
               {events.map((event, idx) => (
                 <tr
                   key={event._id}
-                  onClick={() => !isEditMode && setSelectedEvent(event._id)}
+                  onClick={() => { if (!isEditMode) { setSelectedEvent(event._id); setGraphEventId(event._id); } }}
                   style={{
                     background: idx % 2 === 0 ? '#fff' : '#fafafa',
                     cursor: isEditMode ? 'default' : 'pointer',
@@ -607,7 +720,8 @@ const EventSales = () => {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Save Confirmation Modal */}

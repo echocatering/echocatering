@@ -4700,17 +4700,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               }}>
                 <div className="event-save-animation" style={{ textAlign: 'center' }}>
                   <svg width="120" height="120" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="54" fill="none" stroke="#9333ea" strokeWidth="4" 
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff" strokeWidth="4" 
                       strokeDasharray="339.292" strokeDashoffset="0"
                       style={{ animation: 'event-save-circle 0.6s ease-out' }} />
-                    <path d="M34 60 L52 78 L86 44" fill="none" stroke="#9333ea" strokeWidth="6" 
+                    <path d="M34 60 L52 78 L86 44" fill="none" stroke="#ffffff" strokeWidth="6" 
                       strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <div style={{ 
                   fontSize: '32px', 
                   fontWeight: '700', 
-                  color: '#9333ea',
+                  color: '#ffffff',
                   textAlign: 'center',
                   marginTop: '20px',
                 }}>
@@ -5157,87 +5157,88 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Income Statement</h2>
               
-              {/* Sales */}
+              {/* Sales - sum of all item prices from paid tabs (excluding spillage), minus tips */}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
                 <span style={{ fontWeight: 'bold', color: '#333' }}>Sales</span>
-                <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary?.totalRevenue || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(() => {
+                  // Calculate sales from paid tabs (excluding spillage)
+                  const paidTabsTotal = tabs
+                    .filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived' || t.status === 'closed'))
+                    .reduce((sum, tab) => {
+                      const tabItemsTotal = (tab.items || []).reduce((itemSum, item) => itemSum + (item.price || item.finalPrice || 0), 0);
+                      return sum + tabItemsTotal + (tab.tipAmount || 0);
+                    }, 0);
+                  // Subtract tips to get pure sales
+                  const totalTips = tabs
+                    .filter(t => !t.isSpillage)
+                    .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
+                  return (paidTabsTotal - totalTips).toFixed(2);
+                })()}</span>
               </div>
               
               {/* Tips */}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
                 <span style={{ fontWeight: 'bold', color: '#333' }}>Tips</span>
-                <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${(eventSummary?.totalTips || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: 'bold', color: '#22c55e' }}>${tabs
+                  .filter(t => !t.isSpillage)
+                  .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0)
+                  .toFixed(2)}</span>
               </div>
               
-              {/* COGS Section */}
-              <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
-                <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>COGS</span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee' }}>
-                  <span style={{ flex: 2 }}>Item</span>
-                  <span style={{ flex: 1, textAlign: 'center' }}># Sold</span>
-                  <span style={{ flex: 1, textAlign: 'center' }}>Cost/Unit</span>
-                  <span style={{ flex: 1, textAlign: 'center' }}>Total</span>
-                </div>
-                {eventSummary?.categoryBreakdown && Object.entries(
-                  eventSummary.categoryBreakdown instanceof Map 
-                    ? Object.fromEntries(eventSummary.categoryBreakdown)
-                    : eventSummary.categoryBreakdown
-                ).flatMap(([category, data]) => {
-                  if (!data.items) return [];
-                  return Object.entries(data.items).map(([itemName, itemData]) => {
-                    const quantity = itemData.count || 0;
-                    // Find cost per unit from allItems by matching name
-                    const menuItem = allItems.find(i => i.name === itemName);
-                    // Use recipe cost if available, otherwise estimate based on category
-                    let costPerUnit = 0;
-                    const costLabel = category === 'wine' ? '$/Glass' : category === 'beer' ? '$/Unit' : '$/Unit';
-                    // For now, use a placeholder - this would need to be fetched from recipes
-                    if (menuItem?.costPerUnit) {
-                      costPerUnit = menuItem.costPerUnit;
+              {/* COGS Section - calculated from tabs (excluding spillage) */}
+              {(() => {
+                // Build item counts from non-spillage tabs
+                const itemCounts = {};
+                tabs.filter(t => !t.isSpillage).forEach(tab => {
+                  (tab.items || []).forEach(item => {
+                    const key = item.name;
+                    if (!itemCounts[key]) {
+                      itemCounts[key] = { name: item.name, category: item.category, count: 0 };
                     }
-                    const totalCost = quantity * costPerUnit;
-                    return (
-                      <div key={`${category}-${itemName}`} style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
-                        <div style={{ flex: 2, fontSize: '14px', color: '#333' }}>{itemName}</div>
-                        <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>{quantity}</div>
-                        <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', color: '#666' }}>${costPerUnit.toFixed(2)}</div>
-                        <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>-${totalCost.toFixed(2)}</div>
-                      </div>
-                    );
+                    itemCounts[key].count += 1;
                   });
-                })}
-                {/* Show empty state if no items sold */}
-                {(!eventSummary?.categoryBreakdown || Object.keys(eventSummary.categoryBreakdown).length === 0) && (
-                  <div style={{ padding: '12px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
-                    No items sold yet
+                });
+                const cogsItems = Object.values(itemCounts);
+                let cogsTotal = 0;
+                
+                return (
+                  <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
+                      <span style={{ fontWeight: 'bold', color: '#333' }}>COGS</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee' }}>
+                      <span style={{ flex: 2 }}>Item</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}># Sold</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Cost/Unit</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Total</span>
+                    </div>
+                    {cogsItems.length > 0 ? cogsItems.map(item => {
+                      const menuItem = allItems.find(i => i.name === item.name);
+                      const costPerUnit = menuItem?.costPerUnit || 0;
+                      const totalCost = item.count * costPerUnit;
+                      cogsTotal += totalCost;
+                      return (
+                        <div key={item.name} style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
+                          <div style={{ flex: 2, fontSize: '14px', color: '#333' }}>{item.name}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>{item.count}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', color: '#666' }}>${costPerUnit.toFixed(2)}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>-${totalCost.toFixed(2)}</div>
+                        </div>
+                      );
+                    }) : (
+                      <div style={{ padding: '12px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
+                        No items sold yet
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
+                      <span style={{ flex: 1 }}></span>
+                      <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
+                        -${cogsTotal.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
-                  <span style={{ flex: 1 }}></span>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                    -${(() => {
-                      let total = 0;
-                      if (eventSummary?.categoryBreakdown) {
-                        const breakdown = eventSummary.categoryBreakdown instanceof Map 
-                          ? Object.fromEntries(eventSummary.categoryBreakdown)
-                          : eventSummary.categoryBreakdown;
-                        Object.entries(breakdown).forEach(([category, data]) => {
-                          if (data.items) {
-                            Object.entries(data.items).forEach(([itemName, itemData]) => {
-                              const menuItem = allItems.find(i => i.name === itemName);
-                              const costPerUnit = menuItem?.costPerUnit || 0;
-                              total += (itemData.count || 0) * costPerUnit;
-                            });
-                          }
-                        });
-                      }
-                      return total.toFixed(2);
-                    })()}
-                  </span>
-                </div>
-              </div>
+                );
+              })()}
               
               {/* Operating Expenses */}
               <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
@@ -5272,12 +5273,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 {/* Spillage - items from spillage tab, using $/Unit from menu items or item price as fallback */}
                 {(() => {
                   const spillageTab = tabs.find(t => t.isSpillage);
+                  console.log('[Full Summary] Spillage tab:', spillageTab);
+                  console.log('[Full Summary] All tabs:', tabs.map(t => ({ id: t.id, name: t.name, isSpillage: t.isSpillage, itemCount: t.items?.length })));
                   const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
                     const menuItem = allItems.find(i => i.name === item.name);
                     // Each item in spillage tab represents quantity of 1
                     const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
+                    console.log('[Full Summary] Spillage item:', item.name, 'costPerUnit:', costPerUnit, 'menuItem?.costPerUnit:', menuItem?.costPerUnit, 'item.basePrice:', item.basePrice, 'item.price:', item.price);
                     return sum + costPerUnit;
                   }, 0) || 0;
+                  console.log('[Full Summary] Spillage total:', spillageTotal);
                   if (spillageTotal > 0) {
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
@@ -5342,15 +5347,39 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
                 <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
                 <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                  -${(((eventSummary?.totalRevenue || 0) + (eventSummary?.totalTips || 0)) * 0.3).toFixed(2)}
+                  -${(() => {
+                    // Calculate sales from paid tabs (excluding spillage)
+                    const paidTabsTotal = tabs
+                      .filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived' || t.status === 'closed'))
+                      .reduce((sum, tab) => {
+                        const tabItemsTotal = (tab.items || []).reduce((itemSum, item) => itemSum + (item.price || item.finalPrice || 0), 0);
+                        return sum + tabItemsTotal + (tab.tipAmount || 0);
+                      }, 0);
+                    const totalTips = tabs
+                      .filter(t => !t.isSpillage)
+                      .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
+                    const sales = paidTabsTotal - totalTips;
+                    return ((sales + totalTips) * 0.3).toFixed(2);
+                  })()}
                 </span>
               </div>
               
               {/* Net Income */}
               {(() => {
-                const sales = eventSummary?.totalRevenue || 0;
-                const tips = eventSummary?.totalTips || 0;
+                // Calculate sales from paid tabs (excluding spillage)
+                const paidTabsTotal = tabs
+                  .filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived' || t.status === 'closed'))
+                  .reduce((sum, tab) => {
+                    const tabItemsTotal = (tab.items || []).reduce((itemSum, item) => itemSum + (item.price || item.finalPrice || 0), 0);
+                    return sum + tabItemsTotal + (tab.tipAmount || 0);
+                  }, 0);
+                const totalTips = tabs
+                  .filter(t => !t.isSpillage)
+                  .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
+                const sales = paidTabsTotal - totalTips;
+                const tips = totalTips;
                 const taxes = (sales + tips) * 0.3;
+                
                 // Spillage using costPerUnit from menu items or item price as fallback
                 const spillageTab = tabs.find(t => t.isSpillage);
                 const spillageCost = spillageTab?.items?.reduce((sum, item) => {
@@ -5363,22 +5392,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
                   (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
                   spillageCost;
-                // COGS calculation
+                
+                // COGS calculation from tabs (excluding spillage)
                 let cogs = 0;
-                if (eventSummary?.categoryBreakdown) {
-                  const breakdown = eventSummary.categoryBreakdown instanceof Map 
-                    ? Object.fromEntries(eventSummary.categoryBreakdown)
-                    : eventSummary.categoryBreakdown;
-                  Object.entries(breakdown).forEach(([category, data]) => {
-                    if (data.items) {
-                      Object.entries(data.items).forEach(([itemName, itemData]) => {
-                        const menuItem = allItems.find(i => i.name === itemName);
-                        const costPerUnit = menuItem?.costPerUnit || 0;
-                        cogs += (itemData.count || 0) * costPerUnit;
-                      });
-                    }
+                tabs.filter(t => !t.isSpillage).forEach(tab => {
+                  (tab.items || []).forEach(item => {
+                    const menuItem = allItems.find(i => i.name === item.name);
+                    const costPerUnit = menuItem?.costPerUnit || 0;
+                    cogs += costPerUnit;
                   });
-                }
+                });
+                
                 const netIncome = sales + tips - cogs - operatingExpenses - taxes;
                 return (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>

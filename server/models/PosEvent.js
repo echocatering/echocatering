@@ -102,6 +102,11 @@ const PosTabSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Whether this is the spillage tab
+  isSpillage: {
+    type: Boolean,
+    default: false
+  },
   // Timestamps
   createdAt: {
     type: Date,
@@ -197,6 +202,9 @@ PosEventSchema.methods.calculateSummary = function() {
   const timelineMap = new Map();
 
   this.tabs.forEach(tab => {
+    // Skip spillage tabs for revenue/category calculations
+    if (tab.isSpillage) return;
+    
     // Add tip amount from this tab
     totalTips += tab.tipAmount || 0;
     
@@ -207,11 +215,18 @@ PosEventSchema.methods.calculateSummary = function() {
       // Category breakdown
       const cat = item.category || 'other';
       if (!categoryBreakdown.has(cat)) {
-        categoryBreakdown.set(cat, { count: 0, revenue: 0 });
+        categoryBreakdown.set(cat, { count: 0, revenue: 0, items: {} });
       }
       const catData = categoryBreakdown.get(cat);
       catData.count += item.quantity || 1;
       catData.revenue += (item.finalPrice || 0) * (item.quantity || 1);
+      
+      // Track individual items for COGS calculation
+      if (!catData.items[item.name]) {
+        catData.items[item.name] = { count: 0, revenue: 0 };
+      }
+      catData.items[item.name].count += item.quantity || 1;
+      catData.items[item.name].revenue += (item.finalPrice || 0) * (item.quantity || 1);
 
       // Timeline breakdown (15-minute intervals)
       const addedAt = new Date(item.addedAt);
