@@ -2048,6 +2048,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [eventSummary, setEventSummary] = useState(null);
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [showEventSaveSuccess, setShowEventSaveSuccess] = useState(false);
   const [showEndEventButton, setShowEndEventButton] = useState(false);
   const [isPostEventEdit, setIsPostEventEdit] = useState(false); // Track if user returned to POS via EDIT EVENT
   const endEventTimeoutRef = useRef(null);
@@ -2058,6 +2059,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     eventDate: new Date().toISOString().split('T')[0],
     startTime: '',
     endTime: '',
+    accommodationCost: '',
     transportationCosts: '',
     permitCost: '',
     liabilityInsuranceCost: '',
@@ -4248,6 +4250,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
                     const menuItem = allItems.find(i => i.name === item.name);
                     // Use costPerUnit if available, otherwise use the item's price from the tab
+                    // Each item in spillage tab represents quantity of 1
                     const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
                     return sum + costPerUnit;
                   }, 0) || 0;
@@ -4484,6 +4487,59 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             boxSizing: 'border-box',
             zIndex: 1000,
           }}>
+          
+          {/* Event Save Success Animation Overlay */}
+          {showEventSaveSuccess && (
+            <>
+              <style>{`
+                @keyframes event-save-checkmark {
+                  0% { transform: scale(0); opacity: 0; }
+                  50% { transform: scale(1.2); opacity: 1; }
+                  100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes event-save-circle {
+                  0% { stroke-dashoffset: 166; }
+                  100% { stroke-dashoffset: 0; }
+                }
+                .event-save-animation {
+                  animation: event-save-checkmark 0.6s ease-out;
+                }
+              `}</style>
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000,
+              }}>
+                <div className="event-save-animation" style={{ textAlign: 'center' }}>
+                  <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#9333ea" strokeWidth="4" 
+                      strokeDasharray="339.292" strokeDashoffset="0"
+                      style={{ animation: 'event-save-circle 0.6s ease-out' }} />
+                    <path d="M34 60 L52 78 L86 44" fill="none" stroke="#9333ea" strokeWidth="6" 
+                      strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div style={{ 
+                  fontSize: '32px', 
+                  fontWeight: '700', 
+                  color: '#9333ea',
+                  textAlign: 'center',
+                  marginTop: '20px',
+                }}>
+                  Event Saved
+                </div>
+              </div>
+            </>
+          )}
+          
           {/* Title */}
           <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#333', textAlign: 'center' }}>
             Event Summary
@@ -4569,6 +4625,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             {/* Operating Expenses Section */}
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Operating Expenses</h2>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Accommodation ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={eventSetupData.accommodationCost === '0' || eventSetupData.accommodationCost === 0 ? '' : (eventSetupData.accommodationCost ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                      setEventSetupData(prev => ({ ...prev, accommodationCost: val }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                />
+              </div>
               
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation ($)</label>
@@ -4978,6 +5052,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <span style={{ fontWeight: 'bold', color: '#333' }}>Overhead</span>
                 </div>
                 {/* Fixed costs */}
+                {parseFloat(eventSetupData.accommodationCost) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span style={{ color: '#333' }}>Accommodation</span>
+                    <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.accommodationCost).toFixed(2)}</span>
+                  </div>
+                )}
                 {parseFloat(eventSetupData.transportationCosts) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
                     <span style={{ color: '#333' }}>Transportation</span>
@@ -5001,6 +5081,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   const spillageTab = tabs.find(t => t.isSpillage);
                   const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
                     const menuItem = allItems.find(i => i.name === item.name);
+                    // Each item in spillage tab represents quantity of 1
                     const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
                     return sum + costPerUnit;
                   }, 0) || 0;
@@ -5037,7 +5118,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </>
                 )}
                 {/* Show empty state if no expenses */}
-                {!(parseFloat(eventSetupData.transportationCosts) > 0) && 
+                {!(parseFloat(eventSetupData.accommodationCost) > 0) && 
+                 !(parseFloat(eventSetupData.transportationCosts) > 0) && 
                  !(parseFloat(eventSetupData.permitCost) > 0) && 
                  !(parseFloat(eventSetupData.liabilityInsuranceCost) > 0) && 
                  !(eventSetupData.labor && eventSetupData.labor.length > 0) && (
@@ -5049,6 +5131,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <span style={{ flex: 1 }}></span>
                   <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
                     -${(
+                      (parseFloat(eventSetupData.accommodationCost) || 0) +
                       (parseFloat(eventSetupData.transportationCosts) || 0) +
                       (parseFloat(eventSetupData.permitCost) || 0) +
                       (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
@@ -5081,7 +5164,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   const menuItem = allItems.find(i => i.name === item.name);
                   return sum + (menuItem?.costPerUnit || item.basePrice || item.price || 0);
                 }, 0) || 0;
-                const operatingExpenses = (parseFloat(eventSetupData.transportationCosts) || 0) +
+                const operatingExpenses = (parseFloat(eventSetupData.accommodationCost) || 0) +
+                  (parseFloat(eventSetupData.transportationCosts) || 0) +
                   (parseFloat(eventSetupData.permitCost) || 0) +
                   (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
                   (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
@@ -5228,12 +5312,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       });
                       const data = await response.json();
                       if (response.ok) {
-                        alert('Event saved successfully!');
-                        // Return to home/event list
-                        setShowEventSetup(false);
-                        setShowSummaryView(false);
-                        setEventSummary(null);
-                        clearEvent(); // Clear event from localStorage
+                        // Show success animation
+                        setShowEventSaveSuccess(true);
+                        // After 2 seconds, return to home/event list
+                        setTimeout(() => {
+                          setShowEventSaveSuccess(false);
+                          setShowEventSetup(false);
+                          setShowSummaryView(false);
+                          setEventSummary(null);
+                          clearEvent(); // Clear event from localStorage
+                        }, 2000);
                       } else {
                         console.error('[Event Summary] Save failed:', data);
                         alert(`Failed to save event: ${data.message || 'Unknown error'}`);

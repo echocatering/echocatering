@@ -77,6 +77,7 @@ const cateringEventSchema = new mongoose.Schema({
   totalSales: { type: Number, default: 0 },
   totalTips: { type: Number, default: 0 },
   totalCost: { type: Number, default: 0 },
+  accommodationCost: { type: Number, default: 0 }, // $ Accommodation
   travelCost: { type: Number, default: 0 },      // $ Transportation
   permitCost: { type: Number, default: 0 },      // $ Permit
   insuranceCost: { type: Number, default: 0 },   // $ Insurance
