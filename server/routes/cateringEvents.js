@@ -194,7 +194,7 @@ router.post('/finalize', async (req, res) => {
       startTime: setupData.startTime || '',
       endTime: setupData.endTime || '',
       durationHours,
-      guestCount: parseInt(setupData.patronCount) || 0,
+      guestCount: parseInt(setupData.numberOfPatrons) || 0,
       accommodationCost: parseFloat(setupData.accommodationCost) || 0,
       travelCost: parseFloat(setupData.transportationCosts) || 0,
       permitCost: parseFloat(setupData.permitCost) || 0,

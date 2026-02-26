@@ -1001,7 +1001,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 flex: 1,
                 padding: '12px',
                 border: 'none',
-                background: selectedReceiptIndices.size > 0 ? '#22c55e' : (tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'))),
+                background: selectedReceiptIndices.size > 0 ? '#666' : (tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'))),
                 color: '#fff',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
@@ -1491,8 +1491,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 color: '#d0d0d0'
               }}>
                 ${(parseFloat(editingItem.price) || 0).toFixed(2)}
-                {editingItem.costPerUnit !== undefined && editingItem.costPerUnit !== null && (
-                  <span style={{ color: '#999' }}> | ${(parseFloat(editingItem.costPerUnit) || 0).toFixed(2)} / Unit</span>
+                {editingItem.costPerUnit > 0 && (
+                  <span style={{ color: '#999' }}> | ${(parseFloat(editingItem.costPerUnit) || 0).toFixed(2)}</span>
                 )}
               </span>
             </div>
@@ -2728,9 +2728,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         } else {
           // No active event in DB
           if (eventId) {
-            // localStorage has event but DB doesn't - clear localStorage
-            console.log('[POS] No active event in DB - clearing localStorage');
-            clearEvent();
+            // Don't clear localStorage if we're in post-event edit mode or showing summary
+            // This allows editing the event after it's ended but before saving
+            if (isPostEventEdit || showSummaryView || showEventSetup) {
+              console.log('[POS] No active event in DB but in post-event mode - keeping localStorage');
+            } else {
+              // localStorage has event but DB doesn't - clear localStorage
+              console.log('[POS] No active event in DB - clearing localStorage');
+              clearEvent();
+            }
           }
         }
       } catch (error) {
@@ -4733,14 +4739,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 />
               </div>
               
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Event Date</label>
-                <input
-                  type="date"
-                  value={eventSetupData.eventDate}
-                  onChange={(e) => setEventSetupData(prev => ({ ...prev, eventDate: e.target.value }))}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-                />
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Event Date</label>
+                  <input
+                    type="date"
+                    value={eventSetupData.eventDate}
+                    onChange={(e) => setEventSetupData(prev => ({ ...prev, eventDate: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Number of Patrons</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={eventSetupData.numberOfPatrons || ''}
+                    onChange={(e) => setEventSetupData(prev => ({ ...prev, numberOfPatrons: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))}
+                    placeholder="0"
+                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
               </div>
               
               <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
@@ -5863,44 +5882,44 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </button>
             )}
             
-            {/* Cancel Payment button - only shown during checkout */}
-            {checkoutMode && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (endEventTimeoutRef.current) {
-                    clearTimeout(endEventTimeoutRef.current);
-                  }
-                  setShowEndEventButton(false);
-                  // Cancel Payment - return to menu
-                  setCheckoutMode(false);
-                  setCheckoutItems([]);
-                  setCheckoutSubtotal(0);
-                  setCheckoutTabInfo(null);
-                  setShowScanCard(false);
-                  setShowTabView(false);
-                  setShowCustomTip(false);
-                  setSelectedTipAmount(0);
-                  setCheckoutStage('');
-                  setPaymentStatus(null);
-                  setPaymentStatusMessage(null);
-                  sendCheckoutCancel();
-                }}
-                style={{
-                  background: '#f59e0b',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                CANCEL PAYMENT
-              </button>
-            )}
+            {/* Cancel Payment button - always visible, disabled when not in checkout */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!checkoutMode) return; // Only works during checkout
+                if (endEventTimeoutRef.current) {
+                  clearTimeout(endEventTimeoutRef.current);
+                }
+                setShowEndEventButton(false);
+                // Cancel Payment - return to menu
+                setCheckoutMode(false);
+                setCheckoutItems([]);
+                setCheckoutSubtotal(0);
+                setCheckoutTabInfo(null);
+                setShowScanCard(false);
+                setShowTabView(false);
+                setShowCustomTip(false);
+                setSelectedTipAmount(0);
+                setCheckoutStage('');
+                setPaymentStatus(null);
+                setPaymentStatusMessage(null);
+                sendCheckoutCancel();
+              }}
+              style={{
+                background: checkoutMode ? '#f59e0b' : '#ccc',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: checkoutMode ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap',
+                opacity: checkoutMode ? 1 : 0.5,
+              }}
+            >
+              CANCEL PAYMENT
+            </button>
             
             {/* End Event / Summary button - hidden during checkout */}
             {!checkoutMode && (

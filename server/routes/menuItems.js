@@ -595,7 +595,7 @@ router.get('/', async (req, res) => {
     
     const inventorySheets = await InventorySheet.find({ sheetKey: { $in: sheetKeys } }).lean();
 
-    // Build a map of itemNumber -> salesPrice
+    // Build a map of itemNumber -> { salesPrice, unitCost }
     const priceMap = new Map();
     inventorySheets.forEach(sheet => {
       if (!sheet.rows || !Array.isArray(sheet.rows)) return;
@@ -609,18 +609,26 @@ router.get('/', async (req, res) => {
         
         const itemNumber = values.itemNumber;
         const salesPrice = values.salesPrice;
+        const unitCost = values.unitCost;
         
-        if (itemNumber && salesPrice !== undefined && salesPrice !== null) {
-          priceMap.set(Number(itemNumber), Number(salesPrice));
+        if (itemNumber) {
+          priceMap.set(Number(itemNumber), {
+            salesPrice: salesPrice !== undefined && salesPrice !== null ? Number(salesPrice) : 0,
+            unitCost: unitCost !== undefined && unitCost !== null ? Number(unitCost) : 0
+          });
         }
       });
     });
 
-    // Merge salesPrice into cocktails
-    const cocktailsWithPrice = cocktails.map(cocktail => ({
-      ...cocktail,
-      price: priceMap.get(cocktail.itemNumber) || 0
-    }));
+    // Merge salesPrice and costPerUnit into cocktails
+    const cocktailsWithPrice = cocktails.map(cocktail => {
+      const priceData = priceMap.get(cocktail.itemNumber) || { salesPrice: 0, unitCost: 0 };
+      return {
+        ...cocktail,
+        price: priceData.salesPrice,
+        costPerUnit: priceData.unitCost
+      };
+    });
 
     res.json(cocktailsWithPrice);
   } catch (error) {
