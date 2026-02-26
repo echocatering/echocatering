@@ -4242,12 +4242,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               }}>
                 <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
                 
-                {/* Spillage - calculated using $/Unit from menu items */}
+                {/* Spillage - calculated using $/Unit from menu items or item price as fallback */}
                 {(() => {
                   const spillageTab = tabs.find(t => t.isSpillage);
                   const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
                     const menuItem = allItems.find(i => i.name === item.name);
-                    const costPerUnit = menuItem?.costPerUnit || 0;
+                    // Use costPerUnit if available, otherwise use the item's price from the tab
+                    const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
                     return sum + costPerUnit;
                   }, 0) || 0;
                   if (spillageTotal > 0) {
@@ -4993,12 +4994,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
                   </div>
                 )}
-                {/* Spillage - items from spillage tab, using $/Unit from menu items */}
+                {/* Spillage - items from spillage tab, using $/Unit from menu items or item price as fallback */}
                 {(() => {
                   const spillageTab = tabs.find(t => t.isSpillage);
                   const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
                     const menuItem = allItems.find(i => i.name === item.name);
-                    const costPerUnit = menuItem?.costPerUnit || 0;
+                    const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
                     return sum + costPerUnit;
                   }, 0) || 0;
                   if (spillageTotal > 0) {
@@ -5052,7 +5053,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
                       (tabs.find(t => t.isSpillage)?.items?.reduce((sum, item) => {
                         const menuItem = allItems.find(i => i.name === item.name);
-                        return sum + (menuItem?.costPerUnit || 0);
+                        return sum + (menuItem?.costPerUnit || item.basePrice || item.price || 0);
                       }, 0) || 0)
                     ).toFixed(2)}
                   </span>
@@ -5072,11 +5073,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 const sales = eventSummary?.totalRevenue || 0;
                 const tips = eventSummary?.totalTips || 0;
                 const taxes = (sales + tips) * 0.3;
-                // Spillage using costPerUnit from menu items
+                // Spillage using costPerUnit from menu items or item price as fallback
                 const spillageTab = tabs.find(t => t.isSpillage);
                 const spillageCost = spillageTab?.items?.reduce((sum, item) => {
                   const menuItem = allItems.find(i => i.name === item.name);
-                  return sum + (menuItem?.costPerUnit || 0);
+                  return sum + (menuItem?.costPerUnit || item.basePrice || item.price || 0);
                 }, 0) || 0;
                 const operatingExpenses = (parseFloat(eventSetupData.transportationCosts) || 0) +
                   (parseFloat(eventSetupData.permitCost) || 0) +
@@ -5151,25 +5152,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     // Calculate total tips from tabs (in case eventSummary doesn't have it)
                     const totalTipsFromTabs = tabs.reduce((sum, t) => sum + (t.tipAmount || 0), 0);
                     
-                    // Calculate spillage data from spillage tab using costPerUnit
+                    // Calculate spillage data from spillage tab using costPerUnit or item price as fallback
                     const spillageTab = tabs.find(t => t.isSpillage);
                     const spillageItems = [];
                     let spillageTotal = 0;
                     if (spillageTab?.items) {
-                      // Group items by name and count
+                      // Group items by name and count, track price for fallback
                       const itemCounts = {};
                       spillageTab.items.forEach(item => {
                         if (!itemCounts[item.name]) {
-                          itemCounts[item.name] = { name: item.name, category: item.category, quantity: 0 };
+                          itemCounts[item.name] = { 
+                            name: item.name, 
+                            category: item.category, 
+                            quantity: 0,
+                            itemPrice: item.basePrice || item.price || 0 // Store price for fallback
+                          };
                         }
                         itemCounts[item.name].quantity += 1;
                       });
                       // Calculate cost for each item
                       Object.values(itemCounts).forEach(item => {
                         const menuItem = allItems.find(i => i.name === item.name);
-                        const costPerUnit = menuItem?.costPerUnit || 0;
+                        const costPerUnit = menuItem?.costPerUnit || item.itemPrice || 0;
                         const totalCost = item.quantity * costPerUnit;
-                        spillageItems.push({ ...item, costPerUnit, totalCost });
+                        spillageItems.push({ name: item.name, category: item.category, quantity: item.quantity, costPerUnit, totalCost });
                         spillageTotal += totalCost;
                       });
                     }
