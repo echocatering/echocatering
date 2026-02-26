@@ -1844,9 +1844,9 @@ const commitBeerNumUnitsValue = (rowId) => {
                                 resolvedSheetKey === 'beer' && column.key === 'numUnits';
                               const isItemNumberColumn = column.key === 'itemNumber';
                               const isFormulaCurrencyColumn =
-                                isCurrencyUnitColumn && column.type === 'formula';
+                                isCurrencyUnitColumn && (column.type === 'formula' || column.readOnly === true);
                               const isEditableCurrencyColumn =
-                                isCurrencyUnitColumn && column.type !== 'formula';
+                                isCurrencyUnitColumn && column.type !== 'formula' && column.readOnly !== true;
                               const isFreeTextColumn =
                                 isNameColumn || isGarnishColumn || isIngredientsColumn || isConceptColumn || isNotesColumn;
                               const isDropdownColumn =

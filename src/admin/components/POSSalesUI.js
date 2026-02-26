@@ -5728,8 +5728,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             position: 'relative',
           }}
         >
-          {/* Left side: Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Left side: Logo - hidden when buttons are revealed */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flexShrink: 0,
+            transition: 'opacity 0.3s ease',
+            opacity: showEndEventButton ? 0 : 1,
+            pointerEvents: showEndEventButton ? 'none' : 'auto',
+          }}>
             {logoUrl && (
               <img 
                 src={logoUrl} 
@@ -5882,16 +5889,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </button>
             )}
             
-            {/* Cancel Payment button - always visible, disabled when not in checkout */}
+            {/* Cancel Payment button - always visible and clickable to handle app crash recovery */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!checkoutMode) return; // Only works during checkout
                 if (endEventTimeoutRef.current) {
                   clearTimeout(endEventTimeoutRef.current);
                 }
                 setShowEndEventButton(false);
-                // Cancel Payment - return to menu
+                // Cancel Payment - return to menu (always send message to horizontal view)
                 setCheckoutMode(false);
                 setCheckoutItems([]);
                 setCheckoutSubtotal(0);
@@ -5903,19 +5909,18 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 setCheckoutStage('');
                 setPaymentStatus(null);
                 setPaymentStatusMessage(null);
-                sendCheckoutCancel();
+                sendCheckoutCancel(); // Always send cancel message to horizontal view
               }}
               style={{
-                background: checkoutMode ? '#f59e0b' : '#ccc',
+                background: '#f59e0b',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
                 padding: '6px 12px',
                 fontSize: '12px',
                 fontWeight: 'bold',
-                cursor: checkoutMode ? 'pointer' : 'not-allowed',
+                cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                opacity: checkoutMode ? 1 : 0.5,
               }}
             >
               CANCEL PAYMENT

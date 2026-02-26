@@ -620,13 +620,44 @@ router.get('/', async (req, res) => {
       });
     });
 
+    // Fetch recipes to get costEach (source of truth for cost per unit)
+    const Recipe = require('../models/Recipe');
+    const allRecipes = await Recipe.find({}).lean();
+    
+    // Build recipe cost map by name (lowercase) and itemNumber
+    const recipeCostByName = new Map();
+    const recipeCostByItemNumber = new Map();
+    allRecipes.forEach(recipe => {
+      const costEach = recipe.totals?.costEach;
+      if (costEach !== undefined && costEach !== null && costEach > 0) {
+        if (recipe.title) {
+          recipeCostByName.set(recipe.title.toLowerCase().trim(), Number(costEach));
+        }
+        if (recipe.itemNumber) {
+          recipeCostByItemNumber.set(Number(recipe.itemNumber), Number(costEach));
+        }
+      }
+    });
+
     // Merge salesPrice and costPerUnit into cocktails
+    // Priority for costPerUnit: Recipe costEach > Inventory unitCost
     const cocktailsWithPrice = cocktails.map(cocktail => {
       const priceData = priceMap.get(cocktail.itemNumber) || { salesPrice: 0, unitCost: 0 };
+      
+      // Get cost from recipe (source of truth) - try itemNumber first, then name
+      let costPerUnit = recipeCostByItemNumber.get(cocktail.itemNumber);
+      if (!costPerUnit && cocktail.name) {
+        costPerUnit = recipeCostByName.get(cocktail.name.toLowerCase().trim());
+      }
+      // Fall back to inventory unitCost if recipe cost not found
+      if (!costPerUnit) {
+        costPerUnit = priceData.unitCost;
+      }
+      
       return {
         ...cocktail,
         price: priceData.salesPrice,
-        costPerUnit: priceData.unitCost
+        costPerUnit: costPerUnit || 0
       };
     });
 
