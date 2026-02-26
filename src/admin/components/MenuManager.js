@@ -595,19 +595,6 @@ const MenuManager = () => {
 
       setCocktails(normalized);
       
-      // Debug: Log Cloudinary URLs for all cocktails
-      console.log('[MenuManager] Fetched cocktails with Cloudinary URLs:');
-      normalized.forEach(c => {
-        if (c.cloudinaryVideoUrl || c.cloudinaryIconUrl) {
-          console.log(`  Item ${c.itemNumber} (${c.name}):`, {
-            cloudinaryVideoUrl: c.cloudinaryVideoUrl,
-            cloudinaryIconUrl: c.cloudinaryIconUrl
-          });
-        }
-      });
-      
-      return normalized;
-      
       // If we had an editingCocktail, try to preserve it by finding its index
       if (currentEditingId && !String(currentEditingId).startsWith('new-')) {
         const filtered = normalized.filter(cocktail => {
@@ -628,6 +615,8 @@ const MenuManager = () => {
       } else {
         setCurrentIndex(0);
       }
+      
+      return normalized;
     } catch (error) {
       console.error('Error fetching cocktails:', error);
       setCocktails([]);
@@ -2575,6 +2564,12 @@ const MenuManager = () => {
 
   // Update recipe when editingCocktail changes
   useEffect(() => {
+    // Update active cocktail ref to prevent stale recipe data from populating fields
+    activeCocktailIdRef.current = editingCocktail?._id || null;
+    
+    // Cancel any in-flight recipe fetch when cocktail changes
+    recipeRequestIdRef.current += 1;
+    
     if (editingCocktail && shouldShowRecipeBuilder(editingCocktail.category)) {
       setRecipe(null);
       fetchRecipeForCocktail(editingCocktail);
@@ -2586,6 +2581,11 @@ const MenuManager = () => {
   // Sync garnish from recipe.metadata.garnish to MenuManager form when recipe loads
   useEffect(() => {
     if (recipe && recipe.metadata?.garnish !== undefined && editingCocktail) {
+      // Guard: Only sync if recipe belongs to current editingCocktail
+      // This prevents stale recipe data from a previous item from updating the current item
+      if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
+        return;
+      }
       // Only update if different to avoid infinite loops
       if (editingCocktail.garnish !== recipe.metadata.garnish) {
         setEditingCocktail(prev => ({
@@ -2594,12 +2594,18 @@ const MenuManager = () => {
         }));
       }
     }
-  }, [recipe?.metadata?.garnish, recipe?._id]);
+  }, [recipe?.metadata?.garnish, recipe?._id, editingCocktail?.itemNumber]);
 
   // Sync name bidirectionally between MenuManager and RecipeBuilder
   // For PRE-MIX, recipe title drives the cocktail name (Title Case)
   useEffect(() => {
     if (recipe && editingCocktail) {
+      // Guard: Only sync if recipe belongs to current editingCocktail
+      // This prevents stale recipe data from a previous item from updating the current item
+      if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
+        return;
+      }
+      
       const isPremix = normalizeCategoryKey(editingCocktail.category) === 'premix';
       if (isPremix) {
         // For PRE-MIX, recipe title drives the cocktail name (Title Case - handled by RecipeBuilder)
@@ -2627,7 +2633,7 @@ const MenuManager = () => {
         }
       }
     }
-  }, [recipe?.title, recipe?._id, editingCocktail?.name, editingCocktail?.category]);
+  }, [recipe?.title, recipe?._id, editingCocktail?.name, editingCocktail?.category, editingCocktail?.itemNumber]);
 
   const handleNewItem = () => {
     const blankCocktail = {

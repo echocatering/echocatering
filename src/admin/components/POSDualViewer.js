@@ -52,115 +52,160 @@ export default function POSDualViewer() {
     return allItems.filter(item => item.category === activeCategory);
   }, [allItems, activeCategory]);
 
-  // Calculate container heights to make both viewers the same height
+  // Calculate dimensions to fit both viewers in available space
   const containerRef = useRef(null);
-  const [containerHeight, setContainerHeight] = useState(600);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const updateHeight = () => {
+    const updateDimensions = () => {
       if (containerRef.current) {
-        // Use available height minus padding
-        const availableHeight = window.innerHeight - 120;
-        setContainerHeight(Math.max(400, availableHeight));
+        const rect = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          width: rect.width,
+          height: rect.height
+        });
       }
     };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
+    
+    // Initial measurement
+    updateDimensions();
+    
+    // Use ResizeObserver for accurate container size tracking
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    window.addEventListener('resize', updateDimensions);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateDimensions);
+    };
   }, []);
 
-  // Calculate widths based on aspect ratios with same height
-  // 16:9 means width = height * 16/9
-  // 9:19 means width = height * 9/19
-  const horizontalWidth = containerHeight * (16 / 9);
-  const verticalWidth = containerHeight * (9 / 19);
+  // Calculate viewer sizes to fit within container
+  // Both viewers have same height, widths based on aspect ratios
+  // 16:10 ratio = 1.6, 9:19 ratio = 0.474
+  // Total width ratio = 1.6 + 0.474 = 2.074 (plus gap)
+  const gap = 20;
+  const availableWidth = dimensions.width - gap;
+  const availableHeight = dimensions.height;
+  
+  // Calculate height that fits both viewers in available width
+  const totalWidthRatio = (16/10) + (9/19); // ~2.07
+  const heightFromWidth = availableWidth / totalWidthRatio;
+  
+  // Use the smaller of height-constrained or width-constrained
+  const viewerHeight = Math.min(availableHeight, heightFromWidth, 700);
+  const horizontalWidth = viewerHeight * (16 / 10);
+  const verticalWidth = viewerHeight * (9 / 19);
 
   return (
-    <div 
-      ref={containerRef}
-      style={{ 
-        padding: '20px', 
-        height: '100%', 
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <h1 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: 'bold' }}>
-        POS UI Dual Viewer
+    <div style={{ 
+      padding: '20px', 
+      height: '100vh',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <h1 
+        className="text-3xl tracking-wide uppercase" 
+        style={{ 
+          fontWeight: 400, 
+          margin: '0 0 16px 0',
+          letterSpacing: '0.05em',
+        }}
+      >
+        POS UI
       </h1>
       
-      <div style={{
-        display: 'flex',
-        gap: '20px',
-        flex: 1,
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        overflow: 'auto',
-      }}>
-        {/* 16:9 Horizontal View (Customer-facing) */}
-        <div style={{
+      <div 
+        ref={containerRef}
+        style={{
           display: 'flex',
-          flexDirection: 'column',
+          gap: `${gap}px`,
+          flex: 1,
           alignItems: 'center',
-        }}>
-          <div style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            marginBottom: '8px',
-            color: '#666',
-          }}>
-            16:9 Horizontal (Customer View)
-          </div>
-          <div style={{
-            width: `${horizontalWidth}px`,
-            height: `${containerHeight}px`,
-            border: '2px solid #ccc',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            background: '#000',
-          }}>
-            <MenuGallery2 
-              embedded={true}
-              initialCategory={activeCategory}
-            />
-          </div>
-        </div>
+          justifyContent: 'center',
+          overflow: 'hidden',
+          minHeight: 0,
+        }}
+      >
+        {dimensions.width > 0 && (
+          <>
+            {/* 16:9 Horizontal View (Customer-facing) */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '500',
+                marginBottom: '6px',
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}>
+                16:10 Customer View
+              </div>
+              <div style={{
+                width: `${horizontalWidth}px`,
+                height: `${viewerHeight}px`,
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                background: '#000',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}>
+                <MenuGallery2 
+                  embedded={true}
+                  initialCategory={activeCategory}
+                />
+              </div>
+            </div>
 
-        {/* 9:19 Vertical View (POS Admin) */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}>
-          <div style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            marginBottom: '8px',
-            color: '#666',
-          }}>
-            9:19 Vertical (POS Admin)
-          </div>
-          <div style={{
-            width: `${verticalWidth}px`,
-            height: `${containerHeight}px`,
-            border: '2px solid #ccc',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            background: '#fff',
-          }}>
-            {/* Embed vertical POS via iframe to isolate state */}
-            <iframe
-              src="/admin/pos"
-              title="POS Vertical View"
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-              }}
-            />
-          </div>
-        </div>
+            {/* 9:19 Vertical View (POS Admin) */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '500',
+                marginBottom: '6px',
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}>
+                9:19 POS Admin
+              </div>
+              <div style={{
+                width: `${verticalWidth}px`,
+                height: `${viewerHeight}px`,
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                background: '#fff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}>
+                <iframe
+                  src="/admin/pos"
+                  title="POS Vertical View"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                  }}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -146,7 +146,16 @@ const SalesManager = ({ posEventId = null }) => {
     <div className="sales-manager" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>📊 Sales Dashboard</h1>
+        <h1 
+          className="text-3xl tracking-wide uppercase" 
+          style={{ 
+            margin: 0, 
+            fontWeight: 400,
+            letterSpacing: '0.05em',
+          }}
+        >
+          SALES
+        </h1>
         
         {/* Date Range Selector */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>

@@ -4,6 +4,7 @@ import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 import { normalizeIngredients } from '../utils/ingredientUtils';
+import FullMenu from '../admin/components/FullMenu';
 
 const isProbablyIOS = () => {
   if (typeof navigator === 'undefined') return false;
@@ -443,6 +444,7 @@ function EchoCocktailSubpage2({
   initialIndex,
   onIndexSet,
   onAllItemsClick,
+  onFullMenuClick,
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex !== null && initialIndex !== undefined ? initialIndex : 0);
   const [fadeStage, setFadeStage] = useState('in'); // 'in' | 'out'
@@ -2062,6 +2064,51 @@ function EchoCocktailSubpage2({
           }}>
             <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} noHover={viewMode === 'menu'} />
           </div>
+          
+          {/* FULL MENU button - right half of screen, centered (menu view only) */}
+          {viewMode === 'menu' && (
+            <div style={{
+              position: 'absolute',
+              right: 0,
+              width: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+            }}>
+              <button
+                onClick={() => {
+                  if (onFullMenuClick) {
+                    onFullMenuClick();
+                  }
+                }}
+                onMouseEnter={() => setHoveredButton('full-menu')}
+                onMouseLeave={() => setHoveredButton(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: hoveredButton === 'full-menu' ? '#000' : '#fff',
+                  fontSize: '1.8rem',
+                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  padding: '12px 16px',
+                  transition: 'color 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                FULL MENU
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Left info */}
@@ -2855,6 +2902,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [initialItemProcessed, setInitialItemProcessed] = useState(false);
+  const [showFullMenu, setShowFullMenu] = useState(false);
 
   const subpageOrder = useMemo(() => [
     { key: 'cocktails', label: 'Cocktails' },
@@ -3028,6 +3076,50 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     );
   }
 
+  // Show FullMenu overlay when in menu view and showFullMenu is true
+  if (viewMode === 'menu' && showFullMenu) {
+    return (
+      <div style={{
+        width: outerWidth || '100%',
+        height: outerHeight || '100%',
+        position: 'relative',
+        background: '#fff',
+        overflow: 'hidden',
+      }}>
+        {/* Back button to return to normal view */}
+        <button
+          onClick={() => setShowFullMenu(false)}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            zIndex: 100,
+            background: 'transparent',
+            border: 'none',
+            color: '#333',
+            fontSize: '1.4rem',
+            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          ← BACK
+        </button>
+        <FullMenu 
+          disableNavigation={true} 
+          hideSearch={true} 
+          containerHeight={outerHeight}
+          hiddenCategories={['spirits', 'premix']}
+        />
+      </div>
+    );
+  }
+
   return (
     <EchoCocktailSubpage2
       videoFiles={videoFiles}
@@ -3047,6 +3139,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       initialIndex={initialIndex}
       onIndexSet={onItemNavigated}
       onAllItemsClick={onAllItemsClick}
+      onFullMenuClick={() => setShowFullMenu(true)}
     />
   );
 }

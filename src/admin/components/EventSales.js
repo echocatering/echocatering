@@ -436,7 +436,16 @@ const EventSales = () => {
   return (
     <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>Event Sales</h1>
+        <h1 
+          className="text-3xl tracking-wide uppercase" 
+          style={{ 
+            margin: 0, 
+            fontWeight: 400,
+            letterSpacing: '0.05em',
+          }}
+        >
+          EVENTS
+        </h1>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={() => setOverheadCollapsed(!overheadCollapsed)}
