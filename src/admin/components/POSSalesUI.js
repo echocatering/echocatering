@@ -67,7 +67,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -980,29 +980,38 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             >
               {selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE'}
             </button>
-            {/* Checkout Button - disabled when spillage tab is selected */}
+            {/* Checkout/Duplicate Button - shows DUPLICATE when items selected, disabled when spillage tab for checkout */}
             <button
               onClick={() => {
                 const isSpillageTab = tabs.find(t => t.isSpillage && t.id === activeTabId);
-                if (isSpillageTab) return; // Disabled for spillage tab
+                // If items are selected, duplicate them (works on spillage tab too)
+                if (selectedReceiptIndices.size > 0) {
+                  if (onDuplicateItems) {
+                    onDuplicateItems(activeTabId, Array.from(selectedReceiptIndices));
+                  }
+                  setSelectedReceiptIndices(new Set());
+                  return;
+                }
+                // Normal checkout - disabled for spillage tab
+                if (isSpillageTab) return;
                 onCheckout && onCheckout();
               }}
-              disabled={checkoutLoading || selectedItems.length === 0 || tabs.find(t => t.isSpillage && t.id === activeTabId)}
+              disabled={checkoutLoading || (selectedItems.length === 0 && selectedReceiptIndices.size === 0) || (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0)}
               style={{
                 flex: 1,
                 padding: '12px',
                 border: 'none',
-                background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080')),
+                background: selectedReceiptIndices.size > 0 ? '#22c55e' : (tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'))),
                 color: '#fff',
                 fontSize: `${Math.max(12, outerWidth / 25)}px`,
                 fontWeight: 600,
                 fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: (checkoutLoading || selectedItems.length === 0 || tabs.find(t => t.isSpillage && t.id === activeTabId)) ? 'not-allowed' : 'pointer',
+                cursor: (checkoutLoading || (selectedItems.length === 0 && selectedReceiptIndices.size === 0) || (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0)) ? 'not-allowed' : 'pointer',
                 borderRadius: '4px',
-                opacity: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 0.4 : 1
+                opacity: (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0) ? 0.4 : 1
               }}
             >
-              {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
+              {selectedReceiptIndices.size > 0 ? 'DUPLICATE' : (checkoutLoading ? 'PROCESSING...' : 'CHECKOUT')}
             </button>
           </div>
         )}
@@ -2035,46 +2044,37 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setNextTabNumber,
     activeTabId,
     setActiveTabId,
+    eventSetupData,
+    setEventSetupData,
+    uiState,
+    setUiState,
     startEvent,
     clearEvent,
     hasActiveEvent,
   } = usePosLocalStorage();
   
-  // Event management UI state
+  // Derive UI state values from persisted uiState
+  const showSummaryView = uiState.showSummaryView;
+  const showEventSetup = uiState.showEventSetup;
+  const isPostEventEdit = uiState.isPostEventEdit;
+  
+  // Helper functions to update UI state
+  const setShowSummaryView = (value) => setUiState(prev => ({ ...prev, showSummaryView: typeof value === 'function' ? value(prev.showSummaryView) : value }));
+  const setShowEventSetup = (value) => setUiState(prev => ({ ...prev, showEventSetup: typeof value === 'function' ? value(prev.showEventSetup) : value }));
+  const setIsPostEventEdit = (value) => setUiState(prev => ({ ...prev, isPostEventEdit: typeof value === 'function' ? value(prev.isPostEventEdit) : value }));
+  
+  // Event management UI state (showSummaryView, showEventSetup, isPostEventEdit are now derived from uiState above)
   const [showEventModal, setShowEventModal] = useState(false);
   const [showEndEventModal, setShowEndEventModal] = useState(false);
-  const [showSummaryView, setShowSummaryView] = useState(false);
-  const [showEventSetup, setShowEventSetup] = useState(false);
   const [eventSummary, setEventSummary] = useState(null);
   const [newEventName, setNewEventName] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [showEventSaveSuccess, setShowEventSaveSuccess] = useState(false);
   const [showEndEventButton, setShowEndEventButton] = useState(false);
-  const [isPostEventEdit, setIsPostEventEdit] = useState(false); // Track if user returned to POS via EDIT EVENT
   const endEventTimeoutRef = useRef(null);
+  const saveToServerRef = useRef(null); // Ref for saveToServer function to use in earlier callbacks
   
-  // Event Setup data
-  const [eventSetupData, setEventSetupData] = useState({
-    eventName: '',
-    eventDate: new Date().toISOString().split('T')[0],
-    startTime: '',
-    endTime: '',
-    accommodationCost: '',
-    transportationCosts: '',
-    permitCost: '',
-    liabilityInsuranceCost: '',
-    labor: [], // Array of { job: 'Bartender'|'Barback'|'Server'|'Photographer'|'Other', rate: '', hours: '' }
-    glasswareSent: { rox: '', tmbl: '' },
-    glasswareReturned: { rox: '', tmbl: '' },
-    iceSent: '',
-    iceReturned: '',
-    inventory: {
-      cocktails: [],
-      mocktails: [],
-      beer: [],
-      wine: [],
-    },
-  });
+  // Event Setup data - now managed by usePosLocalStorage hook for persistence
   
   // Checkout state
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -2151,6 +2151,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           : t
       ));
       setActiveTabId(null);
+      
+      // Save to server after payment completed (use ref since saveToServer is defined later)
+      setTimeout(() => saveToServerRef.current?.('payment-complete'), 500);
     }
     
     setCheckoutMode(false);
@@ -2819,6 +2822,113 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     loadItems();
   }, [apiCall]);
 
+  // Reusable function to save POS state to server
+  const saveToServer = useCallback(async (reason = 'manual') => {
+    if (!eventId) return;
+    
+    try {
+      console.log(`[POS] Saving state to server (${reason})...`);
+      const response = await fetch(`/api/catering-events/${eventId}/autosave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tabs,
+          eventSetupData,
+          uiState,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[POS] Save successful (${reason}):`, data.lastSaved);
+      } else {
+        console.error(`[POS] Save failed (${reason}):`, response.status);
+      }
+    } catch (err) {
+      console.error(`[POS] Save error (${reason}):`, err);
+    }
+  }, [eventId, tabs, eventSetupData, uiState]);
+  
+  // Keep ref updated for use in earlier-defined callbacks
+  useEffect(() => {
+    saveToServerRef.current = saveToServer;
+  }, [saveToServer]);
+
+  // Auto-save POS state to server every 5 minutes when there's an active event
+  useEffect(() => {
+    if (!eventId) return;
+    
+    const autoSaveInterval = setInterval(() => {
+      saveToServer('auto-5min');
+    }, 300000); // Every 5 minutes (300 seconds)
+    
+    return () => clearInterval(autoSaveInterval);
+  }, [eventId, saveToServer]);
+
+  // Track if we've already restored from server to avoid duplicate restores
+  const hasRestoredRef = useRef(false);
+  
+  // Restore state from server when app loads with an active event
+  useEffect(() => {
+    const restoreFromServer = async () => {
+      if (!eventId || hasRestoredRef.current) return;
+      
+      hasRestoredRef.current = true; // Mark as restored to prevent duplicate calls
+      
+      try {
+        console.log('[POS] Checking for saved state on server for event:', eventId);
+        const response = await fetch(`/api/catering-events/${eventId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const posState = data.event?.posState;
+          
+          if (posState && posState.lastSaved) {
+            console.log('[POS] Found saved state from:', posState.lastSaved);
+            
+            // Restore tabs if server has newer data or local is empty
+            if (posState.tabs && posState.tabs.length > 0) {
+              const serverTime = new Date(posState.lastSaved).getTime();
+              const localTabsJson = localStorage.getItem('pos_tabs');
+              const localTabs = localTabsJson ? JSON.parse(localTabsJson) : [];
+              
+              // If local is empty or server data is recent (within last 5 minutes), restore from server
+              if (localTabs.length === 0 || serverTime > Date.now() - 300000) {
+                console.log('[POS] Restoring tabs from server...');
+                setTabs(posState.tabs);
+              }
+            }
+            
+            // Restore eventSetupData if available
+            if (posState.eventSetupData && Object.keys(posState.eventSetupData).length > 0) {
+              setEventSetupData(prev => ({
+                ...prev,
+                ...posState.eventSetupData,
+              }));
+            }
+            
+            // Restore uiState if available
+            if (posState.uiState && Object.keys(posState.uiState).length > 0) {
+              setUiState(prev => ({
+                ...prev,
+                ...posState.uiState,
+              }));
+            }
+            
+            console.log('[POS] State restored from server successfully');
+          } else {
+            console.log('[POS] No saved state found on server');
+          }
+        }
+      } catch (err) {
+        console.error('[POS] Error restoring state from server:', err);
+      }
+    };
+    
+    // Restore when eventId becomes available
+    restoreFromServer();
+  }, [eventId, setTabs, setEventSetupData, setUiState]);
+
   // Filter items by active category
   const items = useMemo(() => {
     return allItems.filter(item => normalizeCategoryKey(item.category) === activeCategory);
@@ -3396,7 +3506,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     const targetTab = tabs.find(t => t.id === targetTabId);
     const tabDisplayName = targetTab?.customName || targetTab?.name || '';
     setLastAction({ type: 'add', itemName: actionName, tabName: tabDisplayName });
-  }, [activeTabId, nextTabNumber, tabs]);
+    
+    // Save to server after item added
+    setTimeout(() => saveToServer('item-added'), 500);
+  }, [activeTabId, nextTabNumber, tabs, saveToServer]);
 
   const handleRemoveItem = useCallback((index) => {
     if (!activeTabId) return;
@@ -3416,7 +3529,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Update last action with tab name
     const tabDisplayName = activeTab?.customName || activeTab?.name || '';
     setLastAction({ type: 'remove', itemName: toTitleCase(itemToRemove.name), tabName: tabDisplayName });
-  }, [activeTabId, tabs]);
+    
+    // Save to server after item removed
+    setTimeout(() => saveToServer('item-removed'), 500);
+  }, [activeTabId, tabs, saveToServer]);
 
   const handleMoveItems = useCallback((fromTabId, toTabId, indices) => {
     if (!fromTabId || !toTabId || indices.length === 0) return;
@@ -3450,6 +3566,38 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     const fromTabName = fromTab?.customName || fromTab?.name || '';
     const toTabName = toTab?.customName || toTab?.name || '';
     setLastAction({ type: 'move', itemName: `${itemsToMove.length} item${itemsToMove.length > 1 ? 's' : ''}`, tabName: `${fromTabName} → ${toTabName}` });
+  }, [tabs]);
+
+  const handleDuplicateItems = useCallback((tabId, indices) => {
+    if (!tabId || indices.length === 0) return;
+    
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    
+    // Get items to duplicate (with their modifiers)
+    const itemsToDuplicate = indices.map(i => tab.items[i]).filter(Boolean);
+    
+    if (itemsToDuplicate.length === 0) return;
+    
+    // Create deep copies of the items (preserving modifiers)
+    const duplicatedItems = itemsToDuplicate.map(item => ({
+      ...item,
+      // Generate new unique key for React
+      _duplicateKey: `${item._id || item.name}-${Date.now()}-${Math.random()}`
+    }));
+    
+    console.log(`[POS] Duplicating ${duplicatedItems.length} items in ${tab.name}`);
+    
+    setTabs(prev => prev.map(t => {
+      if (t.id === tabId) {
+        return { ...t, items: [...t.items, ...duplicatedItems] };
+      }
+      return t;
+    }));
+    
+    // Update last action
+    const tabDisplayName = tab?.customName || tab?.name || '';
+    setLastAction({ type: 'add', itemName: `${duplicatedItems.length} item${duplicatedItems.length > 1 ? 's' : ''} duplicated`, tabName: tabDisplayName });
   }, [tabs]);
 
   const frameReady = frameSize.width > 0 && frameSize.height > 0;
@@ -5772,6 +5920,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
               onMoveItems={handleMoveItems}
+              onDuplicateItems={handleDuplicateItems}
               onCheckout={handleCheckout}
               checkoutLoading={checkoutLoading}
             />
@@ -6348,6 +6497,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
                 onMoveItems={handleMoveItems}
+                onDuplicateItems={handleDuplicateItems}
                 onCheckout={handleCheckout}
                 checkoutLoading={checkoutLoading}
               />

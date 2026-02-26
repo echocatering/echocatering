@@ -109,6 +109,35 @@ router.post('/:id/recalculate', authenticateToken, async (req, res) => {
 });
 
 /**
+ * POST /api/catering-events/:id/autosave
+ * Auto-save POS state (tabs, items, setup data) every minute
+ */
+router.post('/:id/autosave', authenticateToken, async (req, res) => {
+  try {
+    const { tabs, eventSetupData, uiState } = req.body;
+    
+    const event = await CateringEvent.findById(req.params.id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    
+    // Store the POS state as a JSON blob for recovery
+    event.posState = {
+      tabs: tabs || [],
+      eventSetupData: eventSetupData || {},
+      uiState: uiState || {},
+      lastSaved: new Date().toISOString()
+    };
+    
+    await event.save();
+    
+    console.log(`[CateringEvents] Auto-saved POS state for event ${req.params.id}`);
+    res.json({ success: true, lastSaved: event.posState.lastSaved });
+  } catch (err) {
+    console.error('[CateringEvents] POST /:id/autosave error:', err);
+    res.status(500).json({ error: 'Failed to auto-save', message: err.message });
+  }
+});
+
+/**
  * POST /api/catering-events/finalize
  * Finalize an event with setup data and summary from POS
  */

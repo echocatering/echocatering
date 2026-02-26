@@ -9,8 +9,8 @@ const Sidebar = () => {
   const logoFileInputRef = useRef(null);
   const [currentLogo, setCurrentLogo] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
-    echoInterface: true,
-    inventory: true,
+    echoInterface: false,
+    inventory: false,
     sales: false,
     calendar: false
   });
@@ -272,16 +272,16 @@ const Sidebar = () => {
               <span className="nav-text">SALES</span>
             </NavLink>
             <NavLink
-              to="/admin/sales/pos-ui"
-              className={`nav-item ${location.pathname === '/admin/sales/pos-ui' ? 'active' : ''}`}
-            >
-              <span className="nav-text">POS UI</span>
-            </NavLink>
-            <NavLink
               to="/admin/sales/events"
               className={`nav-item ${location.pathname === '/admin/sales/events' ? 'active' : ''}`}
             >
               <span className="nav-text">EVENTS</span>
+            </NavLink>
+            <NavLink
+              to="/admin/sales/pos-ui"
+              className={`nav-item ${location.pathname === '/admin/sales/pos-ui' ? 'active' : ''}`}
+            >
+              <span className="nav-text">POS UI</span>
             </NavLink>
           </>
         )}

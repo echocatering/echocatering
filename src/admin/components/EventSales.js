@@ -12,7 +12,7 @@ const EventSales = () => {
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [overheadCollapsed, setOverheadCollapsed] = useState(false);
+  const [overheadCollapsed, setOverheadCollapsed] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedEvents, setEditedEvents] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);

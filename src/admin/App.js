@@ -20,6 +20,7 @@ import Header from './components/Header';
 import ItemUIPreview from './components/ItemUIPreview';
 import POSUIPreview from './components/POSUIPreview';
 import POSSalesUI from './components/POSSalesUI';
+import POSDualViewer from './components/POSDualViewer';
 import PosPage from './components/pos/PosPage';
 import './App.css';
 
@@ -67,7 +68,7 @@ const AdminApp = () => {
             <Route path="/orders-chart" element={<OrdersStackedBarChart />} />
             <Route path="/calendar" element={<CalendarManager />} />
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
-            <Route path="/sales/pos-ui" element={<POSSalesUI layoutMode="vertical" />} />
+            <Route path="/sales/pos-ui" element={<POSDualViewer />} />
             <Route path="/sales/events" element={<EventSales />} />
           </Routes>
         </main>

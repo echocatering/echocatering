@@ -28,6 +28,38 @@ const STORAGE_KEYS = {
   TABS: 'pos_tabs',
   NEXT_TAB_NUMBER: 'pos_next_tab_number',
   ACTIVE_TAB_ID: 'pos_active_tab_id',
+  EVENT_SETUP_DATA: 'pos_event_setup_data',
+  UI_STATE: 'pos_ui_state',
+};
+
+// Default UI state
+const DEFAULT_UI_STATE = {
+  showEventSetup: false,
+  showSummaryView: false,
+  isPostEventEdit: false,
+};
+
+// Default event setup data structure
+const DEFAULT_EVENT_SETUP_DATA = {
+  eventName: '',
+  eventDate: new Date().toISOString().split('T')[0],
+  startTime: '',
+  endTime: '',
+  accommodationCost: '',
+  transportationCosts: '',
+  permitCost: '',
+  liabilityInsuranceCost: '',
+  labor: [],
+  glasswareSent: { rox: '', tmbl: '' },
+  glasswareReturned: { rox: '', tmbl: '' },
+  iceSent: '',
+  iceReturned: '',
+  inventory: {
+    cocktails: [],
+    mocktails: [],
+    beer: [],
+    wine: [],
+  },
 };
 
 /**
@@ -65,6 +97,16 @@ export function usePosLocalStorage() {
   );
   const [activeTabId, setActiveTabId] = useState(() => 
     localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB_ID) || null
+  );
+
+  // Event setup data state
+  const [eventSetupData, setEventSetupData] = useState(() => 
+    safeJsonParse(localStorage.getItem(STORAGE_KEYS.EVENT_SETUP_DATA), DEFAULT_EVENT_SETUP_DATA)
+  );
+
+  // UI state (for preserving view state across refreshes)
+  const [uiState, setUiState] = useState(() => 
+    safeJsonParse(localStorage.getItem(STORAGE_KEYS.UI_STATE), DEFAULT_UI_STATE)
   );
 
   // Persist event state to localStorage
@@ -111,6 +153,16 @@ export function usePosLocalStorage() {
     }
   }, [activeTabId]);
 
+  // Persist eventSetupData to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.EVENT_SETUP_DATA, JSON.stringify(eventSetupData));
+  }, [eventSetupData]);
+
+  // Persist uiState to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.UI_STATE, JSON.stringify(uiState));
+  }, [uiState]);
+
   /**
    * Start a new event
    */
@@ -135,6 +187,8 @@ export function usePosLocalStorage() {
     setTabs([]);
     setNextTabNumber(1);
     setActiveTabId(null);
+    setEventSetupData(DEFAULT_EVENT_SETUP_DATA);
+    setUiState(DEFAULT_UI_STATE);
     
     // Clear all localStorage keys
     Object.values(STORAGE_KEYS).forEach(key => {
@@ -180,6 +234,14 @@ export function usePosLocalStorage() {
     setNextTabNumber,
     activeTabId,
     setActiveTabId,
+    
+    // Event setup data
+    eventSetupData,
+    setEventSetupData,
+    
+    // UI state
+    uiState,
+    setUiState,
     
     // Actions
     startEvent,

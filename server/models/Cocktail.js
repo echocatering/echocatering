@@ -163,6 +163,11 @@ const cocktailSchema = new mongoose.Schema({
       isLink: Boolean
     }],
     default: []
+  },
+  // Cost per unit for COGS/spillage calculations (pulled from recipe or inventory)
+  costPerUnit: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

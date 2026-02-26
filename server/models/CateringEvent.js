@@ -130,6 +130,21 @@ const cateringEventSchema = new mongoose.Schema({
     type: String,
     enum: ['draft', 'active', 'completed', 'cancelled'],
     default: 'draft'
+  },
+
+  // Event number for unique identification
+  eventNumber: {
+    type: Number,
+    unique: true,
+    sparse: true
+  },
+
+  // POS state for auto-save and recovery
+  posState: {
+    tabs: { type: mongoose.Schema.Types.Mixed, default: [] },
+    eventSetupData: { type: mongoose.Schema.Types.Mixed, default: {} },
+    uiState: { type: mongoose.Schema.Types.Mixed, default: {} },
+    lastSaved: { type: Date, default: null }
   }
 }, {
   timestamps: true
