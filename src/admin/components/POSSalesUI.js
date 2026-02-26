@@ -1491,6 +1491,9 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 color: '#d0d0d0'
               }}>
                 ${(parseFloat(editingItem.price) || 0).toFixed(2)}
+                {editingItem.costPerUnit !== undefined && editingItem.costPerUnit !== null && (
+                  <span style={{ color: '#999' }}> | ${(parseFloat(editingItem.costPerUnit) || 0).toFixed(2)} / Unit</span>
+                )}
               </span>
             </div>
             <button
@@ -3060,10 +3063,28 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // ============================================
 
   /**
-   * Handle header tap to reveal END EVENT button
+   * Handle header tap to reveal END EVENT button or cancel payment
    * Button auto-hides after 3 seconds if not clicked
+   * During checkout: always cancels payment instead of showing end event button
    */
   const handleHeaderTap = useCallback(() => {
+    if (checkoutMode) {
+      // During checkout: always cancel payment
+      setCheckoutMode(false);
+      setCheckoutItems([]);
+      setCheckoutSubtotal(0);
+      setCheckoutTabInfo(null);
+      setShowScanCard(false);
+      setShowTabView(false);
+      setShowCustomTip(false);
+      setSelectedTipAmount(0);
+      setCheckoutStage('');
+      setPaymentStatus(null);
+      setPaymentStatusMessage(null);
+      sendCheckoutCancel();
+      return;
+    }
+    
     // Clear any existing timeout
     if (endEventTimeoutRef.current) {
       clearTimeout(endEventTimeoutRef.current);
@@ -3076,7 +3097,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     endEventTimeoutRef.current = setTimeout(() => {
       setShowEndEventButton(false);
     }, 3000);
-  }, []);
+  }, [checkoutMode, sendCheckoutCancel]);
 
   /**
    * Start a new POS event
@@ -5792,6 +5813,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           </div>
           
           {/* Buttons container - absolutely positioned to overlay when shown */}
+          {/* Hidden during checkout - header tap cancels payment instead */}
           <div style={{
             position: 'absolute',
             right: '16px',
@@ -5801,8 +5823,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             alignItems: 'center',
             gap: '8px',
             transition: 'opacity 0.3s ease',
-            opacity: showEndEventButton ? 1 : 0,
-            pointerEvents: showEndEventButton ? 'auto' : 'none',
+            opacity: (showEndEventButton && !checkoutMode) ? 1 : 0,
+            pointerEvents: (showEndEventButton && !checkoutMode) ? 'auto' : 'none',
             zIndex: 10,
           }}>
             {/* TEST/LIVE Button - shown on header tap */}
