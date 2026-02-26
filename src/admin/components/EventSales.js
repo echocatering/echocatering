@@ -13,9 +13,9 @@ const EventSales = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [overheadCollapsed, setOverheadCollapsed] = useState(false);
-  const [editingCell, setEditingCell] = useState(null);
-  const [editValue, setEditValue] = useState('');
-  const [confirmEdit, setConfirmEdit] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedEvents, setEditedEvents] = useState({});
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
@@ -48,54 +48,59 @@ const EventSales = () => {
     }
   };
 
-  // Handle cell click for editing
-  const handleCellClick = (event, column, e) => {
-    e.stopPropagation();
-    if (!column.editable) return;
-    setEditingCell({ eventId: event._id, field: column.field });
-    setEditValue(event[column.field] || '');
+  // Handle entering edit mode
+  const handleEnterEditMode = () => {
+    setIsEditMode(true);
+    setEditedEvents({});
   };
 
-  // Handle edit confirmation
-  const handleEditConfirm = async () => {
-    if (!confirmEdit) return;
-    const { eventId, field, value } = confirmEdit;
-    
+  // Handle field change in edit mode
+  const handleFieldChange = (eventId, field, value) => {
+    setEditedEvents(prev => ({
+      ...prev,
+      [eventId]: {
+        ...(prev[eventId] || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  // Handle save all changes
+  const handleSaveAll = async () => {
     try {
-      const updateData = { [field]: value };
-      await apiCall(`/catering-events/${eventId}`, { 
-        method: 'PUT',
-        body: JSON.stringify(updateData)
-      });
+      // Update each modified event
+      for (const [eventId, changes] of Object.entries(editedEvents)) {
+        if (Object.keys(changes).length > 0) {
+          await apiCall(`/catering-events/${eventId}`, {
+            method: 'PUT',
+            body: JSON.stringify(changes)
+          });
+        }
+      }
       
       // Update local state
-      setEvents(prev => prev.map(e => 
-        e._id === eventId ? { ...e, [field]: value } : e
-      ));
+      setEvents(prev => prev.map(e => {
+        if (editedEvents[e._id]) {
+          return { ...e, ...editedEvents[e._id] };
+        }
+        return e;
+      }));
       
-      setConfirmEdit(null);
-      setEditingCell(null);
-      setEditValue('');
+      setShowSaveConfirm(false);
+      setIsEditMode(false);
+      setEditedEvents({});
     } catch (err) {
-      console.error('Error updating event:', err);
-      alert('Failed to update event: ' + err.message);
+      console.error('Error saving events:', err);
+      alert('Failed to save changes: ' + err.message);
     }
   };
 
-  // Handle edit save
-  const handleEditSave = () => {
-    if (!editingCell) return;
-    setConfirmEdit({
-      eventId: editingCell.eventId,
-      field: editingCell.field,
-      value: editValue
-    });
-  };
-
-  // Handle edit cancel
-  const handleEditCancel = () => {
-    setEditingCell(null);
-    setEditValue('');
+  // Get current value (edited or original)
+  const getCurrentValue = (event, field) => {
+    if (editedEvents[event._id] && editedEvents[event._id][field] !== undefined) {
+      return editedEvents[event._id][field];
+    }
+    return event[field];
   };
 
   // Format currency
@@ -129,7 +134,7 @@ const EventSales = () => {
       name: 'Basic Info',
       collapsable: false,
       columns: [
-        { key: 'delete', label: '', width: '40px', editable: false },
+        { key: 'delete', label: '×', width: '40px', editable: false },
         { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name' },
         { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date' },
         { key: 'patrons', label: '# Patrons', width: '80px', editable: true, field: 'guestCount' },
@@ -178,8 +183,8 @@ const EventSales = () => {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#ef4444',
-              fontSize: '16px',
+              color: '#999',
+              fontSize: '20px',
               cursor: 'pointer',
               padding: '4px 8px',
             }}
@@ -432,20 +437,36 @@ const EventSales = () => {
     <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>Event Sales</h1>
-        <button
-          onClick={fetchEvents}
-          style={{
-            padding: '8px 16px',
-            background: '#800080',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          Refresh
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={isEditMode ? () => setShowSaveConfirm(true) : handleEnterEditMode}
+            style={{
+              padding: '8px 16px',
+              background: isEditMode ? '#22c55e' : '#666',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            {isEditMode ? 'Save' : 'Edit'}
+          </button>
+          <button
+            onClick={fetchEvents}
+            style={{
+              padding: '8px 16px',
+              background: '#800080',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {events.length === 0 ? (
@@ -479,7 +500,15 @@ const EventSales = () => {
                       }}
                       onClick={() => group.collapsable && setOverheadCollapsed(!overheadCollapsed)}
                     >
-                      {group.name} {group.collapsable && (group.collapsed ? '▶' : '▼')}
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {group.collapsable && group.collapsed && (
+                          <span style={{ color: '#800080', fontSize: '14px' }}>▶</span>
+                        )}
+                        {group.name}
+                        {group.collapsable && !group.collapsed && (
+                          <span style={{ color: '#800080', fontSize: '14px' }}>▼</span>
+                        )}
+                      </span>
                     </th>
                   );
                 })}
@@ -499,7 +528,7 @@ const EventSales = () => {
                         borderRight: isLastInGroup && groupIdx < columnGroups.length - 1 ? '2px solid #999' : '1px solid #e5e5e5',
                         fontSize: '12px',
                         fontWeight: '600',
-                        color: '#333',
+                        color: col.key === 'delete' ? '#999' : '#333',
                         whiteSpace: 'nowrap',
                         width: col.width,
                       }}
@@ -514,24 +543,22 @@ const EventSales = () => {
               {events.map((event, idx) => (
                 <tr
                   key={event._id}
-                  onClick={() => setSelectedEvent(event._id)}
+                  onClick={() => !isEditMode && setSelectedEvent(event._id)}
                   style={{
                     background: idx % 2 === 0 ? '#fff' : '#fafafa',
-                    cursor: 'pointer',
+                    cursor: isEditMode ? 'default' : 'pointer',
                     transition: 'background 0.15s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0f0'}
+                  onMouseEnter={(e) => !isEditMode && (e.currentTarget.style.background = '#f0f0f0')}
                   onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafafa'}
                 >
                   {allColumns.map((col, colIdx) => {
                     const groupIdx = columnGroups.findIndex(g => !g.collapsed && g.columns.includes(col));
                     const isLastInGroup = columnGroups[groupIdx]?.columns[columnGroups[groupIdx].columns.length - 1] === col;
-                    const isEditing = editingCell?.eventId === event._id && editingCell?.field === col.field;
                     
                     return (
                       <td
                         key={col.key}
-                        onClick={(e) => handleCellClick(event, col, e)}
                         style={{
                           padding: '10px 8px',
                           borderBottom: '1px solid #eee',
@@ -540,58 +567,23 @@ const EventSales = () => {
                           color: '#333',
                           whiteSpace: 'nowrap',
                           textAlign: 'center',
-                          cursor: col.editable ? 'pointer' : 'default',
-                          background: isEditing ? '#fff3cd' : 'transparent',
                         }}
                       >
-                        {isEditing ? (
-                          <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleEditSave();
-                                if (e.key === 'Escape') handleEditCancel();
-                              }}
-                              autoFocus
-                              style={{
-                                width: '80px',
-                                padding: '4px',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                              }}
-                            />
-                            <button
-                              onClick={handleEditSave}
-                              style={{
-                                padding: '4px 8px',
-                                background: '#22c55e',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                              }}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={handleEditCancel}
-                              style={{
-                                padding: '4px 8px',
-                                background: '#ef4444',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                              }}
-                            >
-                              ✕
-                            </button>
-                          </div>
+                        {isEditMode && col.editable ? (
+                          <input
+                            type="text"
+                            value={getCurrentValue(event, col.field) ?? ''}
+                            onChange={(e) => handleFieldChange(event._id, col.field, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              width: '90%',
+                              padding: '4px',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              textAlign: 'center',
+                            }}
+                          />
                         ) : (
                           renderCell(event, col)
                         )}
@@ -605,8 +597,8 @@ const EventSales = () => {
         </div>
       )}
 
-      {/* Edit Confirmation Modal */}
-      {confirmEdit && (
+      {/* Save Confirmation Modal */}
+      {showSaveConfirm && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -630,7 +622,7 @@ const EventSales = () => {
             <p style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '24px' }}>Are you sure?</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
-                onClick={handleEditConfirm}
+                onClick={handleSaveAll}
                 style={{
                   padding: '10px 24px',
                   background: '#800080',
@@ -646,9 +638,7 @@ const EventSales = () => {
               </button>
               <button
                 onClick={() => {
-                  setConfirmEdit(null);
-                  setEditingCell(null);
-                  setEditValue('');
+                  setShowSaveConfirm(false);
                 }}
                 style={{
                   padding: '10px 24px',
