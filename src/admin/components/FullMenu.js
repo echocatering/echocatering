@@ -22,7 +22,7 @@ const normalizeCategoryKey = (value = '') => {
   return categoryMap[key] || key;
 };
 
-const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'cocktails', hideSearch = false, containerHeight, logoHeight, selectedCocktails, setSelectedCocktails, hiddenCategories = [] }) => {
+const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'cocktails', hideSearch = false, containerHeight, logoHeight, selectedCocktails, setSelectedCocktails, hiddenCategories = [], showFullMenuByDefault = false }) => {
   const hiddenCategoriesList = hiddenCategories || [];
   const params = useParams();
   const recipeType = params?.recipeType;
@@ -33,7 +33,7 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFullMenu, setShowFullMenu] = useState(false);
+  const [showFullMenu, setShowFullMenu] = useState(showFullMenuByDefault);
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
   const [hoveredButton, setHoveredButton] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);

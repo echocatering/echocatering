@@ -3091,17 +3091,18 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
         height: outerHeight || '100%',
         position: 'relative',
         background: '#fff',
-        overflow: 'hidden',
+        overflow: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}>
         {/* Back button to return to normal view */}
         <button
           onClick={() => setShowFullMenu(false)}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: '20px',
             left: '20px',
             zIndex: 100,
-            background: 'transparent',
+            background: 'rgba(255,255,255,0.9)',
             border: 'none',
             color: '#333',
             fontSize: '1.4rem',
@@ -3113,6 +3114,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
+            borderRadius: '8px',
           }}
         >
           ← BACK
@@ -3122,33 +3124,50 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
           hideSearch={true} 
           containerHeight={outerHeight}
           hiddenCategories={['spirits', 'premix']}
+          showFullMenuByDefault={true}
           onItemClick={(item) => {
             // Navigate to the item in the original menu view
             const normalizeCategoryKey = (value = '') => {
               const key = String(value).toLowerCase();
-              const categoryMap = { 'classics': 'cocktails' };
+              const categoryMap = { 'classics': 'cocktails', 'originals': 'mocktails' };
               return categoryMap[key] || key;
             };
             const itemCategory = normalizeCategoryKey(item.category || 'cocktails');
             
-            // Set the category if different
-            if (itemCategory !== selected && subpages[itemCategory]) {
-              setSelected(itemCategory);
-            }
-            
             // Find the index of the item in the category's videoFiles
-            const categoryData = subpages[itemCategory] || subpages[selected];
+            const categoryData = subpages[itemCategory];
             if (categoryData) {
               const itemIndex = categoryData.videoFiles.findIndex((file) => {
                 const info = categoryData.cocktailInfo[file] || {};
-                return info.name === item.name || 
-                       (item.itemNumber && info.itemNumber === item.itemNumber) ||
-                       (item._id && info._id === item._id);
+                // Match by name (case-insensitive), itemNumber, or _id
+                const nameMatch = info.name && item.name && 
+                  info.name.toLowerCase().trim() === item.name.toLowerCase().trim();
+                const itemNumberMatch = item.itemNumber && info.itemNumber === item.itemNumber;
+                const idMatch = item._id && info._id === item._id;
+                return nameMatch || itemNumberMatch || idMatch;
               });
               
+              console.log('FullMenu item click:', { 
+                itemName: item.name, 
+                itemCategory, 
+                foundIndex: itemIndex,
+                videoFilesCount: categoryData.videoFiles.length 
+              });
+              
+              // Set the selected item with its index BEFORE changing category
+              // This ensures the index is captured correctly
               if (itemIndex !== -1) {
                 setFullMenuSelectedItem({ ...item, index: itemIndex, category: itemCategory });
+              } else {
+                // If not found by exact match, default to first item
+                console.warn('Item not found in category, defaulting to index 0');
+                setFullMenuSelectedItem({ ...item, index: 0, category: itemCategory });
               }
+            }
+            
+            // Set the category (this may trigger re-render)
+            if (itemCategory !== selected && subpages[itemCategory]) {
+              setSelected(itemCategory);
             }
             
             // Close full menu view

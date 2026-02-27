@@ -67,7 +67,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +81,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const [actionKey, setActionKey] = useState(0); // For triggering fade-in animation
   const [flashingItemId, setFlashingItemId] = useState(null); // For item click flash effect
   const [showCloseTabConfirm, setShowCloseTabConfirm] = useState(false); // For close tab confirmation
+  const [showInvoiceConfirm, setShowInvoiceConfirm] = useState(false); // For invoice tab confirmation
   
   // Receipt item selection state (for moving items between tabs)
   const [selectedReceiptIndices, setSelectedReceiptIndices] = useState(new Set());
@@ -845,64 +846,85 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   alignContent: 'start'
                 }}>
                   {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
-                  {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        // Allow selecting any tab (archived tabs will be read-only)
-                        onSelectTab(tab.id);
-                      }}
-                      style={{
-                        aspectRatio: '1 / 1',
-                        width: '100%',
-                        border: tab.status === 'archived' 
-                          ? (activeTabId === tab.id ? '2px solid #22c55e' : 'none') 
-                          : (activeTabId === tab.id ? '2px solid #800080' : 'none'),
-                        background: tab.status === 'archived' ? '#dcfce7' : (activeTabId === tab.id ? '#f0e6f0' : '#fff'),
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                        padding: '24px',
-                        overflow: 'hidden',
-                        boxSizing: 'border-box',
-                        opacity: 1
-                      }}
-                    >
-                      {(() => {
-                        const displayName = (tab.customName || tab.name).toUpperCase();
-                        const words = displayName.split(' ');
-                        const longestWord = Math.max(...words.map(w => w.length));
-                        const numLines = words.length;
-                        const buttonWidth = (outerWidth - 16) / 3;
-                        const availableWidth = buttonWidth - 48;
-                        const availableHeight = buttonWidth - 48;
-                        const fontSizeByWidth = availableWidth / (longestWord * 0.6);
-                        const fontSizeByHeight = availableHeight / (numLines * 1.2);
-                        const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
-                        
-                        return words.map((word, idx) => (
-                          <span 
-                            key={idx}
-                            style={{
-                              color: tab.status === 'archived' 
-                                ? (activeTabId === tab.id ? '#166534' : '#333') 
-                                : (activeTabId === tab.id ? '#800080' : '#333'),
-                              fontSize: `${fontSize}px`,
-                              fontWeight: 600,
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {word}
-                          </span>
-                        ));
-                      })()}
-                    </button>
-                  ))}
+                  {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => {
+                    // Determine tab colors based on status
+                    const isInvoiced = tab.isInvoice && tab.status === 'paid';
+                    const isArchived = tab.status === 'archived';
+                    const isSelected = activeTabId === tab.id;
+                    
+                    let borderColor = 'transparent';
+                    let bgColor = '#fff';
+                    let textColor = '#333';
+                    
+                    if (isInvoiced) {
+                      borderColor = isSelected ? '#f59e0b' : 'transparent';
+                      bgColor = '#fef3c7'; // Yellow tint for invoiced
+                      textColor = isSelected ? '#b45309' : '#92400e';
+                    } else if (isArchived) {
+                      borderColor = isSelected ? '#22c55e' : 'transparent';
+                      bgColor = '#dcfce7';
+                      textColor = isSelected ? '#166534' : '#333';
+                    } else {
+                      borderColor = isSelected ? '#800080' : 'transparent';
+                      bgColor = isSelected ? '#f0e6f0' : '#fff';
+                      textColor = isSelected ? '#800080' : '#333';
+                    }
+                    
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          // Allow selecting any tab (archived tabs will be read-only)
+                          onSelectTab(tab.id);
+                        }}
+                        style={{
+                          aspectRatio: '1 / 1',
+                          width: '100%',
+                          border: borderColor !== 'transparent' ? `2px solid ${borderColor}` : 'none',
+                          background: bgColor,
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                          padding: '24px',
+                          overflow: 'hidden',
+                          boxSizing: 'border-box',
+                          opacity: 1
+                        }}
+                      >
+                        {(() => {
+                          const displayName = (tab.customName || tab.name).toUpperCase();
+                          const words = displayName.split(' ');
+                          const longestWord = Math.max(...words.map(w => w.length));
+                          const numLines = words.length;
+                          const buttonWidth = (outerWidth - 16) / 3;
+                          const availableWidth = buttonWidth - 48;
+                          const availableHeight = buttonWidth - 48;
+                          const fontSizeByWidth = availableWidth / (longestWord * 0.6);
+                          const fontSizeByHeight = availableHeight / (numLines * 1.2);
+                          const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight, outerWidth / 12);
+                          
+                          return words.map((word, idx) => (
+                            <span 
+                              key={idx}
+                              style={{
+                                color: textColor,
+                                fontSize: `${fontSize}px`,
+                                fontWeight: 600,
+                                lineHeight: 1.2
+                              }}
+                            >
+                              {word}
+                            </span>
+                          ));
+                        })()}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -951,35 +973,46 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Close/Cancel Button - disabled when spillage tab is selected */}
-            <button
-              onClick={() => {
-                const isSpillageTab = tabs.find(t => t.isSpillage && t.id === activeTabId);
-                if (isSpillageTab) return; // Disabled for spillage tab
-                if (selectedReceiptIndices.size > 0) {
-                  // CANCEL mode - deselect all items
-                  setSelectedReceiptIndices(new Set());
-                } else {
-                  // Normal mode - close tab
-                  activeTabId && setShowCloseTabConfirm(true);
-                }
-              }}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: '#f0f0f0',
-                color: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999'),
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 'not-allowed' : ((selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed'),
-                borderRadius: '4px',
-                opacity: tabs.find(t => t.isSpillage && t.id === activeTabId) ? 0.4 : 1
-              }}
-            >
-              {selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE'}
-            </button>
+            {/* Close/Cancel/Invoice Button - disabled when spillage tab is selected */}
+            {(() => {
+              const currentTab = tabs.find(t => t.id === activeTabId);
+              const isSpillageTab = currentTab?.isSpillage;
+              const hasItems = currentTab?.items?.length > 0;
+              const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : (hasItems ? 'INVOICE' : 'CLOSE');
+              
+              return (
+                <button
+                  onClick={() => {
+                    if (isSpillageTab) return; // Disabled for spillage tab
+                    if (selectedReceiptIndices.size > 0) {
+                      // CANCEL mode - deselect all items
+                      setSelectedReceiptIndices(new Set());
+                    } else if (hasItems) {
+                      // INVOICE mode - show invoice confirmation
+                      activeTabId && setShowInvoiceConfirm(true);
+                    } else {
+                      // CLOSE mode - close empty tab
+                      activeTabId && setShowCloseTabConfirm(true);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: hasItems && !selectedReceiptIndices.size ? '#f59e0b' : '#f0f0f0',
+                    color: isSpillageTab ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? (hasItems && !selectedReceiptIndices.size ? '#fff' : '#333') : '#999'),
+                    fontSize: `${Math.max(12, outerWidth / 25)}px`,
+                    fontWeight: 600,
+                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    cursor: isSpillageTab ? 'not-allowed' : ((selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed'),
+                    borderRadius: '4px',
+                    opacity: isSpillageTab ? 0.4 : 1
+                  }}
+                >
+                  {buttonLabel}
+                </button>
+              );
+            })()}
             {/* Checkout/Duplicate Button - shows DUPLICATE when items selected, disabled when spillage tab for checkout */}
             <button
               onClick={() => {
@@ -1321,6 +1354,101 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }}
                 >
                   {(isPaid || canClose) ? 'CANCEL' : 'OK'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      
+      {/* Invoice Tab Confirmation Popup */}
+      {showInvoiceConfirm && activeTabId && (() => {
+        const currentTab = tabs.find(t => t.id === activeTabId);
+        const tabTotal = (currentTab?.items || []).reduce((sum, item) => sum + (item.price || item.finalPrice || 0), 0);
+        
+        return (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200
+          }}>
+            <div style={{
+              background: '#fff',
+              borderRadius: '8px',
+              padding: '16px 24px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              maxWidth: '80%'
+            }}>
+              <span style={{
+                fontSize: `${Math.max(14, outerWidth / 22)}px`,
+                fontWeight: 600,
+                color: '#f59e0b',
+                textAlign: 'center'
+              }}>
+                INVOICE
+              </span>
+              <span style={{
+                fontSize: `${Math.max(12, outerWidth / 24)}px`,
+                fontWeight: 500,
+                color: '#333',
+                textAlign: 'center'
+              }}>
+                Send "{(currentTab?.customName || currentTab?.name)?.toUpperCase()}" to invoiced tabs?
+              </span>
+              <span style={{
+                fontSize: `${Math.max(11, outerWidth / 26)}px`,
+                color: '#666',
+                textAlign: 'center'
+              }}>
+                Total: ${tabTotal.toFixed(2)} (will be collected later)
+              </span>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  onClick={() => {
+                    // Mark tab as invoiced (paid but with isInvoice flag)
+                    if (onInvoiceTab) {
+                      onInvoiceTab(activeTabId);
+                    }
+                    setShowInvoiceConfirm(false);
+                  }}
+                  style={{
+                    background: '#f59e0b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '10px 24px',
+                    fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  YES
+                </button>
+                <button
+                  onClick={() => setShowInvoiceConfirm(false)}
+                  style={{
+                    background: '#e5e5e5',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '10px 24px',
+                    fontSize: `${Math.max(11, outerWidth / 28)}px`,
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  NO
                 </button>
               </div>
             </div>
@@ -2074,7 +2202,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [syncing, setSyncing] = useState(false);
   const [showEventSaveSuccess, setShowEventSaveSuccess] = useState(false);
   const [showEndEventButton, setShowEndEventButton] = useState(false);
+  const [showForceQuitConfirm, setShowForceQuitConfirm] = useState(false);
   const endEventTimeoutRef = useRef(null);
+  const forceQuitLongPressRef = useRef(null);
   const saveToServerRef = useRef(null); // Ref for saveToServer function to use in earlier callbacks
   
   // Event Setup data - now managed by usePosLocalStorage hook for persistence
@@ -3034,6 +3164,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     console.log(`[POS] Tab ${tabId} archived`);
   }, [activeTabId]);
 
+  // Invoice a tab (marks as paid but with isInvoice flag - payment to be collected later)
+  // Invoice tabs show as yellow and their total is subtracted from revenue (shown as -$)
+  const handleInvoiceTab = useCallback((tabId) => {
+    setTabs(prev => prev.map(t => 
+      t.id === tabId 
+        ? { ...t, status: 'paid', isInvoice: true, invoicedAt: new Date().toISOString() }
+        : t
+    ));
+    if (activeTabId === tabId) {
+      setActiveTabId(null);
+    }
+    console.log(`[POS] Tab ${tabId} invoiced (payment to be collected later)`);
+  }, [activeTabId]);
+
   // Update tab custom name
   const handleUpdateTabName = useCallback((tabId, customName) => {
     setTabs(prev => prev.map(tab =>
@@ -3210,6 +3354,46 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setSyncing(false);
     }
   }, [apiCall, eventId, eventName, tabs, clearEvent]);
+
+  /**
+   * Force quit the event - bypasses tab checks and forces to summary view
+   * Used when tabs are stuck and cannot be closed normally
+   */
+  const handleForceQuit = useCallback(async () => {
+    if (!eventId) return;
+    
+    try {
+      setSyncing(true);
+      console.log('[POS] Force quitting event with tabs:', tabs.map(t => ({ id: t.id, name: t.name, status: t.status, itemCount: t.items?.length })));
+      
+      // Force all non-archived tabs to be marked as archived before ending
+      const forcedTabs = tabs.map(t => 
+        t.status !== 'archived' ? { ...t, status: 'archived', forceClosed: true } : t
+      );
+      
+      const response = await apiCall(`/pos-events/${eventId}/end`, {
+        method: 'PUT',
+        body: { tabs: forcedTabs, forceQuit: true },
+      });
+      
+      if (response && response.event) {
+        setEventSummary(response.event.summary);
+        setShowForceQuitConfirm(false);
+        setShowEndEventModal(false);
+        setShowSummaryView(true);
+        console.log(`[POS] Force quit event: ${eventName}`);
+      }
+    } catch (error) {
+      console.error('[POS] Failed to force quit event:', error);
+      // Even on error, try to show summary view with local data
+      setShowForceQuitConfirm(false);
+      setShowEndEventModal(false);
+      setShowSummaryView(true);
+      console.log('[POS] Showing summary view despite error');
+    } finally {
+      setSyncing(false);
+    }
+  }, [apiCall, eventId, eventName, tabs]);
 
   /**
    * Close summary view and clear local state
@@ -5951,10 +6135,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             </button>
             
             {/* End Event / Summary button - hidden during checkout */}
+            {/* Long-press on END EVENT triggers force quit option */}
             {!checkoutMode && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Clear long press timer if it exists
+                  if (forceQuitLongPressRef.current) {
+                    clearTimeout(forceQuitLongPressRef.current);
+                    forceQuitLongPressRef.current = null;
+                  }
                   if (endEventTimeoutRef.current) {
                     clearTimeout(endEventTimeoutRef.current);
                   }
@@ -5967,6 +6157,49 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   } else {
                     // End Event - show confirmation modal
                     setShowEndEventModal(true);
+                  }
+                }}
+                onTouchStart={(e) => {
+                  // Start long press timer for force quit (1.5 seconds)
+                  forceQuitLongPressRef.current = setTimeout(() => {
+                    e.preventDefault();
+                    setShowEndEventButton(false);
+                    setShowForceQuitConfirm(true);
+                  }, 1500);
+                }}
+                onTouchEnd={() => {
+                  // Clear long press timer
+                  if (forceQuitLongPressRef.current) {
+                    clearTimeout(forceQuitLongPressRef.current);
+                    forceQuitLongPressRef.current = null;
+                  }
+                }}
+                onTouchCancel={() => {
+                  // Clear long press timer
+                  if (forceQuitLongPressRef.current) {
+                    clearTimeout(forceQuitLongPressRef.current);
+                    forceQuitLongPressRef.current = null;
+                  }
+                }}
+                onMouseDown={() => {
+                  // Start long press timer for force quit (1.5 seconds) - mouse support
+                  forceQuitLongPressRef.current = setTimeout(() => {
+                    setShowEndEventButton(false);
+                    setShowForceQuitConfirm(true);
+                  }, 1500);
+                }}
+                onMouseUp={() => {
+                  // Clear long press timer
+                  if (forceQuitLongPressRef.current) {
+                    clearTimeout(forceQuitLongPressRef.current);
+                    forceQuitLongPressRef.current = null;
+                  }
+                }}
+                onMouseLeave={() => {
+                  // Clear long press timer
+                  if (forceQuitLongPressRef.current) {
+                    clearTimeout(forceQuitLongPressRef.current);
+                    forceQuitLongPressRef.current = null;
                   }
                 }}
                 style={{
@@ -6018,6 +6251,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onSelectTab={handleSelectTab}
               onDeleteTab={handleDeleteTab}
               onArchiveTab={handleArchiveTab}
+              onInvoiceTab={handleInvoiceTab}
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
               onMoveItems={handleMoveItems}
@@ -6159,6 +6393,76 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               </div>
             );
           })()
+        )}
+
+        {/* Force Quit Confirmation Modal */}
+        {showForceQuitConfirm && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}>
+            <div style={{
+              background: '#1a1a1a',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '90%',
+              width: '320px',
+              textAlign: 'center',
+              border: '2px solid #ef4444',
+            }}>
+              <h2 style={{ color: '#ef4444', fontSize: '20px', marginBottom: '16px' }}>
+                ⚠️ FORCE QUIT
+              </h2>
+              <p style={{ color: '#fff', marginBottom: '16px', fontWeight: 'bold' }}>
+                Are you sure you want to force quit?
+              </p>
+              <p style={{ color: '#f59e0b', marginBottom: '24px', fontSize: '14px' }}>
+                Data loss may occur. All open tabs will be force-closed.
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setShowForceQuitConfirm(false)}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: '#444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleForceQuit}
+                  disabled={syncing}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: syncing ? '#555' : '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {syncing ? 'FORCING...' : 'FORCE QUIT'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Checkout Success Overlay */}
@@ -6595,6 +6899,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onSelectTab={handleSelectTab}
                 onDeleteTab={handleDeleteTab}
                 onArchiveTab={handleArchiveTab}
+                onInvoiceTab={handleInvoiceTab}
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
                 onMoveItems={handleMoveItems}

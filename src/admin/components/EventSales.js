@@ -18,6 +18,7 @@ const EventSales = () => {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [graphEventId, setGraphEventId] = useState(null); // Event selected for graph view
   const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
+  const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(false); // Side panel collapsed state
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
@@ -169,6 +170,8 @@ const EventSales = () => {
       name: 'Revenue',
       collapsable: false,
       columns: [
+        { key: 'invoice', label: 'Invoice', width: '90px', editable: false, field: 'invoiceTotal' },
+        { key: 'paid', label: 'Paid', width: '80px', editable: true, field: 'isPaid' },
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
@@ -229,6 +232,45 @@ const EventSales = () => {
         return formatCurrency(event.cogsCost);
       case 'tips':
         return formatCurrency(event.totalTips);
+      case 'invoice':
+        // Invoice total - sum of invoiced tabs (shown as negative since payment pending)
+        const invoiceTotal = event.invoiceTotal || 0;
+        return invoiceTotal > 0 ? (
+          <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+            -${invoiceTotal.toFixed(2)}
+          </span>
+        ) : '-';
+      case 'paid':
+        // Y/N checkboxes for paid status
+        const isPaid = getCurrentValue(event, 'isPaid');
+        return (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={isPaid === true}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleFieldChange(event._id, 'isPaid', true);
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '11px', color: isPaid === true ? '#22c55e' : '#999' }}>Y</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={isPaid === false}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleFieldChange(event._id, 'isPaid', false);
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '11px', color: isPaid === false ? '#ef4444' : '#999' }}>N</span>
+            </label>
+          </div>
+        );
       case 'sales':
         return formatCurrency(event.totalSales);
       case 'accommodation':
@@ -245,43 +287,39 @@ const EventSales = () => {
     }
   };
 
-  // Event detail modal
-  const renderEventDetail = () => {
-    if (!selectedEvent) return null;
+  // Event detail side panel (renders inline, not as modal)
+  const renderEventDetailPanel = () => {
+    if (!selectedEvent || detailPanelCollapsed) return null;
     const event = events.find(e => e._id === selectedEvent);
     if (!event) return null;
 
     return (
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        width: '320px',
+        flexShrink: 0,
+        borderLeft: '1px solid #ddd',
+        background: '#fff',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
         <div style={{
-          background: '#fff',
-          borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '800px',
-          maxHeight: '80vh',
-          overflow: 'auto',
-          width: '90%',
+          padding: '12px 16px',
+          borderBottom: '1px solid #eee',
+          background: '#f9f9f9',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ margin: 0, fontSize: '20px' }}>{event.name}</h2>
-            <button
-              onClick={() => setSelectedEvent(null)}
-              style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}
-            >
-              ×
-            </button>
-          </div>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>{event.name}</h3>
+          <button
+            onClick={() => setDetailPanelCollapsed(true)}
+            style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#666' }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
 
           {/* Items Sold */}
           {event.drinkSales && event.drinkSales.length > 0 && (
@@ -510,34 +548,54 @@ const EventSales = () => {
       ) : (
         <>
           {/* Graph View - Top Half */}
-          <div style={{ height: '45%', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}>
-            {/* Graph Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #eee', background: '#f9f9f9' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>View:</span>
-                {['all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'].map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => setGraphViewMode(mode)}
-                    style={{
-                      padding: '6px 12px',
-                      background: graphViewMode === mode ? '#800080' : '#e5e5e5',
-                      color: graphViewMode === mode ? '#fff' : '#333',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {mode === 'all' ? 'All Categories' : mode}
-                  </button>
-                ))}
+          <div style={{ height: '45%', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden', display: 'flex' }}>
+            {/* Graph Main Area */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* Graph Controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #eee', background: '#f9f9f9' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>View:</span>
+                  {['all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'].map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setGraphViewMode(mode)}
+                      style={{
+                        padding: '6px 12px',
+                        background: graphViewMode === mode ? '#800080' : '#e5e5e5',
+                        color: graphViewMode === mode ? '#fff' : '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {mode === 'all' ? 'All Categories' : mode}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '14px', color: '#666' }}>
+                    {graphEventId ? events.find(e => e._id === graphEventId)?.name || 'Select an event' : 'Select an event from the table below'}
+                  </span>
+                  {selectedEvent && detailPanelCollapsed && (
+                    <button
+                      onClick={() => setDetailPanelCollapsed(false)}
+                      style={{
+                        padding: '4px 10px',
+                        background: '#800080',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      Show Details
+                    </button>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>
-                {graphEventId ? events.find(e => e._id === graphEventId)?.name || 'Select an event' : 'Select an event from the table below'}
-              </div>
-            </div>
             
             {/* Graph Content */}
             <div style={{ height: 'calc(100% - 50px)', padding: '16px', overflow: 'auto' }}>
@@ -608,6 +666,9 @@ const EventSales = () => {
                 </div>
               )}
             </div>
+            </div>
+            {/* Event Detail Side Panel */}
+            {renderEventDetailPanel()}
           </div>
           
           {/* Spreadsheet - Bottom Half */}
@@ -669,7 +730,7 @@ const EventSales = () => {
               {events.map((event, idx) => (
                 <tr
                   key={event._id}
-                  onClick={() => { if (!isEditMode) { setSelectedEvent(event._id); setGraphEventId(event._id); } }}
+                  onClick={() => { if (!isEditMode) { setSelectedEvent(event._id); setGraphEventId(event._id); setDetailPanelCollapsed(false); } }}
                   style={{
                     background: idx % 2 === 0 ? '#fff' : '#fafafa',
                     cursor: isEditMode ? 'default' : 'pointer',
@@ -839,9 +900,7 @@ const EventSales = () => {
         </div>
       )}
 
-      {/* Event Detail Modal */}
-      {renderEventDetail()}
-    </div>
+          </div>
   );
 };
 
