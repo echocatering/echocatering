@@ -209,7 +209,16 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
   };
 
   return (
-    <div className="inventory-manager bg-white min-h-screen w-full p-8">
+    <div 
+      className="inventory-manager bg-white w-full p-8"
+      style={{
+        minHeight: containerHeight ? undefined : '100vh',
+        height: containerHeight ? '100%' : undefined,
+        overflowY: containerHeight ? 'auto' : undefined,
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+      }}
+    >
       <div className="max-w-6xl mx-auto">
         <header 
           className="mb-6 flex flex-col gap-4" 

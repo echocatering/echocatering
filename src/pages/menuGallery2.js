@@ -453,16 +453,17 @@ function EchoCocktailSubpage2({
 
   // Handle initial index navigation
   useEffect(() => {
-    if (initialIndex !== null && initialIndex !== undefined && !initialIndexSet && videoFiles.length > 0) {
+    if (initialIndex !== null && initialIndex !== undefined && videoFiles.length > 0) {
       if (initialIndex >= 0 && initialIndex < videoFiles.length) {
+        console.log('[EchoCocktailSubpage2] Navigating to initialIndex:', initialIndex, 'current:', currentIndex);
         setCurrentIndex(initialIndex);
         setInitialIndexSet(true);
         if (onIndexSet) {
-          setTimeout(() => onIndexSet(), 100);
+          setTimeout(() => onIndexSet(initialIndex), 100);
         }
       }
     }
-  }, [initialIndex, initialIndexSet, videoFiles.length, onIndexSet]);
+  }, [initialIndex, videoFiles.length, onIndexSet]);
   const [pendingPage, setPendingPage] = useState(null);
   const [boxesVisible, setBoxesVisible] = useState(false);
   const [hoveredButton, setHoveredButton] = useState(null);
@@ -3031,8 +3032,20 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   // Also handles navigation from full menu view via fullMenuSelectedItem
   const initialIndex = useMemo(() => {
     // Check for fullMenuSelectedItem first (navigation from full menu view)
-    if (fullMenuSelectedItem && fullMenuSelectedItem.category === selected && fullMenuSelectedItem.index !== undefined) {
-      return fullMenuSelectedItem.index;
+    if (fullMenuSelectedItem && fullMenuSelectedItem.index !== undefined) {
+      console.log('[MenuGallery2] fullMenuSelectedItem check:', {
+        itemName: fullMenuSelectedItem.name,
+        itemCategory: fullMenuSelectedItem.category,
+        itemIndex: fullMenuSelectedItem.index,
+        currentSelected: selected,
+        categoryMatch: fullMenuSelectedItem.category === selected
+      });
+      
+      // If category matches, return the index
+      if (fullMenuSelectedItem.category === selected) {
+        console.log('[MenuGallery2] Returning fullMenuSelectedItem index:', fullMenuSelectedItem.index);
+        return fullMenuSelectedItem.index;
+      }
     }
     
     if (!initialItem || isLoading || !videoFiles.length || initialItemProcessed === false) return null;
@@ -3092,7 +3105,10 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
         position: 'relative',
         background: '#fff',
         overflow: 'auto',
+        overflowY: 'scroll',
         WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        overscrollBehavior: 'contain',
       }}>
         {/* Back button to return to normal view */}
         <button
