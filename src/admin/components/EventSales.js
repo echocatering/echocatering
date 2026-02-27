@@ -13,6 +13,7 @@ const EventSales = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [overheadCollapsed, setOverheadCollapsed] = useState(true);
+  const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedEvents, setEditedEvents] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -167,6 +168,16 @@ const EventSales = () => {
       ]
     },
     {
+      name: 'Payment Methods',
+      collapsable: true,
+      collapsed: paymentMethodsCollapsed,
+      columns: [
+        { key: 'cashTotal', label: 'Cash', width: '90px', editable: false, field: 'cashTotal' },
+        { key: 'creditTotal', label: 'Credit', width: '90px', editable: false, field: 'creditTotal' },
+        { key: 'invoiceTotal', label: 'Invoice', width: '90px', editable: false, field: 'invoiceMethodTotal' },
+      ]
+    },
+    {
       name: 'Revenue',
       collapsable: false,
       columns: [
@@ -275,6 +286,30 @@ const EventSales = () => {
         return formatCurrency(event.totalSales);
       case 'accommodation':
         return formatCurrency(event.accommodationCost);
+      case 'cashTotal':
+        // Cash payments - displayed as +$#.##
+        const cashTotal = event.cashTotal || 0;
+        return cashTotal > 0 ? (
+          <span style={{ color: '#22c55e', fontWeight: 'bold' }}>
+            +${cashTotal.toFixed(2)}
+          </span>
+        ) : '-';
+      case 'creditTotal':
+        // Credit payments - displayed as +$#.##
+        const creditTotal = event.creditTotal || 0;
+        return creditTotal > 0 ? (
+          <span style={{ color: '#22c55e', fontWeight: 'bold' }}>
+            +${creditTotal.toFixed(2)}
+          </span>
+        ) : '-';
+      case 'invoiceTotal':
+        // Invoice payments - displayed as $#.## (neutral, doesn't affect profit)
+        const invoiceMethodTotal = event.invoiceMethodTotal || event.invoiceTotal || 0;
+        return invoiceMethodTotal > 0 ? (
+          <span style={{ color: '#666' }}>
+            ${invoiceMethodTotal.toFixed(2)}
+          </span>
+        ) : '-';
       case 'profit':
         const profit = event.netIncome || 0;
         return (
@@ -508,6 +543,20 @@ const EventSales = () => {
             }}
           >
             Overhead
+          </button>
+          <button
+            onClick={() => setPaymentMethodsCollapsed(!paymentMethodsCollapsed)}
+            style={{
+              padding: '8px 16px',
+              background: paymentMethodsCollapsed ? '#999' : '#666',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Payment Methods
           </button>
           <button
             onClick={isEditMode ? () => setShowSaveConfirm(true) : handleEnterEditMode}
