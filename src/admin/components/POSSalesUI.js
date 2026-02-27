@@ -3391,6 +3391,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setEventSummary(response.event.summary);
         setShowEndEventModal(false);
         setShowSummaryView(true);
+        setIsPostEventEdit(true); // Mark as post-event edit mode
         console.log(`[POS] Ended event: ${eventName}`);
       }
     } catch (error) {
@@ -3435,6 +3436,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setShowForceQuitConfirm(false);
         setShowEndEventModal(false);
         setShowSummaryView(true);
+        setIsPostEventEdit(true); // Mark as post-event edit mode
         console.log(`[POS] Force quit event: ${eventName}`);
       }
     } catch (error) {
@@ -3443,6 +3445,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setShowForceQuitConfirm(false);
       setShowEndEventModal(false);
       setShowSummaryView(true);
+      setIsPostEventEdit(true); // Mark as post-event edit mode
       console.log('[POS] Showing summary view despite error');
     } finally {
       setSyncing(false);
@@ -4871,51 +4874,203 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Finalize Event Button - goes directly to event setup/finalize page */}
-              <button
-                onClick={() => {
-                  console.log('[Event Summary] FINALIZE EVENT clicked');
-                  // Pre-populate setup data from event summary
-                  const endTimeValue = eventSummary?.endTime 
-                    ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
-                    : new Date().toTimeString().slice(0, 5);
-                  
-                  // Build inventory from menu items
-                  const buildInventory = (cat) => allItems
-                    .filter(item => normalizeCategoryKey(item.category) === cat)
-                    .map(item => ({ name: item.name, sent: '', returned: '' }));
-                  
-                  setEventSetupData(prev => ({
-                    ...prev,
-                    eventName: eventName || '',
-                    eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                    startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
-                    endTime: endTimeValue,
-                    inventory: {
-                      cocktails: prev.inventory?.cocktails?.length > 0 ? prev.inventory.cocktails : buildInventory('cocktails'),
-                      mocktails: prev.inventory?.mocktails?.length > 0 ? prev.inventory.mocktails : buildInventory('mocktails'),
-                      beer: prev.inventory?.beer?.length > 0 ? prev.inventory.beer : buildInventory('beer'),
-                      wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
-                    },
-                  }));
-                  console.log('[Event Summary] FINALIZE EVENT - navigating to Event Summary page');
-                  setShowSummaryView(false); // Hide brief summary page
-                  setShowEventSetup(true);   // Show full Event Summary page
-                }}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  background: '#800080',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                FINALIZE EVENT
-              </button>
+              {/* Action Buttons - Show Save Event and Edit Event when eventSummary exists */}
+              {eventSummary ? (
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                  <button
+                    onClick={() => {
+                      console.log('[Event Summary] EDIT EVENT - returning to POS view');
+                      // Keep paid/archived tabs as archived (green and uneditable)
+                      // Only return to POS view without changing tab statuses
+                      setShowEventSetup(false);
+                      setShowSummaryView(false);
+                      setIsPostEventEdit(true); // Mark that we're in post-event edit mode
+                      // This will return to the POS view with the active event
+                    }}
+                    disabled={syncing}
+                    style={{
+                      flex: 1,
+                      padding: '16px',
+                      background: syncing ? '#ccc' : '#666',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      cursor: syncing ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    EDIT EVENT
+                  </button>
+                  <button
+                    onClick={async () => {
+                      console.log('[Event Summary] SAVE RESULTS - saving to database');
+                      console.log('[Event Summary] eventId:', eventId);
+                      console.log('[Event Summary] eventSetupData:', eventSetupData);
+                      console.log('[Event Summary] eventSummary:', eventSummary);
+                      console.log('[Event Summary] tabs with tips:', tabs.map(t => ({ id: t.id, name: t.name, tipAmount: t.tipAmount })));
+                      
+                      // Calculate total tips from tabs (in case eventSummary doesn't have it)
+                      const totalTipsFromTabs = tabs.reduce((sum, t) => sum + (t.tipAmount || 0), 0);
+                      
+                      // Calculate spillage data from spillage tab using costPerUnit or item price as fallback
+                      const spillageTab = tabs.find(t => t.isSpillage);
+                      const spillageItems = [];
+                      let spillageTotal = 0;
+                      if (spillageTab?.items) {
+                        // Group items by name and count, track price for fallback
+                        const itemCounts = {};
+                        spillageTab.items.forEach(item => {
+                          if (!itemCounts[item.name]) {
+                            itemCounts[item.name] = { 
+                              name: item.name, 
+                              category: item.category, 
+                              quantity: 0,
+                              itemPrice: item.basePrice || item.price || 0 // Store price for fallback
+                            };
+                          }
+                          itemCounts[item.name].quantity += 1;
+                        });
+                        // Calculate cost for each item
+                        Object.values(itemCounts).forEach(item => {
+                          const menuItem = allItems.find(i => i.name === item.name);
+                          const costPerUnit = menuItem?.costPerUnit || item.itemPrice || 0;
+                          const totalCost = item.quantity * costPerUnit;
+                          spillageItems.push({ name: item.name, category: item.category, quantity: item.quantity, costPerUnit, totalCost });
+                          spillageTotal += totalCost;
+                        });
+                      }
+                      
+                      // Calculate COGS from category breakdown
+                      let cogsTotal = 0;
+                      if (eventSummary?.categoryBreakdown) {
+                        const breakdown = eventSummary.categoryBreakdown instanceof Map 
+                          ? Object.fromEntries(eventSummary.categoryBreakdown)
+                          : eventSummary.categoryBreakdown;
+                        Object.entries(breakdown).forEach(([category, data]) => {
+                          if (data.items) {
+                            Object.entries(data.items).forEach(([itemName, itemData]) => {
+                              const menuItem = allItems.find(i => i.name === itemName);
+                              const costPerUnit = menuItem?.costPerUnit || 0;
+                              cogsTotal += (itemData.count || 0) * costPerUnit;
+                            });
+                          }
+                        });
+                      }
+                      
+                      // Calculate taxes (30% of sales + tips)
+                      const sales = eventSummary?.totalRevenue || 0;
+                      const tips = eventSummary?.totalTips || totalTipsFromTabs;
+                      const taxes = (sales + tips) * 0.3;
+                      
+                      const summaryWithTips = {
+                        ...eventSummary,
+                        totalTips: tips,
+                        taxes: taxes
+                      };
+                      
+                      setSyncing(true);
+                      try {
+                        const response = await fetch('/api/catering-events/finalize', {
+                          method: 'POST',
+                          headers: { 
+                            'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify({
+                            eventId,
+                            setupData: eventSetupData,
+                            summary: summaryWithTips,
+                            tabs: tabs,
+                            spillageData: { items: spillageItems, total: spillageTotal },
+                            cogsData: { total: cogsTotal },
+                          }),
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                          // Show success animation
+                          setShowEventSaveSuccess(true);
+                          // After 2 seconds, return to home/event list
+                          setTimeout(() => {
+                            setShowEventSaveSuccess(false);
+                            setShowEventSetup(false);
+                            setShowSummaryView(false);
+                            setEventSummary(null);
+                            clearEvent(); // Clear event from localStorage
+                          }, 2000);
+                        } else {
+                          console.error('[Event Summary] Save failed:', data);
+                          alert(`Failed to save event: ${data.message || 'Unknown error'}`);
+                        }
+                      } catch (err) {
+                        console.error('Failed to save event:', err);
+                        alert(`Failed to save event: ${err.message}`);
+                      } finally {
+                        setSyncing(false);
+                      }
+                    }}
+                    disabled={syncing}
+                    style={{
+                      flex: 1,
+                      padding: '16px',
+                      background: syncing ? '#ccc' : '#800080',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      cursor: syncing ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {syncing ? 'SAVING...' : 'SAVE RESULTS'}
+                  </button>
+                </div>
+              ) : (
+                /* Finalize Event Button - goes directly to event setup/finalize page */
+                <button
+                  onClick={() => {
+                    console.log('[Event Summary] FINALIZE EVENT clicked');
+                    // Pre-populate setup data from event summary
+                    const endTimeValue = eventSummary?.endTime 
+                      ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
+                      : new Date().toTimeString().slice(0, 5);
+                    
+                    // Build inventory from menu items
+                    const buildInventory = (cat) => allItems
+                      .filter(item => normalizeCategoryKey(item.category) === cat)
+                      .map(item => ({ name: item.name, sent: '', returned: '' }));
+                    
+                    setEventSetupData(prev => ({
+                      ...prev,
+                      eventName: eventName || '',
+                      eventDate: eventStarted ? new Date(eventStarted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                      startTime: eventStarted ? new Date(eventStarted).toTimeString().slice(0, 5) : '',
+                      endTime: endTimeValue,
+                      inventory: {
+                        cocktails: prev.inventory?.cocktails?.length > 0 ? prev.inventory.cocktails : buildInventory('cocktails'),
+                        mocktails: prev.inventory?.mocktails?.length > 0 ? prev.inventory.mocktails : buildInventory('mocktails'),
+                        beer: prev.inventory?.beer?.length > 0 ? prev.inventory.beer : buildInventory('beer'),
+                        wine: prev.inventory?.wine?.length > 0 ? prev.inventory.wine : buildInventory('wine'),
+                      },
+                    }));
+                    console.log('[Event Summary] FINALIZE EVENT - navigating to Event Summary page');
+                    setShowSummaryView(false); // Hide brief summary page
+                    setShowEventSetup(true);   // Show full Event Summary page
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: '#800080',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  FINALIZE EVENT
+                </button>
+              )}
             </div>
           </div>
         </div>
