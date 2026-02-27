@@ -4744,7 +4744,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // Standalone mode: render POSContent directly filling the viewport
   if (isStandalone) {
     // If showing brief summary view after event end (only if showEventSetup is false)
-    if (showSummaryView && eventSummary && !showEventSetup) {
+    // Also show if isPostEventEdit is true (resumed event in post-event mode)
+    if (showSummaryView && (eventSummary || isPostEventEdit) && !showEventSetup) {
       return (
         <div style={{
           width: '100%',
@@ -4784,6 +4785,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             overflow: 'auto',
             padding: '20px',
           }}>
+            {(() => {
+              // Calculate summary from tabs if eventSummary is null
+              const computedSummary = eventSummary || (() => {
+                const paidTabs = tabs.filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived' || t.status === 'closed'));
+                const totalRevenue = paidTabs.reduce((sum, tab) => {
+                  const tabItemsTotal = (tab.items || []).reduce((itemSum, item) => itemSum + (item.price || item.finalPrice || 0), 0);
+                  return sum + tabItemsTotal;
+                }, 0);
+                const totalTips = paidTabs.reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
+                const totalItems = paidTabs.reduce((sum, tab) => sum + (tab.items?.length || 0), 0);
+                const totalTabs = paidTabs.length;
+                return { totalRevenue, totalTips, totalItems, totalTabs };
+              })();
+              
+              return (
             <div style={{ maxWidth: '600px', margin: '0 auto' }}>
               <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center', color: '#333' }}>
                 {eventName || 'Event'}
@@ -4800,13 +4816,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
-                      ${(eventSummary.totalRevenue || 0).toFixed(2)}
+                      ${(computedSummary.totalRevenue || 0).toFixed(2)}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Sales</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
-                      ${(eventSummary.totalTips || 0).toFixed(2)}
+                      ${(computedSummary.totalTips || 0).toFixed(2)}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Tips</div>
                   </div>
@@ -4814,13 +4830,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
-                      {eventSummary.totalItems || 0}
+                      {computedSummary.totalItems || 0}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Total Items</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
-                      {eventSummary.totalTabs || 0}
+                      {computedSummary.totalTabs || 0}
                     </div>
                     <div style={{ fontSize: '14px', color: '#666' }}>Total Tabs</div>
                   </div>
@@ -4849,14 +4865,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
                   <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                    -${(((eventSummary.totalRevenue || 0) + (eventSummary.totalTips || 0)) * 0.3).toFixed(2)}
+                    -${(((computedSummary.totalRevenue || 0) + (computedSummary.totalTips || 0)) * 0.3).toFixed(2)}
                   </span>
                 </div>
                 
                 {/* Net (simplified - full breakdown in Event Setup) */}
                 {(() => {
-                  const sales = eventSummary.totalRevenue || 0;
-                  const tips = eventSummary.totalTips || 0;
+                  const sales = computedSummary.totalRevenue || 0;
+                  const tips = computedSummary.totalTips || 0;
                   const taxes = (sales + tips) * 0.3;
                   const netIncome = sales + tips - taxes;
                   return (
@@ -4874,8 +4890,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Action Buttons - Show Save Event and Edit Event when eventSummary exists */}
-              {eventSummary ? (
+              {/* Action Buttons - Show Save Event and Edit Event when in post-event mode */}
+              {(eventSummary || isPostEventEdit) ? (
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
                   <button
                     onClick={() => {
@@ -5072,6 +5088,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </button>
               )}
             </div>
+              );
+            })()}
           </div>
         </div>
       );
@@ -5079,7 +5097,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
     // Event Setup/Edit page
     if (showEventSetup) {
-      const isPostEvent = eventSummary != null; // Post-event if we have event summary data
+      const isPostEvent = eventSummary != null || isPostEventEdit; // Post-event if we have event summary data OR we're in post-event edit mode
       const glasswareLost = {
         rox: Math.max(0, (eventSetupData.glasswareSent?.rox || 0) - (eventSetupData.glasswareReturned?.rox || 0)),
         tmbl: Math.max(0, (eventSetupData.glasswareSent?.tmbl || 0) - (eventSetupData.glasswareReturned?.tmbl || 0)),
