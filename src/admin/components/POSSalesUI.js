@@ -678,17 +678,26 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 const isSpillageTab = activeTab?.isSpillage;
                 
                 if (isSpillageTab) {
-                  // Spillage tab: show "SPILL TAB" in grey, no name input
+                  // Spillage tab: show "Name: SPILL TAB" in purple, uneditable
                   return (
-                    <span style={{
-                      color: '#999',
-                      fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
-                      fontWeight: 600,
-                      fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                      flex: 1
-                    }}>
-                      SPILL TAB
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <span style={{
+                        color: '#d0d0d0',
+                        fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
+                        fontWeight: 500,
+                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                      }}>
+                        Name:
+                      </span>
+                      <span style={{
+                        color: '#800080',
+                        fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
+                        fontWeight: 600,
+                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                      }}>
+                        SPILL TAB
+                      </span>
+                    </div>
                   );
                 }
                 
@@ -973,12 +982,11 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Close/Cancel/Invoice Button - disabled when spillage tab is selected */}
+            {/* Close/Cancel Button - disabled when spillage tab is selected */}
             {(() => {
               const currentTab = tabs.find(t => t.id === activeTabId);
               const isSpillageTab = currentTab?.isSpillage;
-              const hasItems = currentTab?.items?.length > 0;
-              const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : (hasItems ? 'INVOICE' : 'CLOSE');
+              const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE';
               
               return (
                 <button
@@ -987,11 +995,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     if (selectedReceiptIndices.size > 0) {
                       // CANCEL mode - deselect all items
                       setSelectedReceiptIndices(new Set());
-                    } else if (hasItems) {
-                      // INVOICE mode - show invoice confirmation
-                      activeTabId && setShowInvoiceConfirm(true);
                     } else {
-                      // CLOSE mode - close empty tab
+                      // CLOSE mode - close empty tab (show confirmation)
                       activeTabId && setShowCloseTabConfirm(true);
                     }
                   }}
@@ -999,8 +1004,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     flex: 1,
                     padding: '12px',
                     border: 'none',
-                    background: hasItems && !selectedReceiptIndices.size ? '#f59e0b' : '#f0f0f0',
-                    color: isSpillageTab ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? (hasItems && !selectedReceiptIndices.size ? '#fff' : '#333') : '#999'),
+                    background: '#f0f0f0',
+                    color: isSpillageTab ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999'),
                     fontSize: `${Math.max(12, outerWidth / 25)}px`,
                     fontWeight: 600,
                     fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
@@ -1147,17 +1152,22 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
           </div>
           {/* Action Visualizer - right: show Tip for selected archived tab, Last Action for others */}
           {showArchivedTabs ? (
-            // Show tip for the selected archived tab
+            // Show payment method and tip for the selected archived/paid tab
             (() => {
               const activeTab = tabs.find(t => t.id === activeTabId);
               const tabTip = activeTab?.tipAmount || 0;
+              const paymentType = activeTab?.paymentMethod || (activeTab?.isInvoice ? 'invoice' : 'credit');
+              const paymentLabel = paymentType === 'cash' ? 'CASH' : paymentType === 'invoice' ? 'INVOICE' : 'CREDIT';
+              const paymentColor = paymentType === 'cash' ? '#2196f3' : paymentType === 'invoice' ? '#f59e0b' : '#4caf50';
               return (
                 <span style={{
                   fontSize: `${Math.max(8, footerHeight * 0.18)}px`,
                   fontWeight: 500,
                   fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
                 }}>
-                  <span style={{ color: '#d0d0d0' }}>Tip </span>
+                  <span style={{ color: '#d0d0d0' }}>Payment: </span>
+                  <span style={{ color: paymentColor }}>{paymentLabel}</span>
+                  <span style={{ color: '#d0d0d0' }}> — Tip: </span>
                   <span style={{ color: tabTip > 0 ? '#22c55e' : '#d0d0d0' }}>
                     ${tabTip.toFixed(2)}
                   </span>
@@ -2232,6 +2242,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showScanCard, setShowScanCard] = useState(false); // Show scan card screen after tip selection
   const [selectedTipAmount, setSelectedTipAmount] = useState(0); // Store selected tip for scan card screen
   const [checkoutStage, setCheckoutStage] = useState(''); // Track checkout stage: 'tip', 'tab', 'payment', 'processing', 'success', 'failed'
+  const [showCheckoutOptions, setShowCheckoutOptions] = useState(false); // Show Credit/Cash/Invoice popup
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'credit', 'cash', 'invoice'
+  const [cashTendered, setCashTendered] = useState(''); // Amount of cash given by customer
   
   // Checkout timeout - 1 minute idle returns to menu
   const checkoutTimeoutRef = useRef(null);
@@ -2280,7 +2293,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     if (data.tabId) {
       setTabs(prev => prev.map(t => 
         t.id === data.tabId 
-          ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: data.tipAmount || 0 }
+          ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: data.tipAmount || 0, paymentMethod: data.paymentMethod || 'credit' }
           : t
       ));
       setActiveTabId(null);
@@ -3453,8 +3466,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
 
-    console.log(`[POS Checkout] Entering checkout mode for tab ${activeTab.id} (${activeTab.customName || activeTab.name})`);
+    console.log(`[POS Checkout] Showing checkout options for tab ${activeTab.id} (${activeTab.customName || activeTab.name})`);
     
+    // Store checkout data for later use
     const checkoutData = {
       items: [...selectedItems],
       subtotal: total,
@@ -3464,10 +3478,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       }
     };
     
-    // Store checkout data locally for the tipping screen
     setCheckoutItems(checkoutData.items);
     setCheckoutSubtotal(checkoutData.subtotal);
     setCheckoutTabInfo(checkoutData.tabInfo);
+    
+    // Show checkout options popup (Credit/Cash/Invoice)
+    setShowCheckoutOptions(true);
+  }, [activeTabId, selectedItems, tabs, total]);
+
+  /**
+   * Start credit card checkout flow
+   */
+  const handleCreditCheckout = useCallback(() => {
+    setShowCheckoutOptions(false);
+    setPaymentMethod('credit');
     setShowCustomTip(false);
     setCustomTipAmount('');
     
@@ -3476,11 +3500,131 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setCheckoutStage('tip'); // Set initial stage locally
     
     // Broadcast checkout start via WebSocket to sync horizontal view on other devices
+    const checkoutData = {
+      items: checkoutItems,
+      subtotal: checkoutSubtotal,
+      tabInfo: checkoutTabInfo,
+      paymentMethod: 'credit'
+    };
     sendCheckoutStart(checkoutData);
-    sendCheckoutStage('tip'); // Broadcast initial stage to vertical device
+    sendCheckoutStage('tip');
     
-    console.log(`[POS Checkout] Checkout mode activated. Subtotal: $${total.toFixed(2)}, Items: ${selectedItems.length}`);
-  }, [activeTabId, selectedItems, tabs, total, sendCheckoutStart, sendCheckoutStage]);
+    console.log(`[POS Checkout] Credit checkout mode activated. Subtotal: $${checkoutSubtotal.toFixed(2)}`);
+  }, [checkoutItems, checkoutSubtotal, checkoutTabInfo, sendCheckoutStart, sendCheckoutStage]);
+
+  /**
+   * Start cash checkout flow
+   */
+  const handleCashCheckout = useCallback(() => {
+    setShowCheckoutOptions(false);
+    setPaymentMethod('cash');
+    setCashTendered('');
+    
+    // Enter checkout mode locally
+    setCheckoutMode(true);
+    setCheckoutStage('cash'); // Cash payment stage
+    
+    // Broadcast checkout start via WebSocket to sync horizontal view on other devices
+    const checkoutData = {
+      items: checkoutItems,
+      subtotal: checkoutSubtotal,
+      tabInfo: checkoutTabInfo,
+      paymentMethod: 'cash'
+    };
+    sendCheckoutStart(checkoutData);
+    sendCheckoutStage('cash');
+    
+    console.log(`[POS Checkout] Cash checkout mode activated. Subtotal: $${checkoutSubtotal.toFixed(2)}`);
+  }, [checkoutItems, checkoutSubtotal, checkoutTabInfo, sendCheckoutStart, sendCheckoutStage]);
+
+  /**
+   * Handle invoice checkout - mark tab as invoiced for later payment
+   */
+  const handleInvoiceCheckout = useCallback(() => {
+    setShowCheckoutOptions(false);
+    
+    if (!checkoutTabInfo) {
+      alert('No tab selected');
+      return;
+    }
+    
+    // Mark tab as invoiced (paid later)
+    setTabs(prev => prev.map(t => 
+      t.id === checkoutTabInfo.id 
+        ? { ...t, status: 'paid', isInvoice: true, paymentMethod: 'invoice', paidAt: new Date().toISOString() }
+        : t
+    ));
+    
+    // Clear checkout state
+    setCheckoutItems([]);
+    setCheckoutSubtotal(0);
+    setCheckoutTabInfo(null);
+    
+    // Move to next tab or clear selection
+    if (activeTabId === checkoutTabInfo.id) {
+      setActiveTabId(null);
+    }
+    
+    console.log(`[POS Checkout] Tab ${checkoutTabInfo.id} marked as invoiced`);
+  }, [checkoutTabInfo, activeTabId]);
+
+  /**
+   * Complete cash payment
+   */
+  const handleCompleteCashPayment = useCallback(() => {
+    if (!checkoutTabInfo) {
+      alert('No tab selected');
+      return;
+    }
+    
+    const cashAmount = parseFloat(cashTendered) || 0;
+    const totalDue = checkoutSubtotal;
+    
+    if (cashAmount < totalDue) {
+      alert(`Insufficient cash. Need $${totalDue.toFixed(2)}, received $${cashAmount.toFixed(2)}`);
+      return;
+    }
+    
+    // Mark tab as paid with cash
+    setTabs(prev => prev.map(t => 
+      t.id === checkoutTabInfo.id 
+        ? { 
+            ...t, 
+            status: 'paid', 
+            paymentMethod: 'cash', 
+            tipAmount: 0, // No tip for cash
+            paidAt: new Date().toISOString(),
+            cashTendered: cashAmount,
+            changeGiven: cashAmount - totalDue
+          }
+        : t
+    ));
+    
+    // Show success briefly
+    setCheckoutStage('success');
+    setPaymentMethod('cash');
+    
+    // Broadcast to horizontal view
+    sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
+    
+    // Clear checkout state after delay
+    setTimeout(() => {
+      setCheckoutMode(false);
+      setCheckoutItems([]);
+      setCheckoutSubtotal(0);
+      setCheckoutTabInfo(null);
+      setCashTendered('');
+      setCheckoutStage('');
+      setPaymentMethod('');
+      
+      // Move to next tab or clear selection
+      if (activeTabId === checkoutTabInfo.id) {
+        setActiveTabId(null);
+      }
+    }, 2000);
+    
+    console.log(`[POS Checkout] Cash payment completed. Total: $${totalDue.toFixed(2)}, Cash: $${cashAmount.toFixed(2)}, Change: $${(cashAmount - totalDue).toFixed(2)}`);
+  }, [checkoutTabInfo, checkoutSubtotal, cashTendered, activeTabId, sendCheckoutComplete]);
 
   /**
    * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
@@ -3520,7 +3664,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             if (checkoutTabInfo?.id) {
               setTabs(prev => prev.map(t => 
                 t.id === checkoutTabInfo.id 
-                  ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
+                  ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0, paymentMethod: 'credit' }
                   : t
               ));
               setActiveTabId(null);
@@ -3577,7 +3721,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         if (checkoutTabInfo?.id) {
           setTabs(prev => prev.map(t => 
             t.id === checkoutTabInfo.id 
-              ? { ...t, status: 'archived', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0 }
+              ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: tipAmount || 0, paymentMethod: 'credit' }
               : t
           ));
           setActiveTabId(null);
@@ -3894,7 +4038,68 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               alignItems: 'center',
               overflow: 'hidden',
             }}>
-              {showScanCard ? (
+              {paymentMethod === 'cash' && checkoutStage === 'cash' ? (
+                /* CASH PAYMENT SCREEN - shows total with View Tab button */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '3vh',
+                }}>
+                  {/* Success animation for cash */}
+                  {checkoutStage === 'success' ? (
+                    <>
+                      <div style={{ textAlign: 'center' }}>
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                          <circle cx="60" cy="60" r="54" fill="none" stroke="#22c55e" strokeWidth="4" />
+                          <path d="M34 60 L52 78 L86 44" fill="none" stroke="#22c55e" strokeWidth="6" 
+                            strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <div style={{ 
+                        fontSize: 'clamp(28px, 5vh, 42px)', 
+                        fontWeight: '700', 
+                        color: '#22c55e',
+                        textAlign: 'center',
+                      }}>
+                        Payment Complete!
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Total amount display */}
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginBottom: '1vh' }}>
+                          Total Due
+                        </div>
+                        <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
+                          ${checkoutSubtotal.toFixed(2)}
+                        </div>
+                      </div>
+                      
+                      {/* View Tab button */}
+                      <button
+                        onClick={() => setShowTabView(true)}
+                        style={{
+                          padding: '16px 48px',
+                          fontSize: 'clamp(16px, 2.5vh, 20px)',
+                          fontWeight: '600',
+                          background: '#fff',
+                          color: '#800080',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        View Tab
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : showScanCard ? (
                 /* SCAN CARD SCREEN - shown after tip selection */
                 <div style={{
                   display: 'flex',
@@ -6052,7 +6257,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 setSquareTestMode(prev => !prev);
               }}
               style={{
-                background: squareTestMode ? '#ff9800' : '#4caf50',
+                background: '#666',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -6078,7 +6283,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   }
                 }}
                 style={{
-                  background: readerConnected ? '#4caf50' : '#ef4444',
+                  background: '#666',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
@@ -6459,6 +6664,303 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   }}
                 >
                   {syncing ? 'FORCING...' : 'FORCE QUIT'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Checkout Options Popup (Credit/Cash/Invoice) */}
+        {showCheckoutOptions && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}>
+            <div style={{
+              background: '#1a1a1a',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '90%',
+              width: '320px',
+              textAlign: 'center',
+            }}>
+              <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '8px' }}>
+                Payment Method
+              </h2>
+              <p style={{ color: '#888', marginBottom: '24px', fontSize: '16px' }}>
+                Total: ${checkoutSubtotal.toFixed(2)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  onClick={handleCreditCheckout}
+                  style={{
+                    padding: '16px',
+                    background: '#4caf50',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  💳 CREDIT
+                </button>
+                <button
+                  onClick={handleCashCheckout}
+                  style={{
+                    padding: '16px',
+                    background: '#2196f3',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  💵 CASH
+                </button>
+                <button
+                  onClick={handleInvoiceCheckout}
+                  style={{
+                    padding: '16px',
+                    background: '#f59e0b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📄 INVOICE
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCheckoutOptions(false);
+                    setCheckoutItems([]);
+                    setCheckoutSubtotal(0);
+                    setCheckoutTabInfo(null);
+                  }}
+                  style={{
+                    padding: '14px',
+                    background: '#444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    marginTop: '8px',
+                  }}
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cash Payment Number Pad (Vertical View) */}
+        {checkoutMode && paymentMethod === 'cash' && checkoutStage === 'cash' && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}>
+            <div style={{
+              background: '#1a1a1a',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '350px',
+              textAlign: 'center',
+            }}>
+              <h2 style={{ color: '#fff', fontSize: '18px', marginBottom: '16px' }}>
+                Cash Payment
+              </h2>
+              <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
+                Total Due
+              </div>
+              <div style={{ color: '#4caf50', fontSize: '36px', fontWeight: 'bold', marginBottom: '24px' }}>
+                ${checkoutSubtotal.toFixed(2)}
+              </div>
+              
+              <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
+                Cash Tendered
+              </div>
+              <div style={{ 
+                background: '#333', 
+                borderRadius: '8px', 
+                padding: '12px', 
+                marginBottom: '16px',
+                fontSize: '28px',
+                fontWeight: 'bold',
+                color: '#fff',
+                minHeight: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                ${cashTendered || '0.00'}
+              </div>
+              
+              {/* Change calculation */}
+              {parseFloat(cashTendered) >= checkoutSubtotal && (
+                <div style={{ 
+                  background: '#1b5e20', 
+                  borderRadius: '8px', 
+                  padding: '12px', 
+                  marginBottom: '16px',
+                }}>
+                  <div style={{ color: '#a5d6a7', fontSize: '14px' }}>Change Due</div>
+                  <div style={{ color: '#4caf50', fontSize: '28px', fontWeight: 'bold' }}>
+                    ${(parseFloat(cashTendered) - checkoutSubtotal).toFixed(2)}
+                  </div>
+                </div>
+              )}
+              
+              {/* Number pad */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(3, 1fr)', 
+                gap: '8px',
+                marginBottom: '16px',
+              }}>
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (key === '⌫') {
+                        setCashTendered(prev => prev.slice(0, -1));
+                      } else if (key === '.') {
+                        if (!cashTendered.includes('.')) {
+                          setCashTendered(prev => prev + '.');
+                        }
+                      } else {
+                        setCashTendered(prev => {
+                          const newVal = prev + key;
+                          // Limit to 2 decimal places
+                          if (newVal.includes('.') && newVal.split('.')[1]?.length > 2) {
+                            return prev;
+                          }
+                          return newVal;
+                        });
+                      }
+                    }}
+                    style={{
+                      padding: '16px',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      background: key === '⌫' ? '#ef4444' : '#444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {key}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Quick amount buttons */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                {[20, 50, 100].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setCashTendered(amount.toFixed(2))}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      background: '#333',
+                      color: '#fff',
+                      border: '1px solid #555',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ${amount}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCashTendered(checkoutSubtotal.toFixed(2))}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    background: '#333',
+                    color: '#4caf50',
+                    border: '1px solid #4caf50',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  EXACT
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setCheckoutMode(false);
+                    setCheckoutItems([]);
+                    setCheckoutSubtotal(0);
+                    setCheckoutTabInfo(null);
+                    setCashTendered('');
+                    setCheckoutStage('');
+                    setPaymentMethod('');
+                    sendCheckoutCancel();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: '#444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleCompleteCashPayment}
+                  disabled={!cashTendered || parseFloat(cashTendered) < checkoutSubtotal}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: (!cashTendered || parseFloat(cashTendered) < checkoutSubtotal) ? '#555' : '#4caf50',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: (!cashTendered || parseFloat(cashTendered) < checkoutSubtotal) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  COMPLETE
                 </button>
               </div>
             </div>
