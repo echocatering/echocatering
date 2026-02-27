@@ -11,6 +11,7 @@ const SalesManager = ({ posEventId = null }) => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [selectedEventId, setSelectedEventId] = useState(posEventId);
+  const [selectedEventDetails, setSelectedEventDetails] = useState(null); // Event details for side panel
   
   // Data
   const [summary, setSummary] = useState(null);
@@ -89,6 +90,18 @@ const SalesManager = ({ posEventId = null }) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+  
+  // Set initial selected event details when eventBreakdown loads (most recent event)
+  useEffect(() => {
+    if (eventBreakdown.length > 0 && !selectedEventDetails) {
+      setSelectedEventDetails(eventBreakdown[0]);
+    }
+  }, [eventBreakdown, selectedEventDetails]);
+  
+  // Handle clicking on an event row
+  const handleEventRowClick = useCallback((event) => {
+    setSelectedEventDetails(event);
+  }, []);
   
   // Format currency
   const formatCurrency = (amount) => {
@@ -295,10 +308,10 @@ const SalesManager = ({ posEventId = null }) => {
         </div>
       )}
       
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      {/* Charts Row - Graph and Event Details Side Panel */}
+      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
         {/* Daily Sales Chart */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <div style={{ flex: 1, background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', minHeight: '280px' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>📅 Daily Sales</h3>
           <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '4px', paddingBottom: '24px', position: 'relative' }}>
             {dailySales.length === 0 ? (
@@ -331,7 +344,73 @@ const SalesManager = ({ posEventId = null }) => {
           )}
         </div>
         
-        {/* Category Breakdown */}
+        {/* Event Details Side Panel - Same height as graph */}
+        <div style={{ 
+          width: '350px', 
+          flexShrink: 0,
+          background: 'white', 
+          borderRadius: '12px', 
+          padding: '20px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          minHeight: '280px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>🎉 Event Details</h3>
+          {selectedEventDetails ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ 
+                fontSize: '16px', 
+                fontWeight: 'bold', 
+                color: '#800080',
+                paddingBottom: '8px',
+                borderBottom: '2px solid #800080'
+              }}>
+                {selectedEventDetails.eventName}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ color: '#666' }}>Date</span>
+                <span style={{ fontWeight: '500' }}>{new Date(selectedEventDetails.firstSale).toLocaleDateString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ color: '#666' }}>Total Sales</span>
+                <span style={{ fontWeight: 'bold', color: '#4CAF50' }}>{formatCurrency(selectedEventDetails.sales)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ color: '#666' }}>Tips</span>
+                <span style={{ fontWeight: '500', color: '#2196F3' }}>{formatCurrency(selectedEventDetails.tips)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ color: '#666' }}>Transactions</span>
+                <span style={{ fontWeight: '500' }}>{selectedEventDetails.transactions}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ color: '#666' }}>Items Sold</span>
+                <span style={{ fontWeight: '500' }}>{selectedEventDetails.itemsSold || '-'}</span>
+              </div>
+              <div style={{ 
+                marginTop: 'auto', 
+                padding: '12px', 
+                background: '#f5f5f5', 
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Avg per Transaction</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#800080' }}>
+                  {formatCurrency(selectedEventDetails.transactions ? selectedEventDetails.sales / selectedEventDetails.transactions : 0)}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+              <p>Click an event row below to view details</p>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Category Breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>🏷️ Sales by Category</h3>
           {categoryBreakdown.length === 0 ? (
@@ -450,10 +529,11 @@ const SalesManager = ({ posEventId = null }) => {
         </div>
       </div>
       
-      {/* Events Summary */}
-      {eventBreakdown.length > 0 && !selectedEventId && (
+      {/* Events Summary - Always visible, clickable rows */}
+      {eventBreakdown.length > 0 && (
         <div style={{ marginTop: '24px', background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>🎉 Events Summary</h3>
+          <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>Click a row to view event details in the panel above</p>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #eee' }}>
@@ -465,17 +545,31 @@ const SalesManager = ({ posEventId = null }) => {
               </tr>
             </thead>
             <tbody>
-              {eventBreakdown.map(event => (
-                <tr key={event.eventId} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '12px 8px', fontWeight: '500' }}>{event.eventName}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right' }}>{formatCurrency(event.sales)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', color: '#4CAF50' }}>{formatCurrency(event.tips)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right' }}>{event.transactions}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', color: '#666' }}>
-                    {new Date(event.firstSale).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
+              {eventBreakdown.map(event => {
+                const isSelected = selectedEventDetails?.eventId === event.eventId;
+                return (
+                  <tr 
+                    key={event.eventId} 
+                    onClick={() => handleEventRowClick(event)}
+                    style={{ 
+                      borderBottom: '1px solid #f5f5f5',
+                      cursor: 'pointer',
+                      background: isSelected ? '#f3e5f5' : 'transparent',
+                      transition: 'background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#fafafa'; }}
+                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <td style={{ padding: '12px 8px', fontWeight: '500', color: isSelected ? '#800080' : '#333' }}>{event.eventName}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{formatCurrency(event.sales)}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#4CAF50' }}>{formatCurrency(event.tips)}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{event.transactions}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#666' }}>
+                      {new Date(event.firstSale).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -40,23 +40,38 @@ function useMeasuredSize() {
     const node = ref.current;
     if (!node) return;
     
-    // Immediately measure on mount to prevent stuck loading state
-    const initialMeasure = () => {
-      setSize({ width: node.clientWidth, height: node.clientHeight });
+    // Measure function
+    const measure = () => {
+      const { clientWidth, clientHeight } = node;
+      if (clientWidth > 0 && clientHeight > 0) {
+        setSize({ width: clientWidth, height: clientHeight });
+        return true;
+      }
+      return false;
     };
-    initialMeasure();
+    
+    // Immediately measure on mount
+    if (!measure()) {
+      // If initial measurement fails, try again after a frame
+      requestAnimationFrame(() => {
+        if (!measure()) {
+          // Final fallback: try after a short delay
+          setTimeout(measure, 50);
+        }
+      });
+    }
     
     if (!window.ResizeObserver) {
-      const handle = () => {
-        setSize({ width: node.clientWidth, height: node.clientHeight });
-      };
+      const handle = () => measure();
       window.addEventListener('resize', handle);
       return () => window.removeEventListener('resize', handle);
     }
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        setSize({ width, height });
+        if (width > 0 && height > 0) {
+          setSize({ width, height });
+        }
       }
     });
     observer.observe(node);
@@ -678,7 +693,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 const isSpillageTab = activeTab?.isSpillage;
                 
                 if (isSpillageTab) {
-                  // Spillage tab: show "Name: SPILL TAB" in purple, uneditable
+                  // Spillage tab: show "Name: SPILL TAB" in purple, uneditable (same size as typed text)
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                       <span style={{
@@ -687,7 +702,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                         fontWeight: 500,
                         fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
                       }}>
-                        Name:
+                        NAME:
                       </span>
                       <span style={{
                         color: '#800080',
@@ -3125,6 +3140,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     return result;
   }, [selectedItems]);
 
+  // Shared helper function to calculate spillage total - ensures consistency between brief and full summary
+  const calculateSpillageTotal = useCallback((spillageTab, menuItems) => {
+    if (!spillageTab?.items?.length) return 0;
+    return spillageTab.items.reduce((sum, item) => {
+      const menuItem = menuItems.find(i => i.name === item.name);
+      // Use costPerUnit if available, otherwise use the item's price from the tab
+      const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
+      return sum + costPerUnit;
+    }, 0);
+  }, []);
+
+  // Memoized spillage total for consistent display across views
+  const spillageTotal = useMemo(() => {
+    const spillageTab = tabs.find(t => t.isSpillage);
+    return calculateSpillageTotal(spillageTab, allItems);
+  }, [tabs, allItems, calculateSpillageTotal]);
+
   // Calculate category counts from selected items (active tab)
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -4813,26 +4845,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               }}>
                 <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
                 
-                {/* Spillage - calculated using $/Unit from menu items or item price as fallback */}
-                {(() => {
-                  const spillageTab = tabs.find(t => t.isSpillage);
-                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
-                    const menuItem = allItems.find(i => i.name === item.name);
-                    // Use costPerUnit if available, otherwise use the item's price from the tab
-                    // Each item in spillage tab represents quantity of 1
-                    const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
-                    return sum + costPerUnit;
-                  }, 0) || 0;
-                  if (spillageTotal > 0) {
-                    return (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 'bold', color: '#333' }}>Spillage</span>
-                        <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                {/* Spillage - using shared spillageTotal for consistency */}
+                {spillageTotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold', color: '#333' }}>Spillage</span>
+                    <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
+                  </div>
+                )}
                 
                 {/* Taxes */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
@@ -5659,29 +5678,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
                   </div>
                 )}
-                {/* Spillage - items from spillage tab, using $/Unit from menu items or item price as fallback */}
-                {(() => {
-                  const spillageTab = tabs.find(t => t.isSpillage);
-                  console.log('[Full Summary] Spillage tab:', spillageTab);
-                  console.log('[Full Summary] All tabs:', tabs.map(t => ({ id: t.id, name: t.name, isSpillage: t.isSpillage, itemCount: t.items?.length })));
-                  const spillageTotal = spillageTab?.items?.reduce((sum, item) => {
-                    const menuItem = allItems.find(i => i.name === item.name);
-                    // Each item in spillage tab represents quantity of 1
-                    const costPerUnit = menuItem?.costPerUnit || item.basePrice || item.price || 0;
-                    console.log('[Full Summary] Spillage item:', item.name, 'costPerUnit:', costPerUnit, 'menuItem?.costPerUnit:', menuItem?.costPerUnit, 'item.basePrice:', item.basePrice, 'item.price:', item.price);
-                    return sum + costPerUnit;
-                  }, 0) || 0;
-                  console.log('[Full Summary] Spillage total:', spillageTotal);
-                  if (spillageTotal > 0) {
-                    return (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                        <span style={{ color: '#333' }}>Spillage</span>
-                        <span style={{ color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                {/* Spillage - using shared spillageTotal for consistency */}
+                {spillageTotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span style={{ color: '#333' }}>Spillage</span>
+                    <span style={{ color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
+                  </div>
+                )}
                 {/* Labor costs */}
                 {eventSetupData.labor && eventSetupData.labor.length > 0 && (
                   <>
@@ -5723,10 +5726,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       (parseFloat(eventSetupData.permitCost) || 0) +
                       (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
                       (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
-                      (tabs.find(t => t.isSpillage)?.items?.reduce((sum, item) => {
-                        const menuItem = allItems.find(i => i.name === item.name);
-                        return sum + (menuItem?.costPerUnit || item.basePrice || item.price || 0);
-                      }, 0) || 0)
+                      spillageTotal
                     ).toFixed(2)}
                   </span>
                 </div>
@@ -5769,18 +5769,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 const tips = totalTips;
                 const taxes = (sales + tips) * 0.3;
                 
-                // Spillage using costPerUnit from menu items or item price as fallback
-                const spillageTab = tabs.find(t => t.isSpillage);
-                const spillageCost = spillageTab?.items?.reduce((sum, item) => {
-                  const menuItem = allItems.find(i => i.name === item.name);
-                  return sum + (menuItem?.costPerUnit || item.basePrice || item.price || 0);
-                }, 0) || 0;
+                // Use shared spillageTotal for consistency
                 const operatingExpenses = (parseFloat(eventSetupData.accommodationCost) || 0) +
                   (parseFloat(eventSetupData.transportationCosts) || 0) +
                   (parseFloat(eventSetupData.permitCost) || 0) +
                   (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
                   (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
-                  spillageCost;
+                  spillageTotal;
                 
                 // COGS calculation from tabs (excluding spillage)
                 let cogs = 0;
@@ -6712,7 +6707,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     cursor: 'pointer',
                   }}
                 >
-                  💳 CREDIT
+                  CREDIT
                 </button>
                 <button
                   onClick={handleCashCheckout}
@@ -6727,7 +6722,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     cursor: 'pointer',
                   }}
                 >
-                  💵 CASH
+                  CASH
                 </button>
                 <button
                   onClick={handleInvoiceCheckout}
@@ -6742,7 +6737,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     cursor: 'pointer',
                   }}
                 >
-                  📄 INVOICE
+                  INVOICE
                 </button>
                 <button
                   onClick={() => {
@@ -6794,7 +6789,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               textAlign: 'center',
             }}>
               <h2 style={{ color: '#fff', fontSize: '18px', marginBottom: '16px' }}>
-                Cash Payment
+                RECEIVING PAYMENT
               </h2>
               <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
                 Total Due
