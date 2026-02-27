@@ -2298,7 +2298,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowCustomTip(false);
     setCustomTipAmount('');
     setShowTabView(false);
-    setCheckoutStage('tip'); // Start at tip selection stage
+    
+    // Set payment method and checkout stage based on incoming data
+    if (data.paymentMethod === 'cash') {
+      setPaymentMethod('cash');
+      setCheckoutStage('cash');
+      setCashTendered('');
+    } else {
+      setPaymentMethod(data.paymentMethod || 'credit');
+      setCheckoutStage('tip'); // Start at tip selection stage for credit
+    }
   }, []);
   
   const handleWsCheckoutComplete = useCallback((data) => {
@@ -4074,204 +4083,42 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               overflow: 'hidden',
             }}>
               {paymentMethod === 'cash' && checkoutStage === 'cash' ? (
-                /* CASH PAYMENT SCREEN - shows total, calculator, and View Tab button */
+                /* CASH PAYMENT SCREEN - shows just Total and View Tab button */
                 <div style={{
                   display: 'flex',
-                  flexDirection: 'row',
+                  flexDirection: 'column',
                   width: '100%',
                   height: '100%',
-                  alignItems: 'stretch',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4vh',
-                  padding: '2vh',
+                  gap: '3vh',
                 }}>
-                  {/* Left side - Total and View Tab */}
-                  <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '2vh',
-                  }}>
-                    {/* Total amount display */}
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginBottom: '1vh' }}>
-                        Total Due
-                      </div>
-                      <div style={{ fontSize: 'clamp(48px, 10vh, 72px)', fontWeight: '700', color: '#333' }}>
-                        ${checkoutSubtotal.toFixed(2)}
-                      </div>
+                  {/* Total amount display */}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginBottom: '1vh' }}>
+                      Total Due
                     </div>
-                    
-                    {/* View Tab button */}
-                    <button
-                      onClick={() => setShowTabView(true)}
-                      style={{
-                        padding: '14px 40px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: '#fff',
-                        color: '#800080',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      View Tab
-                    </button>
-                    
-                    {/* Change Due - always visible */}
-                    <div style={{ 
-                      background: parseFloat(cashTendered) >= checkoutSubtotal && parseFloat(cashTendered) > 0 ? '#dcfce7' : '#f5f5f5', 
-                      borderRadius: '8px', 
-                      padding: '12px 24px',
-                      textAlign: 'center',
-                      minWidth: '150px',
-                    }}>
-                      <div style={{ color: '#666', fontSize: 'clamp(12px, 1.5vh, 14px)' }}>Change Due</div>
-                      <div style={{ 
-                        color: parseFloat(cashTendered) >= checkoutSubtotal && parseFloat(cashTendered) > 0 ? '#22c55e' : '#333', 
-                        fontSize: 'clamp(24px, 4vh, 36px)', 
-                        fontWeight: 'bold' 
-                      }}>
-                        ${parseFloat(cashTendered) > 0 ? Math.max(0, parseFloat(cashTendered) - checkoutSubtotal).toFixed(2) : '0.00'}
-                      </div>
+                    <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
+                      ${checkoutSubtotal.toFixed(2)}
                     </div>
                   </div>
                   
-                  {/* Right side - Calculator */}
-                  <div style={{
-                    width: '280px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#f9f9f9',
-                    borderRadius: '12px',
-                    padding: '16px',
-                  }}>
-                    <div style={{ color: '#666', fontSize: '12px', marginBottom: '4px', textAlign: 'center' }}>
-                      Cash Tendered
-                    </div>
-                    <div style={{ 
-                      background: '#fff', 
-                      borderRadius: '8px', 
-                      padding: '12px', 
-                      marginBottom: '12px',
-                      fontSize: 'clamp(24px, 4vh, 32px)',
-                      fontWeight: 'bold',
-                      color: '#333',
-                      textAlign: 'center',
+                  {/* View Tab button */}
+                  <button
+                    onClick={() => setShowTabView(true)}
+                    style={{
+                      padding: '16px 48px',
+                      fontSize: 'clamp(16px, 2.5vh, 20px)',
+                      fontWeight: '600',
+                      background: '#fff',
+                      color: '#800080',
                       border: '1px solid #e0e0e0',
-                    }}>
-                      ${cashTendered || '0.00'}
-                    </div>
-                    
-                    {/* Number pad */}
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(3, 1fr)', 
-                      gap: '6px',
-                      marginBottom: '12px',
-                    }}>
-                      {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((key) => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            if (key === '⌫') {
-                              setCashTendered(prev => prev.slice(0, -1));
-                            } else if (key === '.') {
-                              if (!cashTendered.includes('.')) {
-                                setCashTendered(prev => prev + '.');
-                              }
-                            } else {
-                              setCashTendered(prev => {
-                                const newVal = prev + key;
-                                if (newVal.includes('.') && newVal.split('.')[1]?.length > 2) {
-                                  return prev;
-                                }
-                                return newVal;
-                              });
-                            }
-                          }}
-                          style={{
-                            padding: '12px',
-                            fontSize: '18px',
-                            fontWeight: 'bold',
-                            background: key === '⌫' ? '#ef4444' : '#fff',
-                            color: key === '⌫' ? '#fff' : '#333',
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {key}
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {/* Quick amount buttons */}
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-                      {[20, 50, 100].map((amount) => (
-                        <button
-                          key={amount}
-                          onClick={() => setCashTendered(amount.toFixed(2))}
-                          style={{
-                            flex: 1,
-                            padding: '8px',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            background: '#fff',
-                            color: '#333',
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          ${amount}
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {/* Complete Payment button */}
-                    <button
-                      onClick={() => {
-                        if (parseFloat(cashTendered) >= checkoutSubtotal) {
-                          // Complete cash payment
-                          const tabId = checkoutTabInfo?.tabId;
-                          if (tabId) {
-                            setTabs(prev => prev.map(t => 
-                              t.id === tabId 
-                                ? { ...t, status: 'paid', paidAt: new Date().toISOString(), tipAmount: 0, paymentMethod: 'cash' }
-                                : t
-                            ));
-                            setActiveTabId(null);
-                            setTimeout(() => saveToServerRef.current?.('cash-payment-complete'), 500);
-                          }
-                          sendCheckoutComplete({ tabId, tipAmount: 0, paymentMethod: 'cash' });
-                          setCheckoutMode(false);
-                          setCheckoutItems([]);
-                          setCheckoutSubtotal(0);
-                          setCheckoutTabInfo(null);
-                          setPaymentMethod('');
-                          setCheckoutStage('');
-                          setCashTendered('');
-                        }
-                      }}
-                      disabled={parseFloat(cashTendered) < checkoutSubtotal}
-                      style={{
-                        padding: '14px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        background: parseFloat(cashTendered) >= checkoutSubtotal ? '#22c55e' : '#ccc',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: parseFloat(cashTendered) >= checkoutSubtotal ? 'pointer' : 'not-allowed',
-                      }}
-                    >
-                      Complete Payment
-                    </button>
-                  </div>
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View Tab
+                  </button>
                 </div>
               ) : showScanCard ? (
                 /* SCAN CARD SCREEN - shown after tip selection */
