@@ -16,14 +16,29 @@ const EventSales = () => {
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
   
-  // Pricing variables for invoice calculations
-  const [pricingVars, setPricingVars] = useState({
-    minimum: 500,      // M = minimum event fee
-    overhead: 150,     // O = flat overhead
-    first2Hr: 15,      // F_first = per-guest rate for first 2 hours
-    addHr: 10,         // F_add = per-guest rate for additional hours
-    perPerson: 25,     // S = per-person service fee (for customer pays model)
+  // Pricing variables for invoice calculations - load from localStorage
+  const [pricingVars, setPricingVars] = useState(() => {
+    const saved = localStorage.getItem('eventSalesPricingVars');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved pricing vars:', e);
+      }
+    }
+    return {
+      minimum: 500,      // M = minimum event fee
+      overhead: 150,     // O = flat overhead
+      first2Hr: 15,      // F_first = per-guest rate for first 2 hours
+      addHr: 10,         // F_add = per-guest rate for additional hours
+      perPerson: 25,     // S = per-person service fee (for customer pays model)
+    };
   });
+  
+  // Save pricing variables to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('eventSalesPricingVars', JSON.stringify(pricingVars));
+  }, [pricingVars]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedEvents, setEditedEvents] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -155,22 +170,29 @@ const EventSales = () => {
     const H = parseFloat(event.durationHours) || 0; // Total hours
     const { minimum: M, overhead: O, first2Hr: F_first, addHr: F_add, perPerson: S } = pricingVars;
     
+    // Add specific overhead items to invoice: Permit, Insurance, Accommodation
+    // Exclude: Transportation, Broken Glassware, Spillage, COGS, Labor (covered by flat OHD rate)
+    const permitCost = parseFloat(event.permitCost) || 0;
+    const insuranceCost = parseFloat(event.insuranceCost) || 0;
+    const accommodationCost = parseFloat(event.accommodationCost) || 0;
+    const additionalOverhead = permitCost + insuranceCost + accommodationCost;
+    
     if (model === 'S') {
       // Model 1: Standard (I Buy Alcohol)
       const firstHours = Math.min(H, 2);
       const additionalHours = Math.max(H - 2, 0);
       const serviceFee = (firstHours * F_first * G) + (additionalHours * F_add * G);
-      const totalFee = serviceFee + O;
+      const totalFee = serviceFee + O + additionalOverhead;
       return Math.max(totalFee, M);
     } else if (model === 'C') {
       // Model 2: Customer Pays for Alcohol
       const serviceFee = G * S;
-      const totalFee = serviceFee + O;
+      const totalFee = serviceFee + O + additionalOverhead;
       return Math.max(totalFee, M);
     } else if (model === 'H') {
       // Model 3: Hybrid/Cash Bar
       const totalSales = parseFloat(event.totalSales) || 0;
-      const totalWithOverhead = O + totalSales;
+      const totalWithOverhead = O + totalSales + additionalOverhead;
       if (totalWithOverhead < M) {
         return M - totalWithOverhead; // Customer pays the difference
       }
@@ -404,15 +426,31 @@ const EventSales = () => {
           </span>
         );
       case 'amountReceived':
-        // Editable amount received - handled by edit mode input
+        // Always editable amount received field
         const received = getCurrentValue(event, 'amountReceived') || 0;
         const calcInvoice = calculateInvoice(event);
         const tipAdjustment = Math.max(0, parseFloat(received) - calcInvoice);
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b', fontWeight: 'bold' }}>
-              ${parseFloat(received).toFixed(2)}
-            </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <input
+              type="number"
+              value={received}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFieldChange(event._id, 'amountReceived', parseFloat(e.target.value) || 0);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '80px',
+                padding: '4px 6px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '12px',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
+              }}
+            />
             {tipAdjustment > 0 && (
               <span style={{ fontSize: '10px', color: '#22c55e' }}>
                 +${tipAdjustment.toFixed(2)} tip
@@ -686,21 +724,17 @@ const EventSales = () => {
         {/* Buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
-            onClick={() => setPaymentModelCollapsed(!paymentModelCollapsed)}
-            style={{
-              padding: '8px 16px',
-              background: paymentModelCollapsed ? '#999' : '#800080',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
+            onClick={() => {
+              if (overheadCollapsed) {
+                // Opening Overhead - close others
+                setOverheadCollapsed(false);
+                setPaymentModelCollapsed(true);
+                setPaymentMethodsCollapsed(true);
+              } else {
+                // Closing Overhead
+                setOverheadCollapsed(true);
+              }
             }}
-          >
-            Payment Model
-          </button>
-          <button
-            onClick={() => setOverheadCollapsed(!overheadCollapsed)}
             style={{
               padding: '8px 16px',
               background: overheadCollapsed ? '#999' : '#666',
@@ -714,7 +748,41 @@ const EventSales = () => {
             Overhead
           </button>
           <button
-            onClick={() => setPaymentMethodsCollapsed(!paymentMethodsCollapsed)}
+            onClick={() => {
+              if (paymentModelCollapsed) {
+                // Opening Payment Model - close others
+                setPaymentModelCollapsed(false);
+                setOverheadCollapsed(true);
+                setPaymentMethodsCollapsed(true);
+              } else {
+                // Closing Payment Model
+                setPaymentModelCollapsed(true);
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              background: paymentModelCollapsed ? '#999' : '#800080',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Payment Model
+          </button>
+          <button
+            onClick={() => {
+              if (paymentMethodsCollapsed) {
+                // Opening Payment Methods - close others
+                setPaymentMethodsCollapsed(false);
+                setOverheadCollapsed(true);
+                setPaymentModelCollapsed(true);
+              } else {
+                // Closing Payment Methods
+                setPaymentMethodsCollapsed(true);
+              }
+            }}
             style={{
               padding: '8px 16px',
               background: paymentMethodsCollapsed ? '#999' : '#666',

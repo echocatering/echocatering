@@ -214,9 +214,15 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
       style={{
         minHeight: containerHeight ? undefined : '100vh',
         height: containerHeight ? '100%' : undefined,
-        overflowY: containerHeight ? 'auto' : undefined,
+        overflowY: containerHeight ? 'scroll' : undefined,
+        overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
+        overscrollBehavior: 'contain',
+      }}
+      onTouchMove={(e) => {
+        // Allow touch scrolling - don't prevent default
+        e.stopPropagation();
       }}
     >
       <div className="max-w-6xl mx-auto">

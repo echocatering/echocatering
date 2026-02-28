@@ -82,7 +82,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems, showSpendLimitWarning, setShowSpendLimitWarning, spendLimitWarningTab, setSpendLimitWarningTab }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -107,6 +107,12 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   // Archived tabs view state
   const [showArchivedTabs, setShowArchivedTabs] = useState(false);
   const addTabLongPressRef = useRef(null);
+  
+  // Tab spend limit state (showSpendLimitWarning and spendLimitWarningTab are passed as props)
+  const [showSpendLimitModal, setShowSpendLimitModal] = useState(false);
+  const [spendLimitTabId, setSpendLimitTabId] = useState(null);
+  const [spendLimitInput, setSpendLimitInput] = useState('');
+  const tabLongPressTimerRef = useRef(null);
   
   // Modifier system state
   const [editingItem, setEditingItem] = useState(null); // Item being edited (long-press)
@@ -901,6 +907,50 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           // Allow selecting any tab (archived tabs will be read-only)
                           onSelectTab(tab.id);
                         }}
+                        onMouseDown={(e) => {
+                          // Start long-press timer for spend limit
+                          if (isArchived) return;
+                          tabLongPressTimerRef.current = setTimeout(() => {
+                            e.preventDefault();
+                            setSpendLimitTabId(tab.id);
+                            setSpendLimitInput(tab.spendLimit ? String(tab.spendLimit) : '');
+                            setShowSpendLimitModal(true);
+                          }, 500);
+                        }}
+                        onMouseUp={() => {
+                          if (tabLongPressTimerRef.current) {
+                            clearTimeout(tabLongPressTimerRef.current);
+                            tabLongPressTimerRef.current = null;
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (tabLongPressTimerRef.current) {
+                            clearTimeout(tabLongPressTimerRef.current);
+                            tabLongPressTimerRef.current = null;
+                          }
+                        }}
+                        onTouchStart={(e) => {
+                          // Start long-press timer for spend limit (touch)
+                          if (isArchived) return;
+                          tabLongPressTimerRef.current = setTimeout(() => {
+                            e.preventDefault();
+                            setSpendLimitTabId(tab.id);
+                            setSpendLimitInput(tab.spendLimit ? String(tab.spendLimit) : '');
+                            setShowSpendLimitModal(true);
+                          }, 500);
+                        }}
+                        onTouchEnd={() => {
+                          if (tabLongPressTimerRef.current) {
+                            clearTimeout(tabLongPressTimerRef.current);
+                            tabLongPressTimerRef.current = null;
+                          }
+                        }}
+                        onTouchCancel={() => {
+                          if (tabLongPressTimerRef.current) {
+                            clearTimeout(tabLongPressTimerRef.current);
+                            tabLongPressTimerRef.current = null;
+                          }
+                        }}
                         style={{
                           aspectRatio: '1 / 1',
                           width: '100%',
@@ -917,7 +967,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                           padding: '24px',
                           overflow: 'hidden',
                           boxSizing: 'border-box',
-                          opacity: 1
+                          opacity: 1,
+                          position: 'relative'
                         }}
                       >
                         {(() => {
@@ -1580,6 +1631,208 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             >
               CANCEL
             </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Spend Limit Modal - Set/Adjust tab spend limit */}
+      {showSpendLimitModal && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 300
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '80%',
+            maxWidth: '300px',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600, color: '#333' }}>
+              Set Spend Limit
+            </h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#666' }}>
+              {(() => {
+                const tab = tabs.find(t => t.id === spendLimitTabId);
+                return tab ? (tab.customName || tab.name) : 'Tab';
+              })()}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>$</span>
+              <input
+                type="number"
+                value={spendLimitInput}
+                onChange={(e) => setSpendLimitInput(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '120px',
+                  padding: '12px',
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px'
+                }}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  // Clear the limit
+                  const tab = tabs.find(t => t.id === spendLimitTabId);
+                  if (tab) {
+                    tab.spendLimit = null;
+                  }
+                  setShowSpendLimitModal(false);
+                  setSpendLimitTabId(null);
+                  setSpendLimitInput('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f5f5f5',
+                  color: '#666',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                CLEAR
+              </button>
+              <button
+                onClick={() => {
+                  setShowSpendLimitModal(false);
+                  setSpendLimitTabId(null);
+                  setSpendLimitInput('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#e5e5e5',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => {
+                  // Save the limit
+                  const limit = parseFloat(spendLimitInput) || 0;
+                  const tab = tabs.find(t => t.id === spendLimitTabId);
+                  if (tab && limit > 0) {
+                    tab.spendLimit = limit;
+                  }
+                  setShowSpendLimitModal(false);
+                  setSpendLimitTabId(null);
+                  setSpendLimitInput('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#800080',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                SET LIMIT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Spend Limit Warning Popup */}
+      {showSpendLimitWarning && spendLimitWarningTab && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 300
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '85%',
+            maxWidth: '320px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚠️</div>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: 600, color: '#f59e0b' }}>
+              Spend Limit Warning
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '16px', color: '#333', lineHeight: 1.4 }}>
+              <strong>{spendLimitWarningTab.customName || spendLimitWarningTab.name}</strong> has almost reached its spend limit!
+            </p>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666' }}>
+              Limit: ${spendLimitWarningTab.spendLimit?.toFixed(2)} | Current: ${((spendLimitWarningTab.items || []).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0)).toFixed(2)}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  // Open adjust limit modal
+                  setShowSpendLimitWarning(false);
+                  setSpendLimitTabId(spendLimitWarningTab.id);
+                  setSpendLimitInput(spendLimitWarningTab.spendLimit ? String(spendLimitWarningTab.spendLimit) : '');
+                  setShowSpendLimitModal(true);
+                  setSpendLimitWarningTab(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#800080',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ADJUST LIMIT
+              </button>
+              <button
+                onClick={() => {
+                  setShowSpendLimitWarning(false);
+                  setSpendLimitWarningTab(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#e5e5e5',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                EXIT
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2260,6 +2513,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false); // Show Credit/Cash/Invoice popup
   const [paymentMethod, setPaymentMethod] = useState(''); // 'credit', 'cash', 'invoice'
   const [cashTendered, setCashTendered] = useState(''); // Amount of cash given by customer
+  
+  // Tab spend limit state
+  const [showSpendLimitWarning, setShowSpendLimitWarning] = useState(false);
+  const [spendLimitWarningTab, setSpendLimitWarningTab] = useState(null);
   
   // Checkout timeout - 1 minute idle returns to menu
   const checkoutTimeoutRef = useRef(null);
@@ -3902,11 +4159,29 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     };
     console.log(`[POS] New item created with price: ${newItem.price}`);
     
-    setTabs(prev => prev.map(tab => 
-      tab.id === targetTabId 
-        ? { ...tab, items: [...tab.items, newItem] }
-        : tab
-    ));
+    setTabs(prev => {
+      const updatedTabs = prev.map(tab => 
+        tab.id === targetTabId 
+          ? { ...tab, items: [...tab.items, newItem] }
+          : tab
+      );
+      
+      // Check spend limit after adding item
+      const updatedTab = updatedTabs.find(t => t.id === targetTabId);
+      if (updatedTab?.spendLimit) {
+        const currentTotal = (updatedTab.items || []).reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0);
+        const remaining = updatedTab.spendLimit - currentTotal;
+        if (remaining <= 20 && remaining > 0) {
+          // Within $20 of limit - show warning
+          setTimeout(() => {
+            setSpendLimitWarningTab(updatedTab);
+            setShowSpendLimitWarning(true);
+          }, 100);
+        }
+      }
+      
+      return updatedTabs;
+    });
     
     // Update last action with tab name
     const actionName = modifierName ? `${toTitleCase(item.name)} ${modifierName}` : toTitleCase(item.name);
@@ -6620,6 +6895,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onDuplicateItems={handleDuplicateItems}
               onCheckout={handleCheckout}
               checkoutLoading={checkoutLoading}
+              showSpendLimitWarning={showSpendLimitWarning}
+              setShowSpendLimitWarning={setShowSpendLimitWarning}
+              spendLimitWarningTab={spendLimitWarningTab}
+              setSpendLimitWarningTab={setSpendLimitWarningTab}
             />
           ) : (
             <div style={{
@@ -7563,6 +7842,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onDuplicateItems={handleDuplicateItems}
                 onCheckout={handleCheckout}
                 checkoutLoading={checkoutLoading}
+                showSpendLimitWarning={showSpendLimitWarning}
+                setShowSpendLimitWarning={setShowSpendLimitWarning}
+                spendLimitWarningTab={spendLimitWarningTab}
+                setSpendLimitWarningTab={setSpendLimitWarningTab}
               />
             </div>
           )}

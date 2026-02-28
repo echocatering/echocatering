@@ -3099,17 +3099,26 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   // Show FullMenu overlay when in menu view and showFullMenu is true
   if (viewMode === 'menu' && showFullMenu) {
     return (
-      <div style={{
-        width: outerWidth || '100%',
-        height: outerHeight || '100%',
-        position: 'relative',
-        background: '#fff',
-        overflow: 'auto',
-        overflowY: 'scroll',
-        WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-y',
-        overscrollBehavior: 'contain',
-      }}>
+      <div 
+        style={{
+          width: outerWidth || '100%',
+          height: outerHeight || '100%',
+          position: 'relative',
+          background: '#fff',
+          overflow: 'auto',
+          overflowY: 'scroll',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'thin',
+        }}
+        onTouchMove={(e) => {
+          // Allow touch scrolling
+          e.stopPropagation();
+        }}
+      >
         {/* Back button to return to normal view */}
         <button
           onClick={() => setShowFullMenu(false)}
