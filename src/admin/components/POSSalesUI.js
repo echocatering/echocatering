@@ -878,7 +878,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
                   {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => {
                     // Determine tab colors based on status
-                    const isInvoiced = tab.isInvoice && tab.status === 'paid';
+                    const isInvoiced = tab.isInvoice && tab.status === 'archived';
                     const isArchived = tab.status === 'archived';
                     const isSelected = activeTabId === tab.id;
                     
@@ -1685,50 +1685,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 autoFocus
               />
             </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  // Clear the limit
-                  const tab = tabs.find(t => t.id === spendLimitTabId);
-                  if (tab) {
-                    tab.spendLimit = null;
-                  }
-                  setShowSpendLimitModal(false);
-                  setSpendLimitTabId(null);
-                  setSpendLimitInput('');
-                }}
-                style={{
-                  padding: '10px 20px',
-                  background: '#f5f5f5',
-                  color: '#666',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                CLEAR
-              </button>
-              <button
-                onClick={() => {
-                  setShowSpendLimitModal(false);
-                  setSpendLimitTabId(null);
-                  setSpendLimitInput('');
-                }}
-                style={{
-                  padding: '10px 20px',
-                  background: '#e5e5e5',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                CANCEL
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
               <button
                 onClick={() => {
                   // Save the limit
@@ -1742,7 +1699,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   setSpendLimitInput('');
                 }}
                 style={{
-                  padding: '10px 20px',
+                  padding: '10px 32px',
                   background: '#800080',
                   color: '#fff',
                   border: 'none',
@@ -1754,6 +1711,51 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               >
                 SET LIMIT
               </button>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    // Clear the limit
+                    const tab = tabs.find(t => t.id === spendLimitTabId);
+                    if (tab) {
+                      tab.spendLimit = null;
+                    }
+                    setShowSpendLimitModal(false);
+                    setSpendLimitTabId(null);
+                    setSpendLimitInput('');
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#f5f5f5',
+                    color: '#666',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  CLEAR
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSpendLimitModal(false);
+                    setSpendLimitTabId(null);
+                    setSpendLimitInput('');
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#e5e5e5',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  CANCEL
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1781,7 +1783,6 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             maxWidth: '320px',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚠️</div>
             <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: 600, color: '#f59e0b' }}>
               Spend Limit Warning
             </h3>
@@ -3475,12 +3476,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     console.log(`[POS] Tab ${tabId} archived`);
   }, [activeTabId]);
 
-  // Invoice a tab (marks as paid but with isInvoice flag - payment to be collected later)
+  // Invoice a tab (marks as archived with isInvoice flag - payment to be collected later)
   // Invoice tabs show as yellow and their total is subtracted from revenue (shown as -$)
   const handleInvoiceTab = useCallback((tabId) => {
     setTabs(prev => prev.map(t => 
       t.id === tabId 
-        ? { ...t, status: 'paid', isInvoice: true, invoicedAt: new Date().toISOString() }
+        ? { ...t, status: 'archived', isInvoice: true, invoicedAt: new Date().toISOString() }
         : t
     ));
     if (activeTabId === tabId) {
@@ -3849,10 +3850,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
     
-    // Mark tab as invoiced (paid later)
+    // Mark tab as invoiced (use 'archived' status to appear in paid tabs)
     setTabs(prev => prev.map(t => 
       t.id === checkoutTabInfo.id 
-        ? { ...t, status: 'paid', isInvoice: true, paymentMethod: 'invoice', paidAt: new Date().toISOString() }
+        ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', paidAt: new Date().toISOString() }
         : t
     ));
     
@@ -3886,12 +3887,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
     
-    // Mark tab as paid with cash
+    // Mark tab as paid with cash (use 'archived' status to appear in paid tabs)
     setTabs(prev => prev.map(t => 
       t.id === checkoutTabInfo.id 
         ? { 
             ...t, 
-            status: 'paid', 
+            status: 'archived', 
             paymentMethod: 'cash', 
             tipAmount: 0, // No tip for cash
             paidAt: new Date().toISOString(),
@@ -4381,18 +4382,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   
-                  {/* View Tab button */}
+                  {/* View Tab button - styled like CREDIT tip page back button */}
                   <button
                     onClick={() => setShowTabView(true)}
                     style={{
-                      padding: '16px 48px',
-                      fontSize: 'clamp(16px, 2.5vh, 20px)',
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '16px',
                       fontWeight: '600',
-                      background: '#fff',
-                      color: '#800080',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '8px',
+                      background: 'transparent',
+                      color: '#666',
+                      border: 'none',
                       cursor: 'pointer',
+                      marginTop: '8px',
                     }}
                   >
                     View Tab

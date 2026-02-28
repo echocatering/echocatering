@@ -213,16 +213,12 @@ const FullMenu = ({ onItemClick, disableNavigation = false, defaultCategory = 'c
       className="inventory-manager bg-white w-full p-8"
       style={{
         minHeight: containerHeight ? undefined : '100vh',
-        height: containerHeight ? '100%' : undefined,
-        overflowY: containerHeight ? 'scroll' : undefined,
+        // Don't set fixed height when containerHeight is passed - let content flow naturally for scrolling
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
         overscrollBehavior: 'contain',
-      }}
-      onTouchMove={(e) => {
-        // Allow touch scrolling - don't prevent default
-        e.stopPropagation();
+        paddingBottom: containerHeight ? '100px' : undefined, // Extra padding for scroll
       }}
     >
       <div className="max-w-6xl mx-auto">

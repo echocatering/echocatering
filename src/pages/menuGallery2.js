@@ -3159,35 +3159,65 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             };
             const itemCategory = normalizeCategoryKey(item.category || 'cocktails');
             
+            console.log('FullMenu item clicked:', { 
+              clickedItem: item.name,
+              clickedItemNumber: item.itemNumber,
+              clickedId: item._id,
+              itemCategory
+            });
+            
             // Find the index of the item in the category's videoFiles
             const categoryData = subpages[itemCategory];
             if (categoryData) {
+              // Debug: log all items in category
+              console.log('Category videoFiles:', categoryData.videoFiles.map((file, idx) => {
+                const info = categoryData.cocktailInfo[file] || {};
+                return { idx, file, name: info.name, itemNumber: info.itemNumber, _id: info._id };
+              }));
+              
               const itemIndex = categoryData.videoFiles.findIndex((file) => {
                 const info = categoryData.cocktailInfo[file] || {};
-                // Match by name (case-insensitive), itemNumber, or _id
-                const nameMatch = info.name && item.name && 
-                  info.name.toLowerCase().trim() === item.name.toLowerCase().trim();
-                const itemNumberMatch = item.itemNumber && info.itemNumber === item.itemNumber;
-                const idMatch = item._id && info._id === item._id;
-                return nameMatch || itemNumberMatch || idMatch;
+                
+                // Priority 1: Match by _id (most reliable)
+                if (item._id && info._id && item._id === info._id) {
+                  console.log('Matched by _id:', item._id);
+                  return true;
+                }
+                
+                // Priority 2: Match by itemNumber (very reliable)
+                if (item.itemNumber && info.itemNumber && String(item.itemNumber) === String(info.itemNumber)) {
+                  console.log('Matched by itemNumber:', item.itemNumber);
+                  return true;
+                }
+                
+                // Priority 3: Match by exact name (case-insensitive)
+                if (info.name && item.name && 
+                    info.name.toLowerCase().trim() === item.name.toLowerCase().trim()) {
+                  console.log('Matched by name:', item.name);
+                  return true;
+                }
+                
+                return false;
               });
               
-              console.log('FullMenu item click:', { 
+              console.log('FullMenu item match result:', { 
                 itemName: item.name, 
+                itemNumber: item.itemNumber,
                 itemCategory, 
                 foundIndex: itemIndex,
                 videoFilesCount: categoryData.videoFiles.length 
               });
               
               // Set the selected item with its index BEFORE changing category
-              // This ensures the index is captured correctly
               if (itemIndex !== -1) {
                 setFullMenuSelectedItem({ ...item, index: itemIndex, category: itemCategory });
               } else {
                 // If not found by exact match, default to first item
-                console.warn('Item not found in category, defaulting to index 0');
+                console.warn('Item not found in category, defaulting to index 0. Item:', item);
                 setFullMenuSelectedItem({ ...item, index: 0, category: itemCategory });
               }
+            } else {
+              console.warn('Category data not found for:', itemCategory);
             }
             
             // Set the category (this may trigger re-render)
