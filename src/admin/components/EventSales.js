@@ -761,7 +761,7 @@ const EventSales = () => {
             }}
             style={{
               padding: '8px 16px',
-              background: paymentModelCollapsed ? '#999' : '#800080',
+              background: paymentModelCollapsed ? '#999' : '#666',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -794,20 +794,6 @@ const EventSales = () => {
             }}
           >
             Payment Methods
-          </button>
-          <button
-            onClick={isEditMode ? () => setShowSaveConfirm(true) : handleEnterEditMode}
-            style={{
-              padding: '8px 16px',
-              background: isEditMode ? '#22c55e' : '#666',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            {isEditMode ? 'Save' : 'Edit'}
           </button>
           <button
             onClick={fetchEvents}

@@ -1663,7 +1663,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
             <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#666' }}>
               {(() => {
                 const tab = tabs.find(t => t.id === spendLimitTabId);
-                return tab ? (tab.customName || tab.name) : 'Tab';
+                return tab ? (tab.customName || tab.name).toUpperCase() : 'Tab';
               })()}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
@@ -1787,7 +1787,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
               Spend Limit Warning
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '16px', color: '#333', lineHeight: 1.4 }}>
-              <strong>{spendLimitWarningTab.customName || spendLimitWarningTab.name}</strong> has almost reached its spend limit!
+              <strong>{(spendLimitWarningTab.customName || spendLimitWarningTab.name).toUpperCase()}</strong> has almost reached its spend limit!
             </p>
             <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666' }}>
               Limit: ${spendLimitWarningTab.spendLimit?.toFixed(2)} | Current: ${((spendLimitWarningTab.items || []).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0)).toFixed(2)}
@@ -4187,7 +4187,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Update last action with tab name
     const actionName = modifierName ? `${toTitleCase(item.name)} ${modifierName}` : toTitleCase(item.name);
     const targetTab = tabs.find(t => t.id === targetTabId);
-    const tabDisplayName = targetTab?.customName || targetTab?.name || '';
+    const tabDisplayName = (targetTab?.customName || targetTab?.name || '').toUpperCase();
     setLastAction({ type: 'add', itemName: actionName, tabName: tabDisplayName });
     
     // Save to server after item added
@@ -4210,7 +4210,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     ));
     
     // Update last action with tab name
-    const tabDisplayName = activeTab?.customName || activeTab?.name || '';
+    const tabDisplayName = (activeTab?.customName || activeTab?.name || '').toUpperCase();
     setLastAction({ type: 'remove', itemName: toTitleCase(itemToRemove.name), tabName: tabDisplayName });
     
     // Save to server after item removed
@@ -4246,8 +4246,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }));
     
     // Update last action
-    const fromTabName = fromTab?.customName || fromTab?.name || '';
-    const toTabName = toTab?.customName || toTab?.name || '';
+    const fromTabName = (fromTab?.customName || fromTab?.name || '').toUpperCase();
+    const toTabName = (toTab?.customName || toTab?.name || '').toUpperCase();
     setLastAction({ type: 'move', itemName: `${itemsToMove.length} item${itemsToMove.length > 1 ? 's' : ''}`, tabName: `${fromTabName} → ${toTabName}` });
   }, [tabs]);
 
@@ -4279,7 +4279,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }));
     
     // Update last action
-    const tabDisplayName = tab?.customName || tab?.name || '';
+    const tabDisplayName = (tab?.customName || tab?.name || '').toUpperCase();
     setLastAction({ type: 'add', itemName: `${duplicatedItems.length} item${duplicatedItems.length > 1 ? 's' : ''} duplicated`, tabName: tabDisplayName });
   }, [tabs]);
 
@@ -4361,7 +4361,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               alignItems: 'center',
               overflow: 'hidden',
             }}>
-              {paymentMethod === 'cash' && checkoutStage === 'cash' ? (
+              {paymentMethod === 'cash' && checkoutStage === 'cash' && !showTabView ? (
                 /* CASH PAYMENT SCREEN - shows just Total and View Tab button */
                 <div style={{
                   display: 'flex',
@@ -5167,139 +5167,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Action Buttons - Show Save Event and Edit Event when in post-event mode */}
+              {/* Action Buttons - Show Finalize Event when in post-event mode */}
               {(eventSummary || isPostEventEdit) ? (
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
                   <button
                     onClick={() => {
-                      console.log('[Event Summary] EDIT EVENT - returning to POS view');
-                      // Keep paid/archived tabs as archived (green and uneditable)
-                      // Only return to POS view without changing tab statuses
-                      setShowEventSetup(false);
+                      console.log('[Event Summary] FINALIZE EVENT - returning to event summary page');
+                      // Return to the full event summary page
                       setShowSummaryView(false);
-                      setIsPostEventEdit(true); // Mark that we're in post-event edit mode
-                      // This will return to the POS view with the active event
-                    }}
-                    disabled={syncing}
-                    style={{
-                      flex: 1,
-                      padding: '16px',
-                      background: syncing ? '#ccc' : '#666',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '18px',
-                      fontWeight: 'bold',
-                      cursor: syncing ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    EDIT EVENT
-                  </button>
-                  <button
-                    onClick={async () => {
-                      console.log('[Event Summary] SAVE RESULTS - saving to database');
-                      console.log('[Event Summary] eventId:', eventId);
-                      console.log('[Event Summary] eventSetupData:', eventSetupData);
-                      console.log('[Event Summary] eventSummary:', eventSummary);
-                      console.log('[Event Summary] tabs with tips:', tabs.map(t => ({ id: t.id, name: t.name, tipAmount: t.tipAmount })));
-                      
-                      // Calculate total tips from tabs (in case eventSummary doesn't have it)
-                      const totalTipsFromTabs = tabs.reduce((sum, t) => sum + (t.tipAmount || 0), 0);
-                      
-                      // Calculate spillage data from spillage tab using costPerUnit or item price as fallback
-                      const spillageTab = tabs.find(t => t.isSpillage);
-                      const spillageItems = [];
-                      let spillageTotal = 0;
-                      if (spillageTab?.items) {
-                        // Group items by name and count, track price for fallback
-                        const itemCounts = {};
-                        spillageTab.items.forEach(item => {
-                          if (!itemCounts[item.name]) {
-                            itemCounts[item.name] = { 
-                              name: item.name, 
-                              category: item.category, 
-                              quantity: 0,
-                              itemPrice: item.basePrice || item.price || 0 // Store price for fallback
-                            };
-                          }
-                          itemCounts[item.name].quantity += 1;
-                        });
-                        // Calculate cost for each item
-                        Object.values(itemCounts).forEach(item => {
-                          const menuItem = allItems.find(i => i.name === item.name);
-                          const costPerUnit = menuItem?.costPerUnit || item.itemPrice || 0;
-                          const totalCost = item.quantity * costPerUnit;
-                          spillageItems.push({ name: item.name, category: item.category, quantity: item.quantity, costPerUnit, totalCost });
-                          spillageTotal += totalCost;
-                        });
-                      }
-                      
-                      // Calculate COGS from category breakdown
-                      let cogsTotal = 0;
-                      if (eventSummary?.categoryBreakdown) {
-                        const breakdown = eventSummary.categoryBreakdown instanceof Map 
-                          ? Object.fromEntries(eventSummary.categoryBreakdown)
-                          : eventSummary.categoryBreakdown;
-                        Object.entries(breakdown).forEach(([category, data]) => {
-                          if (data.items) {
-                            Object.entries(data.items).forEach(([itemName, itemData]) => {
-                              const menuItem = allItems.find(i => i.name === itemName);
-                              const costPerUnit = menuItem?.costPerUnit || 0;
-                              cogsTotal += (itemData.count || 0) * costPerUnit;
-                            });
-                          }
-                        });
-                      }
-                      
-                      // Calculate taxes (30% of sales + tips)
-                      const sales = eventSummary?.totalRevenue || 0;
-                      const tips = eventSummary?.totalTips || totalTipsFromTabs;
-                      const taxes = (sales + tips) * 0.3;
-                      
-                      const summaryWithTips = {
-                        ...eventSummary,
-                        totalTips: tips,
-                        taxes: taxes
-                      };
-                      
-                      setSyncing(true);
-                      try {
-                        const response = await fetch('/api/catering-events/finalize', {
-                          method: 'POST',
-                          headers: { 
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({
-                            eventId,
-                            setupData: eventSetupData,
-                            summary: summaryWithTips,
-                            tabs: tabs,
-                            spillageData: { items: spillageItems, total: spillageTotal },
-                            cogsData: { total: cogsTotal },
-                          }),
-                        });
-                        const data = await response.json();
-                        if (response.ok) {
-                          // Show success animation
-                          setShowEventSaveSuccess(true);
-                          // After 2 seconds, return to home/event list
-                          setTimeout(() => {
-                            setShowEventSaveSuccess(false);
-                            setShowEventSetup(false);
-                            setShowSummaryView(false);
-                            setEventSummary(null);
-                            clearEvent(); // Clear event from localStorage
-                          }, 2000);
-                        } else {
-                          console.error('[Event Summary] Save failed:', data);
-                          alert(`Failed to save event: ${data.message || 'Unknown error'}`);
-                        }
-                      } catch (err) {
-                        console.error('Failed to save event:', err);
-                        alert(`Failed to save event: ${err.message}`);
-                      } finally {
-                        setSyncing(false);
-                      }
+                      setShowEventSetup(true);
                     }}
                     disabled={syncing}
                     style={{
@@ -5314,7 +5190,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       cursor: syncing ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {syncing ? 'SAVING...' : 'SAVE RESULTS'}
+                    FINALIZE EVENT
                   </button>
                 </div>
               ) : (
@@ -6969,7 +6845,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         Please close or pay all tabs before ending the event.
                       </p>
                       <p style={{ color: '#ef4444', marginBottom: '24px', fontWeight: 'bold' }}>
-                        {openTabs.length} open tab{openTabs.length > 1 ? 's' : ''}: {openTabs.map(t => t.customName || t.name).join(', ')}
+                        {openTabs.length} open tab{openTabs.length > 1 ? 's' : ''}: {openTabs.map(t => (t.customName || t.name).toUpperCase()).join(', ')}
                       </p>
                       <button
                         onClick={() => setShowEndEventModal(false)}

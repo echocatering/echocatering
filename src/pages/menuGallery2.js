@@ -3103,20 +3103,19 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
         style={{
           width: outerWidth || '100%',
           height: outerHeight || '100%',
-          position: 'relative',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: '#fff',
-          overflow: 'auto',
+          overflow: 'scroll',
           overflowY: 'scroll',
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
+          touchAction: 'pan-y pinch-zoom',
           overscrollBehavior: 'contain',
-          msOverflowStyle: 'none',
-          scrollbarWidth: 'thin',
-        }}
-        onTouchMove={(e) => {
-          // Allow touch scrolling
-          e.stopPropagation();
+          zIndex: 50,
         }}
       >
         {/* Back button to return to normal view */}
@@ -3169,38 +3168,68 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             // Find the index of the item in the category's videoFiles
             const categoryData = subpages[itemCategory];
             if (categoryData) {
-              // Debug: log all items in category
-              console.log('Category videoFiles:', categoryData.videoFiles.map((file, idx) => {
-                const info = categoryData.cocktailInfo[file] || {};
-                return { idx, file, name: info.name, itemNumber: info.itemNumber, _id: info._id };
-              }));
-              
-              const itemIndex = categoryData.videoFiles.findIndex((file) => {
-                const info = categoryData.cocktailInfo[file] || {};
-                
-                // Priority 1: Match by _id (most reliable)
-                if (item._id && info._id && item._id === info._id) {
-                  console.log('Matched by _id:', item._id);
-                  return true;
-                }
-                
-                // Priority 2: Match by itemNumber (very reliable)
-                if (item.itemNumber && info.itemNumber && String(item.itemNumber) === String(info.itemNumber)) {
-                  console.log('Matched by itemNumber:', item.itemNumber);
-                  return true;
-                }
-                
-                // Priority 3: Match by exact name (case-insensitive)
-                if (info.name && item.name && 
-                    info.name.toLowerCase().trim() === item.name.toLowerCase().trim()) {
-                  console.log('Matched by name:', item.name);
-                  return true;
-                }
-                
-                return false;
+              // Debug: log clicked item details
+              console.log('FullMenu clicked item details:', {
+                name: item.name,
+                itemNumber: item.itemNumber,
+                _id: item._id,
+                category: item.category
               });
               
-              console.log('FullMenu item match result:', { 
+              // Debug: log all items in category with their identifiers
+              console.log('Category items for matching:');
+              categoryData.videoFiles.forEach((file, idx) => {
+                const info = categoryData.cocktailInfo[file] || {};
+                console.log(`  [${idx}] name: "${info.name}", itemNumber: ${info.itemNumber}, _id: ${info._id}`);
+              });
+              
+              // Find matching item using multiple strategies
+              let itemIndex = -1;
+              
+              // Strategy 1: Match by _id
+              if (itemIndex === -1 && item._id) {
+                itemIndex = categoryData.videoFiles.findIndex((file) => {
+                  const info = categoryData.cocktailInfo[file] || {};
+                  return info._id && info._id === item._id;
+                });
+                if (itemIndex !== -1) console.log('Matched by _id at index:', itemIndex);
+              }
+              
+              // Strategy 2: Match by itemNumber (convert both to string for comparison)
+              if (itemIndex === -1 && item.itemNumber !== undefined && item.itemNumber !== null) {
+                const clickedItemNum = String(item.itemNumber).trim();
+                itemIndex = categoryData.videoFiles.findIndex((file) => {
+                  const info = categoryData.cocktailInfo[file] || {};
+                  if (info.itemNumber === undefined || info.itemNumber === null) return false;
+                  return String(info.itemNumber).trim() === clickedItemNum;
+                });
+                if (itemIndex !== -1) console.log('Matched by itemNumber at index:', itemIndex);
+              }
+              
+              // Strategy 3: Match by exact name (case-insensitive, trimmed)
+              if (itemIndex === -1 && item.name) {
+                const clickedName = item.name.toLowerCase().trim();
+                itemIndex = categoryData.videoFiles.findIndex((file) => {
+                  const info = categoryData.cocktailInfo[file] || {};
+                  if (!info.name) return false;
+                  return info.name.toLowerCase().trim() === clickedName;
+                });
+                if (itemIndex !== -1) console.log('Matched by exact name at index:', itemIndex);
+              }
+              
+              // Strategy 4: Match by partial name (contains)
+              if (itemIndex === -1 && item.name) {
+                const clickedName = item.name.toLowerCase().trim();
+                itemIndex = categoryData.videoFiles.findIndex((file) => {
+                  const info = categoryData.cocktailInfo[file] || {};
+                  if (!info.name) return false;
+                  const infoName = info.name.toLowerCase().trim();
+                  return infoName.includes(clickedName) || clickedName.includes(infoName);
+                });
+                if (itemIndex !== -1) console.log('Matched by partial name at index:', itemIndex);
+              }
+              
+              console.log('Final match result:', { 
                 itemName: item.name, 
                 itemNumber: item.itemNumber,
                 itemCategory, 
@@ -3212,8 +3241,8 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
               if (itemIndex !== -1) {
                 setFullMenuSelectedItem({ ...item, index: itemIndex, category: itemCategory });
               } else {
-                // If not found by exact match, default to first item
-                console.warn('Item not found in category, defaulting to index 0. Item:', item);
+                // If not found by any match, default to first item
+                console.warn('Item not found in category by any method, defaulting to index 0. Item:', item);
                 setFullMenuSelectedItem({ ...item, index: 0, category: itemCategory });
               }
             } else {
