@@ -14,6 +14,16 @@ const EventSales = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [overheadCollapsed, setOverheadCollapsed] = useState(true);
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
+  const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
+  
+  // Pricing variables for invoice calculations
+  const [pricingVars, setPricingVars] = useState({
+    minimum: 500,      // M = minimum event fee
+    overhead: 150,     // O = flat overhead
+    first2Hr: 15,      // F_first = per-guest rate for first 2 hours
+    addHr: 10,         // F_add = per-guest rate for additional hours
+    perPerson: 25,     // S = per-person service fee (for customer pays model)
+  });
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedEvents, setEditedEvents] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -138,6 +148,37 @@ const EventSales = () => {
     return num.toFixed(2);
   };
 
+  // Calculate invoice based on payment model
+  const calculateInvoice = (event) => {
+    const model = getCurrentValue(event, 'paymentModel') || 'S'; // Default to Standard
+    const G = parseFloat(event.guestCount) || 0; // Number of guests
+    const H = parseFloat(event.durationHours) || 0; // Total hours
+    const { minimum: M, overhead: O, first2Hr: F_first, addHr: F_add, perPerson: S } = pricingVars;
+    
+    if (model === 'S') {
+      // Model 1: Standard (I Buy Alcohol)
+      const firstHours = Math.min(H, 2);
+      const additionalHours = Math.max(H - 2, 0);
+      const serviceFee = (firstHours * F_first * G) + (additionalHours * F_add * G);
+      const totalFee = serviceFee + O;
+      return Math.max(totalFee, M);
+    } else if (model === 'C') {
+      // Model 2: Customer Pays for Alcohol
+      const serviceFee = G * S;
+      const totalFee = serviceFee + O;
+      return Math.max(totalFee, M);
+    } else if (model === 'H') {
+      // Model 3: Hybrid/Cash Bar
+      const totalSales = parseFloat(event.totalSales) || 0;
+      const totalWithOverhead = O + totalSales;
+      if (totalWithOverhead < M) {
+        return M - totalWithOverhead; // Customer pays the difference
+      }
+      return 0; // No additional invoice needed
+    }
+    return 0;
+  };
+
   // Column definitions with groups
   const columnGroups = [
     {
@@ -178,11 +219,19 @@ const EventSales = () => {
       ]
     },
     {
+      name: 'Payment Model',
+      collapsable: true,
+      collapsed: paymentModelCollapsed,
+      columns: [
+        { key: 'paymentModel', label: 'Model', width: '120px', editable: false, field: 'paymentModel' },
+        { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
+        { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived' },
+      ]
+    },
+    {
       name: 'Revenue',
       collapsable: false,
       columns: [
-        { key: 'invoice', label: 'Invoice', width: '90px', editable: false, field: 'invoiceTotal' },
-        { key: 'paid', label: 'Paid', width: '80px', editable: true, field: 'isPaid' },
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
@@ -316,6 +365,60 @@ const EventSales = () => {
           <span style={{ color: profit >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
             {formatCurrency(profit)}
           </span>
+        );
+      case 'paymentModel':
+        // S/C/H checkboxes for payment model
+        const currentModel = getCurrentValue(event, 'paymentModel') || 'S';
+        return (
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+            {[
+              { key: 'S', label: 'S', title: 'Standard (I Buy Alcohol)' },
+              { key: 'C', label: 'C', title: 'Customer Pays for Alcohol' },
+              { key: 'H', label: 'H', title: 'Hybrid/Cash Bar' },
+            ].map(({ key, label, title }) => (
+              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }} title={title}>
+                <input
+                  type="checkbox"
+                  checked={currentModel === key}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleFieldChange(event._id, 'paymentModel', key);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ 
+                  fontSize: '11px', 
+                  fontWeight: currentModel === key ? 'bold' : 'normal',
+                  color: currentModel === key ? '#800080' : '#999' 
+                }}>{label}</span>
+              </label>
+            ))}
+          </div>
+        );
+      case 'calculatedInvoice':
+        // Calculated invoice based on payment model
+        const invoiceAmount = calculateInvoice(event);
+        return (
+          <span style={{ color: '#800080', fontWeight: 'bold' }}>
+            ${invoiceAmount.toFixed(2)}
+          </span>
+        );
+      case 'amountReceived':
+        // Editable amount received - handled by edit mode input
+        const received = getCurrentValue(event, 'amountReceived') || 0;
+        const calcInvoice = calculateInvoice(event);
+        const tipAdjustment = Math.max(0, parseFloat(received) - calcInvoice);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b', fontWeight: 'bold' }}>
+              ${parseFloat(received).toFixed(2)}
+            </span>
+            {tipAdjustment > 0 && (
+              <span style={{ fontSize: '10px', color: '#22c55e' }}>
+                +${tipAdjustment.toFixed(2)} tip
+              </span>
+            )}
+          </div>
         );
       default:
         return '-';
@@ -518,6 +621,7 @@ const EventSales = () => {
 
   return (
     <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header Row with Title, Pricing Variables, and Buttons */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 
           className="text-3xl tracking-wide uppercase" 
@@ -529,7 +633,72 @@ const EventSales = () => {
         >
           EVENTS
         </h1>
+        
+        {/* Pricing Variables - Centered */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#f5f5f5', padding: '8px 16px', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>MIN</label>
+            <input
+              type="number"
+              value={pricingVars.minimum}
+              onChange={(e) => setPricingVars(prev => ({ ...prev, minimum: parseFloat(e.target.value) || 0 }))}
+              style={{ width: '70px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>OHD</label>
+            <input
+              type="number"
+              value={pricingVars.overhead}
+              onChange={(e) => setPricingVars(prev => ({ ...prev, overhead: parseFloat(e.target.value) || 0 }))}
+              style={{ width: '70px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$2HR</label>
+            <input
+              type="number"
+              value={pricingVars.first2Hr}
+              onChange={(e) => setPricingVars(prev => ({ ...prev, first2Hr: parseFloat(e.target.value) || 0 }))}
+              style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$+HR</label>
+            <input
+              type="number"
+              value={pricingVars.addHr}
+              onChange={(e) => setPricingVars(prev => ({ ...prev, addHr: parseFloat(e.target.value) || 0 }))}
+              style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$/PP</label>
+            <input
+              type="number"
+              value={pricingVars.perPerson}
+              onChange={(e) => setPricingVars(prev => ({ ...prev, perPerson: parseFloat(e.target.value) || 0 }))}
+              style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+            />
+          </div>
+        </div>
+        
+        {/* Buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setPaymentModelCollapsed(!paymentModelCollapsed)}
+            style={{
+              padding: '8px 16px',
+              background: paymentModelCollapsed ? '#999' : '#800080',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Payment Model
+          </button>
           <button
             onClick={() => setOverheadCollapsed(!overheadCollapsed)}
             style={{
