@@ -3792,10 +3792,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowCheckoutOptions(true);
   }, [activeTabId, selectedItems, tabs, total]);
 
+  // State for reader disconnected warning
+  const [showReaderDisconnectedWarning, setShowReaderDisconnectedWarning] = useState(false);
+
   /**
    * Start credit card checkout flow
    */
   const handleCreditCheckout = useCallback(() => {
+    // Check if card reader is connected (local or remote)
+    if (!readerConnected && !remoteReaderConnected) {
+      // Show reader disconnected warning
+      setShowReaderDisconnectedWarning(true);
+      return;
+    }
+    
     setShowCheckoutOptions(false);
     setPaymentMethod('credit');
     setShowCustomTip(false);
@@ -3816,7 +3826,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     sendCheckoutStage('tip');
     
     console.log(`[POS Checkout] Credit checkout mode activated. Subtotal: $${checkoutSubtotal.toFixed(2)}`);
-  }, [checkoutItems, checkoutSubtotal, checkoutTabInfo, sendCheckoutStart, sendCheckoutStage]);
+  }, [checkoutItems, checkoutSubtotal, checkoutTabInfo, sendCheckoutStart, sendCheckoutStage, readerConnected, remoteReaderConnected]);
 
   /**
    * Start cash checkout flow
@@ -3909,11 +3919,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Save to server after payment completed
     setTimeout(() => saveToServerRef.current?.('cash-payment-complete'), 500);
     
-    // Show success briefly
+    // Show success animation (same as credit card payment)
     setCheckoutStage('success');
     setPaymentMethod('cash');
+    setPaymentStatus('payment_success'); // Trigger the success animation
     
-    // Broadcast to horizontal view
+    // Broadcast success stage to horizontal view (triggers animation there too)
+    sendCheckoutStage('success');
+    
+    // Broadcast checkout complete to sync tab status
     sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
     
     // Clear checkout state after delay
@@ -3925,6 +3939,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setCashTendered('');
       setCheckoutStage('');
       setPaymentMethod('');
+      setPaymentStatus(null); // Clear payment status
       
       // Move to next tab or clear selection
       if (activeTabId === checkoutTabInfo.id) {
@@ -3933,7 +3948,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }, 2000);
     
     console.log(`[POS Checkout] Cash payment completed. Total: $${totalDue.toFixed(2)}, Cash: $${cashAmount.toFixed(2)}, Change: $${(cashAmount - totalDue).toFixed(2)}`);
-  }, [checkoutTabInfo, checkoutSubtotal, cashTendered, activeTabId, sendCheckoutComplete]);
+  }, [checkoutTabInfo, checkoutSubtotal, cashTendered, activeTabId, sendCheckoutComplete, sendCheckoutStage]);
 
   /**
    * Process payment with tip - Uses Stripe Terminal for Bluetooth reader
@@ -4497,7 +4512,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         color: '#22c55e',
                         textAlign: 'center',
                       }}>
-                        {paymentMethod === 'cash' ? 'Thank you!' : 'Payment Complete!'}
+                        Payment Complete!
                       </div>
                       <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
                         ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
@@ -7136,6 +7151,70 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   CANCEL
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reader Disconnected Warning Modal */}
+        {showReaderDisconnectedWarning && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}>
+            <div style={{
+              background: '#1a1a1a',
+              borderRadius: '16px',
+              padding: '32px 24px',
+              maxWidth: '90%',
+              width: '320px',
+              textAlign: 'center',
+            }}>
+              {/* Warning Icon */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+              }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </div>
+              <h2 style={{ color: '#ef4444', fontSize: '22px', marginBottom: '12px', fontWeight: 'bold' }}>
+                Card Reader Disconnected
+              </h2>
+              <p style={{ color: '#999', marginBottom: '24px', fontSize: '15px', lineHeight: '1.5' }}>
+                Please connect a card reader to process credit card payments.
+              </p>
+              <button
+                onClick={() => setShowReaderDisconnectedWarning(false)}
+                style={{
+                  padding: '14px 32px',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         )}

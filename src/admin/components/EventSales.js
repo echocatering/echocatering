@@ -832,7 +832,7 @@ const EventSales = () => {
       ) : (
         <>
           {/* Graph View - Fixed height container */}
-          <div style={{ height: '420px', minHeight: '420px', maxHeight: '420px', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden', display: 'flex' }}>
+          <div style={{ height: '480px', minHeight: '480px', maxHeight: '480px', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden', display: 'flex' }}>
             {/* Graph Main Area */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* Graph Controls */}

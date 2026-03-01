@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 import { usePosLocalStorage } from '../hooks/usePosLocalStorage';
 import MenuGallery2 from '../../pages/menuGallery2';
+import POSSalesUI from './POSSalesUI';
 
 /**
  * POSDualViewer - Shows both horizontal (16:9) and vertical (9:19) POS layouts side by side
@@ -99,6 +100,11 @@ export default function POSDualViewer() {
   const viewerHeight = Math.min(availableHeight, heightFromWidth);
   const horizontalWidth = viewerHeight * (16 / 10);
   const verticalWidth = viewerHeight * (9 / 19);
+  
+  // Scale down the horizontal view by 10%
+  const horizontalScale = 0.9;
+  const scaledHorizontalWidth = horizontalWidth * horizontalScale;
+  const scaledHorizontalHeight = viewerHeight * horizontalScale;
 
   return (
     <div style={{ 
@@ -153,8 +159,8 @@ export default function POSDualViewer() {
                 16:10 Customer View
               </div>
               <div style={{
-                width: `${horizontalWidth}px`,
-                height: `${viewerHeight}px`,
+                width: `${scaledHorizontalWidth}px`,
+                height: `${scaledHorizontalHeight}px`,
                 border: '1px solid #ddd',
                 borderRadius: '4px',
                 overflow: 'hidden',
@@ -164,8 +170,8 @@ export default function POSDualViewer() {
                 <MenuGallery2 
                   viewMode="menu"
                   orientationOverride="horizontal"
-                  outerWidth={horizontalWidth}
-                  outerHeight={viewerHeight}
+                  outerWidth={scaledHorizontalWidth}
+                  outerHeight={scaledHorizontalHeight}
                 />
               </div>
             </div>
@@ -196,14 +202,10 @@ export default function POSDualViewer() {
                 background: '#fff',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
-                <iframe
-                  src="/admin/pos"
-                  title="POS Vertical View"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                  }}
+                <POSSalesUI 
+                  layoutMode="vertical"
+                  outerWidth={verticalWidth}
+                  outerHeight={viewerHeight}
                 />
               </div>
             </div>
