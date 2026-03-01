@@ -127,7 +127,7 @@ export default function POSDualViewer() {
           display: 'flex',
           gap: `${gap}px`,
           flex: 1,
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
           overflow: 'hidden',
           minHeight: 0,
@@ -162,8 +162,10 @@ export default function POSDualViewer() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
                 <MenuGallery2 
-                  embedded={true}
-                  initialCategory={activeCategory}
+                  viewMode="menu"
+                  orientationOverride="horizontal"
+                  outerWidth={horizontalWidth}
+                  outerHeight={viewerHeight}
                 />
               </div>
             </div>

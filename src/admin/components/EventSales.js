@@ -440,7 +440,15 @@ const EventSales = () => {
               value={received}
               onChange={(e) => {
                 e.stopPropagation();
-                handleFieldChange(event._id, 'amountReceived', parseFloat(e.target.value) || 0);
+                const newReceived = parseFloat(e.target.value) || 0;
+                handleFieldChange(event._id, 'amountReceived', newReceived);
+                // If received > invoice, add extra to tips
+                const extraTip = Math.max(0, newReceived - calcInvoice);
+                const baseTips = event.totalTips || 0;
+                // Only update tips if there's extra from received amount
+                if (extraTip > 0) {
+                  handleFieldChange(event._id, 'totalTips', baseTips + extraTip);
+                }
               }}
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -823,8 +831,8 @@ const EventSales = () => {
         </div>
       ) : (
         <>
-          {/* Graph View - Top Half */}
-          <div style={{ height: '45%', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden', display: 'flex' }}>
+          {/* Graph View - Fixed height container */}
+          <div style={{ height: '420px', minHeight: '420px', maxHeight: '420px', marginBottom: '16px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', overflow: 'hidden', display: 'flex' }}>
             {/* Graph Main Area */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* Graph Controls */}

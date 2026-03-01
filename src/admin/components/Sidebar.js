@@ -266,12 +266,6 @@ const Sidebar = () => {
         {expandedSections.sales && (
           <>
             <NavLink
-              to="/admin/sales"
-              className={`nav-item ${location.pathname === '/admin/sales' ? 'active' : ''}`}
-            >
-              <span className="nav-text">SALES</span>
-            </NavLink>
-            <NavLink
               to="/admin/sales/events"
               className={`nav-item ${location.pathname === '/admin/sales/events' ? 'active' : ''}`}
             >

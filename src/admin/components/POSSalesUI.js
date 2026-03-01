@@ -699,17 +699,19 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 const isSpillageTab = activeTab?.isSpillage;
                 
                 if (isSpillageTab) {
-                  // Spillage tab: show "Name: SPILL TAB" in purple, uneditable (same size as typed text)
+                  // Spillage tab: show "Name:" on left and "SPILL TAB" aligned right like P1
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                      <span style={{
-                        color: '#d0d0d0',
-                        fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
-                        fontWeight: 500,
-                        fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                      }}>
-                        NAME:
-                      </span>
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '12px' }}>
+                        <span style={{
+                          color: '#d0d0d0',
+                          fontSize: `${Math.max(10, footerHeight * 0.3)}px`,
+                          fontWeight: 500,
+                          fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                        }}>
+                          NAME:
+                        </span>
+                      </div>
                       <span style={{
                         color: '#800080',
                         fontSize: `${Math.max(14, footerHeight * 0.45)}px`,
@@ -718,7 +720,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                       }}>
                         SPILL TAB
                       </span>
-                    </div>
+                    </>
                   );
                 }
                 
@@ -1048,16 +1050,18 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Close/Cancel Button - disabled when spillage tab is selected */}
+            {/* Close/Cancel Button - disabled when spillage tab or PAID tab is selected */}
             {(() => {
               const currentTab = tabs.find(t => t.id === activeTabId);
               const isSpillageTab = currentTab?.isSpillage;
+              const isPaidTab = currentTab?.status === 'archived';
+              const isDisabled = isSpillageTab || isPaidTab;
               const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE';
               
               return (
                 <button
                   onClick={() => {
-                    if (isSpillageTab) return; // Disabled for spillage tab
+                    if (isDisabled) return; // Disabled for spillage tab and paid tabs
                     if (selectedReceiptIndices.size > 0) {
                       // CANCEL mode - deselect all items
                       setSelectedReceiptIndices(new Set());
@@ -1071,13 +1075,13 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     padding: '12px',
                     border: 'none',
                     background: '#f0f0f0',
-                    color: isSpillageTab ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999'),
+                    color: isDisabled ? '#999' : ((selectedReceiptIndices.size > 0 || activeTabId) ? '#333' : '#999'),
                     fontSize: `${Math.max(12, outerWidth / 25)}px`,
                     fontWeight: 600,
                     fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                    cursor: isSpillageTab ? 'not-allowed' : ((selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed'),
+                    cursor: isDisabled ? 'not-allowed' : ((selectedReceiptIndices.size > 0 || activeTabId) ? 'pointer' : 'not-allowed'),
                     borderRadius: '4px',
-                    opacity: isSpillageTab ? 0.4 : 1
+                    opacity: isDisabled ? 0.4 : 1
                   }}
                 >
                   {buttonLabel}
@@ -4361,7 +4365,55 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               alignItems: 'center',
               overflow: 'hidden',
             }}>
-              {paymentMethod === 'cash' && checkoutStage === 'cash' && !showTabView ? (
+              {paymentMethod === 'cash' && checkoutStage === 'success' ? (
+                /* CASH SUCCESS ANIMATION - same as CREDIT but says "Payment Complete!" */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2vh',
+                }}>
+                  {/* CSS Animations */}
+                  <style>{`
+                    @keyframes success-checkmark {
+                      0% { transform: scale(0); opacity: 0; }
+                      50% { transform: scale(1.2); opacity: 1; }
+                      100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes success-circle {
+                      0% { stroke-dashoffset: 166; }
+                      100% { stroke-dashoffset: 0; }
+                    }
+                    .success-animation {
+                      animation: success-checkmark 0.6s ease-out;
+                    }
+                  `}</style>
+                  
+                  <div className="success-animation" style={{ textAlign: 'center' }}>
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="54" fill="none" stroke="#22c55e" strokeWidth="4" 
+                        strokeDasharray="339.292" strokeDashoffset="0"
+                        style={{ animation: 'success-circle 0.6s ease-out' }} />
+                      <path d="M34 60 L52 78 L86 44" fill="none" stroke="#22c55e" strokeWidth="6" 
+                        strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div style={{ 
+                    fontSize: 'clamp(28px, 5vh, 42px)', 
+                    fontWeight: '700', 
+                    color: '#22c55e',
+                    textAlign: 'center',
+                  }}>
+                    Payment Complete!
+                  </div>
+                  <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
+                    ${checkoutSubtotal.toFixed(2)}
+                  </div>
+                </div>
+              ) : paymentMethod === 'cash' && checkoutStage === 'cash' && !showTabView ? (
                 /* CASH PAYMENT SCREEN - shows just Total and View Tab button */
                 <div style={{
                   display: 'flex',
