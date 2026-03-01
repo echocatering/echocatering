@@ -382,7 +382,10 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'profit':
-        const profit = event.netIncome || 0;
+        // Profit = Invoice Received + netIncome (if negative, it subtracts)
+        const invoiceReceived = getCurrentValue(event, 'amountReceived') || 0;
+        const netIncome = event.netIncome || 0;
+        const profit = invoiceReceived + netIncome;
         return (
           <span style={{ color: profit >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
             {formatCurrency(profit)}
@@ -478,6 +481,7 @@ const EventSales = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        height: '100%', // Fixed height to match chart container
       }}>
         <div style={{
           padding: '12px 16px',

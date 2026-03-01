@@ -4445,7 +4445,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         color: '#22c55e',
                         textAlign: 'center',
                       }}>
-                        Payment Complete!
+                        {paymentMethod === 'cash' ? 'Thank you!' : 'Payment Complete!'}
                       </div>
                       <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
                         ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
@@ -4960,7 +4960,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <button
                     onClick={() => {
                       setShowTabView(false);
-                      updateCheckoutStage('tip');
+                      // Return to the appropriate screen based on payment method
+                      if (paymentMethod === 'cash') {
+                        updateCheckoutStage('cash');
+                      } else {
+                        updateCheckoutStage('tip');
+                      }
                     }}
                     style={{
                       width: '100%',
@@ -6502,7 +6507,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
-                    {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
+                    {checkoutStage === 'success' && (paymentMethod === 'cash' ? 'THANK YOU!' : 'PAYMENT COMPLETE')}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
                   </span>

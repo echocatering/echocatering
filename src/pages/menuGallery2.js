@@ -2066,8 +2066,8 @@ function EchoCocktailSubpage2({
             <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} noHover={viewMode === 'menu'} />
           </div>
           
-          {/* FULL MENU button - right half of screen, centered (menu view only) */}
-          {viewMode === 'menu' && (
+          {/* FULL MENU button - TEMPORARILY HIDDEN - scrolling and item selection not working properly */}
+          {/* {viewMode === 'menu' && (
             <div style={{
               position: 'absolute',
               right: 0,
@@ -2109,7 +2109,7 @@ function EchoCocktailSubpage2({
                 FULL MENU
               </button>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Left info */}
