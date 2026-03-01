@@ -82,7 +82,7 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems, showSpendLimitWarning, setShowSpendLimitWarning, spendLimitWarningTab, setSpendLimitWarningTab }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onReopenTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems, showSpendLimitWarning, setShowSpendLimitWarning, spendLimitWarningTab, setSpendLimitWarningTab }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -1028,8 +1028,8 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                     if (canMove) {
                       // MOVE mode - open tab selection modal
                       setShowMoveModal(true);
-                    } else if (!isArchivedTab || drawerView === 'tabs') {
-                      // Normal mode - switch views
+                    } else {
+                      // Normal mode - switch views (always allow switching)
                       setDrawerView(drawerView === 'receipt' ? 'tabs' : 'receipt');
                     }
                   }}
@@ -1050,19 +1050,33 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Close/Cancel Button - disabled when spillage tab, PAID tab, or tab has items */}
+            {/* Close/Cancel/Receipt Button - shows RECEIPT for paid tabs, CANCEL when items selected, CLOSE otherwise */}
             {(() => {
               const currentTab = tabs.find(t => t.id === activeTabId);
               const isSpillageTab = currentTab?.isSpillage;
               const isPaidTab = currentTab?.status === 'archived';
               const hasItems = (currentTab?.items || []).length > 0;
-              const isDisabled = isSpillageTab || isPaidTab || (hasItems && selectedReceiptIndices.size === 0);
-              const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE';
+              // For paid tabs, show RECEIPT button (always enabled)
+              // For unpaid tabs with items and no selection, disable CLOSE
+              const isDisabled = isSpillageTab || (!isPaidTab && hasItems && selectedReceiptIndices.size === 0);
+              
+              // Determine button label
+              let buttonLabel = 'CLOSE';
+              if (selectedReceiptIndices.size > 0) {
+                buttonLabel = 'CANCEL';
+              } else if (isPaidTab) {
+                buttonLabel = 'RECEIPT';
+              }
               
               return (
                 <button
                   onClick={() => {
-                    if (isDisabled) return; // Disabled for spillage tab and paid tabs
+                    if (isPaidTab) {
+                      // RECEIPT mode - switch to receipt view for paid tab
+                      setDrawerView('receipt');
+                      return;
+                    }
+                    if (isDisabled) return; // Disabled for spillage tab
                     if (selectedReceiptIndices.size > 0) {
                       // CANCEL mode - deselect all items
                       setSelectedReceiptIndices(new Set());
@@ -1089,39 +1103,83 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Checkout/Duplicate Button - shows DUPLICATE when items selected, disabled when spillage tab for checkout */}
-            <button
-              onClick={() => {
-                const isSpillageTab = tabs.find(t => t.isSpillage && t.id === activeTabId);
-                // If items are selected, duplicate them (works on spillage tab too)
-                if (selectedReceiptIndices.size > 0) {
-                  if (onDuplicateItems) {
-                    onDuplicateItems(activeTabId, Array.from(selectedReceiptIndices));
-                  }
-                  setSelectedReceiptIndices(new Set());
-                  return;
-                }
-                // Normal checkout - disabled for spillage tab
-                if (isSpillageTab) return;
-                onCheckout && onCheckout();
-              }}
-              disabled={checkoutLoading || (selectedItems.length === 0 && selectedReceiptIndices.size === 0) || (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: 'none',
-                background: selectedReceiptIndices.size > 0 ? '#666' : (tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#ccc' : (checkoutLoading ? '#666' : (selectedItems.length === 0 ? '#ccc' : '#800080'))),
-                color: '#fff',
-                fontSize: `${Math.max(12, outerWidth / 25)}px`,
-                fontWeight: 600,
-                fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-                cursor: (checkoutLoading || (selectedItems.length === 0 && selectedReceiptIndices.size === 0) || (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0)) ? 'not-allowed' : 'pointer',
-                borderRadius: '4px',
-                opacity: (tabs.find(t => t.isSpillage && t.id === activeTabId) && selectedReceiptIndices.size === 0) ? 0.4 : 1
-              }}
-            >
-              {selectedReceiptIndices.size > 0 ? 'DUPLICATE' : (checkoutLoading ? 'PROCESSING...' : 'CHECKOUT')}
-            </button>
+            {/* Checkout/Duplicate/Reopen Button - shows DUPLICATE when items selected, REOPEN for invoice tabs, disabled for paid CASH/CREDIT tabs */}
+            {(() => {
+              const currentTab = tabs.find(t => t.id === activeTabId);
+              const isSpillageTab = currentTab?.isSpillage;
+              const isPaidTab = currentTab?.status === 'archived';
+              const paymentMethod = currentTab?.paymentMethod;
+              const isInvoiceTab = isPaidTab && paymentMethod === 'invoice';
+              const isPaidCashOrCredit = isPaidTab && (paymentMethod === 'cash' || paymentMethod === 'credit');
+              
+              // Determine button state
+              let buttonLabel = 'CHECKOUT';
+              let isDisabled = false;
+              let buttonBackground = '#800080';
+              
+              if (selectedReceiptIndices.size > 0) {
+                buttonLabel = 'DUPLICATE';
+                buttonBackground = '#666';
+                isDisabled = false;
+              } else if (isInvoiceTab) {
+                buttonLabel = 'REOPEN';
+                buttonBackground = '#2196F3';
+                isDisabled = false;
+              } else if (isPaidCashOrCredit) {
+                buttonLabel = 'CHECKOUT';
+                buttonBackground = '#ccc';
+                isDisabled = true;
+              } else if (isSpillageTab) {
+                buttonBackground = '#ccc';
+                isDisabled = true;
+              } else if (checkoutLoading) {
+                buttonLabel = 'PROCESSING...';
+                buttonBackground = '#666';
+                isDisabled = true;
+              } else if (selectedItems.length === 0) {
+                buttonBackground = '#ccc';
+                isDisabled = true;
+              }
+              
+              return (
+                <button
+                  onClick={() => {
+                    // If items are selected, duplicate them (works on spillage tab too)
+                    if (selectedReceiptIndices.size > 0) {
+                      if (onDuplicateItems) {
+                        onDuplicateItems(activeTabId, Array.from(selectedReceiptIndices));
+                      }
+                      setSelectedReceiptIndices(new Set());
+                      return;
+                    }
+                    // REOPEN invoice tab - move back to unpaid
+                    if (isInvoiceTab && onReopenTab) {
+                      onReopenTab(activeTabId);
+                      return;
+                    }
+                    // Normal checkout - disabled for spillage tab and paid tabs
+                    if (isSpillageTab || isPaidCashOrCredit) return;
+                    onCheckout && onCheckout();
+                  }}
+                  disabled={isDisabled}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: buttonBackground,
+                    color: '#fff',
+                    fontSize: `${Math.max(12, outerWidth / 25)}px`,
+                    fontWeight: 600,
+                    fontFamily: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    borderRadius: '4px',
+                    opacity: isDisabled ? 0.4 : 1
+                  }}
+                >
+                  {buttonLabel}
+                </button>
+              );
+            })()}
           </div>
         )}
         
@@ -2520,6 +2578,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [paymentMethod, setPaymentMethod] = useState(''); // 'credit', 'cash', 'invoice'
   const [cashTendered, setCashTendered] = useState(''); // Amount of cash given by customer
   
+  // Receipt prompt state (horizontal view after payment success)
+  const [showReceiptPrompt, setShowReceiptPrompt] = useState(false); // Show "Would you like a receipt?" screen
+  const [showReceiptKeypad, setShowReceiptKeypad] = useState(false); // Show email/phone keypad
+  const [receiptContact, setReceiptContact] = useState(''); // Email or phone number entered
+  const [receiptSending, setReceiptSending] = useState(false); // Sending receipt in progress
+  const receiptTimerRef = useRef(null); // 10 second auto-dismiss timer
+  
   // Tab spend limit state
   const [showSpendLimitWarning, setShowSpendLimitWarning] = useState(false);
   const [spendLimitWarningTab, setSpendLimitWarningTab] = useState(null);
@@ -2638,13 +2703,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Also update paymentStatus based on stage so H shows success/failed animation
     if (data.stage === 'success') {
       setPaymentStatus('payment_success');
-      // Auto-clear after 3 seconds
+      // After 2 seconds of success animation, show receipt prompt
       setTimeout(() => {
         setPaymentStatus(null);
-        setCheckoutMode(false);
-        setShowScanCard(false);
-        setSelectedTipAmount(0);
-      }, 3000);
+        setShowReceiptPrompt(true);
+        // Start 10 second timer for auto-dismiss
+        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+        receiptTimerRef.current = setTimeout(() => {
+          setShowReceiptPrompt(false);
+          setCheckoutMode(false);
+          setCheckoutStage('');
+          setShowScanCard(false);
+          setSelectedTipAmount(0);
+        }, 10000);
+      }, 2000);
+    } else if (data.stage === 'receipt_request') {
+      // Vertical view received receipt request status
+      // This is handled by the vertical view to show "Requesting Receipt" status
     } else if (data.stage === 'failed') {
       setPaymentStatus('payment_failed');
       // Auto-clear after 3 seconds
@@ -3513,7 +3588,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const handleInvoiceTab = useCallback((tabId) => {
     setTabs(prev => prev.map(t => 
       t.id === tabId 
-        ? { ...t, status: 'archived', isInvoice: true, invoicedAt: new Date().toISOString() }
+        ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', invoicedAt: new Date().toISOString() }
         : t
     ));
     if (activeTabId === tabId) {
@@ -3521,6 +3596,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
     console.log(`[POS] Tab ${tabId} invoiced (payment to be collected later)`);
   }, [activeTabId]);
+
+  // Reopen an invoice tab (moves back to unpaid/open status)
+  const handleReopenTab = useCallback((tabId) => {
+    setTabs(prev => prev.map(t => 
+      t.id === tabId 
+        ? { ...t, status: 'open', isInvoice: false, paymentMethod: null, paidAt: null, invoicedAt: null }
+        : t
+    ));
+    console.log(`[POS] Tab ${tabId} reopened (moved back to unpaid)`);
+  }, []);
 
   // Update tab custom name
   const handleUpdateTabName = useCallback((tabId, customName) => {
@@ -4363,7 +4448,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // ============================================
   if (layoutMode === 'auto' && orientation === 'horizontal') {
     // CHECKOUT MODE: Show receipt with tip options (Square-style light theme)
-    if (checkoutMode && checkoutItems.length > 0) {
+    // Also show when checkoutStage is 'success' to display the Thank You animation
+    // Also show receipt prompt/keypad screens
+    if ((checkoutMode && checkoutItems.length > 0) || checkoutStage === 'success' || showReceiptPrompt || showReceiptKeypad) {
       const tipPercentages = [
         { label: '15%', value: 0.15 },
         { label: '20%', value: 0.20 },
@@ -4421,7 +4508,266 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               alignItems: 'center',
               overflow: 'hidden',
             }}>
-              {paymentMethod === 'cash' && checkoutStage === 'success' ? (
+              {showReceiptKeypad ? (
+                /* RECEIPT KEYPAD SCREEN - email/phone input */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  paddingTop: '2vh',
+                  gap: '2vh',
+                }}>
+                  <div style={{ 
+                    fontSize: 'clamp(20px, 4vh, 32px)', 
+                    fontWeight: '600', 
+                    color: '#333',
+                    textAlign: 'center',
+                    marginBottom: '1vh',
+                  }}>
+                    Enter Email or Phone
+                  </div>
+                  
+                  {/* Input display */}
+                  <div style={{
+                    width: '90%',
+                    padding: '16px',
+                    fontSize: 'clamp(18px, 3vh, 24px)',
+                    textAlign: 'center',
+                    background: '#fff',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    minHeight: '50px',
+                    color: receiptContact ? '#333' : '#999',
+                  }}>
+                    {receiptContact || 'email@example.com or (555) 123-4567'}
+                  </div>
+                  
+                  {/* Keypad */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '8px',
+                    width: '90%',
+                    maxWidth: '400px',
+                  }}>
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '@', '0', '.'].map(key => (
+                      <button
+                        key={key}
+                        onClick={() => setReceiptContact(prev => prev + key)}
+                        style={{
+                          padding: 'clamp(12px, 2vh, 20px)',
+                          fontSize: 'clamp(20px, 3vh, 28px)',
+                          fontWeight: '600',
+                          background: '#f5f5f5',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Letter row for email */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '4px',
+                    width: '90%',
+                    justifyContent: 'center',
+                  }}>
+                    {['q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m'].map(key => (
+                      <button
+                        key={key}
+                        onClick={() => setReceiptContact(prev => prev + key)}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: 'clamp(14px, 2vh, 18px)',
+                          fontWeight: '500',
+                          background: '#f5f5f5',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          minWidth: '30px',
+                        }}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: '12px', width: '90%', marginTop: '1vh' }}>
+                    <button
+                      onClick={() => setReceiptContact(prev => prev.slice(0, -1))}
+                      style={{
+                        flex: 1,
+                        padding: '14px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: '#f0f0f0',
+                        color: '#666',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ← Delete
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Clear timer
+                        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                        setShowReceiptKeypad(false);
+                        setShowReceiptPrompt(false);
+                        setReceiptContact('');
+                        setCheckoutMode(false);
+                        setCheckoutStage('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '14px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: '#666',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!receiptContact) return;
+                        setReceiptSending(true);
+                        // Broadcast to vertical view that receipt is being requested
+                        sendCheckoutStage('receipt_request');
+                        try {
+                          // Send receipt via API
+                          const response = await fetch('/api/receipts/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              contact: receiptContact,
+                              tabId: checkoutTabInfo?.id,
+                              items: checkoutItems,
+                              subtotal: checkoutSubtotal,
+                              tip: selectedTipAmount,
+                              total: checkoutSubtotal + selectedTipAmount,
+                              paymentMethod: paymentMethod,
+                            }),
+                          });
+                          if (!response.ok) throw new Error('Failed to send receipt');
+                          console.log('[POS] Receipt sent to:', receiptContact);
+                        } catch (err) {
+                          console.error('[POS] Failed to send receipt:', err);
+                        }
+                        // Clear and return to menu
+                        setReceiptSending(false);
+                        setShowReceiptKeypad(false);
+                        setShowReceiptPrompt(false);
+                        setReceiptContact('');
+                        setCheckoutMode(false);
+                        setCheckoutStage('');
+                        sendCheckoutStage(''); // Clear vertical view status
+                      }}
+                      disabled={!receiptContact || receiptSending}
+                      style={{
+                        flex: 2,
+                        padding: '14px',
+                        fontSize: 'clamp(14px, 2vh, 18px)',
+                        fontWeight: '600',
+                        background: receiptContact ? '#22c55e' : '#ccc',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: receiptContact ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      {receiptSending ? 'Sending...' : 'Send Receipt'}
+                    </button>
+                  </div>
+                </div>
+              ) : showReceiptPrompt ? (
+                /* RECEIPT PROMPT SCREEN - "Would you like a receipt?" */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4vh',
+                }}>
+                  <div style={{ 
+                    fontSize: 'clamp(24px, 5vh, 36px)', 
+                    fontWeight: '600', 
+                    color: '#333',
+                    textAlign: 'center',
+                  }}>
+                    Would you like a receipt?
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '20px', width: '80%', maxWidth: '400px' }}>
+                    <button
+                      onClick={() => {
+                        // Clear timer and return to menu
+                        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                        setShowReceiptPrompt(false);
+                        setCheckoutMode(false);
+                        setCheckoutStage('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '20px',
+                        fontSize: 'clamp(18px, 3vh, 24px)',
+                        fontWeight: '600',
+                        background: '#f0f0f0',
+                        color: '#666',
+                        border: 'none',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      No Thanks
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Clear timer and show keypad
+                        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                        setShowReceiptPrompt(false);
+                        setShowReceiptKeypad(true);
+                        // Broadcast to vertical view
+                        sendCheckoutStage('receipt_request');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '20px',
+                        fontSize: 'clamp(18px, 3vh, 24px)',
+                        fontWeight: '600',
+                        background: '#22c55e',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                  
+                  {/* Timer indicator */}
+                  <div style={{ fontSize: '14px', color: '#999' }}>
+                    Auto-dismiss in 10 seconds
+                  </div>
+                </div>
+              ) : paymentMethod === 'cash' && checkoutStage === 'success' ? (
                 /* CASH SUCCESS ANIMATION - same as CREDIT but says "Payment Complete!" */
                 <div style={{
                   display: 'flex',
@@ -6616,6 +6962,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
                     {checkoutStage === 'success' && (paymentMethod === 'cash' ? 'THANK YOU!' : 'PAYMENT COMPLETE')}
+                    {checkoutStage === 'receipt_request' && 'REQUESTING RECEIPT'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
                   </span>
@@ -6880,6 +7227,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               onDeleteTab={handleDeleteTab}
               onArchiveTab={handleArchiveTab}
               onInvoiceTab={handleInvoiceTab}
+              onReopenTab={handleReopenTab}
               onUpdateTabName={handleUpdateTabName}
               onUpdateItemModifiers={handleUpdateItemModifiers}
               onMoveItems={handleMoveItems}
@@ -7891,6 +8239,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 onDeleteTab={handleDeleteTab}
                 onArchiveTab={handleArchiveTab}
                 onInvoiceTab={handleInvoiceTab}
+                onReopenTab={handleReopenTab}
                 onUpdateTabName={handleUpdateTabName}
                 onUpdateItemModifiers={handleUpdateItemModifiers}
                 onMoveItems={handleMoveItems}
