@@ -1050,12 +1050,13 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 </button>
               );
             })()}
-            {/* Close/Cancel Button - disabled when spillage tab or PAID tab is selected */}
+            {/* Close/Cancel Button - disabled when spillage tab, PAID tab, or tab has items */}
             {(() => {
               const currentTab = tabs.find(t => t.id === activeTabId);
               const isSpillageTab = currentTab?.isSpillage;
               const isPaidTab = currentTab?.status === 'archived';
-              const isDisabled = isSpillageTab || isPaidTab;
+              const hasItems = (currentTab?.items || []).length > 0;
+              const isDisabled = isSpillageTab || isPaidTab || (hasItems && selectedReceiptIndices.size === 0);
               const buttonLabel = selectedReceiptIndices.size > 0 ? 'CANCEL' : 'CLOSE';
               
               return (
@@ -2626,8 +2627,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   
   // Handle checkout stage updates from other devices (for vertical screen sync)
   const handleWsCheckoutStage = useCallback((data) => {
-    console.log('[POS] WebSocket checkout_stage received:', data.stage);
+    console.log('[POS] WebSocket checkout_stage received:', data.stage, data.paymentMethod ? `(${data.paymentMethod})` : '');
     setCheckoutStage(data.stage || '');
+    
+    // Update payment method if provided
+    if (data.paymentMethod) {
+      setPaymentMethod(data.paymentMethod);
+    }
     
     // Also update paymentStatus based on stage so H shows success/failed animation
     if (data.stage === 'success') {
@@ -3428,6 +3434,28 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     return calculateSpillageTotal(spillageTab, allItems);
   }, [tabs, allItems, calculateSpillageTotal]);
 
+  // Auto-update labor hours when start/end time changes
+  useEffect(() => {
+    if (eventSetupData.startTime && eventSetupData.endTime && eventSetupData.labor?.length > 0) {
+      const [startH, startM] = eventSetupData.startTime.split(':').map(Number);
+      const [endH, endM] = eventSetupData.endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      const durationMinutes = endMinutes >= startMinutes ? endMinutes - startMinutes : (24 * 60 - startMinutes + endMinutes);
+      const calculatedHours = (durationMinutes / 60).toFixed(2);
+      
+      // Update all labor entries with the calculated hours (only if hours is empty or matches previous calculated value)
+      setEventSetupData(prev => ({
+        ...prev,
+        labor: prev.labor.map(l => ({
+          ...l,
+          hours: l.hours === '' || l.hours === '0' || l.hours === prev._lastCalculatedHours ? calculatedHours : l.hours
+        })),
+        _lastCalculatedHours: calculatedHours
+      }));
+    }
+  }, [eventSetupData.startTime, eventSetupData.endTime]);
+
   // Calculate category counts from selected items (active tab)
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -3562,6 +3590,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       
       if (response && response._id) {
         startEvent(response._id, response.name);
+        // Record start time in eventSetupData
+        const startTimeNow = new Date().toTimeString().slice(0, 5);
+        setEventSetupData(prev => ({
+          ...prev,
+          startTime: startTimeNow,
+          eventDate: new Date().toISOString().split('T')[0],
+        }));
         // Create the spillage tab if it doesn't exist
         setTabs(prev => {
           if (!prev.find(t => t.isSpillage)) {
@@ -3571,7 +3606,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         });
         setShowEventModal(false);
         setNewEventName('');
-        console.log(`[POS] Started event: ${response.name} (${response._id})`);
+        console.log(`[POS] Started event: ${response.name} (${response._id}) at ${startTimeNow}`);
       }
     } catch (error) {
       console.error('[POS] Failed to start event:', error);
@@ -3642,6 +3677,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     try {
       setSyncing(true);
+      // Record end time in eventSetupData
+      const endTimeNow = new Date().toTimeString().slice(0, 5);
+      setEventSetupData(prev => ({
+        ...prev,
+        endTime: endTimeNow,
+      }));
       // Log tabs with tip amounts for debugging
       console.log('[POS] Ending event with tabs:', tabs.map(t => ({ id: t.id, name: t.name, tipAmount: t.tipAmount, status: t.status, itemCount: t.items?.length })));
       const response = await apiCall(`/pos-events/${eventId}/end`, {
@@ -3654,7 +3695,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setShowEndEventModal(false);
         setShowSummaryView(true);
         setIsPostEventEdit(true); // Mark as post-event edit mode
-        console.log(`[POS] Ended event: ${eventName}`);
+        console.log(`[POS] Ended event: ${eventName} at ${endTimeNow}`);
       }
     } catch (error) {
       console.error('[POS] Failed to end event:', error);
@@ -3924,8 +3965,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentMethod('cash');
     setPaymentStatus('payment_success'); // Trigger the success animation
     
-    // Broadcast success stage to horizontal view (triggers animation there too)
-    sendCheckoutStage('success');
+    // Broadcast success stage to horizontal view with payment method (triggers animation there too)
+    sendCheckoutStage('success', 'cash');
     
     // Broadcast checkout complete to sync tab status
     sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
@@ -4422,7 +4463,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     color: '#22c55e',
                     textAlign: 'center',
                   }}>
-                    Payment Complete!
+                    Thank you!
                   </div>
                   <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
                     ${checkoutSubtotal.toFixed(2)}
@@ -5486,7 +5527,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(0, 0, 0, 0.5)',
+                background: 'rgba(0, 0, 0, 0.7)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -5602,7 +5643,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     </div>
                   </div>
                   <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>${(eventSummary.totalSpillage || 0).toFixed(2)}</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>${spillageTotal.toFixed(2)}</div>
                     <div style={{ fontSize: '12px', color: '#666' }}>Total Spillage</div>
                   </div>
                 </>

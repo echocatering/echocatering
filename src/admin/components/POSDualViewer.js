@@ -101,10 +101,8 @@ export default function POSDualViewer() {
   const horizontalWidth = viewerHeight * (16 / 10);
   const verticalWidth = viewerHeight * (9 / 19);
   
-  // Scale down the horizontal view by 10%
-  const horizontalScale = 0.9;
-  const scaledHorizontalWidth = horizontalWidth * horizontalScale;
-  const scaledHorizontalHeight = viewerHeight * horizontalScale;
+  // MenuGallery2 will be scaled 10% smaller inside its container
+  const menuGalleryScale = 0.9;
 
   return (
     <div style={{ 
@@ -159,20 +157,30 @@ export default function POSDualViewer() {
                 16:10 Customer View
               </div>
               <div style={{
-                width: `${scaledHorizontalWidth}px`,
-                height: `${scaledHorizontalHeight}px`,
+                width: `${horizontalWidth}px`,
+                height: `${viewerHeight}px`,
                 border: '1px solid #ddd',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 background: '#000',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}>
-                <MenuGallery2 
-                  viewMode="menu"
-                  orientationOverride="horizontal"
-                  outerWidth={scaledHorizontalWidth}
-                  outerHeight={scaledHorizontalHeight}
-                />
+                <div style={{
+                  transform: `scale(${menuGalleryScale})`,
+                  transformOrigin: 'center center',
+                  width: `${horizontalWidth / menuGalleryScale}px`,
+                  height: `${viewerHeight / menuGalleryScale}px`,
+                }}>
+                  <MenuGallery2 
+                    viewMode="menu"
+                    orientationOverride="horizontal"
+                    outerWidth={horizontalWidth / menuGalleryScale}
+                    outerHeight={viewerHeight / menuGalleryScale}
+                  />
+                </div>
               </div>
             </div>
 
@@ -202,10 +210,16 @@ export default function POSDualViewer() {
                 background: '#fff',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
-                <POSSalesUI 
-                  layoutMode="vertical"
-                  outerWidth={verticalWidth}
-                  outerHeight={viewerHeight}
+                <iframe
+                  src="/admin/pos"
+                  title="POS Vertical View"
+                  style={{
+                    width: '375px',
+                    height: '812px',
+                    border: 'none',
+                    transform: `scale(${viewerHeight / 812})`,
+                    transformOrigin: 'top left',
+                  }}
                 />
               </div>
             </div>

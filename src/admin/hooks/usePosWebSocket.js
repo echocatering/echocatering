@@ -220,13 +220,15 @@ export function usePosWebSocket(onCheckoutStart, onCheckoutComplete, onCheckoutC
   }, []);
   
   // Send checkout stage update
-  const sendCheckoutStage = useCallback((stage) => {
+  const sendCheckoutStage = useCallback((stage, paymentMethod = null) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const data = { stage };
+      if (paymentMethod) data.paymentMethod = paymentMethod;
       wsRef.current.send(JSON.stringify({
         type: 'checkout_stage',
-        data: { stage }
+        data
       }));
-      console.log('[POS WebSocket] Sent checkout_stage:', stage);
+      console.log('[POS WebSocket] Sent checkout_stage:', stage, paymentMethod ? `(${paymentMethod})` : '');
     }
   }, []);
   

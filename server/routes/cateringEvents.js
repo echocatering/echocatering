@@ -293,6 +293,51 @@ router.post('/finalize', async (req, res) => {
       }
     }
     
+    // Calculate payment method totals and item data from tabs
+    if (tabs && Array.isArray(tabs)) {
+      let cashTotal = 0;
+      let creditTotal = 0;
+      let invoiceTotal = 0;
+      const itemDataParts = [];
+      
+      for (const tab of tabs) {
+        if (tab.status === 'archived' || tab.status === 'paid') {
+          // Calculate tab total from items
+          const tabTotal = (tab.items || []).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+          const tipAmount = parseFloat(tab.tipAmount) || 0;
+          const totalWithTip = tabTotal + tipAmount;
+          
+          // Add to appropriate payment method total
+          const paymentMethod = tab.paymentMethod || 'credit';
+          if (paymentMethod === 'cash') {
+            cashTotal += totalWithTip;
+          } else if (paymentMethod === 'invoice') {
+            invoiceTotal += totalWithTip;
+          } else {
+            creditTotal += totalWithTip;
+          }
+          
+          // Collect item data with timestamps
+          for (const item of (tab.items || [])) {
+            const itemName = (item.name || 'Unknown').replace(/[,-]/g, ' ').trim();
+            const category = (item.category || 'other').toLowerCase();
+            const timestamp = item.addedAt || tab.paidAt || new Date().toISOString();
+            itemDataParts.push(`${itemName}-${category}-${timestamp}`);
+          }
+        }
+      }
+      
+      eventData.cashTotal = cashTotal;
+      eventData.creditTotal = creditTotal;
+      eventData.invoiceTotal = invoiceTotal;
+      eventData.itemData = itemDataParts.join(', ');
+      
+      // Update totalSales to be sum of all payment methods (if not already set from summary)
+      if (!summary || !summary.totalRevenue) {
+        eventData.totalSales = cashTotal + creditTotal + invoiceTotal;
+      }
+    }
+    
     // Link to POS event if we have an eventId
     if (eventId) {
       eventData.posEventId = eventId;

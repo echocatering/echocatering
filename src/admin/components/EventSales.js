@@ -237,7 +237,7 @@ const EventSales = () => {
       columns: [
         { key: 'cashTotal', label: 'Cash', width: '90px', editable: false, field: 'cashTotal' },
         { key: 'creditTotal', label: 'Credit', width: '90px', editable: false, field: 'creditTotal' },
-        { key: 'invoiceTotal', label: 'Invoice', width: '90px', editable: false, field: 'invoiceMethodTotal' },
+        { key: 'invoiceTotal', label: 'Invoice', width: '90px', editable: false, field: 'invoiceTotal' },
       ]
     },
     {
@@ -257,13 +257,14 @@ const EventSales = () => {
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
+        { key: 'itemData', label: 'DATA', width: '0px', editable: false, field: 'itemData', hidden: true },
       ]
     }
   ];
 
-  // Flatten columns for rendering
+  // Flatten columns for rendering (filter out hidden columns)
   const allColumns = columnGroups.flatMap(group => 
-    group.collapsed ? [] : group.columns
+    group.collapsed ? [] : group.columns.filter(col => !col.hidden)
   );
 
   // Render cell value
@@ -375,10 +376,10 @@ const EventSales = () => {
         ) : '-';
       case 'invoiceTotal':
         // Invoice payments - displayed as $#.## (neutral, doesn't affect profit)
-        const invoiceMethodTotal = event.invoiceMethodTotal || event.invoiceTotal || 0;
-        return invoiceMethodTotal > 0 ? (
-          <span style={{ color: '#666' }}>
-            ${invoiceMethodTotal.toFixed(2)}
+        const invoiceTotalAmount = event.invoiceTotal || 0;
+        return invoiceTotalAmount > 0 ? (
+          <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+            ${invoiceTotalAmount.toFixed(2)}
           </span>
         ) : '-';
       case 'profit':

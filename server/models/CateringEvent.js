@@ -77,6 +77,15 @@ const cateringEventSchema = new mongoose.Schema({
   totalSales: { type: Number, default: 0 },
   totalTips: { type: Number, default: 0 },
   totalCost: { type: Number, default: 0 },
+  
+  // Payment method totals
+  cashTotal: { type: Number, default: 0 },      // Total from cash payments
+  creditTotal: { type: Number, default: 0 },    // Total from credit payments
+  invoiceTotal: { type: Number, default: 0 },   // Total from invoice payments
+  
+  // Item-level sales data for chart (Item-Category-Timestamp format)
+  itemData: { type: String, default: '' },      // Comma-separated: "Margarita-cocktails-2026-03-01T15:30:00Z, ..."
+  
   accommodationCost: { type: Number, default: 0 }, // $ Accommodation
   travelCost: { type: Number, default: 0 },      // $ Transportation
   permitCost: { type: Number, default: 0 },      // $ Permit
