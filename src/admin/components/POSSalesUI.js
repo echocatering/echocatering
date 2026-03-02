@@ -2717,7 +2717,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setShowScanCard(false);
           setSelectedTipAmount(0);
         }, 10000);
-      }, 2000);
+      }, 3000);
     } else if (data.stage === 'receipt_request') {
       // Vertical view received receipt request status
       // This is handled by the vertical view to show "Requesting Receipt" status
@@ -2908,7 +2908,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
     
     if (data.status === 'payment_success') {
-      // After 2 seconds of success animation, show receipt prompt
+      // After 3 seconds of success animation (Thank you!), show receipt prompt
       setTimeout(() => {
         setPaymentStatus(null);
         setShowScanCard(false);
@@ -2921,7 +2921,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setCheckoutStage('');
           setSelectedTipAmount(0);
         }, 10000);
-      }, 2000);
+      }, 3000);
     } else if (data.status === 'payment_failed') {
       // Show failure, then return to payment screen after 1.5 seconds
       setTimeout(() => {
@@ -4746,6 +4746,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 });
                                 if (!response.ok) throw new Error('Failed to send receipt');
                                 console.log('[POS] Receipt sent to:', receiptContact);
+                                // Send 'receipt_sent' status to vertical view (shows green "RECEIPT SENT!")
+                                sendCheckoutStage('receipt_sent');
                               } catch (err) {
                                 console.error('[POS] Failed to send receipt:', err);
                               }
@@ -4756,7 +4758,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
-                              sendCheckoutStage('');
+                              // Clear vertical view status after 2 seconds
+                              setTimeout(() => sendCheckoutStage(''), 2000);
                             }}
                             disabled={!receiptContact || receiptSending}
                             style={{
@@ -4923,6 +4926,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 });
                                 if (!response.ok) throw new Error('Failed to send receipt');
                                 console.log('[POS] Receipt sent to:', receiptContact);
+                                // Send 'receipt_sent' status to vertical view (shows green "RECEIPT SENT!")
+                                sendCheckoutStage('receipt_sent');
                               } catch (err) {
                                 console.error('[POS] Failed to send receipt:', err);
                               }
@@ -4933,7 +4938,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
-                              sendCheckoutStage('');
+                              // Clear vertical view status after 2 seconds
+                              setTimeout(() => sendCheckoutStage(''), 2000);
                             }}
                             disabled={!receiptContact || receiptSending}
                             style={{
@@ -7217,13 +7223,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
-                  <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'success' ? '#22c55e' : '#800080' }}>
+                  <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : (checkoutStage === 'success' || checkoutStage === 'receipt_sent') ? '#22c55e' : '#800080' }}>
                     {checkoutStage === 'tip' && 'ADDING TIP'}
                     {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
                     {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
                     {checkoutStage === 'receipt_request' && 'REQUESTING RECEIPT'}
+                    {checkoutStage === 'receipt_sent' && 'RECEIPT SENT!'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
                   </span>

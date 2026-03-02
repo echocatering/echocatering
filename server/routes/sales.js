@@ -321,6 +321,61 @@ router.get('/events', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/sales/event/:eventId/categories
+ * @desc    Get category breakdown for a specific POS event
+ * @access  Private
+ */
+router.get('/event/:eventId/categories', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await PosEvent.findById(eventId).lean();
+    
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Calculate category breakdown from tabs
+    const categoryMap = {};
+    
+    if (event.tabs && event.tabs.length > 0) {
+      event.tabs.forEach(tab => {
+        // Only count paid tabs (not spillage, not invoice)
+        if ((tab.status === 'paid' || tab.status === 'archived') && !tab.isSpillage) {
+          (tab.items || []).forEach(item => {
+            const category = item.category || 'uncategorized';
+            const itemPrice = parseFloat(item.price) || 0;
+            const modifierPrice = (item.modifiers || []).reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+            const totalPrice = itemPrice + modifierPrice;
+            
+            if (!categoryMap[category]) {
+              categoryMap[category] = { quantity: 0, revenue: 0 };
+            }
+            categoryMap[category].quantity += 1;
+            categoryMap[category].revenue += totalPrice;
+          });
+        }
+      });
+    }
+    
+    const categories = Object.entries(categoryMap).map(([category, data]) => ({
+      category,
+      quantity: data.quantity,
+      revenue: data.revenue
+    })).sort((a, b) => b.revenue - a.revenue);
+    
+    res.json({
+      eventId,
+      eventName: event.name,
+      categories
+    });
+  } catch (error) {
+    console.error('[Sales API] Error fetching event categories:', error);
+    res.status(500).json({ error: 'Failed to fetch event categories', message: error.message });
+  }
+});
+
+/**
  * @route   GET /api/sales/:id
  * @desc    Get a single sale by ID
  * @access  Private

@@ -91,12 +91,39 @@ const SalesManager = ({ posEventId = null }) => {
     fetchData();
   }, [fetchData]);
   
+  // State for event-specific category data
+  const [eventCategories, setEventCategories] = useState([]);
+  const [loadingEventCategories, setLoadingEventCategories] = useState(false);
+  
   // Set initial selected event details when eventBreakdown loads (most recent event)
   useEffect(() => {
     if (eventBreakdown.length > 0 && !selectedEventDetails) {
       setSelectedEventDetails(eventBreakdown[0]);
     }
   }, [eventBreakdown, selectedEventDetails]);
+  
+  // Fetch event-specific category data when an event is selected
+  useEffect(() => {
+    const fetchEventCategories = async () => {
+      if (!selectedEventDetails?.eventId) {
+        setEventCategories([]);
+        return;
+      }
+      
+      setLoadingEventCategories(true);
+      try {
+        const res = await apiCall(`/sales/event/${selectedEventDetails.eventId}/categories`);
+        setEventCategories(res.categories || []);
+      } catch (err) {
+        console.error('[Sales] Error fetching event categories:', err);
+        setEventCategories([]);
+      } finally {
+        setLoadingEventCategories(false);
+      }
+    };
+    
+    fetchEventCategories();
+  }, [selectedEventDetails?.eventId, apiCall]);
   
   // Handle clicking on an event row
   const handleEventRowClick = useCallback((event) => {
@@ -409,32 +436,45 @@ const SalesManager = ({ posEventId = null }) => {
         </div>
       </div>
       
-      {/* Category Breakdown */}
+      {/* Category Breakdown - Shows event-specific data when event is selected */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>🏷️ Sales by Category</h3>
-          {categoryBreakdown.length === 0 ? (
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
+            🏷️ Sales by Category
+            {selectedEventDetails && (
+              <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
+                ({selectedEventDetails.eventName})
+              </span>
+            )}
+          </h3>
+          {loadingEventCategories ? (
+            <p style={{ color: '#999' }}>Loading category data...</p>
+          ) : (selectedEventDetails ? eventCategories : categoryBreakdown).length === 0 ? (
             <p style={{ color: '#999' }}>No category data</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {categoryBreakdown.map((cat, i) => (
-                <div key={cat.category}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>{cat.category}</span>
-                    <span style={{ color: '#666' }}>{formatCurrency(cat.revenue)} ({cat.quantity} items)</span>
+              {(selectedEventDetails ? eventCategories : categoryBreakdown).map((cat, i) => {
+                const displayCategories = selectedEventDetails ? eventCategories : categoryBreakdown;
+                const maxRevenue = Math.max(...displayCategories.map(c => c.revenue), 1);
+                return (
+                  <div key={cat.category}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>{cat.category}</span>
+                      <span style={{ color: '#666' }}>{formatCurrency(cat.revenue)} ({cat.quantity} items)</span>
+                    </div>
+                    <div style={{ height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${(cat.revenue / maxRevenue) * 100}%`,
+                          background: getCategoryColor(cat.category),
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div style={{ height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${(cat.revenue / maxCategoryRevenue) * 100}%`,
-                        background: getCategoryColor(cat.category),
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
