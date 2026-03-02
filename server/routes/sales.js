@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Sale = require('../models/Sale');
+const PosEvent = require('../models/PosEvent');
 const { authenticateToken } = require('../middleware/auth');
 
 // All sales routes require authentication
@@ -250,7 +251,7 @@ router.get('/daily', async (req, res) => {
 
 /**
  * @route   GET /api/sales/events
- * @desc    Get sales grouped by event
+ * @desc    Get sales grouped by event - queries POS events directly for accurate data
  * @access  Private
  */
 router.get('/events', async (req, res) => {
@@ -260,38 +261,56 @@ router.get('/events', async (req, res) => {
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
 
-    const eventData = await Sale.aggregate([
-      {
-        $match: {
-          status: 'succeeded',
-          createdAt: { $gte: start, $lte: end },
-          eventId: { $ne: null }
-        }
-      },
-      {
-        $group: {
-          _id: '$eventId',
-          eventName: { $first: '$eventName' },
-          sales: { $sum: '$totalCents' },
-          tips: { $sum: '$tipCents' },
-          transactions: { $sum: 1 },
-          firstSale: { $min: '$createdAt' },
-          lastSale: { $max: '$createdAt' }
-        }
-      },
-      { $sort: { firstSale: -1 } }
-    ]);
+    // Query POS events directly for accurate sales data (includes cash, credit, invoice)
+    const posEvents = await PosEvent.find({
+      createdAt: { $gte: start, $lte: end }
+    }).sort({ createdAt: -1 }).lean();
+
+    // Map POS events to sales data format
+    const eventData = posEvents.map(event => {
+      // Calculate sales from tabs if summary not available
+      let totalSales = 0;
+      let totalTips = 0;
+      let transactions = 0;
+
+      if (event.summary && event.summary.totalRevenue !== undefined) {
+        // Use pre-calculated summary
+        totalSales = event.summary.totalRevenue || 0;
+        totalTips = event.summary.totalTips || 0;
+        transactions = event.summary.totalTabs || 0;
+      } else if (event.tabs && event.tabs.length > 0) {
+        // Calculate from tabs
+        event.tabs.forEach(tab => {
+          if (tab.status === 'paid' || tab.status === 'archived') {
+            // Don't count spillage tab or invoice tabs in sales
+            if (!tab.isSpillage && tab.paymentMethod !== 'invoice') {
+              const tabTotal = (tab.items || []).reduce((sum, item) => {
+                const itemPrice = parseFloat(item.price) || 0;
+                const modifierPrice = (item.modifiers || []).reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+                return sum + itemPrice + modifierPrice;
+              }, 0);
+              totalSales += tabTotal;
+              totalTips += tab.tipAmount || 0;
+              transactions++;
+            }
+          }
+        });
+      }
+
+      return {
+        eventId: event._id.toString(),
+        eventName: event.name || 'Unnamed Event',
+        sales: totalSales,
+        tips: totalTips,
+        transactions: transactions,
+        firstSale: event.createdAt,
+        lastSale: event.endedAt || event.updatedAt || event.createdAt,
+        status: event.status
+      };
+    });
 
     res.json({
-      events: eventData.map(e => ({
-        eventId: e._id,
-        eventName: e.eventName,
-        sales: e.sales / 100,
-        tips: e.tips / 100,
-        transactions: e.transactions,
-        firstSale: e.firstSale,
-        lastSale: e.lastSale
-      })),
+      events: eventData,
       startDate: start.toISOString(),
       endDate: end.toISOString()
     });

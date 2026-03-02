@@ -2583,6 +2583,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [showReceiptKeypad, setShowReceiptKeypad] = useState(false); // Show email/phone keypad
   const [receiptContact, setReceiptContact] = useState(''); // Email or phone number entered
   const [receiptSending, setReceiptSending] = useState(false); // Sending receipt in progress
+  const [showSymbolKeypad, setShowSymbolKeypad] = useState(false); // Toggle between letter and symbol keypad
   const receiptTimerRef = useRef(null); // 10 second auto-dismiss timer
   
   // Tab spend limit state
@@ -2796,29 +2797,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         if (result.success) {
           setPaymentStatus('payment_success');
           setCheckoutStage('success');
+          setPaymentMethod('credit');
           
           // Mark tab as paid (use ref to get current value)
           if (checkoutTabInfoRef.current?.id) {
             setTabs(prev => prev.map(t => 
               t.id === checkoutTabInfoRef.current.id 
-                ? { ...t, status: 'archived', paidAt: new Date().toISOString() }
+                ? { ...t, status: 'archived', paidAt: new Date().toISOString(), paymentMethod: 'credit' }
                 : t
             ));
             setActiveTabId(null);
           }
           
-          // Broadcast success to H
+          // Broadcast success to H with payment method
           if (sendPaymentResultRef.current) {
-            sendPaymentResultRef.current({ status: 'payment_success', stage: 'success' });
+            sendPaymentResultRef.current({ status: 'payment_success', stage: 'success', paymentMethod: 'credit' });
           }
           
+          // Clear payment status after 2 seconds but DON'T clear checkout mode
+          // The receipt prompt on H will handle clearing checkout mode
           setTimeout(() => {
             setPaymentStatus(null);
-            setCheckoutMode(false);
             setShowScanCard(false);
-            setSelectedTipAmount(0);
-            setCheckoutStage('');
-          }, 3000);
+            // Don't clear checkoutMode or checkoutStage - receipt prompt handles this
+          }, 2000);
         } else {
           setPaymentStatus('payment_failed');
           setCheckoutStage('failed');
@@ -2900,15 +2902,26 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setPaymentStatus(data.status);
     setCheckoutStage(data.stage || '');
     
+    // Update payment method if provided
+    if (data.paymentMethod) {
+      setPaymentMethod(data.paymentMethod);
+    }
+    
     if (data.status === 'payment_success') {
-      // Show success, then clear after 3 seconds
+      // After 2 seconds of success animation, show receipt prompt
       setTimeout(() => {
         setPaymentStatus(null);
-        setCheckoutMode(false);
         setShowScanCard(false);
-        setSelectedTipAmount(0);
-        setCheckoutStage('');
-      }, 3000);
+        setShowReceiptPrompt(true);
+        // Start 10 second timer for auto-dismiss
+        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+        receiptTimerRef.current = setTimeout(() => {
+          setShowReceiptPrompt(false);
+          setCheckoutMode(false);
+          setCheckoutStage('');
+          setSelectedTipAmount(0);
+        }, 10000);
+      }, 2000);
     } else if (data.status === 'payment_failed') {
       // Show failure, then return to payment screen after 1.5 seconds
       setTimeout(() => {
@@ -3122,10 +3135,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   }, [sendPaymentResult]);
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
-  const updateCheckoutStage = useCallback((stage) => {
-    console.log('[POS] updateCheckoutStage called:', stage);
+  const updateCheckoutStage = useCallback((stage, paymentMethodParam = null) => {
+    console.log('[POS] updateCheckoutStage called:', stage, paymentMethodParam ? `(${paymentMethodParam})` : '');
     setCheckoutStage(stage);
-    sendCheckoutStage(stage);
+    if (paymentMethodParam) {
+      setPaymentMethod(paymentMethodParam);
+    }
+    sendCheckoutStage(stage, paymentMethodParam);
   }, [sendCheckoutStage]);
   
   // Checkout timeout effect - 1 minute idle on horizontal view returns to menu
@@ -4108,7 +4124,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           if (result.success) {
             setPaymentStatus('payment_success');
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
-            updateCheckoutStage('success'); // Show "Payment Completed" on vertical screen
+            updateCheckoutStage('success', 'credit'); // Show "Payment Complete" on vertical screen with payment method
             
             // Mark tab as paid and store tip amount
             if (checkoutTabInfo?.id) {
@@ -4120,16 +4136,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setActiveTabId(null);
             }
             
+            // Clear payment status after 2 seconds but DON'T clear checkout mode
+            // The receipt prompt will handle clearing checkout mode
             setTimeout(() => {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCurrentCheckoutId(null);
-              setCheckoutMode(false);
               setCheckoutLoading(false);
               setShowScanCard(false);
-              setSelectedTipAmount(0);
-              updateCheckoutStage('');
-            }, 3000);
+              // Don't clear checkoutMode or checkoutStage - receipt prompt handles this
+            }, 2000);
           } else {
             setPaymentStatus('payment_failed');
             setPaymentStatusMessage('Payment failed. Please try again.');
@@ -4545,153 +4561,398 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {receiptContact || 'email@example.com or (555) 123-4567'}
                   </div>
                   
-                  {/* Keypad */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '8px',
-                    width: '90%',
-                    maxWidth: '400px',
-                  }}>
-                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '@', '0', '.'].map(key => (
-                      <button
-                        key={key}
-                        onClick={() => setReceiptContact(prev => prev + key)}
-                        style={{
-                          padding: 'clamp(12px, 2vh, 20px)',
-                          fontSize: 'clamp(20px, 3vh, 28px)',
-                          fontWeight: '600',
-                          background: '#f5f5f5',
-                          border: '1px solid #ddd',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {key}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Letter row for email */}
+                  {/* Keypad Container */}
                   <div style={{
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '4px',
-                    width: '90%',
-                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    width: '95%',
+                    maxWidth: '550px',
                   }}>
-                    {['q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m'].map(key => (
-                      <button
-                        key={key}
-                        onClick={() => setReceiptContact(prev => prev + key)}
-                        style={{
-                          padding: '8px 12px',
-                          fontSize: 'clamp(14px, 2vh, 18px)',
-                          fontWeight: '500',
-                          background: '#f5f5f5',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          minWidth: '30px',
-                        }}
-                      >
-                        {key}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '12px', width: '90%', marginTop: '1vh' }}>
-                    <button
-                      onClick={() => setReceiptContact(prev => prev.slice(0, -1))}
-                      style={{
-                        flex: 1,
-                        padding: '14px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: '#f0f0f0',
-                        color: '#666',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ← Delete
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Clear timer
-                        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
-                        setShowReceiptKeypad(false);
-                        setShowReceiptPrompt(false);
-                        setReceiptContact('');
-                        setCheckoutMode(false);
-                        setCheckoutStage('');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '14px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: '#666',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!receiptContact) return;
-                        setReceiptSending(true);
-                        // Broadcast to vertical view that receipt is being requested
-                        sendCheckoutStage('receipt_request');
-                        try {
-                          // Send receipt via API
-                          const response = await fetch('/api/receipts/send', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              contact: receiptContact,
-                              tabId: checkoutTabInfo?.id,
-                              items: checkoutItems,
-                              subtotal: checkoutSubtotal,
-                              tip: selectedTipAmount,
-                              total: checkoutSubtotal + selectedTipAmount,
-                              paymentMethod: paymentMethod,
-                            }),
-                          });
-                          if (!response.ok) throw new Error('Failed to send receipt');
-                          console.log('[POS] Receipt sent to:', receiptContact);
-                        } catch (err) {
-                          console.error('[POS] Failed to send receipt:', err);
-                        }
-                        // Clear and return to menu
-                        setReceiptSending(false);
-                        setShowReceiptKeypad(false);
-                        setShowReceiptPrompt(false);
-                        setReceiptContact('');
-                        setCheckoutMode(false);
-                        setCheckoutStage('');
-                        sendCheckoutStage(''); // Clear vertical view status
-                      }}
-                      disabled={!receiptContact || receiptSending}
-                      style={{
-                        flex: 2,
-                        padding: '14px',
-                        fontSize: 'clamp(14px, 2vh, 18px)',
-                        fontWeight: '600',
-                        background: receiptContact ? '#22c55e' : '#ccc',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: receiptContact ? 'pointer' : 'not-allowed',
-                      }}
-                    >
-                      {receiptSending ? 'Sending...' : 'Send Receipt'}
-                    </button>
+                    {/* Number/Special Row - 1,2,3,4,5,6,7,8,9,0,.,_,@,.com,⌫ */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '4px',
+                      justifyContent: 'center',
+                    }}>
+                      {['1','2','3','4','5','6','7','8','9','0','.','_','@','.com','⌫'].map(key => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            if (key === '⌫') {
+                              setReceiptContact(prev => prev.slice(0, -1));
+                            } else {
+                              setReceiptContact(prev => prev + key);
+                            }
+                          }}
+                          style={{
+                            padding: '8px 6px',
+                            fontSize: key === '.com' ? 'clamp(10px, 1.5vh, 14px)' : 'clamp(14px, 2vh, 18px)',
+                            fontWeight: '500',
+                            background: key === '⌫' ? '#e0e0e0' : '#f5f5f5',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            minWidth: key === '.com' ? '40px' : '30px',
+                            flex: key === '.com' ? '1.3' : '1',
+                          }}
+                        >
+                          {key}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {showSymbolKeypad ? (
+                      /* SYMBOL KEYPAD */
+                      <>
+                        {/* Symbol rows */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {['!','#','$','%','&','*','(',')','-','+'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {['=','[',']','{','}','|','\\',':',';','"'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {["'",'<','>',',','?','/','~','`','^'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* RETURN, CANCEL, SEND row */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                        }}>
+                          <button
+                            onClick={() => setShowSymbolKeypad(false)}
+                            style={{
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: '#2196F3',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            RETURN
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                              setShowReceiptKeypad(false);
+                              setShowReceiptPrompt(false);
+                              setReceiptContact('');
+                              setShowSymbolKeypad(false);
+                              setCheckoutMode(false);
+                              setCheckoutStage('');
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: '#666',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            CANCEL
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!receiptContact) return;
+                              setReceiptSending(true);
+                              sendCheckoutStage('receipt_request');
+                              try {
+                                const response = await fetch('/api/receipts/send', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    contact: receiptContact,
+                                    tabId: checkoutTabInfo?.id,
+                                    items: checkoutItems,
+                                    subtotal: checkoutSubtotal,
+                                    tip: selectedTipAmount,
+                                    total: checkoutSubtotal + selectedTipAmount,
+                                    paymentMethod: paymentMethod,
+                                  }),
+                                });
+                                if (!response.ok) throw new Error('Failed to send receipt');
+                                console.log('[POS] Receipt sent to:', receiptContact);
+                              } catch (err) {
+                                console.error('[POS] Failed to send receipt:', err);
+                              }
+                              setReceiptSending(false);
+                              setShowReceiptKeypad(false);
+                              setShowReceiptPrompt(false);
+                              setReceiptContact('');
+                              setShowSymbolKeypad(false);
+                              setCheckoutMode(false);
+                              setCheckoutStage('');
+                              sendCheckoutStage('');
+                            }}
+                            disabled={!receiptContact || receiptSending}
+                            style={{
+                              flex: 1.5,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: receiptContact ? '#22c55e' : '#ccc',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: receiptContact ? 'pointer' : 'not-allowed',
+                            }}
+                          >
+                            {receiptSending ? 'SENDING...' : 'SEND'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      /* LETTER KEYPAD */
+                      <>
+                        {/* Letter row 1: q-p */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {['q','w','e','r','t','y','u','i','o','p'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Letter row 2: a-l */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {['a','s','d','f','g','h','j','k','l'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Letter row 3: z-m */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          justifyContent: 'center',
+                        }}>
+                          {['z','x','c','v','b','n','m'].map(key => (
+                            <button
+                              key={key}
+                              onClick={() => setReceiptContact(prev => prev + key)}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: 'clamp(14px, 2vh, 18px)',
+                                fontWeight: '500',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                minWidth: '30px',
+                              }}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* SYMB, CANCEL, SEND row */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                        }}>
+                          <button
+                            onClick={() => setShowSymbolKeypad(true)}
+                            style={{
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: '#2196F3',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            SYMB
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                              setShowReceiptKeypad(false);
+                              setShowReceiptPrompt(false);
+                              setReceiptContact('');
+                              setShowSymbolKeypad(false);
+                              setCheckoutMode(false);
+                              setCheckoutStage('');
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: '#666',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            CANCEL
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!receiptContact) return;
+                              setReceiptSending(true);
+                              sendCheckoutStage('receipt_request');
+                              try {
+                                const response = await fetch('/api/receipts/send', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    contact: receiptContact,
+                                    tabId: checkoutTabInfo?.id,
+                                    items: checkoutItems,
+                                    subtotal: checkoutSubtotal,
+                                    tip: selectedTipAmount,
+                                    total: checkoutSubtotal + selectedTipAmount,
+                                    paymentMethod: paymentMethod,
+                                  }),
+                                });
+                                if (!response.ok) throw new Error('Failed to send receipt');
+                                console.log('[POS] Receipt sent to:', receiptContact);
+                              } catch (err) {
+                                console.error('[POS] Failed to send receipt:', err);
+                              }
+                              setReceiptSending(false);
+                              setShowReceiptKeypad(false);
+                              setShowReceiptPrompt(false);
+                              setReceiptContact('');
+                              setShowSymbolKeypad(false);
+                              setCheckoutMode(false);
+                              setCheckoutStage('');
+                              sendCheckoutStage('');
+                            }}
+                            disabled={!receiptContact || receiptSending}
+                            style={{
+                              flex: 1.5,
+                              padding: '14px',
+                              fontSize: 'clamp(14px, 2vh, 18px)',
+                              fontWeight: '600',
+                              background: receiptContact ? '#22c55e' : '#ccc',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: receiptContact ? 'pointer' : 'not-allowed',
+                            }}
+                          >
+                            {receiptSending ? 'SENDING...' : 'SEND'}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : showReceiptPrompt ? (
@@ -4899,7 +5160,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         color: '#22c55e',
                         textAlign: 'center',
                       }}>
-                        Payment Complete!
+                        Thank you!
                       </div>
                       <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
                         ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
@@ -5981,7 +6242,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                     <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                       <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>${(eventSummary.totalRevenue || 0).toFixed(2)}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>Total Revenue</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Sales</div>
                     </div>
                     <div style={{ flex: 1, background: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                       <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2196F3' }}>${(eventSummary.totalTips || 0).toFixed(2)}</div>
@@ -6961,7 +7222,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
-                    {checkoutStage === 'success' && (paymentMethod === 'cash' ? 'THANK YOU!' : 'PAYMENT COMPLETE')}
+                    {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
                     {checkoutStage === 'receipt_request' && 'REQUESTING RECEIPT'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
