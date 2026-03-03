@@ -51,11 +51,17 @@ const EventSales = () => {
     try {
       setLoading(true);
       const data = await apiCall('/catering-events?limit=100');
-      // Sort events by date with most recent first
+      // Sort events by date with most recent first, then by creation time for same-day events
       const sortedEvents = (data.events || []).sort((a, b) => {
         const dateA = new Date(a.date || 0);
         const dateB = new Date(b.date || 0);
-        return dateB - dateA; // Most recent first
+        // Compare dates (day only)
+        const dayDiff = dateB.setHours(0,0,0,0) - dateA.setHours(0,0,0,0);
+        if (dayDiff !== 0) return dayDiff > 0 ? 1 : -1;
+        // Same day - sort by createdAt or startTime (newest first)
+        const timeA = new Date(a.createdAt || a.startTime || a.date || 0);
+        const timeB = new Date(b.createdAt || b.startTime || b.date || 0);
+        return timeB - timeA;
       });
       setEvents(sortedEvents);
       setError(null);

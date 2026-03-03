@@ -2733,6 +2733,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setTimeout(() => {
           setPaymentStatus(null);
           setShowReceiptPrompt(true);
+          // Send receipt_request to vertical to show "Requesting Receipt" with spinner
+          sendCheckoutStage('receipt_request');
           // Start 10 second timer for auto-dismiss
           if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
           receiptTimerRef.current = setTimeout(() => {
@@ -2741,6 +2743,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setCheckoutStage('');
             setShowScanCard(false);
             setSelectedTipAmount(0);
+            // Clear vertical notification on auto-dismiss
+            sendCheckoutStage('');
           }, 10000);
         }, 3000);
       }
@@ -2938,6 +2942,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setPaymentStatus(null);
         setShowScanCard(false);
         setShowReceiptPrompt(true);
+        // Send receipt_request to vertical to show "Requesting Receipt" with spinner
+        sendCheckoutStage('receipt_request');
         // Start 10 second timer for auto-dismiss
         if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
         receiptTimerRef.current = setTimeout(() => {
@@ -2945,6 +2951,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setCheckoutMode(false);
           setCheckoutStage('');
           setSelectedTipAmount(0);
+          // Clear vertical notification on auto-dismiss
+          sendCheckoutStage('');
         }, 10000);
       }, 3000);
     } else if (data.status === 'payment_failed') {
@@ -2954,7 +2962,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setCheckoutStage('payment');
       }, 1500);
     }
-  }, []);
+  }, [sendCheckoutStage]);
   
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
@@ -4826,7 +4834,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             onClick={async () => {
                               if (!receiptContact) return;
                               setReceiptSending(true);
-                              sendCheckoutStage('receipt_request');
+                              // Show "Sending Receipt" on vertical with spinner
+                              sendCheckoutStage('receipt_sending');
                               try {
                                 const response = await fetch('/api/receipts/send', {
                                   method: 'POST',
@@ -4847,6 +4856,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 sendCheckoutStage('receipt_sent');
                               } catch (err) {
                                 console.error('[POS] Failed to send receipt:', err);
+                                // Clear vertical notification on error
+                                sendCheckoutStage('');
                               }
                               setReceiptSending(false);
                               setShowReceiptKeypad(false);
@@ -5017,7 +5028,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             onClick={async () => {
                               if (!receiptContact) return;
                               setReceiptSending(true);
-                              sendCheckoutStage('receipt_request');
+                              // Show "Sending Receipt" on vertical with spinner
+                              sendCheckoutStage('receipt_sending');
                               try {
                                 const response = await fetch('/api/receipts/send', {
                                   method: 'POST',
@@ -5038,6 +5050,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                 sendCheckoutStage('receipt_sent');
                               } catch (err) {
                                 console.error('[POS] Failed to send receipt:', err);
+                                // Clear vertical notification on error
+                                sendCheckoutStage('');
                               }
                               setReceiptSending(false);
                               setShowReceiptKeypad(false);
@@ -5097,6 +5111,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         setShowReceiptPrompt(false);
                         setCheckoutMode(false);
                         setCheckoutStage('');
+                        // Clear vertical notification when declining receipt
+                        sendCheckoutStage('');
                       }}
                       style={{
                         flex: 1,
@@ -7357,6 +7373,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
                     {checkoutStage === 'success' && 'PAYMENT COMPLETE!'}
                     {checkoutStage === 'receipt_request' && 'REQUESTING RECEIPT'}
+                    {checkoutStage === 'receipt_sending' && 'SENDING RECEIPT'}
                     {checkoutStage === 'receipt_sent' && 'RECEIPT SENT!'}
                     {checkoutStage === 'receipt_canceled' && 'REQUEST CANCELED'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}

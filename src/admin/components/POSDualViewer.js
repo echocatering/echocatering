@@ -101,8 +101,8 @@ export default function POSDualViewer() {
   const horizontalWidth = viewerHeight * (16 / 10);
   const verticalWidth = viewerHeight * (9 / 19);
   
-  // MenuGallery2 will be scaled 10% smaller inside its container
-  const menuGalleryScale = 0.9;
+  // MenuGallery2 will be scaled 20% smaller inside its container
+  const menuGalleryScale = 0.8;
 
   return (
     <div style={{ 
@@ -209,17 +209,13 @@ export default function POSDualViewer() {
                 overflow: 'hidden',
                 background: '#fff',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                position: 'relative',
               }}>
-                <iframe
-                  src="/admin/pos"
-                  title="POS Vertical View"
-                  style={{
-                    width: '375px',
-                    height: '812px',
-                    border: 'none',
-                    transform: `scale(${viewerHeight / 812})`,
-                    transformOrigin: 'top left',
-                  }}
+                <POSSalesUI
+                  isStandalone={true}
+                  layoutMode="vertical"
+                  outerWidth={verticalWidth}
+                  outerHeight={viewerHeight}
                 />
               </div>
             </div>
