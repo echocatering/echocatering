@@ -2703,8 +2703,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     
     // Also update paymentStatus based on stage so H shows success/failed animation
     if (data.stage === 'success') {
+      // Ensure checkoutMode is true so the success animation shows (not the menu)
+      setCheckoutMode(true);
       setPaymentStatus('payment_success');
-      // After 2 seconds of success animation, show receipt prompt
+      // After 3 seconds of success animation (Thank you!), show receipt prompt
       setTimeout(() => {
         setPaymentStatus(null);
         setShowReceiptPrompt(true);
@@ -4137,16 +4139,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               setActiveTabId(null);
             }
             
-            // Clear payment status after 2 seconds but DON'T clear checkout mode
-            // The receipt prompt will handle clearing checkout mode
+            // Clear vertical view checkout state after 1.5 seconds
+            // Horizontal view handles its own receipt prompt flow
             setTimeout(() => {
               setPaymentStatus(null);
               setPaymentStatusMessage(null);
               setCurrentCheckoutId(null);
               setCheckoutLoading(false);
               setShowScanCard(false);
-              // Don't clear checkoutMode or checkoutStage - receipt prompt handles this
-            }, 2000);
+              setCheckoutMode(false);
+              setCheckoutStage('');
+              setCheckoutItems([]);
+              setCheckoutSubtotal(0);
+              setCheckoutTabInfo(null);
+            }, 1500);
           } else {
             setPaymentStatus('payment_failed');
             setPaymentStatusMessage('Payment failed. Please try again.');
@@ -4708,12 +4714,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           <button
                             onClick={() => {
                               if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                              // Send receipt_canceled to vertical view
+                              sendCheckoutStage('receipt_canceled');
                               setShowReceiptKeypad(false);
                               setShowReceiptPrompt(false);
                               setReceiptContact('');
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
+                              // Clear vertical view status after 1.5 seconds
+                              setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
                             style={{
                               flex: 1,
@@ -4762,8 +4772,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
-                              // Clear vertical view status after 2 seconds
-                              setTimeout(() => sendCheckoutStage(''), 2000);
+                              // Clear vertical view status after 1.5 seconds
+                              setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
                             disabled={!receiptContact || receiptSending}
                             style={{
@@ -4895,12 +4905,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                           <button
                             onClick={() => {
                               if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+                              // Send receipt_canceled to vertical view
+                              sendCheckoutStage('receipt_canceled');
                               setShowReceiptKeypad(false);
                               setShowReceiptPrompt(false);
                               setReceiptContact('');
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
+                              // Clear vertical view status after 1.5 seconds
+                              setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
                             style={{
                               flex: 1,
@@ -4949,8 +4963,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
-                              // Clear vertical view status after 2 seconds
-                              setTimeout(() => sendCheckoutStage(''), 2000);
+                              // Clear vertical view status after 1.5 seconds
+                              setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
                             disabled={!receiptContact || receiptSending}
                             style={{
@@ -6216,8 +6230,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     min="0"
                     value={eventSetupData.numberOfPatrons || ''}
                     onChange={(e) => setEventSetupData(prev => ({ ...prev, numberOfPatrons: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))}
-                    placeholder="0"
-                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
                   />
                 </div>
               </div>
@@ -6292,8 +6305,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }
                   }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="0"
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
                 />
               </div>
               
@@ -6310,8 +6322,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }
                   }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="0"
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
                 />
               </div>
               
@@ -6328,8 +6339,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }
                   }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="0"
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
                 />
               </div>
               
@@ -6346,8 +6356,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     }
                   }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="0"
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
                 />
               </div>
               
@@ -7234,18 +7243,19 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
-                  <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : (checkoutStage === 'success' || checkoutStage === 'receipt_sent') ? '#22c55e' : '#800080' }}>
+                  <span style={{ fontWeight: 'bold', color: checkoutStage === 'failed' ? '#ef4444' : checkoutStage === 'receipt_canceled' ? '#f59e0b' : (checkoutStage === 'success' || checkoutStage === 'receipt_sent') ? '#22c55e' : '#800080' }}>
                     {checkoutStage === 'tip' && 'ADDING TIP'}
                     {checkoutStage === 'tab' && 'VIEWING RECEIPT'}
                     {checkoutStage === 'payment' && 'TAKING PAYMENT'}
                     {checkoutStage === 'processing' && 'PAYMENT PROCESSING'}
-                    {checkoutStage === 'success' && 'PAYMENT COMPLETE'}
+                    {checkoutStage === 'success' && 'PAYMENT COMPLETE!'}
                     {checkoutStage === 'receipt_request' && 'REQUESTING RECEIPT'}
                     {checkoutStage === 'receipt_sent' && 'RECEIPT SENT!'}
+                    {checkoutStage === 'receipt_canceled' && 'REQUEST CANCELED'}
                     {checkoutStage === 'failed' && 'PAYMENT FAILED'}
                     {!checkoutStage && 'TAKING PAYMENT'}
                   </span>
-                  {checkoutStage !== 'success' && checkoutStage !== 'failed' && (
+                  {checkoutStage !== 'success' && checkoutStage !== 'failed' && checkoutStage !== 'receipt_sent' && checkoutStage !== 'receipt_canceled' && (
                     <div style={{
                       width: '16px',
                       height: '16px',

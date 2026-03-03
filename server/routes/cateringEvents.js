@@ -68,6 +68,19 @@ router.get('/', authenticateToken, async (req, res) => {
               });
             }
             
+            // Calculate COGS from spillage tabs
+            let cogsCost = 0;
+            if (posEvent.tabs && posEvent.tabs.length > 0) {
+              posEvent.tabs.forEach(tab => {
+                if (tab.isSpillage) {
+                  const spillageTotal = (tab.items || []).reduce((sum, item) => {
+                    return sum + (parseFloat(item.price) || 0);
+                  }, 0);
+                  cogsCost += spillageTotal;
+                }
+              });
+            }
+            
             return {
               ...event,
               totalSales,
@@ -75,6 +88,7 @@ router.get('/', authenticateToken, async (req, res) => {
               cashTotal,
               creditTotal,
               invoiceTotal,
+              cogsCost: event.cogsCost || cogsCost,
             };
           }
         } catch (err) {
