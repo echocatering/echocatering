@@ -2548,6 +2548,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const endEventTimeoutRef = useRef(null);
   const forceQuitLongPressRef = useRef(null);
   const saveToServerRef = useRef(null); // Ref for saveToServer function to use in earlier callbacks
+  const sendCheckoutStageRef = useRef(null); // Ref for sendCheckoutStage to avoid circular dependency
   
   // Event Setup data - now managed by usePosLocalStorage hook for persistence
   
@@ -2943,7 +2944,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setShowScanCard(false);
         setShowReceiptPrompt(true);
         // Send receipt_request to vertical to show "Requesting Receipt" with spinner
-        sendCheckoutStage('receipt_request');
+        sendCheckoutStageRef.current?.('receipt_request');
         // Start 10 second timer for auto-dismiss
         if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
         receiptTimerRef.current = setTimeout(() => {
@@ -2952,7 +2953,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setCheckoutStage('');
           setSelectedTipAmount(0);
           // Clear vertical notification on auto-dismiss
-          sendCheckoutStage('');
+          sendCheckoutStageRef.current?.('');
         }, 10000);
       }, 3000);
     } else if (data.status === 'payment_failed') {
@@ -2962,7 +2963,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         setCheckoutStage('payment');
       }, 1500);
     }
-  }, [sendCheckoutStage]);
+  }, []);
   
   // Handle payment status updates from Square webhook via WebSocket
   const handlePaymentStatus = useCallback((message) => {
@@ -3166,6 +3167,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   useEffect(() => {
     sendPaymentResultRef.current = sendPaymentResult;
   }, [sendPaymentResult]);
+  
+  // Update ref when sendCheckoutStage is available (to avoid circular dependency in handleWsPaymentResult)
+  useEffect(() => {
+    sendCheckoutStageRef.current = sendCheckoutStage;
+  }, [sendCheckoutStage]);
   
   // Helper to update checkout stage locally AND broadcast via WebSocket
   const updateCheckoutStage = useCallback((stage, paymentMethodParam = null) => {
