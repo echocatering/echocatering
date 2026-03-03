@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const CateringEvent = require('../models/CateringEvent');
+const PosEvent = require('../models/PosEvent');
 const { authenticateToken } = require('../middleware/auth');
 
 /**
  * GET /api/catering-events
  * List all catering events, sorted by date desc
+ * Populates sales data from linked POS events
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -19,7 +21,71 @@ router.get('/', authenticateToken, async (req, res) => {
       CateringEvent.countDocuments(query)
     ]);
 
-    res.json({ events, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+    // Populate sales data from linked POS events
+    const eventsWithSales = await Promise.all(events.map(async (event) => {
+      // If event already has totalSales, use it
+      if (event.totalSales && event.totalSales > 0) {
+        return event;
+      }
+      
+      // If event has a linked POS event, get sales from there
+      if (event.posEventId) {
+        try {
+          const posEvent = await PosEvent.findById(event.posEventId).lean();
+          if (posEvent) {
+            // Calculate sales from POS event tabs
+            let totalSales = 0;
+            let totalTips = 0;
+            let cashTotal = 0;
+            let creditTotal = 0;
+            let invoiceTotal = 0;
+            
+            if (posEvent.summary && posEvent.summary.totalRevenue) {
+              totalSales = posEvent.summary.totalRevenue;
+              totalTips = posEvent.summary.totalTips || 0;
+            } else if (posEvent.tabs && posEvent.tabs.length > 0) {
+              posEvent.tabs.forEach(tab => {
+                if ((tab.status === 'paid' || tab.status === 'archived') && !tab.isSpillage) {
+                  const tabTotal = (tab.items || []).reduce((sum, item) => {
+                    const itemPrice = parseFloat(item.price) || 0;
+                    const modifierPrice = (item.modifiers || []).reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+                    return sum + itemPrice + modifierPrice;
+                  }, 0);
+                  
+                  totalSales += tabTotal;
+                  totalTips += tab.tipAmount || 0;
+                  
+                  // Track by payment method
+                  const paymentMethod = tab.paymentMethod || 'credit';
+                  if (paymentMethod === 'cash') {
+                    cashTotal += tabTotal + (tab.tipAmount || 0);
+                  } else if (paymentMethod === 'invoice') {
+                    invoiceTotal += tabTotal;
+                  } else {
+                    creditTotal += tabTotal + (tab.tipAmount || 0);
+                  }
+                }
+              });
+            }
+            
+            return {
+              ...event,
+              totalSales,
+              totalTips,
+              cashTotal,
+              creditTotal,
+              invoiceTotal,
+            };
+          }
+        } catch (err) {
+          console.error(`[CateringEvents] Error fetching POS event ${event.posEventId}:`, err);
+        }
+      }
+      
+      return event;
+    }));
+
+    res.json({ events: eventsWithSales, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
   } catch (err) {
     console.error('[CateringEvents] GET / error:', err);
     res.status(500).json({ error: 'Failed to fetch events', message: err.message });

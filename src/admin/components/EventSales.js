@@ -886,34 +886,105 @@ const EventSales = () => {
             <div style={{ height: 'calc(100% - 50px)', padding: '16px', overflow: 'auto' }}>
               {graphEventId ? (() => {
                 const graphEvent = events.find(e => e._id === graphEventId);
-                if (!graphEvent || !graphEvent.timeline || graphEvent.timeline.length === 0) {
+                if (!graphEvent) {
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
-                      No timeline data available for this event
+                      Event not found
                     </div>
                   );
                 }
                 
-                // Process timeline data based on view mode
-                const processedData = graphEvent.timeline.map(interval => {
-                  const startTime = new Date(interval.intervalStart);
-                  const timeLabel = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                // Try to use timeline data first, otherwise parse itemData
+                let processedData = [];
+                
+                if (graphEvent.timeline && graphEvent.timeline.length > 0) {
+                  // Use existing timeline data
+                  processedData = graphEvent.timeline.map(interval => {
+                    const startTime = new Date(interval.intervalStart);
+                    const timeLabel = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let itemCount = 0;
+                    let revenue = 0;
+                    
+                    if (interval.items && interval.items.length > 0) {
+                      interval.items.forEach(item => {
+                        const category = (item.category || '').toLowerCase();
+                        if (graphViewMode === 'all' || category === graphViewMode || category.includes(graphViewMode)) {
+                          itemCount += item.quantity || 1;
+                          revenue += item.revenue || 0;
+                        }
+                      });
+                    }
+                    
+                    return { timeLabel, itemCount, revenue };
+                  });
+                } else if (graphEvent.itemData && graphEvent.itemData.length > 0) {
+                  // Parse itemData field: "itemName-category-timestamp, itemName-category-timestamp, ..."
+                  const itemDataParts = graphEvent.itemData.split(', ').filter(Boolean);
+                  const timeIntervals = {};
                   
-                  let itemCount = 0;
-                  let revenue = 0;
+                  itemDataParts.forEach(part => {
+                    const lastDashIdx = part.lastIndexOf('-');
+                    if (lastDashIdx === -1) return;
+                    
+                    const timestamp = part.substring(lastDashIdx + 1);
+                    const rest = part.substring(0, lastDashIdx);
+                    const secondLastDash = rest.lastIndexOf('-');
+                    
+                    if (secondLastDash === -1) return;
+                    
+                    const category = rest.substring(secondLastDash + 1).toLowerCase();
+                    const itemName = rest.substring(0, secondLastDash);
+                    
+                    // Round timestamp to 15-minute interval
+                    const date = new Date(timestamp);
+                    if (isNaN(date.getTime())) return;
+                    
+                    const minutes = date.getMinutes();
+                    const roundedMinutes = Math.floor(minutes / 15) * 15;
+                    date.setMinutes(roundedMinutes, 0, 0);
+                    const intervalKey = date.toISOString();
+                    
+                    if (!timeIntervals[intervalKey]) {
+                      timeIntervals[intervalKey] = { items: [], timestamp: date };
+                    }
+                    
+                    timeIntervals[intervalKey].items.push({ name: itemName, category });
+                  });
                   
-                  if (interval.items && interval.items.length > 0) {
+                  // Sort intervals by time and process
+                  const sortedIntervals = Object.values(timeIntervals).sort((a, b) => a.timestamp - b.timestamp);
+                  
+                  processedData = sortedIntervals.map(interval => {
+                    const timeLabel = interval.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let itemCount = 0;
                     interval.items.forEach(item => {
-                      const category = (item.category || '').toLowerCase();
-                      if (graphViewMode === 'all' || category === graphViewMode) {
-                        itemCount += item.quantity || 1;
-                        revenue += item.revenue || 0;
+                      if (graphViewMode === 'all' || item.category === graphViewMode || item.category.includes(graphViewMode)) {
+                        itemCount += 1;
                       }
                     });
-                  }
-                  
-                  return { timeLabel, itemCount, revenue };
-                });
+                    
+                    return { timeLabel, itemCount, revenue: 0 };
+                  });
+                } else if (graphEvent.drinkSales && graphEvent.drinkSales.length > 0) {
+                  // Use drinkSales as category breakdown (not timeline, but shows something)
+                  processedData = graphEvent.drinkSales
+                    .filter(item => graphViewMode === 'all' || (item.category || '').toLowerCase() === graphViewMode)
+                    .map(item => ({
+                      timeLabel: item.name || item.category || 'Unknown',
+                      itemCount: item.quantity || 0,
+                      revenue: item.revenue || 0,
+                    }));
+                }
+                
+                if (processedData.length === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
+                      No sales data available for this event
+                    </div>
+                  );
+                }
                 
                 const maxCount = Math.max(...processedData.map(d => d.itemCount), 1);
                 
@@ -935,7 +1006,7 @@ const EventSales = () => {
                               borderRadius: '2px 2px 0 0',
                               transition: 'height 0.3s ease',
                             }}
-                            title={`${data.itemCount} items - $${data.revenue.toFixed(2)}`}
+                            title={`${data.itemCount} items${data.revenue > 0 ? ` - $${data.revenue.toFixed(2)}` : ''}`}
                           />
                         </div>
                         <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>

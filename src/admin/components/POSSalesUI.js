@@ -4072,7 +4072,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Broadcast checkout complete to sync tab status
     sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
     
-    // Clear checkout state after delay
+    // Clear vertical view checkout state after 1.5 seconds (Payment Complete transition)
+    // But DON'T send checkoutStage update - let horizontal view handle its own receipt prompt flow
     setTimeout(() => {
       setCheckoutMode(false);
       setCheckoutItems([]);
@@ -4087,7 +4088,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       if (activeTabId === checkoutTabInfo.id) {
         setActiveTabId(null);
       }
-    }, 2000);
+    }, 1500);
     
     console.log(`[POS Checkout] Cash payment completed. Total: $${totalDue.toFixed(2)}, Cash: $${cashAmount.toFixed(2)}, Change: $${(cashAmount - totalDue).toFixed(2)}`);
   }, [checkoutTabInfo, checkoutSubtotal, cashTendered, activeTabId, sendCheckoutComplete, sendCheckoutStage]);
@@ -4533,47 +4534,47 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   height: '100%',
                   alignItems: 'center',
                   justifyContent: 'flex-start',
-                  paddingTop: '2vh',
-                  gap: '2vh',
+                  paddingTop: '1vh',
+                  gap: '1vh',
                 }}>
                   <div style={{ 
-                    fontSize: 'clamp(20px, 4vh, 32px)', 
+                    fontSize: 'clamp(18px, 3vh, 26px)', 
                     fontWeight: '600', 
                     color: '#333',
                     textAlign: 'center',
-                    marginBottom: '1vh',
                   }}>
                     Enter Email or Phone
                   </div>
                   
                   {/* Input display */}
                   <div style={{
-                    width: '90%',
-                    padding: '16px',
-                    fontSize: 'clamp(18px, 3vh, 24px)',
+                    width: '98%',
+                    padding: '12px',
+                    fontSize: 'clamp(16px, 2.5vh, 22px)',
                     textAlign: 'center',
                     background: '#fff',
                     border: '2px solid #ddd',
                     borderRadius: '8px',
-                    minHeight: '50px',
+                    minHeight: '40px',
                     color: receiptContact ? '#333' : '#999',
                   }}>
                     {receiptContact || 'email@example.com or (555) 123-4567'}
                   </div>
                   
-                  {/* Keypad Container */}
+                  {/* Keypad Container - Full width, minimal gaps */}
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '6px',
-                    width: '95%',
-                    maxWidth: '550px',
+                    width: '100%',
+                    flex: 1,
                   }}>
                     {/* Number/Special Row - 1,2,3,4,5,6,7,8,9,0,.,_,@,.com,⌫ */}
                     <div style={{
                       display: 'flex',
-                      gap: '4px',
+                      gap: '3px',
                       justifyContent: 'center',
+                      padding: '0 2px',
                     }}>
                       {['1','2','3','4','5','6','7','8','9','0','.','_','@','.com','⌫'].map(key => (
                         <button
@@ -4586,15 +4587,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             }
                           }}
                           style={{
-                            padding: '8px 6px',
-                            fontSize: key === '.com' ? 'clamp(10px, 1.5vh, 14px)' : 'clamp(14px, 2vh, 18px)',
-                            fontWeight: '500',
+                            padding: 'clamp(10px, 2vh, 16px) clamp(4px, 1vw, 8px)',
+                            fontSize: key === '.com' ? 'clamp(12px, 2vh, 16px)' : 'clamp(16px, 2.5vh, 22px)',
+                            fontWeight: '600',
                             background: key === '⌫' ? '#e0e0e0' : '#f5f5f5',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                            borderRadius: '6px',
                             cursor: 'pointer',
-                            minWidth: key === '.com' ? '40px' : '30px',
-                            flex: key === '.com' ? '1.3' : '1',
+                            flex: key === '.com' ? '1.5' : '1',
                           }}
                         >
                           {key}
@@ -4608,22 +4608,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* Symbol rows */}
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {['!','#','$','%','&','*','(',')','-','+'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
                               }}
                             >
                               {key}
@@ -4632,22 +4633,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         </div>
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {['=','[',']','{','}','|','\\',':',';','"'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
                               }}
                             >
                               {key}
@@ -4656,22 +4658,23 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         </div>
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {["'",'<','>',',','?','/','~','`','^'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
                               }}
                             >
                               {key}
@@ -4682,16 +4685,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* RETURN, CANCEL, SEND row */}
                         <div style={{
                           display: 'flex',
-                          gap: '8px',
-                          marginTop: '8px',
+                          gap: '6px',
+                          marginTop: '6px',
+                          padding: '0 2px',
                         }}>
                           <button
                             onClick={() => setShowSymbolKeypad(false)}
                             style={{
                               flex: 1,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: '#2196F3',
                               color: '#fff',
                               border: 'none',
@@ -4713,9 +4717,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             }}
                             style={{
                               flex: 1,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: '#666',
                               color: '#fff',
                               border: 'none',
@@ -4764,9 +4768,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             disabled={!receiptContact || receiptSending}
                             style={{
                               flex: 1.5,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: receiptContact ? '#22c55e' : '#ccc',
                               color: '#fff',
                               border: 'none',
@@ -4784,22 +4788,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* Letter row 1: q-p */}
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {['q','w','e','r','t','y','u','i','o','p'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
+                                textTransform: 'lowercase',
                               }}
                             >
                               {key}
@@ -4810,22 +4816,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* Letter row 2: a-l */}
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {['a','s','d','f','g','h','j','k','l'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
+                                textTransform: 'lowercase',
                               }}
                             >
                               {key}
@@ -4836,22 +4844,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* Letter row 3: z-m */}
                         <div style={{
                           display: 'flex',
-                          gap: '4px',
+                          gap: '3px',
                           justifyContent: 'center',
+                          padding: '0 2px',
                         }}>
                           {['z','x','c','v','b','n','m'].map(key => (
                             <button
                               key={key}
                               onClick={() => setReceiptContact(prev => prev + key)}
                               style={{
-                                padding: '8px 12px',
-                                fontSize: 'clamp(14px, 2vh, 18px)',
-                                fontWeight: '500',
+                                padding: 'clamp(12px, 2.5vh, 18px) clamp(8px, 1.5vw, 14px)',
+                                fontSize: 'clamp(18px, 3vh, 24px)',
+                                fontWeight: '600',
                                 background: '#f5f5f5',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                minWidth: '30px',
+                                flex: 1,
+                                textTransform: 'lowercase',
                               }}
                             >
                               {key}
@@ -4862,16 +4872,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         {/* SYMB, CANCEL, SEND row */}
                         <div style={{
                           display: 'flex',
-                          gap: '8px',
-                          marginTop: '8px',
+                          gap: '6px',
+                          marginTop: '6px',
+                          padding: '0 2px',
                         }}>
                           <button
                             onClick={() => setShowSymbolKeypad(true)}
                             style={{
                               flex: 1,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: '#2196F3',
                               color: '#fff',
                               border: 'none',
@@ -4893,9 +4904,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             }}
                             style={{
                               flex: 1,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: '#666',
                               color: '#fff',
                               border: 'none',
@@ -4944,9 +4955,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                             disabled={!receiptContact || receiptSending}
                             style={{
                               flex: 1.5,
-                              padding: '14px',
-                              fontSize: 'clamp(14px, 2vh, 18px)',
-                              fontWeight: '600',
+                              padding: 'clamp(14px, 2.5vh, 20px)',
+                              fontSize: 'clamp(16px, 2.5vh, 20px)',
+                              fontWeight: '700',
                               background: receiptContact ? '#22c55e' : '#ccc',
                               color: '#fff',
                               border: 'none',
