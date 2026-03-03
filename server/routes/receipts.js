@@ -212,7 +212,7 @@ function detectContactType(contact) {
 async function sendEmailReceipt(email, receiptImage, receiptHTML) {
   try {
     const emailData = {
-      from: 'Echo Catering <onboarding@resend.dev>',
+      from: 'Echo Catering <receipts@echocatering.com>',
       to: email,
       subject: 'Your Receipt from Echo Catering',
       html: receiptHTML,
