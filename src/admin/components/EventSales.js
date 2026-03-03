@@ -12,6 +12,7 @@ const EventSales = () => {
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [basicInfoCollapsed, setBasicInfoCollapsed] = useState(false);
   const [overheadCollapsed, setOverheadCollapsed] = useState(true);
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
@@ -159,6 +160,46 @@ const EventSales = () => {
     return num < 0 ? `-$${Math.abs(num).toFixed(2)}` : `$${num.toFixed(2)}`;
   };
 
+  // Parse itemData string and extract payment method totals and category breakdown
+  // Format: "itemName, category, timestamp, paymentMethod, cost" per line
+  const parseItemData = (itemDataStr) => {
+    if (!itemDataStr || typeof itemDataStr !== 'string') {
+      return { paymentTotals: { CASH: 0, CREDIT: 0, INVOICE: 0 }, categoryBreakdown: {} };
+    }
+    
+    const paymentTotals = { CASH: 0, CREDIT: 0, INVOICE: 0 };
+    const categoryBreakdown = {};
+    
+    const lines = itemDataStr.split('\n').filter(line => line.trim());
+    for (const line of lines) {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length >= 5) {
+        const [itemName, category, timestamp, paymentMethod, costStr] = parts;
+        const cost = parseFloat(costStr) || 0;
+        const method = (paymentMethod || '').toUpperCase();
+        
+        // Add to payment totals
+        if (method === 'CASH' || method === 'CREDIT' || method === 'INVOICE') {
+          paymentTotals[method] += cost;
+        }
+        
+        // Add to category breakdown
+        const cat = (category || 'other').toLowerCase();
+        if (!categoryBreakdown[cat]) {
+          categoryBreakdown[cat] = { total: 0, items: {} };
+        }
+        categoryBreakdown[cat].total += cost;
+        if (!categoryBreakdown[cat].items[itemName]) {
+          categoryBreakdown[cat].items[itemName] = { count: 0, total: 0 };
+        }
+        categoryBreakdown[cat].items[itemName].count += 1;
+        categoryBreakdown[cat].items[itemName].total += cost;
+      }
+    }
+    
+    return { paymentTotals, categoryBreakdown };
+  };
+
   // Format date
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -220,16 +261,17 @@ const EventSales = () => {
   const columnGroups = [
     {
       name: 'Basic Info',
-      collapsable: false,
+      collapsable: true,
+      collapsed: basicInfoCollapsed,
       columns: [
-        { key: 'delete', label: '×', width: '40px', editable: false },
+        { key: 'delete', label: '', width: '40px', editable: false, isDeleteHeader: true },
         { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name', lockGroup: 'basicInfo' },
         { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date', lockGroup: 'basicInfo' },
         { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount', lockGroup: 'basicInfo' },
         { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime', lockGroup: 'basicInfo' },
         { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime', lockGroup: 'basicInfo' },
         { key: 'hours', label: 'Total Hours', width: '90px', editable: false, field: 'durationHours' },
-        { key: 'lockBasicInfo', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'basicInfo' },
+        { key: 'lockBasicInfo', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'basicInfo', isLockHeader: true },
       ]
     },
     {
@@ -244,8 +286,10 @@ const EventSales = () => {
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
+        { key: 'salesTax', label: '$Tax', width: '80px', editable: false },
+        { key: 'invoiceTax', label: 'iTax', width: '80px', editable: false },
         { key: 'overheadTotal', label: 'Total', width: '90px', editable: false },
-        { key: 'lockOverhead', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'overhead' },
+        { key: 'lockOverhead', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'overhead', isLockHeader: true },
       ]
     },
     {
@@ -266,7 +310,7 @@ const EventSales = () => {
         { key: 'paymentModel', label: 'Model', width: '120px', editable: true, field: 'paymentModel', lockGroup: 'paymentModel' },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
         { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'paymentModel' },
-        { key: 'lockPaymentModel', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'paymentModel' },
+        { key: 'lockPaymentModel', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'paymentModel', isLockHeader: true },
       ]
     },
     {
@@ -312,7 +356,9 @@ const EventSales = () => {
         const lockGroup = column.lockGroup;
         const isLocked = sectionLocks[lockGroup];
         return (
-          <span
+          <img
+            src={isLocked ? '/assets/icons/LOCKED.png' : '/assets/icons/UNLOCKED.png'}
+            alt={isLocked ? 'Locked' : 'Unlocked'}
             onClick={(e) => {
               e.stopPropagation();
               if (isLocked) {
@@ -323,14 +369,13 @@ const EventSales = () => {
             }}
             style={{
               cursor: 'pointer',
-              fontSize: '14px',
-              color: '#999',
-              userSelect: 'none',
+              width: '16px',
+              height: '16px',
+              opacity: 0.6,
+              filter: 'grayscale(100%)',
             }}
             title={isLocked ? 'Click to unlock editing' : 'Click to lock editing'}
-          >
-            {isLocked ? '🔒' : '🔓'}
-          </span>
+          />
         );
       case 'name':
         return event.name || '-';
@@ -358,6 +403,24 @@ const EventSales = () => {
         return formatCurrency(event.taxesCost);
       case 'cogs':
         return formatCurrency(event.cogsCost);
+      case 'salesTax':
+        // Sales Tax - 8% of total sales (calculated from itemData or totalSales)
+        const totalSalesForTax = event.totalSales || 0;
+        const salesTaxAmount = totalSalesForTax * 0.08;
+        return salesTaxAmount > 0 ? (
+          <span style={{ color: '#ef4444' }}>
+            -${salesTaxAmount.toFixed(2)}
+          </span>
+        ) : '-';
+      case 'invoiceTax':
+        // Invoice Tax - 8% of invoice total specifically
+        const invoiceTotalForTax = event.invoiceTotal || 0;
+        const invoiceTaxAmount = invoiceTotalForTax * 0.08;
+        return invoiceTaxAmount > 0 ? (
+          <span style={{ color: '#f59e0b' }}>
+            ${invoiceTaxAmount.toFixed(2)}
+          </span>
+        ) : '-';
       case 'tips':
         return formatCurrency(event.totalTips);
       case 'invoice':
@@ -404,24 +467,27 @@ const EventSales = () => {
       case 'accommodation':
         return formatCurrency(event.accommodationCost);
       case 'cashTotal':
-        // Cash payments - displayed as +$#.##
-        const cashTotal = event.cashTotal || 0;
+        // Cash payments - use parsed itemData if available, fallback to stored value
+        const parsedCash = parseItemData(event.itemData);
+        const cashTotal = parsedCash.paymentTotals.CASH > 0 ? parsedCash.paymentTotals.CASH : (event.cashTotal || 0);
         return cashTotal > 0 ? (
           <span style={{ color: '#22c55e', fontWeight: 'bold' }}>
             +${cashTotal.toFixed(2)}
           </span>
         ) : '-';
       case 'creditTotal':
-        // Credit payments - displayed as +$#.##
-        const creditTotal = event.creditTotal || 0;
+        // Credit payments - use parsed itemData if available, fallback to stored value
+        const parsedCredit = parseItemData(event.itemData);
+        const creditTotal = parsedCredit.paymentTotals.CREDIT > 0 ? parsedCredit.paymentTotals.CREDIT : (event.creditTotal || 0);
         return creditTotal > 0 ? (
           <span style={{ color: '#22c55e', fontWeight: 'bold' }}>
             +${creditTotal.toFixed(2)}
           </span>
         ) : '-';
       case 'invoiceTotal':
-        // Invoice payments - displayed as $#.## (neutral, doesn't affect profit)
-        const invoiceTotalAmount = event.invoiceTotal || 0;
+        // Invoice payments - use parsed itemData if available, fallback to stored value
+        const parsedInvoice = parseItemData(event.itemData);
+        const invoiceTotalAmount = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
         return invoiceTotalAmount > 0 ? (
           <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
             ${invoiceTotalAmount.toFixed(2)}
@@ -445,7 +511,8 @@ const EventSales = () => {
           </span>
         );
       case 'overheadTotal':
-        // Sum of all overhead costs, displayed as negative (loss)
+        // Sum of all overhead costs including sales tax, displayed as negative (loss)
+        const eventSalesTax = (event.totalSales || 0) * 0.08;
         const overheadSum = 
           (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
@@ -453,7 +520,8 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
+          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0) +
+          eventSalesTax;
         return overheadSum > 0 ? (
           <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
             -${overheadSum.toFixed(2)}
@@ -817,15 +885,17 @@ const EventSales = () => {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={() => {
-              // Check if P&L Report view is currently active (all 3 sections open)
-              const isPLReportView = !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed;
+              // Check if P&L Report view is currently active (Basic Info hidden, all 3 P&L sections open)
+              const isPLReportView = basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed;
               if (isPLReportView) {
-                // Switch to Summary view - close all 3 sections
+                // Switch to Summary view - show Basic Info, close P&L sections
+                setBasicInfoCollapsed(false);
                 setOverheadCollapsed(true);
                 setPaymentModelCollapsed(true);
                 setPaymentMethodsCollapsed(true);
               } else {
-                // Switch to P&L Report view - open all 3 sections
+                // Switch to P&L Report view - hide Basic Info, open all P&L sections
+                setBasicInfoCollapsed(true);
                 setOverheadCollapsed(false);
                 setPaymentModelCollapsed(false);
                 setPaymentMethodsCollapsed(false);
@@ -833,7 +903,7 @@ const EventSales = () => {
             }}
             style={{
               padding: '8px 16px',
-              background: (!overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? '#666' : '#999',
+              background: '#999',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -841,7 +911,7 @@ const EventSales = () => {
               fontSize: '14px',
             }}
           >
-            {(!overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? 'Summary' : 'P&L Report'}
+            {(basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? 'Summary' : 'P&L Report'}
           </button>
           <button
             onClick={() => setShowRatePanel(prev => !prev)}
@@ -1118,14 +1188,22 @@ const EventSales = () => {
                         textAlign: 'center',
                         borderBottom: '2px solid #ddd',
                         borderRight: isLastInGroup && groupIdx < columnGroups.length - 1 ? '2px solid #999' : '1px solid #e5e5e5',
-                        fontSize: '12px',
+                        fontSize: col.isDeleteHeader ? '20px' : '12px',
                         fontWeight: '600',
-                        color: col.key === 'delete' ? '#999' : '#333',
+                        color: (col.key === 'delete' || col.isLockHeader) ? '#999' : '#333',
                         whiteSpace: 'nowrap',
                         width: col.width,
                       }}
                     >
-                      {col.label}
+                      {col.isLockHeader ? (
+                        <img 
+                          src="/assets/icons/LOCKED.png" 
+                          alt="Lock" 
+                          style={{ width: '16px', height: '16px', opacity: 0.6, filter: 'grayscale(100%)' }} 
+                        />
+                      ) : col.isDeleteHeader ? (
+                        <span style={{ color: '#999' }}>×</span>
+                      ) : col.label}
                     </th>
                   );
                 })}

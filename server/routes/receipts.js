@@ -50,10 +50,11 @@ function generateReceiptHTML(data) {
           border-bottom: 2px dashed #ddd;
         }
         .logo {
-          font-size: 28px;
-          font-weight: bold;
-          color: #800080;
-          margin-bottom: 5px;
+          margin-bottom: 10px;
+        }
+        .logo img {
+          max-width: 150px;
+          height: auto;
         }
         .date {
           color: #666;
@@ -110,7 +111,7 @@ function generateReceiptHTML(data) {
     </head>
     <body>
       <div class="header">
-        <div class="logo">ECHO</div>
+        <div class="logo"><img src="https://echocatering.com/assets/icons/LOGO_echo.png" alt="Echo Catering" /></div>
         <div class="date">${date}</div>
       </div>
       
@@ -118,7 +119,7 @@ function generateReceiptHTML(data) {
         ${(items || []).map(item => `
           <div class="item">
             <span class="item-name">${item.name}${item.modifiers?.length ? ` (${item.modifiers.map(m => m.name).join(', ')})` : ''}</span>
-            <span class="item-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
+            <span class="item-price">— $${(parseFloat(item.price) || 0).toFixed(2)}</span>
           </div>
         `).join('')}
       </div>
@@ -126,17 +127,21 @@ function generateReceiptHTML(data) {
       <div class="totals">
         <div class="total-row">
           <span>Subtotal</span>
-          <span>$${(subtotal || 0).toFixed(2)}</span>
+          <span>— $${(subtotal || 0).toFixed(2)}</span>
+        </div>
+        <div class="total-row">
+          <span>Tax (8%)</span>
+          <span>— $${((subtotal || 0) * 0.08).toFixed(2)}</span>
         </div>
         ${tip > 0 ? `
           <div class="total-row">
             <span>Tip</span>
-            <span>$${tip.toFixed(2)}</span>
+            <span>— $${tip.toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="total-row final">
           <span>Total</span>
-          <span>$${(total || 0).toFixed(2)}</span>
+          <span>— $${(total || 0).toFixed(2)}</span>
         </div>
       </div>
       

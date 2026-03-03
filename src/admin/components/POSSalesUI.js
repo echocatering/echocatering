@@ -4123,7 +4123,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
     
     const cashAmount = parseFloat(cashTendered) || 0;
-    const totalDue = checkoutSubtotal;
+    const taxAmount = checkoutSubtotal * 0.08;
+    const totalDue = checkoutSubtotal + taxAmount;
     
     if (cashAmount < totalDue) {
       alert(`Insufficient cash. Need $${totalDue.toFixed(2)}, received $${cashAmount.toFixed(2)}`);
@@ -4201,7 +4202,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
 
-    const finalTotal = checkoutSubtotal + tipAmount;
+    const taxAmount = checkoutSubtotal * 0.08;
+    const finalTotal = checkoutSubtotal + taxAmount + tipAmount;
     const totalCents = Math.round(finalTotal * 100);
     
     try {
@@ -4354,8 +4356,9 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Broadcast tip amount to all devices via WebSocket
     sendTipUpdate({ tipAmount, tabId: checkoutTabInfo?.id });
     
-    // Calculate total amount in cents
-    const totalAmount = checkoutSubtotal + tipAmount;
+    // Calculate total amount in cents (including 8% tax)
+    const taxAmount = checkoutSubtotal * 0.08;
+    const totalAmount = checkoutSubtotal + taxAmount + tipAmount;
     const amountCents = Math.round(totalAmount * 100);
     
     // Check if this device has the reader connected
@@ -5797,20 +5800,43 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       ))}
                     </div>
                     
-                    {/* Total - always visible at bottom of receipt */}
+                    {/* Subtotal, Tax, Total - always visible at bottom of receipt */}
                     <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
                       padding: '12px 0 0 0',
                       marginTop: '8px',
                       borderTop: '2px solid #333',
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      color: '#333',
                       flexShrink: 0,
                     }}>
-                      <span>Total</span>
-                      <span>${checkoutSubtotal.toFixed(2)}</span>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '14px',
+                        color: '#666',
+                        marginBottom: '4px',
+                      }}>
+                        <span>Subtotal</span>
+                        <span>${checkoutSubtotal.toFixed(2)}</span>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '14px',
+                        color: '#666',
+                        marginBottom: '8px',
+                      }}>
+                        <span>Tax (8%)</span>
+                        <span>${(checkoutSubtotal * 0.08).toFixed(2)}</span>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#333',
+                      }}>
+                        <span>Total</span>
+                        <span>${(checkoutSubtotal * 1.08).toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -6864,6 +6890,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <span style={{ color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
                   </div>
                 )}
+                {/* Sales Tax - 8% of non-spillage paid tabs (not spillage) */}
+                {(() => {
+                  const paidTabs = tabs.filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived'));
+                  const totalSales = paidTabs.reduce((sum, tab) => {
+                    return sum + (tab.items || []).reduce((itemSum, item) => itemSum + (parseFloat(item.price) || 0), 0);
+                  }, 0);
+                  const salesTax = totalSales * 0.08;
+                  return salesTax > 0 ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <span style={{ color: '#333' }}>Sales Tax (8%)</span>
+                      <span style={{ color: '#ef4444' }}>-${salesTax.toFixed(2)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 {/* Labor costs */}
                 {eventSetupData.labor && eventSetupData.labor.length > 0 && (
                   <>
@@ -6899,14 +6939,22 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f9f9f9' }}>
                   <span style={{ flex: 1 }}></span>
                   <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                    -${(
-                      (parseFloat(eventSetupData.accommodationCost) || 0) +
-                      (parseFloat(eventSetupData.transportationCosts) || 0) +
-                      (parseFloat(eventSetupData.permitCost) || 0) +
-                      (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
-                      (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
-                      spillageTotal
-                    ).toFixed(2)}
+                    -${(() => {
+                      const paidTabs = tabs.filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived'));
+                      const totalSales = paidTabs.reduce((sum, tab) => {
+                        return sum + (tab.items || []).reduce((itemSum, item) => itemSum + (parseFloat(item.price) || 0), 0);
+                      }, 0);
+                      const salesTax = totalSales * 0.08;
+                      return (
+                        (parseFloat(eventSetupData.accommodationCost) || 0) +
+                        (parseFloat(eventSetupData.transportationCosts) || 0) +
+                        (parseFloat(eventSetupData.permitCost) || 0) +
+                        (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
+                        (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
+                        spillageTotal +
+                        salesTax
+                      ).toFixed(2);
+                    })()}
                   </span>
                 </div>
               </div>
@@ -8239,7 +8287,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           }}>
             <div style={{ textAlign: 'center', color: '#fff' }}>
               <div style={{ fontSize: '64px', marginBottom: '20px' }}>✓</div>
-              <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Successful</h2>
+              <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Complete</h2>
               {lastCheckoutResult && (
                 <p style={{ fontSize: '18px', opacity: 0.9 }}>
                   ${(lastCheckoutResult.totalCharged?.amount / 100).toFixed(2)} charged
@@ -8537,7 +8585,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Successful!</h2>
+                  <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Payment Complete!</h2>
                   <p style={{ fontSize: '18px', opacity: 0.9 }}>
                     {paymentStatusMessage}
                   </p>

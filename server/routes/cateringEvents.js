@@ -412,12 +412,16 @@ router.post('/finalize', async (req, res) => {
             creditTotal += totalWithTip;
           }
           
-          // Collect item data with timestamps
+          // Collect item data with timestamps and payment method
+          // Format: "itemName, category, timestamp, paymentMethod, cost"
           for (const item of (tab.items || [])) {
-            const itemName = (item.name || 'Unknown').replace(/[,-]/g, ' ').trim();
+            const itemName = (item.name || 'Unknown').replace(/,/g, ' ').trim();
             const category = (item.category || 'other').toLowerCase();
             const timestamp = item.addedAt || tab.paidAt || new Date().toISOString();
-            itemDataParts.push(`${itemName}-${category}-${timestamp}`);
+            const timeStr = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const cost = (parseFloat(item.price) || 0).toFixed(2);
+            const txnType = paymentMethod.toUpperCase();
+            itemDataParts.push(`${itemName}, ${category}, ${timeStr}, ${txnType}, ${cost}`);
           }
         }
       }
@@ -425,7 +429,8 @@ router.post('/finalize', async (req, res) => {
       eventData.cashTotal = cashTotal;
       eventData.creditTotal = creditTotal;
       eventData.invoiceTotal = invoiceTotal;
-      eventData.itemData = itemDataParts.join(', ');
+      // Use client-side itemData if provided (includes transaction types), otherwise use server-built data
+      eventData.itemData = setupData.itemData || itemDataParts.join('\n');
       
       // Update totalSales to be sum of all payment methods (if not already set from summary)
       if (!summary || !summary.totalRevenue) {
