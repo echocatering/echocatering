@@ -2655,6 +2655,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setTimeout(() => saveToServerRef.current?.('payment-complete'), 500);
     }
     
+    // On horizontal device: don't immediately clear if showing success animation
+    // The animation flow (handleWsCheckoutStage 'success' handler) will clean up after 3s + receipt
+    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
+    if (isHorizontalDevice) {
+      // Let the success animation flow handle the cleanup - just sync tab state above
+      return;
+    }
+    
     setCheckoutMode(false);
     setCheckoutItems([]);
     setCheckoutSubtotal(0);
@@ -2662,7 +2670,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setShowScanCard(false);
     setSelectedTipAmount(0);
     setCheckoutStage('');
-  }, [setTabs, setActiveTabId]);
+  }, [setTabs, setActiveTabId, orientation, layoutMode]);
   
   const handleWsCheckoutCancel = useCallback(() => {
     console.log('[POS] WebSocket checkout_cancel received');
@@ -2701,36 +2709,41 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setPaymentMethod(data.paymentMethod);
     }
     
-    // Also update paymentStatus based on stage so H shows success/failed animation
+    // Horizontal device only: show success animation + receipt prompt flow
+    // Vertical device manages its own state in handleCompleteCashPayment / onPaymentComplete
+    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
+    
     if (data.stage === 'success') {
-      // Ensure checkoutMode is true so the success animation shows (not the menu)
-      setCheckoutMode(true);
-      setPaymentStatus('payment_success');
-      // After 3 seconds of success animation (Thank you!), show receipt prompt
-      setTimeout(() => {
-        setPaymentStatus(null);
-        setShowReceiptPrompt(true);
-        // Start 10 second timer for auto-dismiss
-        if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
-        receiptTimerRef.current = setTimeout(() => {
-          setShowReceiptPrompt(false);
-          setCheckoutMode(false);
-          setCheckoutStage('');
-          setShowScanCard(false);
-          setSelectedTipAmount(0);
-        }, 10000);
-      }, 3000);
-    } else if (data.stage === 'receipt_request') {
-      // Vertical view received receipt request status
-      // This is handled by the vertical view to show "Requesting Receipt" status
+      if (isHorizontalDevice) {
+        // Ensure checkoutMode is true so the success animation shows (not the menu)
+        setCheckoutMode(true);
+        setPaymentStatus('payment_success');
+        // After 3 seconds of success animation (Thank you!), show receipt prompt
+        setTimeout(() => {
+          setPaymentStatus(null);
+          setShowReceiptPrompt(true);
+          // Start 10 second timer for auto-dismiss
+          if (receiptTimerRef.current) clearTimeout(receiptTimerRef.current);
+          receiptTimerRef.current = setTimeout(() => {
+            setShowReceiptPrompt(false);
+            setCheckoutMode(false);
+            setCheckoutStage('');
+            setShowScanCard(false);
+            setSelectedTipAmount(0);
+          }, 10000);
+        }, 3000);
+      }
+      // Vertical: state is already managed by handleCompleteCashPayment / onPaymentComplete
     } else if (data.stage === 'failed') {
-      setPaymentStatus('payment_failed');
-      // Auto-clear after 3 seconds
-      setTimeout(() => {
-        setPaymentStatus(null);
-      }, 3000);
+      if (isHorizontalDevice) {
+        setPaymentStatus('payment_failed');
+        // Auto-clear after 3 seconds
+        setTimeout(() => {
+          setPaymentStatus(null);
+        }, 3000);
+      }
     }
-  }, []);
+  }, [orientation, layoutMode]);
   
   // Handle process_payment request from horizontal device (customer-facing)
   // This is received by the vertical device (with Stripe reader) to process payment
@@ -4071,8 +4084,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Broadcast success stage to horizontal view with payment method (triggers animation there too)
     sendCheckoutStage('success', 'cash');
     
-    // Broadcast checkout complete to sync tab status
-    sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
+    // Delay checkout_complete broadcast until AFTER horizontal animation finishes (3s animation + buffer)
+    // Sending it immediately would clear horizontal's checkoutMode before the animation plays
+    setTimeout(() => {
+      sendCheckoutComplete({ tipAmount: 0, finalTotal: totalDue, tabId: checkoutTabInfo.id, paymentMethod: 'cash' });
+    }, 3500);
     
     // Clear vertical view checkout state after 1.5 seconds (Payment Complete transition)
     // But DON'T send checkoutStage update - let horizontal view handle its own receipt prompt flow
@@ -6158,6 +6174,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 .event-save-animation {
                   animation: event-save-checkmark 0.6s ease-out;
                 }
+                .scrollable-content input:focus::placeholder { color: transparent; }
+                .scrollable-content input:focus { background: #fff !important; outline: 2px solid #800080; outline-offset: -1px; border-color: #800080 !important; }
               `}</style>
               <div style={{
                 position: 'fixed',

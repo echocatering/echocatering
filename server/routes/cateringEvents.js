@@ -23,12 +23,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Populate sales data from linked POS events
     const eventsWithSales = await Promise.all(events.map(async (event) => {
-      // If event already has totalSales, use it
-      if (event.totalSales && event.totalSales > 0) {
-        return event;
-      }
-      
-      // If event has a linked POS event, get sales from there
+      // Always look up POS event if linked - needed for cashTotal/creditTotal/invoiceTotal/cogsCost
       if (event.posEventId) {
         try {
           const posEvent = await PosEvent.findById(event.posEventId).lean();
@@ -81,14 +76,34 @@ router.get('/', authenticateToken, async (req, res) => {
               });
             }
             
+            // Build drinkSales from POS tabs if event doesn't have it (needed for graph)
+            let drinkSales = event.drinkSales || [];
+            if ((!drinkSales || drinkSales.length === 0) && posEvent.tabs && posEvent.tabs.length > 0) {
+              const itemMap = {};
+              posEvent.tabs.forEach(tab => {
+                if ((tab.status === 'paid' || tab.status === 'archived') && !tab.isSpillage) {
+                  (tab.items || []).forEach(item => {
+                    const key = item.name || 'Unknown';
+                    if (!itemMap[key]) {
+                      itemMap[key] = { name: key, category: item.category || 'other', quantity: 0, revenue: 0 };
+                    }
+                    itemMap[key].quantity += 1;
+                    itemMap[key].revenue += parseFloat(item.price) || 0;
+                  });
+                }
+              });
+              drinkSales = Object.values(itemMap);
+            }
+            
             return {
               ...event,
-              totalSales,
-              totalTips,
+              totalSales: event.totalSales || totalSales,
+              totalTips: event.totalTips || totalTips,
               cashTotal,
               creditTotal,
               invoiceTotal,
               cogsCost: event.cogsCost || cogsCost,
+              drinkSales: drinkSales.length > 0 ? drinkSales : event.drinkSales,
             };
           }
         } catch (err) {

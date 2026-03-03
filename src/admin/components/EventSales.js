@@ -257,7 +257,7 @@ const EventSales = () => {
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
-        { key: 'itemData', label: 'DATA', width: '0px', editable: false, field: 'itemData', hidden: true },
+        { key: 'itemData', label: 'DATA', width: '60px', editable: false, field: 'itemData', hidden: false },
       ]
     }
   ];
@@ -382,6 +382,17 @@ const EventSales = () => {
             ${invoiceTotalAmount.toFixed(2)}
           </span>
         ) : '-';
+      case 'itemData':
+        const hasItemData = event.itemData && event.itemData.length > 0;
+        const hasDrinkSales = event.drinkSales && event.drinkSales.length > 0;
+        const hasTimeline = event.timeline && event.timeline.length > 0;
+        const hasGraphData = hasItemData || hasDrinkSales || hasTimeline;
+        return (
+          <span style={{ fontSize: '11px', color: hasGraphData ? '#22c55e' : '#999', fontWeight: 'bold' }}
+            title={hasItemData ? event.itemData.substring(0, 100) : (hasDrinkSales ? `${event.drinkSales.length} items` : 'No data')}>
+            {hasGraphData ? '✓' : '–'}
+          </span>
+        );
       case 'profit':
         // Profit = Invoice Received + netIncome (if negative, it subtracts)
         const invoiceReceived = getCurrentValue(event, 'amountReceived') || 0;
