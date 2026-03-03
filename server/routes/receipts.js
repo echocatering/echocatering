@@ -1,26 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const twilio = require('twilio');
 const puppeteer = require('puppeteer');
 
-// Email transporter (configure with your SMTP settings)
-let emailTransporter = null;
-try {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    emailTransporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-} catch (err) {
-  console.log('[Receipts] Email transporter not configured:', err.message);
-}
+// Resend client for email
+const resend = new Resend(process.env.RESEND_API_KEY || 're_DBu7uZNQ_N5p2wMrLfW9cG7MJbngMDcmW');
 
 // Twilio client for SMS (configure with your Twilio credentials)
 let twilioClient = null;
@@ -222,29 +207,40 @@ function detectContactType(contact) {
 }
 
 /**
- * Send receipt via email
+ * Send receipt via email using Resend
  */
 async function sendEmailReceipt(email, receiptImage, receiptHTML) {
-  if (!emailTransporter) {
-    console.log('[Receipts] Email not configured - would send to:', email);
-    return { success: true, method: 'email', simulated: true };
+  try {
+    const emailData = {
+      from: 'Echo Catering <onboarding@resend.dev>',
+      to: email,
+      subject: 'Your Receipt from Echo Catering',
+      html: receiptHTML,
+    };
+    
+    // Add attachment if image was generated
+    if (receiptImage) {
+      emailData.attachments = [
+        {
+          filename: 'receipt.jpg',
+          content: receiptImage.toString('base64'),
+        },
+      ];
+    }
+    
+    const { data, error } = await resend.emails.send(emailData);
+    
+    if (error) {
+      console.error('[Receipts] Resend error:', error);
+      throw new Error(error.message || 'Failed to send email');
+    }
+    
+    console.log('[Receipts] Email sent successfully via Resend:', data);
+    return { success: true, method: 'email', id: data?.id };
+  } catch (err) {
+    console.error('[Receipts] Email send failed:', err);
+    throw err;
   }
-  
-  await emailTransporter.sendMail({
-    from: process.env.SMTP_FROM || '"Echo Catering" <receipts@echocatering.com>',
-    to: email,
-    subject: 'Your Receipt from Echo Catering',
-    html: receiptHTML,
-    attachments: [
-      {
-        filename: 'receipt.jpg',
-        content: receiptImage,
-        contentType: 'image/jpeg',
-      },
-    ],
-  });
-  
-  return { success: true, method: 'email' };
 }
 
 /**
