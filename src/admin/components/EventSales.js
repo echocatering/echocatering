@@ -383,14 +383,20 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'itemData':
-        const hasItemData = event.itemData && event.itemData.length > 0;
-        const hasDrinkSales = event.drinkSales && event.drinkSales.length > 0;
-        const hasTimeline = event.timeline && event.timeline.length > 0;
-        const hasGraphData = hasItemData || hasDrinkSales || hasTimeline;
+        // Show count of item lines in itemData string
+        const itemDataStr = event.itemData || '';
+        const lineCount = itemDataStr ? itemDataStr.split('\n').filter(line => line.trim()).length : 0;
         return (
-          <span style={{ fontSize: '11px', color: hasGraphData ? '#22c55e' : '#999', fontWeight: 'bold' }}
-            title={hasItemData ? event.itemData.substring(0, 100) : (hasDrinkSales ? `${event.drinkSales.length} items` : 'No data')}>
-            {hasGraphData ? '✓' : '–'}
+          <span 
+            style={{ fontSize: '11px', color: lineCount > 0 ? '#22c55e' : '#999', fontWeight: 'bold', cursor: lineCount > 0 ? 'pointer' : 'default' }}
+            title={itemDataStr ? itemDataStr.substring(0, 500) : 'No item data'}
+            onClick={(e) => {
+              if (lineCount > 0) {
+                e.stopPropagation();
+                alert(itemDataStr);
+              }
+            }}>
+            {lineCount > 0 ? `${lineCount}` : '–'}
           </span>
         );
       case 'profit':

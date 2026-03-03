@@ -60,6 +60,7 @@ const DEFAULT_EVENT_SETUP_DATA = {
     beer: [],
     wine: [],
   },
+  itemData: '', // Format: "(item name), (category), (timestamp), (transaction), (cost)\n" per item
 };
 
 /**

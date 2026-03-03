@@ -2702,6 +2702,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // Handle checkout stage updates from other devices (for vertical screen sync)
   const handleWsCheckoutStage = useCallback((data) => {
     console.log('[POS] WebSocket checkout_stage received:', data.stage, data.paymentMethod ? `(${data.paymentMethod})` : '');
+    
+    // Determine device type
+    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
+    const isVerticalDevice = layoutMode === 'auto' && orientation === 'vertical';
+    
+    // Vertical device IGNORES success/failed stages from WebSocket
+    // It manages its own state locally in handleCompleteCashPayment / onPaymentComplete
+    // Receiving its own broadcast would re-set checkoutStage after the 1.5s timeout clears it
+    if (isVerticalDevice && (data.stage === 'success' || data.stage === 'failed')) {
+      console.log('[POS] Vertical ignoring own success/failed broadcast');
+      return;
+    }
+    
+    // Update checkout stage (for horizontal receiving from vertical, or other stages)
     setCheckoutStage(data.stage || '');
     
     // Update payment method if provided
@@ -2710,9 +2724,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
     
     // Horizontal device only: show success animation + receipt prompt flow
-    // Vertical device manages its own state in handleCompleteCashPayment / onPaymentComplete
-    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
-    
     if (data.stage === 'success') {
       if (isHorizontalDevice) {
         // Ensure checkoutMode is true so the success animation shows (not the menu)
@@ -2733,7 +2744,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           }, 10000);
         }, 3000);
       }
-      // Vertical: state is already managed by handleCompleteCashPayment / onPaymentComplete
     } else if (data.stage === 'failed') {
       if (isHorizontalDevice) {
         setPaymentStatus('payment_failed');
@@ -3158,6 +3168,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
     sendCheckoutStage(stage, paymentMethodParam);
   }, [sendCheckoutStage]);
+  
+  // When horizontal view returns to menu (checkoutMode false), clear vertical's transaction messages
+  useEffect(() => {
+    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
+    if (isHorizontalDevice && !checkoutMode) {
+      // Send empty stage to clear any lingering transaction messages on vertical
+      sendCheckoutStage('');
+      console.log('[POS] Horizontal menu loaded - clearing vertical transaction messages');
+    }
+  }, [checkoutMode, orientation, layoutMode, sendCheckoutStage]);
   
   // Checkout timeout effect - 1 minute idle on horizontal view returns to menu
   // Only applies to horizontal view (no stripeBridge) and non-processing stages
@@ -3601,6 +3621,30 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }
   }, [activeTabId, tabs]);
   
+  // Helper to build itemData string from tab items
+  // Format: "(item name), (category), (timestamp), (transaction), (cost)\n" per item
+  const buildItemDataFromTab = useCallback((tab, transactionType) => {
+    if (!tab || !tab.items || tab.items.length === 0) return '';
+    
+    return tab.items.map(item => {
+      const itemName = item.name || 'Unknown';
+      const category = item.category || 'other';
+      const timestamp = item.addedAt || item.timestamp || new Date().toISOString();
+      const timeStr = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const cost = (item.price || item.finalPrice || 0).toFixed(2);
+      return `${itemName}, ${category}, ${timeStr}, ${transactionType}, ${cost}`;
+    }).join('\n');
+  }, []);
+  
+  // Append item data to eventSetupData.itemData
+  const appendItemData = useCallback((newItemData) => {
+    if (!newItemData) return;
+    setEventSetupData(prev => ({
+      ...prev,
+      itemData: prev.itemData ? `${prev.itemData}\n${newItemData}` : newItemData
+    }));
+  }, [setEventSetupData]);
+
   // Archive a tab (for paid tabs - removes from UI but keeps in event data)
   const handleArchiveTab = useCallback((tabId) => {
     setTabs(prev => prev.map(t => 
@@ -3617,6 +3661,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // Invoice a tab (marks as archived with isInvoice flag - payment to be collected later)
   // Invoice tabs show as yellow and their total is subtracted from revenue (shown as -$)
   const handleInvoiceTab = useCallback((tabId) => {
+    // Find the tab and build itemData before marking as invoiced
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      const itemDataStr = buildItemDataFromTab(tab, 'INVOICE');
+      if (itemDataStr) {
+        appendItemData(itemDataStr);
+      }
+    }
+    
     setTabs(prev => prev.map(t => 
       t.id === tabId 
         ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', invoicedAt: new Date().toISOString() }
@@ -3626,7 +3679,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setActiveTabId(null);
     }
     console.log(`[POS] Tab ${tabId} invoiced (payment to be collected later)`);
-  }, [activeTabId]);
+  }, [activeTabId, tabs, buildItemDataFromTab, appendItemData]);
 
   // Reopen an invoice tab (moves back to unpaid/open status)
   const handleReopenTab = useCallback((tabId) => {
@@ -4058,6 +4111,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
     
+    // Build itemData from tab items before marking as paid
+    const itemDataStr = buildItemDataFromTab(checkoutTabInfo, 'CASH');
+    if (itemDataStr) {
+      appendItemData(itemDataStr);
+    }
+    
     // Mark tab as paid with cash (use 'archived' status to appear in paid tabs)
     setTabs(prev => prev.map(t => 
       t.id === checkoutTabInfo.id 
@@ -4144,6 +4203,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatus('payment_success');
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
             updateCheckoutStage('success', 'credit'); // Show "Payment Complete" on vertical screen with payment method
+            
+            // Build itemData from tab items before marking as paid
+            if (checkoutTabInfo) {
+              const itemDataStr = buildItemDataFromTab(checkoutTabInfo, 'CREDIT');
+              if (itemDataStr) {
+                appendItemData(itemDataStr);
+              }
+            }
             
             // Mark tab as paid and store tip amount
             if (checkoutTabInfo?.id) {
@@ -6158,6 +6225,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             zIndex: 1000,
           }}>
           
+          {/* CSS for input focus styling - hide placeholder and show white background */}
+          <style>{`
+            .scrollable-content input:focus::placeholder { color: transparent; }
+            .scrollable-content input:focus { background: #fff !important; outline: 2px solid #800080; outline-offset: -1px; border-color: #800080 !important; }
+          `}</style>
+          
           {/* Event Save Success Animation Overlay */}
           {showEventSaveSuccess && (
             <>
@@ -6174,8 +6247,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 .event-save-animation {
                   animation: event-save-checkmark 0.6s ease-out;
                 }
-                .scrollable-content input:focus::placeholder { color: transparent; }
-                .scrollable-content input:focus { background: #fff !important; outline: 2px solid #800080; outline-offset: -1px; border-color: #800080 !important; }
               `}</style>
               <div style={{
                 position: 'fixed',
@@ -6974,6 +7045,24 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       taxes: taxes
                     };
                     
+                    // Add spillage items to itemData before saving
+                    const spillageTabForItemData = tabs.find(t => t.isSpillage);
+                    let finalItemData = eventSetupData.itemData || '';
+                    if (spillageTabForItemData && spillageTabForItemData.items && spillageTabForItemData.items.length > 0) {
+                      const spillageItemData = spillageTabForItemData.items.map(item => {
+                        const itemName = item.name || 'Unknown';
+                        const category = item.category || 'other';
+                        const timestamp = item.addedAt || item.timestamp || new Date().toISOString();
+                        const timeStr = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                        const cost = (item.price || item.finalPrice || 0).toFixed(2);
+                        return `${itemName}, ${category}, ${timeStr}, SPILLAGE, ${cost}`;
+                      }).join('\n');
+                      finalItemData = finalItemData ? `${finalItemData}\n${spillageItemData}` : spillageItemData;
+                    }
+                    
+                    // Update eventSetupData with final itemData
+                    const finalSetupData = { ...eventSetupData, itemData: finalItemData };
+                    
                     setSyncing(true);
                     try {
                       const response = await fetch('/api/catering-events/finalize', {
@@ -6983,7 +7072,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         },
                         body: JSON.stringify({
                           eventId,
-                          setupData: eventSetupData,
+                          setupData: finalSetupData,
                           summary: summaryWithTips,
                           tabs: tabs,
                           spillageData: { items: spillageItems, total: spillageTotal },
