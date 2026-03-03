@@ -2719,6 +2719,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     // Update checkout stage (for horizontal receiving from vertical, or other stages)
     setCheckoutStage(data.stage || '');
     
+    // If stage is empty, also exit checkoutMode on vertical to clear header notification
+    if (!data.stage && isVerticalDevice) {
+      setCheckoutMode(false);
+    }
+    
     // Update payment method if provided
     if (data.paymentMethod) {
       setPaymentMethod(data.paymentMethod);
@@ -4164,14 +4169,16 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     }, 3500);
     
     // Clear vertical view checkout state after 1.5 seconds (Payment Complete transition)
-    // But DON'T send checkoutStage update - let horizontal view handle its own receipt prompt flow
+    // Keep checkoutMode true so vertical can show receipt flow stages from horizontal
+    // Horizontal will send empty stage when receipt flow completes to exit checkoutMode
     setTimeout(() => {
-      setCheckoutMode(false);
+      // Don't exit checkoutMode - let horizontal control via empty stage webhook
+      // setCheckoutMode(false);
       setCheckoutItems([]);
       setCheckoutSubtotal(0);
       setCheckoutTabInfo(null);
       setCashTendered('');
-      setCheckoutStage('');
+      setCheckoutStage(''); // Clear stage but keep checkoutMode for receipt flow
       setPaymentMethod('');
       setPaymentStatus(null); // Clear payment status
       
