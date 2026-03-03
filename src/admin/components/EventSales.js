@@ -45,6 +45,15 @@ const EventSales = () => {
   const [graphEventId, setGraphEventId] = useState(null); // Event selected for graph view
   const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
   const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(false); // Side panel collapsed state
+  
+  // Section lock states - controls whether fields in each section are editable
+  const [sectionLocks, setSectionLocks] = useState({
+    basicInfo: true,      // Initially locked
+    overhead: true,       // Initially locked
+    paymentModel: false,  // Initially unlocked
+  });
+  const [unlockConfirm, setUnlockConfirm] = useState(null); // Section name to confirm unlock
+  const [showRatePanel, setShowRatePanel] = useState(false); // Rate panel visibility
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
@@ -214,12 +223,13 @@ const EventSales = () => {
       collapsable: false,
       columns: [
         { key: 'delete', label: '×', width: '40px', editable: false },
-        { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name' },
-        { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date' },
-        { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount' },
-        { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime' },
-        { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime' },
+        { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name', lockGroup: 'basicInfo' },
+        { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date', lockGroup: 'basicInfo' },
+        { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount', lockGroup: 'basicInfo' },
+        { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime', lockGroup: 'basicInfo' },
+        { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime', lockGroup: 'basicInfo' },
         { key: 'hours', label: 'Total Hours', width: '90px', editable: false, field: 'durationHours' },
+        { key: 'lockBasicInfo', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'basicInfo' },
       ]
     },
     {
@@ -227,14 +237,15 @@ const EventSales = () => {
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
-        { key: 'accommodation', label: 'Accommodation', width: '110px', editable: true, field: 'accommodationCost' },
-        { key: 'transportation', label: 'Transportation', width: '110px', editable: true, field: 'travelCost' },
-        { key: 'permit', label: 'Permit', width: '80px', editable: true, field: 'permitCost' },
-        { key: 'insurance', label: 'Insurance', width: '90px', editable: true, field: 'insuranceCost' },
-        { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost' },
-        { key: 'spillage', label: 'Spillage', width: '90px', editable: true, field: 'spillageCost' },
-        { key: 'cogs', label: 'COGS', width: '80px', editable: true, field: 'cogsCost' },
+        { key: 'accommodation', label: 'Accommodation', width: '110px', editable: true, field: 'accommodationCost', lockGroup: 'overhead' },
+        { key: 'transportation', label: 'Transportation', width: '110px', editable: true, field: 'travelCost', lockGroup: 'overhead' },
+        { key: 'permit', label: 'Permit', width: '80px', editable: true, field: 'permitCost', lockGroup: 'overhead' },
+        { key: 'insurance', label: 'Insurance', width: '90px', editable: true, field: 'insuranceCost', lockGroup: 'overhead' },
+        { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
+        { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
+        { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
         { key: 'overheadTotal', label: 'Total', width: '90px', editable: false },
+        { key: 'lockOverhead', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'overhead' },
       ]
     },
     {
@@ -252,9 +263,10 @@ const EventSales = () => {
       collapsable: true,
       collapsed: paymentModelCollapsed,
       columns: [
-        { key: 'paymentModel', label: 'Model', width: '120px', editable: false, field: 'paymentModel' },
+        { key: 'paymentModel', label: 'Model', width: '120px', editable: true, field: 'paymentModel', lockGroup: 'paymentModel' },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
-        { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived' },
+        { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'paymentModel' },
+        { key: 'lockPaymentModel', label: '🔒', width: '40px', editable: false, isLock: true, lockGroup: 'paymentModel' },
       ]
     },
     {
@@ -293,6 +305,32 @@ const EventSales = () => {
           >
             ×
           </button>
+        );
+      case 'lockBasicInfo':
+      case 'lockOverhead':
+      case 'lockPaymentModel':
+        const lockGroup = column.lockGroup;
+        const isLocked = sectionLocks[lockGroup];
+        return (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isLocked) {
+                setUnlockConfirm(lockGroup);
+              } else {
+                setSectionLocks(prev => ({ ...prev, [lockGroup]: true }));
+              }
+            }}
+            style={{
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: '#999',
+              userSelect: 'none',
+            }}
+            title={isLocked ? 'Click to unlock editing' : 'Click to lock editing'}
+          >
+            {isLocked ? '🔒' : '🔓'}
+          </span>
         );
       case 'name':
         return event.name || '-';
@@ -725,6 +763,7 @@ const EventSales = () => {
         </h1>
         
         {/* Pricing Variables - Centered */}
+        {showRatePanel && (
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#f5f5f5', padding: '8px 16px', borderRadius: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>MIN</label>
@@ -772,48 +811,29 @@ const EventSales = () => {
             />
           </div>
         </div>
+        )}
         
         {/* Buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={() => {
-              if (overheadCollapsed) {
-                // Opening Overhead - close others
+              // Check if P&L Report view is currently active (all 3 sections open)
+              const isPLReportView = !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed;
+              if (isPLReportView) {
+                // Switch to Summary view - close all 3 sections
+                setOverheadCollapsed(true);
+                setPaymentModelCollapsed(true);
+                setPaymentMethodsCollapsed(true);
+              } else {
+                // Switch to P&L Report view - open all 3 sections
                 setOverheadCollapsed(false);
-                setPaymentModelCollapsed(true);
-                setPaymentMethodsCollapsed(true);
-              } else {
-                // Closing Overhead
-                setOverheadCollapsed(true);
-              }
-            }}
-            style={{
-              padding: '8px 16px',
-              background: overheadCollapsed ? '#999' : '#666',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            Overhead
-          </button>
-          <button
-            onClick={() => {
-              if (paymentModelCollapsed) {
-                // Opening Payment Model - close others
                 setPaymentModelCollapsed(false);
-                setOverheadCollapsed(true);
-                setPaymentMethodsCollapsed(true);
-              } else {
-                // Closing Payment Model
-                setPaymentModelCollapsed(true);
+                setPaymentMethodsCollapsed(false);
               }
             }}
             style={{
               padding: '8px 16px',
-              background: paymentModelCollapsed ? '#999' : '#666',
+              background: (!overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? '#666' : '#999',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -821,23 +841,13 @@ const EventSales = () => {
               fontSize: '14px',
             }}
           >
-            Payment Model
+            {(!overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? 'Summary' : 'P&L Report'}
           </button>
           <button
-            onClick={() => {
-              if (paymentMethodsCollapsed) {
-                // Opening Payment Methods - close others
-                setPaymentMethodsCollapsed(false);
-                setOverheadCollapsed(true);
-                setPaymentModelCollapsed(true);
-              } else {
-                // Closing Payment Methods
-                setPaymentMethodsCollapsed(true);
-              }
-            }}
+            onClick={() => setShowRatePanel(prev => !prev)}
             style={{
               padding: '8px 16px',
-              background: paymentMethodsCollapsed ? '#999' : '#666',
+              background: showRatePanel ? '#666' : '#999',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -845,7 +855,7 @@ const EventSales = () => {
               fontSize: '14px',
             }}
           >
-            Payment Methods
+            Rate
           </button>
           <button
             onClick={fetchEvents}
@@ -1151,7 +1161,7 @@ const EventSales = () => {
                           textAlign: 'center',
                         }}
                       >
-                        {isEditMode && col.editable ? (
+                        {isEditMode && col.editable && (!col.lockGroup || !sectionLocks[col.lockGroup]) ? (
                           <input
                             type="text"
                             value={getCurrentValue(event, col.field) ?? ''}
@@ -1295,7 +1305,65 @@ const EventSales = () => {
         </div>
       )}
 
+      {/* Unlock Confirmation Modal */}
+      {unlockConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '24px' }}>Are you sure?</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  setSectionLocks(prev => ({ ...prev, [unlockConfirm]: false }));
+                  setUnlockConfirm(null);
+                }}
+                style={{
+                  padding: '10px 24px',
+                  background: '#22c55e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                }}
+              >
+                Unlock
+              </button>
+              <button
+                onClick={() => setUnlockConfirm(null)}
+                style={{
+                  padding: '10px 24px',
+                  background: '#e5e5e5',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+    </div>
   );
 };
 
