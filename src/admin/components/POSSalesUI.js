@@ -7046,22 +7046,15 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       });
                     }
                     
-                    // Calculate COGS from category breakdown
+                    // Calculate COGS from all non-spillage tabs (same as Event Summary display)
                     let cogsTotal = 0;
-                    if (eventSummary?.categoryBreakdown) {
-                      const breakdown = eventSummary.categoryBreakdown instanceof Map 
-                        ? Object.fromEntries(eventSummary.categoryBreakdown)
-                        : eventSummary.categoryBreakdown;
-                      Object.entries(breakdown).forEach(([category, data]) => {
-                        if (data.items) {
-                          Object.entries(data.items).forEach(([itemName, itemData]) => {
-                            const menuItem = allItems.find(i => i.name === itemName);
-                            const costPerUnit = menuItem?.costPerUnit || 0;
-                            cogsTotal += (itemData.count || 0) * costPerUnit;
-                          });
-                        }
+                    tabs.filter(t => !t.isSpillage).forEach(tab => {
+                      (tab.items || []).forEach(item => {
+                        const menuItem = allItems.find(i => i.name === item.name);
+                        const costPerUnit = menuItem?.costPerUnit || 0;
+                        cogsTotal += costPerUnit;
                       });
-                    }
+                    });
                     
                     // Calculate taxes (30% of sales + tips)
                     const sales = eventSummary?.totalRevenue || 0;

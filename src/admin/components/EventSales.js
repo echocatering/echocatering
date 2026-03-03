@@ -234,6 +234,7 @@ const EventSales = () => {
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: true, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: true, field: 'cogsCost' },
+        { key: 'overheadTotal', label: 'Total', width: '90px', editable: false },
       ]
     },
     {
@@ -389,22 +390,37 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'itemData':
-        // Show count of item lines in itemData string
+        // Show hamburger menu icon for item data
         const itemDataStr = event.itemData || '';
-        const lineCount = itemDataStr ? itemDataStr.split('\n').filter(line => line.trim()).length : 0;
+        const hasData = itemDataStr && itemDataStr.trim().length > 0;
         return (
           <span 
-            style={{ fontSize: '11px', color: lineCount > 0 ? '#22c55e' : '#999', fontWeight: 'bold', cursor: lineCount > 0 ? 'pointer' : 'default' }}
-            title={itemDataStr ? itemDataStr.substring(0, 500) : 'No item data'}
+            style={{ fontSize: '16px', color: hasData ? '#666' : '#ccc', cursor: hasData ? 'pointer' : 'default' }}
+            title={hasData ? 'Click to view item data' : 'No item data'}
             onClick={(e) => {
-              if (lineCount > 0) {
+              if (hasData) {
                 e.stopPropagation();
                 alert(itemDataStr);
               }
             }}>
-            {lineCount > 0 ? `${lineCount}` : '–'}
+            ☰
           </span>
         );
+      case 'overheadTotal':
+        // Sum of all overhead costs, displayed as negative (loss)
+        const overheadSum = 
+          (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
+        return overheadSum > 0 ? (
+          <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+            -${overheadSum.toFixed(2)}
+          </span>
+        ) : '-';
       case 'profit':
         // Profit = Invoice Received + netIncome (if negative, it subtracts)
         const invoiceReceived = getCurrentValue(event, 'amountReceived') || 0;
