@@ -139,7 +139,6 @@ const EventSales = () => {
       }));
       
       setShowSaveConfirm(false);
-      setIsEditMode(false);
       setEditedEvents({});
     } catch (err) {
       console.error('Error saving events:', err);
@@ -942,6 +941,23 @@ const EventSales = () => {
           >
             Data
           </button>
+          {Object.keys(editedEvents).length > 0 && (
+            <button
+              onClick={() => setShowSaveConfirm(true)}
+              style={{
+                padding: '8px 16px',
+                background: '#4caf50',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+              }}
+            >
+              Save Changes
+            </button>
+          )}
           <button
             onClick={fetchEvents}
             style={{
@@ -1053,53 +1069,68 @@ const EventSales = () => {
                     return { timeLabel, itemCount, revenue };
                   });
                 } else if (graphEvent.itemData && graphEvent.itemData.length > 0) {
-                  // Parse itemData field: "itemName-category-timestamp, itemName-category-timestamp, ..."
-                  const itemDataParts = graphEvent.itemData.split(', ').filter(Boolean);
+                  // Parse itemData field - new format: "itemName, category, timeStr, transactionType, cost" per line
+                  const lines = graphEvent.itemData.split('\n').filter(Boolean);
                   const timeIntervals = {};
                   
-                  itemDataParts.forEach(part => {
-                    const lastDashIdx = part.lastIndexOf('-');
-                    if (lastDashIdx === -1) return;
-                    
-                    const timestamp = part.substring(lastDashIdx + 1);
-                    const rest = part.substring(0, lastDashIdx);
-                    const secondLastDash = rest.lastIndexOf('-');
-                    
-                    if (secondLastDash === -1) return;
-                    
-                    const category = rest.substring(secondLastDash + 1).toLowerCase();
-                    const itemName = rest.substring(0, secondLastDash);
-                    
-                    // Round timestamp to 15-minute interval
-                    const date = new Date(timestamp);
-                    if (isNaN(date.getTime())) return;
-                    
-                    const minutes = date.getMinutes();
-                    const roundedMinutes = Math.floor(minutes / 15) * 15;
-                    date.setMinutes(roundedMinutes, 0, 0);
-                    const intervalKey = date.toISOString();
-                    
-                    if (!timeIntervals[intervalKey]) {
-                      timeIntervals[intervalKey] = { items: [], timestamp: date };
+                  lines.forEach(line => {
+                    // New format: "itemName, category, timeStr, transactionType, cost"
+                    const parts = line.split(', ').map(p => p.trim());
+                    if (parts.length >= 3) {
+                      const itemName = parts[0];
+                      const category = (parts[1] || 'other').toLowerCase();
+                      const timeStr = parts[2]; // e.g., "08:14 PM"
+                      const cost = parts.length >= 5 ? parseFloat(parts[4]) || 0 : 0;
+                      
+                      // Use timeStr as interval key (already rounded to minute)
+                      // Round to 15-minute intervals for grouping
+                      const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                      if (timeParts) {
+                        let hours = parseInt(timeParts[1]);
+                        const minutes = parseInt(timeParts[2]);
+                        const ampm = timeParts[3].toUpperCase();
+                        
+                        if (ampm === 'PM' && hours !== 12) hours += 12;
+                        if (ampm === 'AM' && hours === 12) hours = 0;
+                        
+                        const roundedMinutes = Math.floor(minutes / 15) * 15;
+                        const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
+                        
+                        if (!timeIntervals[intervalKey]) {
+                          timeIntervals[intervalKey] = { items: [], hours, minutes: roundedMinutes };
+                        }
+                        
+                        timeIntervals[intervalKey].items.push({ name: itemName, category, cost });
+                      }
                     }
-                    
-                    timeIntervals[intervalKey].items.push({ name: itemName, category });
                   });
                   
                   // Sort intervals by time and process
-                  const sortedIntervals = Object.values(timeIntervals).sort((a, b) => a.timestamp - b.timestamp);
+                  const sortedIntervals = Object.entries(timeIntervals)
+                    .sort((a, b) => {
+                      const aTime = a[1].hours * 60 + a[1].minutes;
+                      const bTime = b[1].hours * 60 + b[1].minutes;
+                      return aTime - bTime;
+                    })
+                    .map(([key, interval]) => interval);
                   
                   processedData = sortedIntervals.map(interval => {
-                    const timeLabel = interval.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const hours = interval.hours;
+                    const minutes = interval.minutes;
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+                    const timeLabel = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
                     
                     let itemCount = 0;
+                    let revenue = 0;
                     interval.items.forEach(item => {
                       if (graphViewMode === 'all' || item.category === graphViewMode || item.category.includes(graphViewMode)) {
                         itemCount += 1;
+                        revenue += item.cost || 0;
                       }
                     });
                     
-                    return { timeLabel, itemCount, revenue: 0 };
+                    return { timeLabel, itemCount, revenue };
                   });
                 } else if (graphEvent.drinkSales && graphEvent.drinkSales.length > 0) {
                   // Use drinkSales as category breakdown (not timeline, but shows something)
@@ -1228,13 +1259,13 @@ const EventSales = () => {
               {events.map((event, idx) => (
                 <tr
                   key={event._id}
-                  onClick={() => { if (!isEditMode) { setSelectedEvent(event._id); setGraphEventId(event._id); setDetailPanelCollapsed(false); } }}
+                  onClick={() => { setSelectedEvent(event._id); setGraphEventId(event._id); setDetailPanelCollapsed(false); }}
                   style={{
                     background: idx % 2 === 0 ? '#fff' : '#fafafa',
-                    cursor: isEditMode ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     transition: 'background 0.15s',
                   }}
-                  onMouseEnter={(e) => !isEditMode && (e.currentTarget.style.background = '#f0f0f0')}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0f0'}
                   onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafafa'}
                 >
                   {allColumns.map((col, colIdx) => {
@@ -1254,7 +1285,7 @@ const EventSales = () => {
                           textAlign: 'center',
                         }}
                       >
-                        {isEditMode && col.editable && (!col.lockGroup || !sectionLocks[col.lockGroup]) ? (
+                        {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] ? (
                           <input
                             type="text"
                             value={getCurrentValue(event, col.field) ?? ''}
