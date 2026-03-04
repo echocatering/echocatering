@@ -275,7 +275,7 @@ const EventSales = () => {
       ]
     },
     {
-      name: 'Overhead',
+      name: 'Expenses',
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
@@ -286,9 +286,7 @@ const EventSales = () => {
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
-        { key: 'salesTax', label: '$Tax', width: '80px', editable: false },
-        { key: 'invoiceTax', label: 'iTax', width: '80px', editable: false },
-        { key: 'overheadTotal', label: 'Total', width: '90px', editable: false },
+        { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'lockOverhead', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'overhead', isLockHeader: true },
       ]
     },
@@ -319,6 +317,7 @@ const EventSales = () => {
       columns: [
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
+        { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
         { key: 'itemData', label: 'DATA', width: '60px', editable: false, field: 'itemData', hidden: !showDataColumn },
       ]
@@ -404,21 +403,16 @@ const EventSales = () => {
       case 'cogs':
         return formatCurrency(event.cogsCost);
       case 'salesTax':
-        // Sales Tax - 8% of total sales (calculated from itemData or totalSales)
-        const totalSalesForTax = event.totalSales || 0;
-        const salesTaxAmount = totalSalesForTax * 0.08;
+        // Tax - 8% of all payment methods (CASH + CREDIT + INVOICE)
+        const parsedForTax = parseItemData(event.itemData);
+        const cashForTax = parsedForTax.paymentTotals.CASH > 0 ? parsedForTax.paymentTotals.CASH : (event.cashTotal || 0);
+        const creditForTax = parsedForTax.paymentTotals.CREDIT > 0 ? parsedForTax.paymentTotals.CREDIT : (event.creditTotal || 0);
+        const invoiceForTax = parsedForTax.paymentTotals.INVOICE > 0 ? parsedForTax.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+        const totalForTax = cashForTax + creditForTax + invoiceForTax;
+        const salesTaxAmount = totalForTax * 0.08;
         return salesTaxAmount > 0 ? (
-          <span style={{ color: '#ef4444' }}>
-            -${salesTaxAmount.toFixed(2)}
-          </span>
-        ) : '-';
-      case 'invoiceTax':
-        // Invoice Tax - 8% of invoice total specifically
-        const invoiceTotalForTax = event.invoiceTotal || 0;
-        const invoiceTaxAmount = invoiceTotalForTax * 0.08;
-        return invoiceTaxAmount > 0 ? (
-          <span style={{ color: '#f59e0b' }}>
-            ${invoiceTaxAmount.toFixed(2)}
+          <span style={{ color: '#666' }}>
+            ${salesTaxAmount.toFixed(2)}
           </span>
         ) : '-';
       case 'tips':
@@ -486,11 +480,13 @@ const EventSales = () => {
         ) : '-';
       case 'invoiceTotal':
         // Invoice payments - use parsed itemData if available, fallback to stored value
+        // Include 8% tax in the displayed amount
         const parsedInvoice = parseItemData(event.itemData);
-        const invoiceTotalAmount = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        return invoiceTotalAmount > 0 ? (
+        const invoiceSubtotal = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+        const invoiceTotalWithTax = invoiceSubtotal * 1.08;
+        return invoiceSubtotal > 0 ? (
           <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
-            ${invoiceTotalAmount.toFixed(2)}
+            ${invoiceTotalWithTax.toFixed(2)}
           </span>
         ) : '-';
       case 'itemData':
@@ -510,10 +506,14 @@ const EventSales = () => {
             ☰
           </span>
         );
-      case 'overheadTotal':
-        // Sum of all overhead costs including sales tax, displayed as negative (loss)
-        const eventSalesTax = (event.totalSales || 0) * 0.08;
-        const overheadSum = 
+      case 'expensesTotal':
+        // Sum of all expenses including tax, displayed as negative (loss)
+        const parsedExpTax = parseItemData(event.itemData);
+        const cashExpTax = parsedExpTax.paymentTotals.CASH > 0 ? parsedExpTax.paymentTotals.CASH : (event.cashTotal || 0);
+        const creditExpTax = parsedExpTax.paymentTotals.CREDIT > 0 ? parsedExpTax.paymentTotals.CREDIT : (event.creditTotal || 0);
+        const invoiceExpTax = parsedExpTax.paymentTotals.INVOICE > 0 ? parsedExpTax.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+        const totalExpTax = (cashExpTax + creditExpTax + invoiceExpTax) * 0.08;
+        const expensesSum = 
           (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
@@ -521,10 +521,10 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0) +
-          eventSalesTax;
-        return overheadSum > 0 ? (
+          totalExpTax;
+        return expensesSum > 0 ? (
           <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-            -${overheadSum.toFixed(2)}
+            -${expensesSum.toFixed(2)}
           </span>
         ) : '-';
       case 'profit':
@@ -1054,9 +1054,12 @@ const EventSales = () => {
                   other: '#6b7280',
                 };
                 
-                // Parse itemData and group by time interval AND category
+                // Parse itemData and group by time interval
+                // For 'all' mode: group by category
+                // For specific category: group by individual item name
                 const timeIntervals = {};
                 const categories = new Set();
+                const itemNames = new Set();
                 
                 if (graphEvent.itemData && graphEvent.itemData.length > 0) {
                   const lines = graphEvent.itemData.split('\n').filter(Boolean);
@@ -1064,9 +1067,15 @@ const EventSales = () => {
                   lines.forEach(line => {
                     const parts = line.split(', ').map(p => p.trim());
                     if (parts.length >= 3) {
+                      const itemName = parts[0];
                       const category = (parts[1] || 'other').toLowerCase();
                       const timeStr = parts[2];
                       const cost = parts.length >= 5 ? parseFloat(parts[4]) || 0 : 0;
+                      
+                      // Skip if not in selected category (when not 'all')
+                      if (graphViewMode !== 'all' && category !== graphViewMode && !category.includes(graphViewMode)) {
+                        return;
+                      }
                       
                       const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
                       if (timeParts) {
@@ -1081,16 +1090,24 @@ const EventSales = () => {
                         const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
                         
                         if (!timeIntervals[intervalKey]) {
-                          timeIntervals[intervalKey] = { hours, minutes: roundedMinutes, categories: {} };
+                          timeIntervals[intervalKey] = { hours, minutes: roundedMinutes, categories: {}, items: {} };
                         }
                         
+                        // Always track categories
                         if (!timeIntervals[intervalKey].categories[category]) {
                           timeIntervals[intervalKey].categories[category] = { count: 0, revenue: 0 };
                         }
-                        
                         timeIntervals[intervalKey].categories[category].count += 1;
                         timeIntervals[intervalKey].categories[category].revenue += cost;
                         categories.add(category);
+                        
+                        // Track individual items for specific category view
+                        if (!timeIntervals[intervalKey].items[itemName]) {
+                          timeIntervals[intervalKey].items[itemName] = { count: 0, revenue: 0, category };
+                        }
+                        timeIntervals[intervalKey].items[itemName].count += 1;
+                        timeIntervals[intervalKey].items[itemName].revenue += cost;
+                        itemNames.add(itemName);
                       }
                     }
                   });
@@ -1112,8 +1129,10 @@ const EventSales = () => {
                   );
                 }
                 
-                // Build data series for each category
-                const categoryList = Array.from(categories).sort();
+                // Determine what to show: categories (all mode) or items (specific category)
+                const isAllMode = graphViewMode === 'all';
+                const seriesList = isAllMode ? Array.from(categories).sort() : Array.from(itemNames).sort();
+                
                 const timeLabels = sortedIntervals.map(([key, interval]) => {
                   const hours = interval.hours;
                   const minutes = interval.minutes;
@@ -1122,12 +1141,20 @@ const EventSales = () => {
                   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
                 });
                 
-                // Get max count across all categories for scaling
+                // Get max count for scaling
                 let maxCount = 1;
                 sortedIntervals.forEach(([key, interval]) => {
-                  Object.values(interval.categories).forEach(cat => {
-                    if (cat.count > maxCount) maxCount = cat.count;
+                  const dataSource = isAllMode ? interval.categories : interval.items;
+                  Object.values(dataSource).forEach(item => {
+                    if (item.count > maxCount) maxCount = item.count;
                   });
+                });
+                
+                // Generate colors for items (when in specific category mode)
+                const itemColors = {};
+                const colorPalette = ['#9333ea', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4', '#84cc16', '#d946ef'];
+                seriesList.forEach((name, idx) => {
+                  itemColors[name] = colorPalette[idx % colorPalette.length];
                 });
                 
                 // SVG dimensions
@@ -1137,19 +1164,14 @@ const EventSales = () => {
                 const graphWidth = width - padding.left - padding.right;
                 const graphHeight = height - padding.top - padding.bottom;
                 
-                // Filter categories based on view mode
-                const visibleCategories = graphViewMode === 'all' 
-                  ? categoryList 
-                  : categoryList.filter(c => c === graphViewMode || c.includes(graphViewMode));
-                
                 return (
                   <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
                     {/* Legend */}
                     <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      {visibleCategories.map(cat => (
-                        <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{ width: '12px', height: '3px', background: categoryColors[cat] || '#6b7280', borderRadius: '2px' }} />
-                          <span style={{ fontSize: '12px', color: '#666', textTransform: 'capitalize' }}>{cat}</span>
+                      {seriesList.map(name => (
+                        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ width: '12px', height: '3px', background: isAllMode ? (categoryColors[name] || '#6b7280') : itemColors[name], borderRadius: '2px' }} />
+                          <span style={{ fontSize: '12px', color: '#666', textTransform: isAllMode ? 'capitalize' : 'none' }}>{name}</span>
                         </div>
                       ))}
                     </div>
@@ -1173,32 +1195,36 @@ const EventSales = () => {
                         <line key={i} x1={padding.left} y1={height - padding.bottom - pct * graphHeight} x2={width - padding.right} y2={height - padding.bottom - pct * graphHeight} stroke="#f0f0f0" strokeWidth="1" />
                       ))}
                       
-                      {/* Lines for each category */}
-                      {visibleCategories.map(cat => {
+                      {/* Lines for each series (categories in 'all' mode, items in specific category mode) */}
+                      {seriesList.map(seriesName => {
                         const points = sortedIntervals.map(([key, interval], idx) => {
                           const x = padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth;
-                          const count = interval.categories[cat]?.count || 0;
+                          const dataSource = isAllMode ? interval.categories : interval.items;
+                          const count = dataSource[seriesName]?.count || 0;
                           const y = height - padding.bottom - (count / maxCount) * graphHeight;
                           return `${x},${y}`;
                         }).join(' ');
                         
+                        const lineColor = isAllMode ? (categoryColors[seriesName] || '#6b7280') : itemColors[seriesName];
+                        
                         return (
-                          <g key={cat}>
+                          <g key={seriesName}>
                             <polyline
                               points={points}
                               fill="none"
-                              stroke={categoryColors[cat] || '#6b7280'}
+                              stroke={lineColor}
                               strokeWidth="2"
                               strokeLinejoin="round"
                             />
                             {/* Data points */}
                             {sortedIntervals.map(([key, interval], idx) => {
                               const x = padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth;
-                              const count = interval.categories[cat]?.count || 0;
+                              const dataSource = isAllMode ? interval.categories : interval.items;
+                              const count = dataSource[seriesName]?.count || 0;
                               const y = height - padding.bottom - (count / maxCount) * graphHeight;
                               return count > 0 ? (
-                                <circle key={idx} cx={x} cy={y} r="4" fill={categoryColors[cat] || '#6b7280'}>
-                                  <title>{`${cat}: ${count} items`}</title>
+                                <circle key={idx} cx={x} cy={y} r="4" fill={lineColor}>
+                                  <title>{`${seriesName}: ${count} items`}</title>
                                 </circle>
                               ) : null;
                             })}

@@ -139,21 +139,21 @@ function generateReceiptHTML(data) {
       <div class="totals">
         <div class="total-row">
           <span>Subtotal</span>
-          <span>— $${(subtotal || 0).toFixed(2)}</span>
+          <span> — $${(subtotal || 0).toFixed(2)}</span>
         </div>
         <div class="total-row">
           <span>Tax (8%)</span>
-          <span>— $${((subtotal || 0) * 0.08).toFixed(2)}</span>
+          <span> — $${((subtotal || 0) * 0.08).toFixed(2)}</span>
         </div>
         ${tip > 0 ? `
           <div class="total-row">
             <span>Tip</span>
-            <span>— $${tip.toFixed(2)}</span>
+            <span> — $${tip.toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="total-row final">
           <span>Total</span>
-          <span>— $${(total || 0).toFixed(2)}</span>
+          <span> — $${(total || 0).toFixed(2)}</span>
         </div>
       </div>
       

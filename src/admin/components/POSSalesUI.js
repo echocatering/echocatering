@@ -878,7 +878,16 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   alignContent: 'start'
                 }}>
                   {/* Tab Buttons - show archived or unarchived based on toggle, exclude spillage tab (has its own button) */}
-                  {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived')).map((tab) => {
+                  {/* When showing archived tabs, sort invoice tabs first */}
+                  {tabs.filter(tab => !tab.isSpillage && (showArchivedTabs ? tab.status === 'archived' : tab.status !== 'archived'))
+                    .sort((a, b) => {
+                      if (!showArchivedTabs) return 0; // Don't sort unpaid tabs
+                      // Invoice tabs come first
+                      if (a.isInvoice && !b.isInvoice) return -1;
+                      if (!a.isInvoice && b.isInvoice) return 1;
+                      return 0;
+                    })
+                    .map((tab) => {
                     // Determine tab colors based on status
                     const isInvoiced = tab.isInvoice && tab.status === 'archived';
                     const isArchived = tab.status === 'archived';
@@ -4936,7 +4945,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                     items: checkoutItems,
                                     subtotal: checkoutSubtotal,
                                     tip: selectedTipAmount,
-                                    total: checkoutSubtotal + selectedTipAmount,
+                                    total: (checkoutSubtotal * 1.08) + selectedTipAmount,
                                     paymentMethod: paymentMethod,
                                     cardBrand: cardBrand,
                                     cardLast4: cardLast4,
@@ -5134,7 +5143,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                     items: checkoutItems,
                                     subtotal: checkoutSubtotal,
                                     tip: selectedTipAmount,
-                                    total: checkoutSubtotal + selectedTipAmount,
+                                    total: (checkoutSubtotal * 1.08) + selectedTipAmount,
                                     paymentMethod: paymentMethod,
                                     cardBrand: cardBrand,
                                     cardLast4: cardLast4,
@@ -6938,7 +6947,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               {/* Operating Expenses */}
               <div style={{ background: '#fff', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
                 <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Overhead</span>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>Expenses</span>
                 </div>
                 {/* Fixed costs */}
                 {parseFloat(eventSetupData.accommodationCost) > 0 && (
