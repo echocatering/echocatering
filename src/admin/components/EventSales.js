@@ -1044,46 +1044,30 @@ const EventSales = () => {
                   );
                 }
                 
-                // Try to use timeline data first, otherwise parse itemData
-                let processedData = [];
+                // Category colors
+                const categoryColors = {
+                  cocktails: '#9333ea',
+                  mocktails: '#22c55e',
+                  beer: '#f59e0b',
+                  wine: '#ef4444',
+                  spirits: '#3b82f6',
+                  other: '#6b7280',
+                };
                 
-                if (graphEvent.timeline && graphEvent.timeline.length > 0) {
-                  // Use existing timeline data
-                  processedData = graphEvent.timeline.map(interval => {
-                    const startTime = new Date(interval.intervalStart);
-                    const timeLabel = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                    
-                    let itemCount = 0;
-                    let revenue = 0;
-                    
-                    if (interval.items && interval.items.length > 0) {
-                      interval.items.forEach(item => {
-                        const category = (item.category || '').toLowerCase();
-                        if (graphViewMode === 'all' || category === graphViewMode || category.includes(graphViewMode)) {
-                          itemCount += item.quantity || 1;
-                          revenue += item.revenue || 0;
-                        }
-                      });
-                    }
-                    
-                    return { timeLabel, itemCount, revenue };
-                  });
-                } else if (graphEvent.itemData && graphEvent.itemData.length > 0) {
-                  // Parse itemData field - new format: "itemName, category, timeStr, transactionType, cost" per line
+                // Parse itemData and group by time interval AND category
+                const timeIntervals = {};
+                const categories = new Set();
+                
+                if (graphEvent.itemData && graphEvent.itemData.length > 0) {
                   const lines = graphEvent.itemData.split('\n').filter(Boolean);
-                  const timeIntervals = {};
                   
                   lines.forEach(line => {
-                    // New format: "itemName, category, timeStr, transactionType, cost"
                     const parts = line.split(', ').map(p => p.trim());
                     if (parts.length >= 3) {
-                      const itemName = parts[0];
                       const category = (parts[1] || 'other').toLowerCase();
-                      const timeStr = parts[2]; // e.g., "08:14 PM"
+                      const timeStr = parts[2];
                       const cost = parts.length >= 5 ? parseFloat(parts[4]) || 0 : 0;
                       
-                      // Use timeStr as interval key (already rounded to minute)
-                      // Round to 15-minute intervals for grouping
                       const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
                       if (timeParts) {
                         let hours = parseInt(timeParts[1]);
@@ -1097,53 +1081,30 @@ const EventSales = () => {
                         const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
                         
                         if (!timeIntervals[intervalKey]) {
-                          timeIntervals[intervalKey] = { items: [], hours, minutes: roundedMinutes };
+                          timeIntervals[intervalKey] = { hours, minutes: roundedMinutes, categories: {} };
                         }
                         
-                        timeIntervals[intervalKey].items.push({ name: itemName, category, cost });
+                        if (!timeIntervals[intervalKey].categories[category]) {
+                          timeIntervals[intervalKey].categories[category] = { count: 0, revenue: 0 };
+                        }
+                        
+                        timeIntervals[intervalKey].categories[category].count += 1;
+                        timeIntervals[intervalKey].categories[category].revenue += cost;
+                        categories.add(category);
                       }
                     }
                   });
-                  
-                  // Sort intervals by time and process
-                  const sortedIntervals = Object.entries(timeIntervals)
-                    .sort((a, b) => {
-                      const aTime = a[1].hours * 60 + a[1].minutes;
-                      const bTime = b[1].hours * 60 + b[1].minutes;
-                      return aTime - bTime;
-                    })
-                    .map(([key, interval]) => interval);
-                  
-                  processedData = sortedIntervals.map(interval => {
-                    const hours = interval.hours;
-                    const minutes = interval.minutes;
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
-                    const timeLabel = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-                    
-                    let itemCount = 0;
-                    let revenue = 0;
-                    interval.items.forEach(item => {
-                      if (graphViewMode === 'all' || item.category === graphViewMode || item.category.includes(graphViewMode)) {
-                        itemCount += 1;
-                        revenue += item.cost || 0;
-                      }
-                    });
-                    
-                    return { timeLabel, itemCount, revenue };
-                  });
-                } else if (graphEvent.drinkSales && graphEvent.drinkSales.length > 0) {
-                  // Use drinkSales as category breakdown (not timeline, but shows something)
-                  processedData = graphEvent.drinkSales
-                    .filter(item => graphViewMode === 'all' || (item.category || '').toLowerCase() === graphViewMode)
-                    .map(item => ({
-                      timeLabel: item.name || item.category || 'Unknown',
-                      itemCount: item.quantity || 0,
-                      revenue: item.revenue || 0,
-                    }));
                 }
                 
-                if (processedData.length === 0) {
+                // Sort intervals by time
+                const sortedIntervals = Object.entries(timeIntervals)
+                  .sort((a, b) => {
+                    const aTime = a[1].hours * 60 + a[1].minutes;
+                    const bTime = b[1].hours * 60 + b[1].minutes;
+                    return aTime - bTime;
+                  });
+                
+                if (sortedIntervals.length === 0) {
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
                       No sales data available for this event
@@ -1151,34 +1112,115 @@ const EventSales = () => {
                   );
                 }
                 
-                const maxCount = Math.max(...processedData.map(d => d.itemCount), 1);
+                // Build data series for each category
+                const categoryList = Array.from(categories).sort();
+                const timeLabels = sortedIntervals.map(([key, interval]) => {
+                  const hours = interval.hours;
+                  const minutes = interval.minutes;
+                  const ampm = hours >= 12 ? 'PM' : 'AM';
+                  const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+                  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+                });
+                
+                // Get max count across all categories for scaling
+                let maxCount = 1;
+                sortedIntervals.forEach(([key, interval]) => {
+                  Object.values(interval.categories).forEach(cat => {
+                    if (cat.count > maxCount) maxCount = cat.count;
+                  });
+                });
+                
+                // SVG dimensions
+                const width = Math.max(sortedIntervals.length * 60, 400);
+                const height = 280;
+                const padding = { top: 20, right: 20, bottom: 50, left: 40 };
+                const graphWidth = width - padding.left - padding.right;
+                const graphHeight = height - padding.top - padding.bottom;
+                
+                // Filter categories based on view mode
+                const visibleCategories = graphViewMode === 'all' 
+                  ? categoryList 
+                  : categoryList.filter(c => c === graphViewMode || c.includes(graphViewMode));
                 
                 return (
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '100%', paddingBottom: '30px' }}>
-                    {processedData.map((data, idx) => (
-                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
-                          <div
-                            style={{
-                              width: '100%',
-                              height: `${(data.itemCount / maxCount) * 100}%`,
-                              minHeight: data.itemCount > 0 ? '4px' : '0',
-                              background: graphViewMode === 'all' ? '#800080' : 
-                                graphViewMode === 'cocktails' ? '#9333ea' :
-                                graphViewMode === 'mocktails' ? '#22c55e' :
-                                graphViewMode === 'beer' ? '#f59e0b' :
-                                graphViewMode === 'wine' ? '#ef4444' : '#3b82f6',
-                              borderRadius: '2px 2px 0 0',
-                              transition: 'height 0.3s ease',
-                            }}
-                            title={`${data.itemCount} items${data.revenue > 0 ? ` - $${data.revenue.toFixed(2)}` : ''}`}
-                          />
+                  <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
+                    {/* Legend */}
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      {visibleCategories.map(cat => (
+                        <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ width: '12px', height: '3px', background: categoryColors[cat] || '#6b7280', borderRadius: '2px' }} />
+                          <span style={{ fontSize: '12px', color: '#666', textTransform: 'capitalize' }}>{cat}</span>
                         </div>
-                        <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>
-                          {data.timeLabel}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    
+                    {/* SVG Line Graph */}
+                    <svg width={width} height={height} style={{ display: 'block' }}>
+                      {/* Y-axis */}
+                      <line x1={padding.left} y1={padding.top} x2={padding.left} y2={height - padding.bottom} stroke="#ddd" strokeWidth="1" />
+                      {/* X-axis */}
+                      <line x1={padding.left} y1={height - padding.bottom} x2={width - padding.right} y2={height - padding.bottom} stroke="#ddd" strokeWidth="1" />
+                      
+                      {/* Y-axis labels */}
+                      {[0, Math.ceil(maxCount / 2), maxCount].map((val, i) => (
+                        <text key={i} x={padding.left - 8} y={height - padding.bottom - (val / maxCount) * graphHeight} fontSize="10" fill="#999" textAnchor="end" dominantBaseline="middle">
+                          {val}
+                        </text>
+                      ))}
+                      
+                      {/* Grid lines */}
+                      {[0.25, 0.5, 0.75, 1].map((pct, i) => (
+                        <line key={i} x1={padding.left} y1={height - padding.bottom - pct * graphHeight} x2={width - padding.right} y2={height - padding.bottom - pct * graphHeight} stroke="#f0f0f0" strokeWidth="1" />
+                      ))}
+                      
+                      {/* Lines for each category */}
+                      {visibleCategories.map(cat => {
+                        const points = sortedIntervals.map(([key, interval], idx) => {
+                          const x = padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth;
+                          const count = interval.categories[cat]?.count || 0;
+                          const y = height - padding.bottom - (count / maxCount) * graphHeight;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        
+                        return (
+                          <g key={cat}>
+                            <polyline
+                              points={points}
+                              fill="none"
+                              stroke={categoryColors[cat] || '#6b7280'}
+                              strokeWidth="2"
+                              strokeLinejoin="round"
+                            />
+                            {/* Data points */}
+                            {sortedIntervals.map(([key, interval], idx) => {
+                              const x = padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth;
+                              const count = interval.categories[cat]?.count || 0;
+                              const y = height - padding.bottom - (count / maxCount) * graphHeight;
+                              return count > 0 ? (
+                                <circle key={idx} cx={x} cy={y} r="4" fill={categoryColors[cat] || '#6b7280'}>
+                                  <title>{`${cat}: ${count} items`}</title>
+                                </circle>
+                              ) : null;
+                            })}
+                          </g>
+                        );
+                      })}
+                      
+                      {/* X-axis labels */}
+                      {timeLabels.map((label, idx) => (
+                        <text
+                          key={idx}
+                          x={padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth}
+                          y={height - padding.bottom + 15}
+                          fontSize="10"
+                          fill="#666"
+                          textAnchor="middle"
+                          transform={`rotate(-45, ${padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth}, ${height - padding.bottom + 15})`}
+                        >
+                          {label}
+                        </text>
+                      ))}
+                    </svg>
                   </div>
                 );
               })() : (
@@ -1285,7 +1327,7 @@ const EventSales = () => {
                           textAlign: 'center',
                         }}
                       >
-                        {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] ? (
+                        {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] && col.key !== 'paymentModel' ? (
                           <input
                             type="text"
                             value={getCurrentValue(event, col.field) ?? ''}
