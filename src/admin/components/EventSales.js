@@ -655,33 +655,6 @@ const EventSales = () => {
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
 
-          {/* Items Sold */}
-          {event.drinkSales && event.drinkSales.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Items Sold</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item</th>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Category</th>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Qty</th>
-                    <th style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {event.drinkSales.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{item.name}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.category}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #eee' }}>{formatCurrency(item.revenue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
           {/* Glassware (Rox, Tumbl) - only show if there's data with non-zero values */}
           {event.glassware && event.glassware.filter(g => g.sent > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0).length > 0 && (
             <div style={{ marginBottom: '20px' }}>
@@ -732,37 +705,6 @@ const EventSales = () => {
                     {(event.iceBlocksBrought || 0) - (event.iceBlocksReturned || 0)}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Timeline (15-min intervals) */}
-          {event.timeline && event.timeline.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Sales Timeline</h3>
-              <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px' }}>
-                {event.timeline.map((interval, idx) => {
-                  const startTime = new Date(interval.intervalStart);
-                  const endTime = new Date(interval.intervalEnd);
-                  return (
-                    <div key={idx} style={{ padding: '12px', borderBottom: idx < event.timeline.length - 1 ? '1px solid #eee' : 'none' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#800080' }}>
-                        {startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      {interval.items && interval.items.length > 0 ? (
-                        <div style={{ paddingLeft: '12px' }}>
-                          {interval.items.map((item, itemIdx) => (
-                            <div key={itemIdx} style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
-                              {item.name} - {item.quantity}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '13px', color: '#999', fontStyle: 'italic', paddingLeft: '12px' }}>No sales</div>
-                      )}
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}
@@ -1026,7 +968,7 @@ const EventSales = () => {
                         fontSize: '11px',
                       }}
                     >
-                      Show Details
+                      Inventory
                     </button>
                   )}
                 </div>
@@ -1054,13 +996,41 @@ const EventSales = () => {
                   other: '#6b7280',
                 };
                 
-                // Parse itemData and group by time interval
-                // For 'all' mode: group by category
-                // For specific category: group by individual item name
+                // Parse event start and end times to generate all 15-minute intervals
+                const parseTimeStr = (timeStr) => {
+                  if (!timeStr) return null;
+                  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+                  if (!match) return null;
+                  let hours = parseInt(match[1]);
+                  const minutes = parseInt(match[2]);
+                  const ampm = match[3]?.toUpperCase();
+                  if (ampm === 'PM' && hours !== 12) hours += 12;
+                  if (ampm === 'AM' && hours === 12) hours = 0;
+                  return hours * 60 + minutes;
+                };
+                
+                const eventStartMinutes = parseTimeStr(graphEvent.startTime);
+                const eventEndMinutes = parseTimeStr(graphEvent.endTime);
+                
+                // Generate all 15-minute intervals for the event duration
                 const timeIntervals = {};
                 const categories = new Set();
                 const itemNames = new Set();
                 
+                if (eventStartMinutes !== null && eventEndMinutes !== null) {
+                  // Round start down to nearest 15 min, end up to nearest 15 min
+                  const startInterval = Math.floor(eventStartMinutes / 15) * 15;
+                  const endInterval = Math.ceil(eventEndMinutes / 15) * 15;
+                  
+                  for (let mins = startInterval; mins <= endInterval; mins += 15) {
+                    const hours = Math.floor(mins / 60);
+                    const minutes = mins % 60;
+                    const intervalKey = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                    timeIntervals[intervalKey] = { hours, minutes, categories: {}, items: {} };
+                  }
+                }
+                
+                // Parse itemData and populate intervals
                 if (graphEvent.itemData && graphEvent.itemData.length > 0) {
                   const lines = graphEvent.itemData.split('\n').filter(Boolean);
                   
@@ -1089,6 +1059,7 @@ const EventSales = () => {
                         const roundedMinutes = Math.floor(minutes / 15) * 15;
                         const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
                         
+                        // Create interval if it doesn't exist (for sales outside event time range)
                         if (!timeIntervals[intervalKey]) {
                           timeIntervals[intervalKey] = { hours, minutes: roundedMinutes, categories: {}, items: {} };
                         }
@@ -1124,7 +1095,7 @@ const EventSales = () => {
                 if (sortedIntervals.length === 0) {
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
-                      No sales data available for this event
+                      No event time data available
                     </div>
                   );
                 }
@@ -1157,17 +1128,17 @@ const EventSales = () => {
                   itemColors[name] = colorPalette[idx % colorPalette.length];
                 });
                 
-                // SVG dimensions
-                const width = Math.max(sortedIntervals.length * 60, 400);
-                const height = 280;
+                // SVG dimensions - use full container width
+                const width = Math.max(sortedIntervals.length * 50, 400);
+                const height = 220;
                 const padding = { top: 20, right: 20, bottom: 50, left: 40 };
                 const graphWidth = width - padding.left - padding.right;
                 const graphHeight = height - padding.top - padding.bottom;
                 
                 return (
-                  <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
+                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                     {/* Legend */}
-                    <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
                       {seriesList.map(name => (
                         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{ width: '12px', height: '3px', background: isAllMode ? (categoryColors[name] || '#6b7280') : itemColors[name], borderRadius: '2px' }} />
@@ -1176,8 +1147,8 @@ const EventSales = () => {
                       ))}
                     </div>
                     
-                    {/* SVG Line Graph */}
-                    <svg width={width} height={height} style={{ display: 'block' }}>
+                    {/* SVG Line Graph - full width */}
+                    <svg width="100%" height={height} viewBox={`0 0 ${Math.max(sortedIntervals.length * 50, 400)} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block', flex: 1 }}>
                       {/* Y-axis */}
                       <line x1={padding.left} y1={padding.top} x2={padding.left} y2={height - padding.bottom} stroke="#ddd" strokeWidth="1" />
                       {/* X-axis */}
@@ -1327,7 +1298,7 @@ const EventSales = () => {
               {events.map((event, idx) => (
                 <tr
                   key={event._id}
-                  onClick={() => { setSelectedEvent(event._id); setGraphEventId(event._id); setDetailPanelCollapsed(false); }}
+                  onClick={() => { setSelectedEvent(event._id); setGraphEventId(event._id); }}
                   style={{
                     background: idx % 2 === 0 ? '#fff' : '#fafafa',
                     cursor: 'pointer',
