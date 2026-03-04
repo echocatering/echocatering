@@ -5259,7 +5259,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     Thank you!
                   </div>
                   <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
-                    ${checkoutSubtotal.toFixed(2)}
+                    ${(checkoutSubtotal * 1.08).toFixed(2)}
                   </div>
                 </div>
               ) : paymentMethod === 'cash' && checkoutStage === 'cash' && !showTabView ? (
@@ -5349,7 +5349,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                         Thank you!
                       </div>
                       <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
-                        ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
+                        ${(checkoutSubtotal * 1.08 + selectedTipAmount).toFixed(2)}
                       </div>
                     </>
                   ) : (
@@ -5358,7 +5358,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       {/* Total amount at top */}
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
-                          ${(checkoutSubtotal + selectedTipAmount).toFixed(2)}
+                          ${(checkoutSubtotal * 1.08 + selectedTipAmount).toFixed(2)}
                         </div>
                         {selectedTipAmount > 0 && (
                           <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginTop: '0.5vh' }}>
@@ -5499,10 +5499,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   height: '100%',
                   overflow: 'hidden',
                 }}>
-                  {/* Large Total Display */}
+                  {/* Large Total Display (including 8% tax) */}
                   <div style={{ textAlign: 'center', marginBottom: '1vh', flexShrink: 0 }}>
                     <div style={{ fontSize: 'clamp(28px, 5vh, 42px)', fontWeight: '700', color: '#333' }}>
-                      ${checkoutSubtotal.toFixed(2)}
+                      ${(checkoutSubtotal * 1.08).toFixed(2)}
                     </div>
                     <div style={{ fontSize: 'clamp(12px, 1.8vh, 16px)', color: '#888', marginTop: '0.3vh' }}>
                       Add a tip
@@ -7155,20 +7155,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       taxes: taxes
                     };
                     
-                    // Add spillage items to itemData before saving
-                    const spillageTabForItemData = tabs.find(t => t.isSpillage);
-                    let finalItemData = eventSetupData.itemData || '';
-                    if (spillageTabForItemData && spillageTabForItemData.items && spillageTabForItemData.items.length > 0) {
-                      const spillageItemData = spillageTabForItemData.items.map(item => {
-                        const itemName = item.name || 'Unknown';
-                        const category = item.category || 'other';
-                        const timestamp = item.addedAt || item.timestamp || new Date().toISOString();
+                    // Build itemData from all paid/archived tabs (excluding spillage)
+                    // Format: "itemName, category, timeStr, transactionType, cost"
+                    const itemDataParts = [];
+                    tabs.filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived')).forEach(tab => {
+                      const txnType = (tab.paymentMethod || 'credit').toUpperCase();
+                      (tab.items || []).forEach(item => {
+                        const itemName = (item.name || 'Unknown').replace(/,/g, ' ').trim();
+                        const category = (item.category || 'other').toLowerCase();
+                        const timestamp = item.addedAt || item.timestamp || tab.paidAt || new Date().toISOString();
                         const timeStr = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                        const cost = (item.price || item.finalPrice || 0).toFixed(2);
-                        return `${itemName}, ${category}, ${timeStr}, SPILLAGE, ${cost}`;
-                      }).join('\n');
-                      finalItemData = finalItemData ? `${finalItemData}\n${spillageItemData}` : spillageItemData;
-                    }
+                        const cost = (parseFloat(item.price) || 0).toFixed(2);
+                        itemDataParts.push(`${itemName}, ${category}, ${timeStr}, ${txnType}, ${cost}`);
+                      });
+                    });
+                    const finalItemData = itemDataParts.join('\n');
                     
                     // Update eventSetupData with final itemData
                     const finalSetupData = { ...eventSetupData, itemData: finalItemData };
@@ -7978,7 +7979,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 Payment Method
               </h2>
               <p style={{ color: '#888', marginBottom: '24px', fontSize: '16px' }}>
-                Total: ${checkoutSubtotal.toFixed(2)}
+                Total: ${(checkoutSubtotal * 1.08).toFixed(2)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button

@@ -396,6 +396,9 @@ router.post('/finalize', async (req, res) => {
       const itemDataParts = [];
       
       for (const tab of tabs) {
+        // Skip spillage tabs - they don't count toward payment totals
+        if (tab.isSpillage) continue;
+        
         if (tab.status === 'archived' || tab.status === 'paid') {
           // Calculate tab total from items
           const tabTotal = (tab.items || []).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
