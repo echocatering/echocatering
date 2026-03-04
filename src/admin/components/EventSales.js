@@ -582,8 +582,9 @@ const EventSales = () => {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
             <input
-              type="number"
-              value={received}
+              type="text"
+              inputMode="decimal"
+              value={received === 0 ? '' : received}
               onChange={(e) => {
                 e.stopPropagation();
                 const newReceived = parseFloat(e.target.value) || 0;
@@ -596,16 +597,32 @@ const EventSales = () => {
                   handleFieldChange(event._id, 'totalTips', baseTips + extraTip);
                 }
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Clear 0 on click
+                if (parseFloat(e.target.value) === 0 || e.target.value === '') {
+                  e.target.value = '';
+                }
+              }}
+              onFocus={(e) => {
+                // Clear 0 on focus
+                if (parseFloat(e.target.value) === 0 || e.target.value === '0') {
+                  e.target.value = '';
+                }
+              }}
               style={{
                 width: '80px',
                 padding: '4px 6px',
-                border: '1px solid #ddd',
+                border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
                 textAlign: 'center',
                 fontWeight: 'bold',
                 color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
+                background: 'transparent',
+                outline: 'none',
+                MozAppearance: 'textfield',
+                WebkitAppearance: 'none',
               }}
             />
             {tipAdjustment > 0 && (
