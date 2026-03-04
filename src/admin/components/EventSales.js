@@ -16,6 +16,7 @@ const EventSales = () => {
   const [overheadCollapsed, setOverheadCollapsed] = useState(true);
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
+  const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
   
   // Pricing variables for invoice calculations - load from localStorage
   const [pricingVars, setPricingVars] = useState(() => {
@@ -279,8 +280,8 @@ const EventSales = () => {
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
-        { key: 'accommodation', label: 'Accommodation', width: '110px', editable: true, field: 'accommodationCost', lockGroup: 'overhead' },
-        { key: 'transportation', label: 'Transportation', width: '110px', editable: true, field: 'travelCost', lockGroup: 'overhead' },
+        { key: 'accommodation', label: 'Accom.', width: '80px', editable: true, field: 'accommodationCost', lockGroup: 'overhead' },
+        { key: 'transportation', label: 'Transp.', width: '80px', editable: true, field: 'travelCost', lockGroup: 'overhead' },
         { key: 'permit', label: 'Permit', width: '80px', editable: true, field: 'permitCost', lockGroup: 'overhead' },
         { key: 'insurance', label: 'Insurance', width: '90px', editable: true, field: 'insuranceCost', lockGroup: 'overhead' },
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
@@ -320,7 +321,7 @@ const EventSales = () => {
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
-        { key: 'itemData', label: 'DATA', width: '60px', editable: false, field: 'itemData', hidden: false },
+        { key: 'itemData', label: 'DATA', width: '60px', editable: false, field: 'itemData', hidden: !showDataColumn },
       ]
     }
   ];
@@ -926,6 +927,20 @@ const EventSales = () => {
             }}
           >
             Rate
+          </button>
+          <button
+            onClick={() => setShowDataColumn(prev => !prev)}
+            style={{
+              padding: '8px 16px',
+              background: showDataColumn ? '#666' : '#999',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Data
           </button>
           <button
             onClick={fetchEvents}

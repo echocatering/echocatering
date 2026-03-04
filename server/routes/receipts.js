@@ -21,7 +21,19 @@ try {
  * Generate receipt HTML
  */
 function generateReceiptHTML(data) {
-  const { items, subtotal, tip, total, paymentMethod, tabId } = data;
+  const { items, subtotal, tip, total, paymentMethod, tabId, cardBrand, cardLast4 } = data;
+  
+  // Format payment method display
+  let paymentDisplay = 'Payment method: Card';
+  if (paymentMethod === 'cash') {
+    paymentDisplay = 'Payment method: Cash';
+  } else if (paymentMethod === 'credit' && cardBrand && cardLast4) {
+    // Capitalize card brand (visa -> Visa, mastercard -> Mastercard)
+    const brandName = cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1).toLowerCase();
+    paymentDisplay = `Payment method: ${brandName} ending in ${cardLast4}`;
+  } else if (paymentMethod === 'invoice') {
+    paymentDisplay = 'Payment method: Invoice';
+  }
   const date = new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'long', 
@@ -119,7 +131,7 @@ function generateReceiptHTML(data) {
         ${(items || []).map(item => `
           <div class="item">
             <span class="item-name">${item.name}${item.modifiers?.length ? ` (${item.modifiers.map(m => m.name).join(', ')})` : ''}</span>
-            <span class="item-price">— $${(parseFloat(item.price) || 0).toFixed(2)}</span>
+            <span class="item-price"> — $${(parseFloat(item.price) || 0).toFixed(2)}</span>
           </div>
         `).join('')}
       </div>
@@ -146,7 +158,7 @@ function generateReceiptHTML(data) {
       </div>
       
       <div class="payment-method">
-        Paid with ${paymentMethod ? paymentMethod.toUpperCase() : 'CARD'}
+        ${paymentDisplay}
       </div>
       
       <div class="footer">

@@ -2577,6 +2577,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   const [checkoutStage, setCheckoutStage] = useState(''); // Track checkout stage: 'tip', 'tab', 'payment', 'processing', 'success', 'failed'
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false); // Show Credit/Cash/Invoice popup
   const [paymentMethod, setPaymentMethod] = useState(''); // 'credit', 'cash', 'invoice'
+  const [cardBrand, setCardBrand] = useState(''); // Card brand from Stripe (visa, mastercard, etc.)
+  const [cardLast4, setCardLast4] = useState(''); // Last 4 digits of card
   const [cashTendered, setCashTendered] = useState(''); // Amount of cash given by customer
   
   // Receipt prompt state (horizontal view after payment success)
@@ -2724,6 +2726,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       setCheckoutMode(false);
     }
     
+    // Keep checkoutMode true on vertical for receipt-related stages so notification shows
+    if (isVerticalDevice && (data.stage === 'receipt_request' || data.stage === 'receipt_sending' || data.stage === 'receipt_sent' || data.stage === 'receipt_canceled')) {
+      setCheckoutMode(true);
+    }
+    
     // Update payment method if provided
     if (data.paymentMethod) {
       setPaymentMethod(data.paymentMethod);
@@ -2833,6 +2840,27 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
           setPaymentStatus('payment_success');
           setCheckoutStage('success');
           setPaymentMethod('credit');
+          
+          // Build itemData from tab items before marking as paid
+          if (checkoutTabInfoRef.current) {
+            const tab = checkoutTabInfoRef.current;
+            if (tab.items && tab.items.length > 0) {
+              const itemDataStr = tab.items.map(item => {
+                const itemName = item.name || 'Unknown';
+                const category = item.category || 'other';
+                const timestamp = item.addedAt || item.timestamp || new Date().toISOString();
+                const timeStr = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                const cost = (item.price || item.finalPrice || 0).toFixed(2);
+                return `${itemName}, ${category}, ${timeStr}, CREDIT, ${cost}`;
+              }).join('\n');
+              if (itemDataStr) {
+                setEventSetupData(prev => ({
+                  ...prev,
+                  itemData: prev.itemData ? `${prev.itemData}\n${itemDataStr}` : itemDataStr
+                }));
+              }
+            }
+          }
           
           // Mark tab as paid (use ref to get current value)
           if (checkoutTabInfoRef.current?.id) {
@@ -4227,6 +4255,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
             setPaymentStatusMessage(`Payment successful! Transaction: ${result.transactionId || 'N/A'}`);
             updateCheckoutStage('success', 'credit'); // Show "Payment Complete" on vertical screen with payment method
             
+            // Store card details from Stripe result for receipt
+            if (result.cardBrand) setCardBrand(result.cardBrand);
+            if (result.cardLast4) setCardLast4(result.cardLast4);
+            
             // Build itemData from tab items before marking as paid
             if (checkoutTabInfo) {
               const itemDataStr = buildItemDataFromTab(checkoutTabInfo, 'CREDIT');
@@ -4864,6 +4896,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                     tip: selectedTipAmount,
                                     total: checkoutSubtotal + selectedTipAmount,
                                     paymentMethod: paymentMethod,
+                                    cardBrand: cardBrand,
+                                    cardLast4: cardLast4,
                                   }),
                                 });
                                 if (!response.ok) throw new Error('Failed to send receipt');
@@ -4882,6 +4916,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
+                              setCardBrand('');
+                              setCardLast4('');
                               // Clear vertical view status after 1.5 seconds
                               setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
@@ -5058,6 +5094,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                                     tip: selectedTipAmount,
                                     total: checkoutSubtotal + selectedTipAmount,
                                     paymentMethod: paymentMethod,
+                                    cardBrand: cardBrand,
+                                    cardLast4: cardLast4,
                                   }),
                                 });
                                 if (!response.ok) throw new Error('Failed to send receipt');
@@ -5076,6 +5114,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                               setShowSymbolKeypad(false);
                               setCheckoutMode(false);
                               setCheckoutStage('');
+                              setCardBrand('');
+                              setCardLast4('');
                               // Clear vertical view status after 1.5 seconds
                               setTimeout(() => sendCheckoutStage(''), 1500);
                             }}
@@ -5233,13 +5273,13 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   justifyContent: 'center',
                   gap: '3vh',
                 }}>
-                  {/* Total amount display */}
+                  {/* Total amount display (including 8% tax) */}
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 'clamp(14px, 2vh, 18px)', color: '#888', marginBottom: '1vh' }}>
                       Total Due
                     </div>
                     <div style={{ fontSize: 'clamp(56px, 12vh, 84px)', fontWeight: '700', color: '#333' }}>
-                      ${checkoutSubtotal.toFixed(2)}
+                      ${(checkoutSubtotal * 1.08).toFixed(2)}
                     </div>
                   </div>
                   
@@ -8103,10 +8143,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 RECEIVING PAYMENT
               </h2>
               <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
-                Total Due
+                Total Due (incl. 8% tax)
               </div>
               <div style={{ color: '#4caf50', fontSize: '36px', fontWeight: 'bold', marginBottom: '24px' }}>
-                ${checkoutSubtotal.toFixed(2)}
+                ${(checkoutSubtotal * 1.08).toFixed(2)}
               </div>
               
               <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
@@ -8130,14 +8170,14 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
               
               {/* Change calculation - always visible */}
               <div style={{ 
-                background: parseFloat(cashTendered) >= checkoutSubtotal && parseFloat(cashTendered) > 0 ? '#1b5e20' : '#333', 
+                background: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#1b5e20' : '#333', 
                 borderRadius: '8px', 
                 padding: '12px', 
                 marginBottom: '16px',
               }}>
-                <div style={{ color: parseFloat(cashTendered) >= checkoutSubtotal && parseFloat(cashTendered) > 0 ? '#a5d6a7' : '#888', fontSize: '14px' }}>Change Due</div>
-                <div style={{ color: parseFloat(cashTendered) >= checkoutSubtotal && parseFloat(cashTendered) > 0 ? '#4caf50' : '#fff', fontSize: '28px', fontWeight: 'bold' }}>
-                  ${parseFloat(cashTendered) > 0 ? Math.max(0, parseFloat(cashTendered) - checkoutSubtotal).toFixed(2) : '0.00'}
+                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#a5d6a7' : '#888', fontSize: '14px' }}>Change Due</div>
+                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#4caf50' : '#fff', fontSize: '28px', fontWeight: 'bold' }}>
+                  ${parseFloat(cashTendered) > 0 ? Math.max(0, parseFloat(cashTendered) - (checkoutSubtotal * 1.08)).toFixed(2) : '0.00'}
                 </div>
               </div>
               
@@ -8207,7 +8247,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </button>
                 ))}
                 <button
-                  onClick={() => setCashTendered(checkoutSubtotal.toFixed(2))}
+                  onClick={() => setCashTendered((checkoutSubtotal * 1.08).toFixed(2))}
                   style={{
                     flex: 1,
                     padding: '10px',
@@ -8251,17 +8291,17 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </button>
                 <button
                   onClick={handleCompleteCashPayment}
-                  disabled={!cashTendered || parseFloat(cashTendered) < checkoutSubtotal}
+                  disabled={!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)}
                   style={{
                     flex: 1,
                     padding: '14px',
-                    background: (!cashTendered || parseFloat(cashTendered) < checkoutSubtotal) ? '#555' : '#4caf50',
+                    background: (!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)) ? '#555' : '#4caf50',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '16px',
                     fontWeight: 'bold',
-                    cursor: (!cashTendered || parseFloat(cashTendered) < checkoutSubtotal) ? 'not-allowed' : 'pointer',
+                    cursor: (!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   COMPLETE
