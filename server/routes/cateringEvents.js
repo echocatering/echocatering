@@ -99,9 +99,9 @@ router.get('/', authenticateToken, async (req, res) => {
               ...event,
               totalSales: event.totalSales || totalSales,
               totalTips: event.totalTips || totalTips,
-              cashTotal,
-              creditTotal,
-              invoiceTotal,
+              cashTotal: event.cashTotal || cashTotal,
+              creditTotal: event.creditTotal || creditTotal,
+              invoiceTotal: event.invoiceTotal || invoiceTotal,
               cogsCost: event.cogsCost || cogsCost,
               drinkSales: drinkSales.length > 0 ? drinkSales : event.drinkSales,
             };
@@ -429,6 +429,7 @@ router.post('/finalize', async (req, res) => {
         }
       }
       
+      console.log('[CateringEvents] Payment totals - Cash:', cashTotal, 'Credit:', creditTotal, 'Invoice:', invoiceTotal);
       eventData.cashTotal = cashTotal;
       eventData.creditTotal = creditTotal;
       eventData.invoiceTotal = invoiceTotal;

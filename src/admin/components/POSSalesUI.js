@@ -3707,26 +3707,46 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
   // Invoice a tab (marks as archived with isInvoice flag - payment to be collected later)
   // Invoice tabs show as yellow and their total is subtracted from revenue (shown as -$)
+  // Only one invoice tab allowed - subsequent invoices merge items into existing invoice tab
   const handleInvoiceTab = useCallback((tabId) => {
-    // Find the tab and build itemData before marking as invoiced
     const tab = tabs.find(t => t.id === tabId);
-    if (tab) {
-      const itemDataStr = buildItemDataFromTab(tab, 'INVOICE');
-      if (itemDataStr) {
-        appendItemData(itemDataStr);
-      }
+    if (!tab) return;
+    
+    // Check if there's already an existing invoice tab (not the current one)
+    const existingInvoiceTab = tabs.find(t => t.isInvoice && t.status === 'archived' && t.id !== tabId);
+    
+    if (existingInvoiceTab) {
+      // Merge items into existing invoice tab and delete the current tab
+      console.log(`[POS] Merging tab ${tabId} items into existing invoice tab ${existingInvoiceTab.id}`);
+      setTabs(prev => {
+        const updatedTabs = prev.map(t => {
+          if (t.id === existingInvoiceTab.id) {
+            // Add items from current tab to existing invoice tab
+            return {
+              ...t,
+              items: [...t.items, ...tab.items],
+              invoicedAt: new Date().toISOString() // Update timestamp
+            };
+          }
+          return t;
+        }).filter(t => t.id !== tabId); // Remove the tab being invoiced
+        return updatedTabs;
+      });
+      console.log(`[POS] Tab ${tabId} merged into invoice tab ${existingInvoiceTab.id}`);
+    } else {
+      // No existing invoice tab - mark this one as invoiced
+      setTabs(prev => prev.map(t => 
+        t.id === tabId 
+          ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', invoicedAt: new Date().toISOString() }
+          : t
+      ));
+      console.log(`[POS] Tab ${tabId} invoiced (payment to be collected later)`);
     }
     
-    setTabs(prev => prev.map(t => 
-      t.id === tabId 
-        ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', invoicedAt: new Date().toISOString() }
-        : t
-    ));
     if (activeTabId === tabId) {
       setActiveTabId(null);
     }
-    console.log(`[POS] Tab ${tabId} invoiced (payment to be collected later)`);
-  }, [activeTabId, tabs, buildItemDataFromTab, appendItemData]);
+  }, [activeTabId, tabs]);
 
   // Reopen an invoice tab (moves back to unpaid/open status)
   const handleReopenTab = useCallback((tabId) => {
@@ -4112,6 +4132,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
 
   /**
    * Handle invoice checkout - mark tab as invoiced for later payment
+   * Only one invoice tab allowed - subsequent invoices merge items into existing invoice tab
    */
   const handleInvoiceCheckout = useCallback(() => {
     setShowCheckoutOptions(false);
@@ -4121,12 +4142,35 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
       return;
     }
     
-    // Mark tab as invoiced (use 'archived' status to appear in paid tabs)
-    setTabs(prev => prev.map(t => 
-      t.id === checkoutTabInfo.id 
-        ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', paidAt: new Date().toISOString() }
-        : t
-    ));
+    // Check if there's already an existing invoice tab (not the current one)
+    const existingInvoiceTab = tabs.find(t => t.isInvoice && t.status === 'archived' && t.id !== checkoutTabInfo.id);
+    
+    if (existingInvoiceTab) {
+      // Merge items into existing invoice tab and delete the current tab
+      console.log(`[POS Checkout] Merging tab ${checkoutTabInfo.id} items into existing invoice tab ${existingInvoiceTab.id}`);
+      setTabs(prev => {
+        const currentTab = prev.find(t => t.id === checkoutTabInfo.id);
+        const updatedTabs = prev.map(t => {
+          if (t.id === existingInvoiceTab.id) {
+            return {
+              ...t,
+              items: [...t.items, ...(currentTab?.items || [])],
+              invoicedAt: new Date().toISOString()
+            };
+          }
+          return t;
+        }).filter(t => t.id !== checkoutTabInfo.id);
+        return updatedTabs;
+      });
+    } else {
+      // No existing invoice tab - mark this one as invoiced
+      setTabs(prev => prev.map(t => 
+        t.id === checkoutTabInfo.id 
+          ? { ...t, status: 'archived', isInvoice: true, paymentMethod: 'invoice', paidAt: new Date().toISOString() }
+          : t
+      ));
+      console.log(`[POS Checkout] Tab ${checkoutTabInfo.id} marked as invoiced`);
+    }
     
     // Clear checkout state
     setCheckoutItems([]);
@@ -4137,9 +4181,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     if (activeTabId === checkoutTabInfo.id) {
       setActiveTabId(null);
     }
-    
-    console.log(`[POS Checkout] Tab ${checkoutTabInfo.id} marked as invoiced`);
-  }, [checkoutTabInfo, activeTabId]);
+  }, [checkoutTabInfo, activeTabId, tabs]);
 
   /**
    * Complete cash payment
