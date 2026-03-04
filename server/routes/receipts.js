@@ -131,7 +131,7 @@ function generateReceiptHTML(data) {
         ${(items || []).map(item => `
           <div class="item">
             <span class="item-name">${item.name}${item.modifiers?.length ? ` (${item.modifiers.map(m => m.name).join(', ')})` : ''}</span>
-            <span class="item-price"> — $${(parseFloat(item.price) || 0).toFixed(2)}</span>
+            <span class="item-price">&nbsp;— $${(parseFloat(item.price) || 0).toFixed(2)}</span>
           </div>
         `).join('')}
       </div>
@@ -139,21 +139,21 @@ function generateReceiptHTML(data) {
       <div class="totals">
         <div class="total-row">
           <span>Subtotal</span>
-          <span> — $${(subtotal || 0).toFixed(2)}</span>
+          <span>&nbsp;— $${(subtotal || 0).toFixed(2)}</span>
         </div>
         <div class="total-row">
           <span>Tax (8%)</span>
-          <span> — $${((subtotal || 0) * 0.08).toFixed(2)}</span>
+          <span>&nbsp;— $${((subtotal || 0) * 0.08).toFixed(2)}</span>
         </div>
         ${tip > 0 ? `
           <div class="total-row">
             <span>Tip</span>
-            <span> — $${tip.toFixed(2)}</span>
+            <span>&nbsp;— $${tip.toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="total-row final">
           <span>Total</span>
-          <span> — $${(total || 0).toFixed(2)}</span>
+          <span>&nbsp;— $${(total || 0).toFixed(2)}</span>
         </div>
       </div>
       
