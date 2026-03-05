@@ -46,7 +46,7 @@ const EventSales = () => {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [graphEventId, setGraphEventId] = useState(null); // Event selected for graph view
   const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
-  const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(false); // Side panel collapsed state
+  const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(true); // Side panel collapsed by default
   
   // Section lock states - controls whether fields in each section are editable
   const [sectionLocks, setSectionLocks] = useState({
@@ -1013,7 +1013,7 @@ const EventSales = () => {
                   other: '#6b7280',
                 };
                 
-                // Parse event start and end times to generate all 15-minute intervals
+                // Parse time string to minutes since midnight
                 const parseTimeStr = (timeStr) => {
                   if (!timeStr) return null;
                   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
@@ -1026,28 +1026,12 @@ const EventSales = () => {
                   return hours * 60 + minutes;
                 };
                 
-                const eventStartMinutes = parseTimeStr(graphEvent.startTime);
-                const eventEndMinutes = parseTimeStr(graphEvent.endTime);
-                
-                // Generate all 15-minute intervals for the event duration
-                const timeIntervals = {};
+                // First pass: collect all sale times to find min/max
+                const saleTimes = [];
                 const categories = new Set();
                 const itemNames = new Set();
+                const salesByInterval = {};
                 
-                if (eventStartMinutes !== null && eventEndMinutes !== null) {
-                  // Round start down to nearest 15 min, end up to nearest 15 min
-                  const startInterval = Math.floor(eventStartMinutes / 15) * 15;
-                  const endInterval = Math.ceil(eventEndMinutes / 15) * 15;
-                  
-                  for (let mins = startInterval; mins <= endInterval; mins += 15) {
-                    const hours = Math.floor(mins / 60);
-                    const minutes = mins % 60;
-                    const intervalKey = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    timeIntervals[intervalKey] = { hours, minutes, categories: {}, items: {} };
-                  }
-                }
-                
-                // Parse itemData and populate intervals
                 if (graphEvent.itemData && graphEvent.itemData.length > 0) {
                   const lines = graphEvent.itemData.split('\n').filter(Boolean);
                   
@@ -1073,32 +1057,62 @@ const EventSales = () => {
                         if (ampm === 'PM' && hours !== 12) hours += 12;
                         if (ampm === 'AM' && hours === 12) hours = 0;
                         
+                        const totalMinutes = hours * 60 + minutes;
+                        saleTimes.push(totalMinutes);
+                        
                         const roundedMinutes = Math.floor(minutes / 15) * 15;
                         const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
                         
-                        // Create interval if it doesn't exist (for sales outside event time range)
-                        if (!timeIntervals[intervalKey]) {
-                          timeIntervals[intervalKey] = { hours, minutes: roundedMinutes, categories: {}, items: {} };
+                        if (!salesByInterval[intervalKey]) {
+                          salesByInterval[intervalKey] = { categories: {}, items: {} };
                         }
                         
-                        // Always track categories
-                        if (!timeIntervals[intervalKey].categories[category]) {
-                          timeIntervals[intervalKey].categories[category] = { count: 0, revenue: 0 };
+                        // Track categories
+                        if (!salesByInterval[intervalKey].categories[category]) {
+                          salesByInterval[intervalKey].categories[category] = { count: 0, revenue: 0 };
                         }
-                        timeIntervals[intervalKey].categories[category].count += 1;
-                        timeIntervals[intervalKey].categories[category].revenue += cost;
+                        salesByInterval[intervalKey].categories[category].count += 1;
+                        salesByInterval[intervalKey].categories[category].revenue += cost;
                         categories.add(category);
                         
-                        // Track individual items for specific category view
-                        if (!timeIntervals[intervalKey].items[itemName]) {
-                          timeIntervals[intervalKey].items[itemName] = { count: 0, revenue: 0, category };
+                        // Track individual items
+                        if (!salesByInterval[intervalKey].items[itemName]) {
+                          salesByInterval[intervalKey].items[itemName] = { count: 0, revenue: 0, category };
                         }
-                        timeIntervals[intervalKey].items[itemName].count += 1;
-                        timeIntervals[intervalKey].items[itemName].revenue += cost;
+                        salesByInterval[intervalKey].items[itemName].count += 1;
+                        salesByInterval[intervalKey].items[itemName].revenue += cost;
                         itemNames.add(itemName);
                       }
                     }
                   });
+                }
+                
+                // Determine time range: use event times if available, otherwise use sales data range
+                let eventStartMinutes = parseTimeStr(graphEvent.startTime);
+                let eventEndMinutes = parseTimeStr(graphEvent.endTime);
+                
+                // Fallback to sales data range if event times not available
+                if ((eventStartMinutes === null || eventEndMinutes === null) && saleTimes.length > 0) {
+                  eventStartMinutes = Math.min(...saleTimes);
+                  eventEndMinutes = Math.max(...saleTimes);
+                }
+                
+                // Generate all 15-minute intervals for the full range
+                const timeIntervals = {};
+                
+                if (eventStartMinutes !== null && eventEndMinutes !== null) {
+                  // Round start down to nearest 15 min, end up to nearest 15 min
+                  const startInterval = Math.floor(eventStartMinutes / 15) * 15;
+                  const endInterval = Math.ceil(eventEndMinutes / 15) * 15;
+                  
+                  for (let mins = startInterval; mins <= endInterval; mins += 15) {
+                    const hours = Math.floor(mins / 60);
+                    const minutes = mins % 60;
+                    const intervalKey = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                    // Copy sales data if exists, otherwise empty
+                    const salesData = salesByInterval[intervalKey] || { categories: {}, items: {} };
+                    timeIntervals[intervalKey] = { hours, minutes, categories: salesData.categories, items: salesData.items };
+                  }
                 }
                 
                 // Sort intervals by time
