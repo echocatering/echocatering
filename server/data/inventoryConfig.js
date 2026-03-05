@@ -185,7 +185,7 @@ const SHEET_DEFINITIONS = [
       { key: 'numUnits', label: '#Units', type: 'number', precision: 0 },
       {
         key: 'unitCost',
-        label: '$/Unit',
+        label: '$ / Unit',
         type: 'formula',
         unit: 'USD',
         precision: 2,

@@ -610,11 +610,13 @@ router.get('/', async (req, res) => {
         const itemNumber = values.itemNumber;
         const salesPrice = values.salesPrice;
         const unitCost = values.unitCost;
+        const glassCost = values.glassCost;
         
         if (itemNumber) {
           priceMap.set(Number(itemNumber), {
             salesPrice: salesPrice !== undefined && salesPrice !== null ? Number(salesPrice) : 0,
-            unitCost: unitCost !== undefined && unitCost !== null ? Number(unitCost) : 0
+            unitCost: unitCost !== undefined && unitCost !== null ? Number(unitCost) : 0,
+            glassCost: glassCost !== undefined && glassCost !== null ? Number(glassCost) : 0
           });
         }
       });
@@ -641,8 +643,9 @@ router.get('/', async (req, res) => {
 
     // Merge salesPrice and costPerUnit into cocktails
     // Priority for costPerUnit: Recipe costEach > Inventory unitCost
+    // For wine items: use glassCost instead of costPerUnit
     const cocktailsWithPrice = cocktails.map(cocktail => {
-      const priceData = priceMap.get(cocktail.itemNumber) || { salesPrice: 0, unitCost: 0 };
+      const priceData = priceMap.get(cocktail.itemNumber) || { salesPrice: 0, unitCost: 0, glassCost: 0 };
       
       // Get cost from recipe (source of truth) - try itemNumber first, then name
       let costPerUnit = recipeCostByItemNumber.get(cocktail.itemNumber);
@@ -654,10 +657,17 @@ router.get('/', async (req, res) => {
         costPerUnit = priceData.unitCost;
       }
       
+      // For wine items, use glassCost as the costPerUnit if available
+      const isWine = cocktail.category === 'wine' || cocktail.section === 'wine';
+      if (isWine && priceData.glassCost > 0) {
+        costPerUnit = priceData.glassCost;
+      }
+      
       return {
         ...cocktail,
         price: priceData.salesPrice,
-        costPerUnit: costPerUnit || 0
+        costPerUnit: costPerUnit || 0,
+        glassCost: priceData.glassCost || 0
       };
     });
 

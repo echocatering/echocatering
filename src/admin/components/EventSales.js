@@ -17,6 +17,7 @@ const EventSales = () => {
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
   const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
+  const [invoiceDetailsEventId, setInvoiceDetailsEventId] = useState(null); // Event ID for invoice details popup
   
   // Pricing variables for invoice calculations - load from localStorage
   const [pricingVars, setPricingVars] = useState(() => {
@@ -305,6 +306,7 @@ const EventSales = () => {
       collapsable: true,
       collapsed: paymentModelCollapsed,
       columns: [
+        { key: 'invoiceDetails', label: '☰', width: '40px', editable: false, isInvoiceMenu: true },
         { key: 'paymentModel', label: 'Model', width: '120px', editable: true, field: 'paymentModel', lockGroup: 'paymentModel' },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
         { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'paymentModel' },
@@ -347,6 +349,27 @@ const EventSales = () => {
             title="Delete event"
           >
             ×
+          </button>
+        );
+      case 'invoiceDetails':
+        // Hamburger menu button to show invoice tab items
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setInvoiceDetailsEventId(invoiceDetailsEventId === event._id ? null : event._id);
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '16px',
+              padding: '2px 6px',
+              color: '#666',
+            }}
+            title="View Invoice Items"
+          >
+            ☰
           </button>
         );
       case 'lockBasicInfo':
@@ -1016,6 +1039,7 @@ const EventSales = () => {
                 // Parse time string to minutes since midnight
                 const parseTimeStr = (timeStr) => {
                   if (!timeStr) return null;
+                  // Handle various formats: "1:00 PM", "13:00", "1:00PM", etc.
                   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
                   if (!match) return null;
                   let hours = parseInt(match[1]);
@@ -1023,11 +1047,17 @@ const EventSales = () => {
                   const ampm = match[3]?.toUpperCase();
                   if (ampm === 'PM' && hours !== 12) hours += 12;
                   if (ampm === 'AM' && hours === 12) hours = 0;
+                  // If no AM/PM and hours < 12, assume PM for typical event times
+                  if (!ampm && hours >= 1 && hours <= 11) hours += 12;
                   return hours * 60 + minutes;
                 };
                 
-                // First pass: collect all sale times to find min/max
-                const saleTimes = [];
+                // Get event start/end times first
+                let eventStartMinutes = parseTimeStr(graphEvent.startTime);
+                let eventEndMinutes = parseTimeStr(graphEvent.endTime);
+                
+                // Parse ALL itemData to collect sales (don't filter by category yet for time range)
+                const allSaleTimes = [];
                 const categories = new Set();
                 const itemNames = new Set();
                 const salesByInterval = {};
@@ -1043,11 +1073,6 @@ const EventSales = () => {
                       const timeStr = parts[2];
                       const cost = parts.length >= 5 ? parseFloat(parts[4]) || 0 : 0;
                       
-                      // Skip if not in selected category (when not 'all')
-                      if (graphViewMode !== 'all' && category !== graphViewMode && !category.includes(graphViewMode)) {
-                        return;
-                      }
-                      
                       const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
                       if (timeParts) {
                         let hours = parseInt(timeParts[1]);
@@ -1058,7 +1083,7 @@ const EventSales = () => {
                         if (ampm === 'AM' && hours === 12) hours = 0;
                         
                         const totalMinutes = hours * 60 + minutes;
-                        saleTimes.push(totalMinutes);
+                        allSaleTimes.push(totalMinutes);
                         
                         const roundedMinutes = Math.floor(minutes / 15) * 15;
                         const intervalKey = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
@@ -1067,51 +1092,74 @@ const EventSales = () => {
                           salesByInterval[intervalKey] = { categories: {}, items: {} };
                         }
                         
-                        // Track categories
-                        if (!salesByInterval[intervalKey].categories[category]) {
-                          salesByInterval[intervalKey].categories[category] = { count: 0, revenue: 0 };
-                        }
-                        salesByInterval[intervalKey].categories[category].count += 1;
-                        salesByInterval[intervalKey].categories[category].revenue += cost;
+                        // Track categories (always, for legend)
                         categories.add(category);
                         
-                        // Track individual items
-                        if (!salesByInterval[intervalKey].items[itemName]) {
-                          salesByInterval[intervalKey].items[itemName] = { count: 0, revenue: 0, category };
+                        // Only add to data if matches current view mode
+                        const matchesFilter = graphViewMode === 'all' || category === graphViewMode || category.includes(graphViewMode);
+                        
+                        if (matchesFilter) {
+                          // Track categories for this interval
+                          if (!salesByInterval[intervalKey].categories[category]) {
+                            salesByInterval[intervalKey].categories[category] = { count: 0, revenue: 0 };
+                          }
+                          salesByInterval[intervalKey].categories[category].count += 1;
+                          salesByInterval[intervalKey].categories[category].revenue += cost;
+                          
+                          // Track individual items
+                          if (!salesByInterval[intervalKey].items[itemName]) {
+                            salesByInterval[intervalKey].items[itemName] = { count: 0, revenue: 0, category };
+                          }
+                          salesByInterval[intervalKey].items[itemName].count += 1;
+                          salesByInterval[intervalKey].items[itemName].revenue += cost;
+                          itemNames.add(itemName);
                         }
-                        salesByInterval[intervalKey].items[itemName].count += 1;
-                        salesByInterval[intervalKey].items[itemName].revenue += cost;
-                        itemNames.add(itemName);
                       }
                     }
                   });
                 }
                 
-                // Determine time range: use event times if available, otherwise use sales data range
-                let eventStartMinutes = parseTimeStr(graphEvent.startTime);
-                let eventEndMinutes = parseTimeStr(graphEvent.endTime);
-                
                 // Fallback to sales data range if event times not available
-                if ((eventStartMinutes === null || eventEndMinutes === null) && saleTimes.length > 0) {
-                  eventStartMinutes = Math.min(...saleTimes);
-                  eventEndMinutes = Math.max(...saleTimes);
+                if ((eventStartMinutes === null || eventEndMinutes === null) && allSaleTimes.length > 0) {
+                  eventStartMinutes = Math.min(...allSaleTimes);
+                  eventEndMinutes = Math.max(...allSaleTimes);
                 }
                 
                 // Generate all 15-minute intervals for the full range
+                // Use exact start time + 15 min increments (no rounding)
                 const timeIntervals = {};
                 
                 if (eventStartMinutes !== null && eventEndMinutes !== null) {
-                  // Round start down to nearest 15 min, end up to nearest 15 min
-                  const startInterval = Math.floor(eventStartMinutes / 15) * 15;
-                  const endInterval = Math.ceil(eventEndMinutes / 15) * 15;
-                  
-                  for (let mins = startInterval; mins <= endInterval; mins += 15) {
+                  // Start from exact event start time, add 15 min intervals until end
+                  for (let mins = eventStartMinutes; mins <= eventEndMinutes; mins += 15) {
                     const hours = Math.floor(mins / 60);
                     const minutes = mins % 60;
                     const intervalKey = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    // Copy sales data if exists, otherwise empty
-                    const salesData = salesByInterval[intervalKey] || { categories: {}, items: {} };
-                    timeIntervals[intervalKey] = { hours, minutes, categories: salesData.categories, items: salesData.items };
+                    // Find sales that fall within this 15-min window
+                    // Check all salesByInterval keys to find matches within this interval range
+                    let intervalCategories = {};
+                    let intervalItems = {};
+                    
+                    // Look for sales in the range [mins, mins+15)
+                    Object.entries(salesByInterval).forEach(([saleKey, saleData]) => {
+                      const [saleHour, saleMin] = saleKey.split(':').map(Number);
+                      const saleMinutes = saleHour * 60 + saleMin;
+                      if (saleMinutes >= mins && saleMinutes < mins + 15) {
+                        // Merge this sale data into the interval
+                        Object.entries(saleData.categories || {}).forEach(([cat, catData]) => {
+                          if (!intervalCategories[cat]) intervalCategories[cat] = { count: 0, revenue: 0 };
+                          intervalCategories[cat].count += catData.count;
+                          intervalCategories[cat].revenue += catData.revenue;
+                        });
+                        Object.entries(saleData.items || {}).forEach(([item, itemData]) => {
+                          if (!intervalItems[item]) intervalItems[item] = { count: 0, revenue: 0, category: itemData.category };
+                          intervalItems[item].count += itemData.count;
+                          intervalItems[item].revenue += itemData.revenue;
+                        });
+                      }
+                    });
+                    
+                    timeIntervals[intervalKey] = { hours, minutes, categories: intervalCategories, items: intervalItems };
                   }
                 }
                 
@@ -1353,6 +1401,7 @@ const EventSales = () => {
                           color: '#333',
                           whiteSpace: 'nowrap',
                           textAlign: 'center',
+                          position: col.key === 'invoiceDetails' ? 'relative' : 'static',
                         }}
                       >
                         {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] && col.key !== 'paymentModel' ? (
@@ -1373,6 +1422,67 @@ const EventSales = () => {
                         ) : (
                           renderCell(event, col)
                         )}
+                        {/* Invoice Details Popup */}
+                        {col.key === 'invoiceDetails' && invoiceDetailsEventId === event._id && (() => {
+                          // Parse invoice items from itemData
+                          const parsed = parseItemData(event.itemData);
+                          const invoiceItems = parsed.items.filter(item => item.transactionType === 'INVOICE');
+                          const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
+                          const invoiceTax = invoiceSubtotal * 0.08;
+                          const invoiceTotal = invoiceSubtotal + invoiceTax;
+                          
+                          return (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: '0',
+                                zIndex: 1000,
+                                background: '#fff',
+                                border: '1px solid #ddd',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                padding: '12px',
+                                minWidth: '250px',
+                                maxHeight: '300px',
+                                overflowY: 'auto',
+                              }}
+                            >
+                              <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>
+                                Invoice Items
+                              </div>
+                              {invoiceItems.length > 0 ? (
+                                <>
+                                  {invoiceItems.map((item, i) => (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px' }}>
+                                      <span>{item.name}</span>
+                                      <span>${item.cost.toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                  <div style={{ borderTop: '1px solid #eee', marginTop: '8px', paddingTop: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666' }}>
+                                      <span>Subtotal</span>
+                                      <span>${invoiceSubtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666' }}>
+                                      <span>Tax (8%)</span>
+                                      <span>${invoiceTax.toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 'bold', marginTop: '4px' }}>
+                                      <span>Total</span>
+                                      <span>${invoiceTotal.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <div style={{ color: '#999', fontSize: '12px', textAlign: 'center', padding: '12px 0' }}>
+                                  No invoice items
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                     );
                   })}

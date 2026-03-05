@@ -2471,7 +2471,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   );
 }
 
-export default function POSSalesUI({ layoutMode = 'auto' }) {
+export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterWidth, outerHeight: propOuterHeight, isStandalone = false }) {
   // layoutMode: 'vertical' | 'horizontal' | 'auto'
   // When layoutMode is 'vertical' or 'horizontal', force that layout and ignore device orientation
   // When layoutMode is 'auto', detect device orientation and switch layouts automatically:
@@ -4641,17 +4641,21 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
     setLastAction({ type: 'add', itemName: `${duplicatedItems.length} item${duplicatedItems.length > 1 ? 's' : ''} duplicated`, tabName: tabDisplayName });
   }, [tabs]);
 
-  const frameReady = frameSize.width > 0 && frameSize.height > 0;
+  // Use prop dimensions when isStandalone with explicit dimensions, otherwise use measured size
+  const effectiveWidth = (isStandalone && propOuterWidth) ? propOuterWidth : frameSize.width;
+  const effectiveHeight = (isStandalone && propOuterHeight) ? propOuterHeight : frameSize.height;
+  const frameReady = effectiveWidth > 0 && effectiveHeight > 0;
 
   const stageDims = useMemo(() => {
     if (!frameReady) return { width: 0, height: 0 };
-    const { width: fw, height: fh } = frameSize;
+    const fw = effectiveWidth;
+    const fh = effectiveHeight;
     if (orientation === 'horizontal') return { width: fw, height: fh };
     // 9:19 vertical
     const stageHeight = fh;
     const stageWidth = fh * (9 / 19);
     return { width: stageWidth, height: stageHeight };
-  }, [frameReady, frameSize, orientation]);
+  }, [frameReady, effectiveWidth, effectiveHeight, orientation]);
 
   // ============================================
   // HORIZONTAL VIEW (CUSTOMER-FACING)
@@ -5996,10 +6000,10 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
   // When layoutMode is forced (not 'auto'), OR when layoutMode is 'auto' with vertical orientation
   // we're in standalone mode - render POSContent directly filling the viewport without the viewer wrapper
   // ============================================
-  const isStandalone = layoutMode !== 'auto' || (layoutMode === 'auto' && orientation === 'vertical');
+  const isStandaloneMode = layoutMode !== 'auto' || (layoutMode === 'auto' && orientation === 'vertical');
 
   // Standalone mode: render POSContent directly filling the viewport
-  if (isStandalone) {
+  if (isStandaloneMode) {
     // If showing brief summary view after event end (only if showEventSetup is false)
     // Also show if isPostEventEdit is true (resumed event in post-event mode)
     if (showSummaryView && (eventSummary || isPostEventEdit) && !showEventSetup) {
@@ -6118,20 +6122,11 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   </div>
                 )}
                 
-                {/* Taxes */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                    -${(((computedSummary.totalRevenue || 0) + (computedSummary.totalTips || 0)) * 0.3).toFixed(2)}
-                  </span>
-                </div>
-                
                 {/* Net (simplified - full breakdown in Event Setup) */}
                 {(() => {
                   const sales = computedSummary.totalRevenue || 0;
                   const tips = computedSummary.totalTips || 0;
-                  const taxes = (sales + tips) * 0.3;
-                  const netIncome = sales + tips - taxes;
+                  const netIncome = sales + tips;
                   return (
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>
                       <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>Net (before expenses)</span>
@@ -6913,19 +6908,20 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                     <div style={{ fontSize: '12px', color: '#666', padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #eee' }}>
                       <span style={{ flex: 2 }}>Item</span>
                       <span style={{ flex: 1, textAlign: 'center' }}># Sold</span>
-                      <span style={{ flex: 1, textAlign: 'center' }}>Cost/Unit</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>Cost</span>
                       <span style={{ flex: 1, textAlign: 'center' }}>Total</span>
                     </div>
                     {cogsItems.length > 0 ? cogsItems.map(item => {
                       const menuItem = allItems.find(i => i.name === item.name);
                       const costPerUnit = menuItem?.costPerUnit || 0;
+                      const isWine = menuItem?.category === 'wine' || menuItem?.section === 'wine';
                       const totalCost = item.count * costPerUnit;
                       cogsTotal += totalCost;
                       return (
                         <div key={item.name} style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
                           <div style={{ flex: 2, fontSize: '14px', color: '#333' }}>{item.name}</div>
                           <div style={{ flex: 1, fontSize: '14px', textAlign: 'center' }}>{item.count}</div>
-                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', color: '#666' }}>${costPerUnit.toFixed(2)}</div>
+                          <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', color: '#666' }} title={isWine ? '$ / Glass' : '$ / Unit'}>${costPerUnit.toFixed(2)}</div>
                           <div style={{ flex: 1, fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>-${totalCost.toFixed(2)}</div>
                         </div>
                       );
@@ -7050,27 +7046,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                 </div>
               </div>
               
-              {/* Taxes */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold', color: '#333' }}>Taxes (30%)</span>
-                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                  -${(() => {
-                    // Calculate sales from paid tabs (excluding spillage)
-                    const paidTabsTotal = tabs
-                      .filter(t => !t.isSpillage && (t.status === 'paid' || t.status === 'archived' || t.status === 'closed'))
-                      .reduce((sum, tab) => {
-                        const tabItemsTotal = (tab.items || []).reduce((itemSum, item) => itemSum + (item.price || item.finalPrice || 0), 0);
-                        return sum + tabItemsTotal + (tab.tipAmount || 0);
-                      }, 0);
-                    const totalTips = tabs
-                      .filter(t => !t.isSpillage)
-                      .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
-                    const sales = paidTabsTotal - totalTips;
-                    return ((sales + totalTips) * 0.3).toFixed(2);
-                  })()}
-                </span>
-              </div>
-              
               {/* Net Income */}
               {(() => {
                 // Calculate sales from paid tabs (excluding spillage)
@@ -7085,7 +7060,6 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   .reduce((sum, tab) => sum + (tab.tipAmount || 0), 0);
                 const sales = paidTabsTotal - totalTips;
                 const tips = totalTips;
-                const taxes = (sales + tips) * 0.3;
                 
                 // Use shared spillageTotal for consistency
                 const operatingExpenses = (parseFloat(eventSetupData.accommodationCost) || 0) +
@@ -7105,7 +7079,7 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                   });
                 });
                 
-                const netIncome = sales + tips - cogs - operatingExpenses - taxes;
+                const netIncome = sales + tips - cogs - operatingExpenses;
                 return (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>
                     <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#333' }}>Net Income</span>
@@ -7195,15 +7169,12 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
                       });
                     });
                     
-                    // Calculate taxes (30% of sales + tips)
                     const sales = eventSummary?.totalRevenue || 0;
                     const tips = eventSummary?.totalTips || totalTipsFromTabs;
-                    const taxes = (sales + tips) * 0.3;
                     
                     const summaryWithTips = {
                       ...eventSummary,
-                      totalTips: tips,
-                      taxes: taxes
+                      totalTips: tips
                     };
                     
                     // Build itemData from all paid/archived tabs (excluding spillage)
@@ -7767,8 +7738,8 @@ export default function POSSalesUI({ layoutMode = 'auto' }) {
         >
           {frameReady ? (
             <POSContent
-              outerWidth={frameSize.width}
-              outerHeight={frameSize.height}
+              outerWidth={effectiveWidth}
+              outerHeight={effectiveHeight}
               items={items}
               activeCategory={activeCategory}
               setActiveCategory={setActiveCategory}
