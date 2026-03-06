@@ -2064,7 +2064,7 @@ function EchoCocktailSubpage2({
             justifyContent: 'center',
             pointerEvents: 'auto',
           }}>
-            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? 80 : 56} noHover={viewMode === 'menu'} />
+            <ArrowButtons onPrev={handlePrev} onNext={handleNext} size={viewMode === 'menu' ? (disableInnerScale ? 64 : 80) : 56} noHover={viewMode === 'menu'} />
           </div>
           
           {/* FULL MENU button - TEMPORARILY HIDDEN - scrolling and item selection not working properly */}
@@ -2163,8 +2163,8 @@ function EchoCocktailSubpage2({
               bottom: `${size.height / 32 + parseFloat(bottomBarPadding)}px`,
               width: 'auto',
               height: 'auto',
-              maxWidth: '120px',
-              maxHeight: '120px',
+              maxWidth: disableInnerScale ? '96px' : '120px',
+              maxHeight: disableInnerScale ? '96px' : '120px',
               filter: 'brightness(0) invert(0.3)',
               pointerEvents: 'none',
               zIndex: 25,

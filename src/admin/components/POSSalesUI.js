@@ -7547,14 +7547,24 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
           {/* Buttons container - absolutely positioned to overlay when shown */}
           {/* During checkout: always visible with CANCEL PAYMENT button */}
           {/* Outside checkout: shown on header tap with END EVENT button */}
+          {/* Scale button sizes based on container width for dual viewer */}
+          {(() => {
+            const containerW = (isStandalone && propOuterWidth) ? propOuterWidth : 400;
+            const isSmallContainer = containerW < 350;
+            const btnPadding = isSmallContainer ? '4px 6px' : '6px 12px';
+            const btnFontSize = isSmallContainer ? '10px' : '12px';
+            const btnGap = isSmallContainer ? '4px' : '8px';
+            const rightPadding = isSmallContainer ? '8px' : '16px';
+            
+            return (
           <div style={{
             position: 'absolute',
-            right: '16px',
+            right: rightPadding,
             top: '50%',
             transform: 'translateY(-50%)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: btnGap,
             transition: 'opacity 0.3s ease',
             opacity: showEndEventButton ? 1 : 0,
             pointerEvents: showEndEventButton ? 'auto' : 'none',
@@ -7571,8 +7581,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '12px',
+                padding: btnPadding,
+                fontSize: btnFontSize,
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -7597,8 +7607,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
+                  padding: btnPadding,
+                  fontSize: btnFontSize,
                   fontWeight: 'bold',
                   cursor: 'pointer',
                   display: 'flex',
@@ -7639,8 +7649,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '12px',
+                padding: btnPadding,
+                fontSize: btnFontSize,
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -7718,12 +7728,12 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }
                 }}
                 style={{
-                  background: isPostEventEdit ? '#f59e0b' : '#c62828',
+                  background: isPostEventEdit ? '#3b82f6' : '#ef4444',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
+                  padding: btnPadding,
+                  fontSize: btnFontSize,
                   fontWeight: 'bold',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
@@ -7734,6 +7744,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             )}
             
           </div>
+            );
+          })()}
         </div>
 
         {/* POS Content */}

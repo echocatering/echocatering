@@ -18,6 +18,7 @@ const EventSales = () => {
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
   const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
   const [invoiceDetailsEventId, setInvoiceDetailsEventId] = useState(null); // Event ID for invoice details popup
+  const [dataPopupEvent, setDataPopupEvent] = useState(null); // Event object for DATA popup modal
   
   // Pricing variables for invoice calculations - load from localStorage
   const [pricingVars, setPricingVars] = useState(() => {
@@ -523,7 +524,7 @@ const EventSales = () => {
             onClick={(e) => {
               if (hasData) {
                 e.stopPropagation();
-                alert(itemDataStr);
+                setDataPopupEvent(event);
               }
             }}>
             ☰
@@ -1401,7 +1402,6 @@ const EventSales = () => {
                           color: '#333',
                           whiteSpace: 'nowrap',
                           textAlign: 'center',
-                          position: col.key === 'invoiceDetails' ? 'relative' : 'static',
                         }}
                       >
                         {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] && col.key !== 'paymentModel' ? (
@@ -1422,67 +1422,6 @@ const EventSales = () => {
                         ) : (
                           renderCell(event, col)
                         )}
-                        {/* Invoice Details Popup */}
-                        {col.key === 'invoiceDetails' && invoiceDetailsEventId === event._id && (() => {
-                          // Parse invoice items from itemData
-                          const parsed = parseItemData(event.itemData);
-                          const invoiceItems = parsed.items.filter(item => item.transactionType === 'INVOICE');
-                          const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
-                          const invoiceTax = invoiceSubtotal * 0.08;
-                          const invoiceTotal = invoiceSubtotal + invoiceTax;
-                          
-                          return (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: '0',
-                                zIndex: 1000,
-                                background: '#fff',
-                                border: '1px solid #ddd',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                padding: '12px',
-                                minWidth: '250px',
-                                maxHeight: '300px',
-                                overflowY: 'auto',
-                              }}
-                            >
-                              <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>
-                                Invoice Items
-                              </div>
-                              {invoiceItems.length > 0 ? (
-                                <>
-                                  {invoiceItems.map((item, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px' }}>
-                                      <span>{item.name}</span>
-                                      <span>${item.cost.toFixed(2)}</span>
-                                    </div>
-                                  ))}
-                                  <div style={{ borderTop: '1px solid #eee', marginTop: '8px', paddingTop: '8px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666' }}>
-                                      <span>Subtotal</span>
-                                      <span>${invoiceSubtotal.toFixed(2)}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666' }}>
-                                      <span>Tax (8%)</span>
-                                      <span>${invoiceTax.toFixed(2)}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 'bold', marginTop: '4px' }}>
-                                      <span>Total</span>
-                                      <span>${invoiceTotal.toFixed(2)}</span>
-                                    </div>
-                                  </div>
-                                </>
-                              ) : (
-                                <div style={{ color: '#999', fontSize: '12px', textAlign: 'center', padding: '12px 0' }}>
-                                  No invoice items
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
                       </td>
                     );
                   })}
@@ -1667,6 +1606,308 @@ const EventSales = () => {
           </div>
         </div>
       )}
+
+      {/* DATA Popup Modal */}
+      {dataPopupEvent && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setDataPopupEvent(null)}
+        >
+          <div 
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>
+                Event Data - {dataPopupEvent.name}
+              </h3>
+              <button
+                onClick={() => setDataPopupEvent(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0 8px',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ 
+              flex: 1, 
+              overflow: 'auto', 
+              background: '#f5f5f5', 
+              borderRadius: '8px', 
+              padding: '16px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}>
+              {dataPopupEvent.itemData || 'No data available'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Receipt Popup Modal */}
+      {invoiceDetailsEventId && (() => {
+        const event = events.find(e => e._id === invoiceDetailsEventId);
+        if (!event) return null;
+        
+        const parsed = parseItemData(event.itemData);
+        const invoiceItems = parsed.items.filter(item => item.transactionType === 'INVOICE');
+        const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
+        const invoiceTax = invoiceSubtotal * 0.08;
+        const invoiceTotal = invoiceSubtotal + invoiceTax;
+        const eventDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric'
+        }) : '';
+        
+        return (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => setInvoiceDetailsEventId(null)}
+          >
+            <div 
+              style={{
+                background: '#fff',
+                borderRadius: '12px',
+                maxWidth: '450px',
+                width: '90%',
+                maxHeight: '80vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Receipt Content */}
+              <div style={{ 
+                flex: 1, 
+                overflow: 'auto', 
+                padding: '24px',
+                fontFamily: "'Helvetica Neue', Arial, sans-serif",
+              }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '20px', paddingBottom: '20px', borderBottom: '2px dashed #ddd' }}>
+                  <img 
+                    src="/assets/icons/LOGO_echo.png" 
+                    alt="Echo Catering" 
+                    style={{ maxWidth: '150px', height: 'auto', marginBottom: '10px' }}
+                  />
+                  <div style={{ color: '#666', fontSize: '14px' }}>{eventDate}</div>
+                  <div style={{ color: '#333', fontSize: '16px', fontWeight: 'bold', marginTop: '8px' }}>{event.name}</div>
+                </div>
+                
+                {/* Items */}
+                <div style={{ marginBottom: '20px' }}>
+                  {invoiceItems.length > 0 ? (
+                    invoiceItems.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                        <span style={{ color: '#333' }}>{item.name}</span>
+                        <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${item.cost.toFixed(2)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>No invoice items</div>
+                  )}
+                </div>
+                
+                {/* Totals */}
+                {invoiceItems.length > 0 && (
+                  <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '15px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                      <span>Subtotal</span>
+                      <span>&nbsp;— ${invoiceSubtotal.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                      <span>Tax (8%)</span>
+                      <span>&nbsp;— ${invoiceTax.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
+                      <span>Total</span>
+                      <span>&nbsp;— ${invoiceTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Payment Method */}
+                <div style={{ textAlign: 'center', marginTop: '20px', padding: '10px', background: '#f5f5f5', borderRadius: '8px', color: '#666' }}>
+                  Payment method: Invoice
+                </div>
+                
+                {/* Footer */}
+                <div style={{ textAlign: 'center', marginTop: '20px', color: '#999', fontSize: '12px' }}>
+                  Thank you for your business!<br />
+                  echocatering.com
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                padding: '16px 24px', 
+                borderTop: '1px solid #eee',
+                background: '#fafafa',
+              }}>
+                <button
+                  onClick={() => {
+                    // Print functionality
+                    const printWindow = window.open('', '_blank');
+                    const receiptHtml = `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <title>Invoice Receipt - ${event.name}</title>
+                        <style>
+                          body { font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; }
+                          .header { text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px dashed #ddd; }
+                          .logo img { max-width: 150px; height: auto; }
+                          .date { color: #666; font-size: 14px; }
+                          .event-name { color: #333; font-size: 16px; font-weight: bold; margin-top: 8px; }
+                          .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+                          .totals { border-top: 2px dashed #ddd; padding-top: 15px; margin-top: 15px; }
+                          .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
+                          .total-row.final { font-size: 20px; font-weight: bold; padding-top: 10px; border-top: 1px solid #ddd; margin-top: 10px; }
+                          .payment-method { text-align: center; margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 8px; color: #666; }
+                          .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                          @media print { body { margin: 0; } }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="header">
+                          <div class="logo"><img src="/assets/icons/LOGO_echo.png" alt="Echo Catering" /></div>
+                          <div class="date">${eventDate}</div>
+                          <div class="event-name">${event.name}</div>
+                        </div>
+                        <div class="items">
+                          ${invoiceItems.map(item => `<div class="item"><span>${item.name}</span><span>&nbsp;— $${item.cost.toFixed(2)}</span></div>`).join('')}
+                        </div>
+                        <div class="totals">
+                          <div class="total-row"><span>Subtotal</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
+                          <div class="total-row"><span>Tax (8%)</span><span>&nbsp;— $${invoiceTax.toFixed(2)}</span></div>
+                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${invoiceTotal.toFixed(2)}</span></div>
+                        </div>
+                        <div class="payment-method">Payment method: Invoice</div>
+                        <div class="footer">Thank you for your business!<br>echocatering.com</div>
+                      </body>
+                      </html>
+                    `;
+                    printWindow.document.write(receiptHtml);
+                    printWindow.document.close();
+                    printWindow.print();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  🖨️ Print
+                </button>
+                <button
+                  onClick={async () => {
+                    // Share functionality
+                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}\nTotal: $${invoiceTotal.toFixed(2)}\n\nPayment method: Invoice`;
+                    
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: `Invoice Receipt - ${event.name}`,
+                          text: shareText,
+                        });
+                      } catch (err) {
+                        console.log('Share cancelled or failed');
+                      }
+                    } else {
+                      // Fallback: copy to clipboard
+                      navigator.clipboard.writeText(shareText);
+                      alert('Receipt copied to clipboard!');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#22c55e',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  📤 Share
+                </button>
+                <button
+                  onClick={() => setInvoiceDetailsEventId(null)}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#e5e5e5',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
