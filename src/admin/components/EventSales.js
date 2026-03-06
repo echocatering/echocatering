@@ -1692,6 +1692,13 @@ const EventSales = () => {
         const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
         const invoiceTax = invoiceSubtotal * 0.08;
         const invoiceTotal = invoiceSubtotal + invoiceTax;
+        
+        // Additional invoice items: Permit, Insurance, Overhead (OHD)
+        const permitCost = parseFloat(event.permitCost) || 0;
+        const insuranceCost = parseFloat(event.insuranceCost) || 0;
+        const overheadCost = pricingVars.overhead || 0;
+        const adjustedTotal = invoiceTotal + permitCost + insuranceCost + overheadCost;
+        
         const eventDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
           year: 'numeric', 
           month: 'long', 
@@ -1770,9 +1777,28 @@ const EventSales = () => {
                       <span>Tax (8%)</span>
                       <span>&nbsp;— ${invoiceTax.toFixed(2)}</span>
                     </div>
+                    {/* Additional charges: Permit, Insurance, Overhead */}
+                    {permitCost > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                        <span>Permit</span>
+                        <span>&nbsp;— ${permitCost.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {insuranceCost > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                        <span>Insurance</span>
+                        <span>&nbsp;— ${insuranceCost.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {overheadCost > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                        <span>Overhead</span>
+                        <span>&nbsp;— ${overheadCost.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
-                      <span>Total</span>
-                      <span>&nbsp;— ${invoiceTotal.toFixed(2)}</span>
+                      <span>Adjusted Total</span>
+                      <span>&nbsp;— ${adjustedTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 )}
@@ -1833,7 +1859,10 @@ const EventSales = () => {
                         <div class="totals">
                           <div class="total-row"><span>Subtotal</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
                           <div class="total-row"><span>Tax (8%)</span><span>&nbsp;— $${invoiceTax.toFixed(2)}</span></div>
-                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${invoiceTotal.toFixed(2)}</span></div>
+                          ${permitCost > 0 ? `<div class="total-row"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
+                          ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
+                          ${overheadCost > 0 ? `<div class="total-row"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
+                          <div class="total-row final"><span>Adjusted Total</span><span>&nbsp;— $${adjustedTotal.toFixed(2)}</span></div>
                         </div>
                         <div class="payment-method">Payment method: Invoice</div>
                         <div class="footer">Thank you for your business!<br>echocatering.com</div>
@@ -1864,8 +1893,13 @@ const EventSales = () => {
                 </button>
                 <button
                   onClick={async () => {
-                    // Share functionality
-                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}\nTotal: $${invoiceTotal.toFixed(2)}\n\nPayment method: Invoice`;
+                    // Share functionality - include additional charges
+                    const additionalCharges = [
+                      permitCost > 0 ? `Permit: $${permitCost.toFixed(2)}` : null,
+                      insuranceCost > 0 ? `Insurance: $${insuranceCost.toFixed(2)}` : null,
+                      overheadCost > 0 ? `Overhead: $${overheadCost.toFixed(2)}` : null,
+                    ].filter(Boolean).join('\n');
+                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\nAdjusted Total: $${adjustedTotal.toFixed(2)}\n\nPayment method: Invoice`;
                     
                     if (navigator.share) {
                       try {
