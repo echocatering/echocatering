@@ -3842,10 +3842,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
           startTime: startTimeNow,
           eventDate: new Date().toISOString().split('T')[0],
         }));
-        // Create the spillage tab if it doesn't exist
+        // Create the spillage tab if it doesn't exist, or ensure it has status: 'open'
         setTabs(prev => {
-          if (!prev.find(t => t.isSpillage)) {
+          const spillageTab = prev.find(t => t.isSpillage);
+          if (!spillageTab) {
             return [...prev, { id: 'spillage-tab', name: 'S', isSpillage: true, items: [], status: 'open' }];
+          }
+          // Ensure spillage tab always has status: 'open' (fix for tabs restored from localStorage without status)
+          if (spillageTab.status !== 'open') {
+            return prev.map(t => t.isSpillage ? { ...t, status: 'open' } : t);
           }
           return prev;
         });
@@ -4484,10 +4489,11 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     // If no active tab, auto-create one first
     let targetTabId = activeTabId;
     
-    // Check if active tab is paid - don't allow adding items to paid tabs
+    // Check if active tab is paid or archived - don't allow adding items to paid/archived tabs
     const activeTab = tabs.find(t => t.id === activeTabId);
-    if (activeTab?.status === 'paid') {
-      console.log('[POS] Cannot add items to paid tab');
+    console.log(`[POS] Active tab: ${activeTab?.name}, status: ${activeTab?.status}, isSpillage: ${activeTab?.isSpillage}`);
+    if (activeTab?.status === 'paid' || activeTab?.status === 'archived') {
+      console.log('[POS] Cannot add items to paid/archived tab');
       return;
     }
     

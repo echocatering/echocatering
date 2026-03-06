@@ -162,15 +162,16 @@ const EventSales = () => {
     return num < 0 ? `-$${Math.abs(num).toFixed(2)}` : `$${num.toFixed(2)}`;
   };
 
-  // Parse itemData string and extract payment method totals and category breakdown
+  // Parse itemData string and extract payment method totals, category breakdown, and individual items
   // Format: "itemName, category, timestamp, paymentMethod, cost" per line
   const parseItemData = (itemDataStr) => {
     if (!itemDataStr || typeof itemDataStr !== 'string') {
-      return { paymentTotals: { CASH: 0, CREDIT: 0, INVOICE: 0 }, categoryBreakdown: {} };
+      return { paymentTotals: { CASH: 0, CREDIT: 0, INVOICE: 0 }, categoryBreakdown: {}, items: [] };
     }
     
     const paymentTotals = { CASH: 0, CREDIT: 0, INVOICE: 0 };
     const categoryBreakdown = {};
+    const items = [];
     
     const lines = itemDataStr.split('\n').filter(line => line.trim());
     for (const line of lines) {
@@ -179,6 +180,15 @@ const EventSales = () => {
         const [itemName, category, timestamp, paymentMethod, costStr] = parts;
         const cost = parseFloat(costStr) || 0;
         const method = (paymentMethod || '').toUpperCase();
+        
+        // Add to items array
+        items.push({
+          name: itemName,
+          category: category,
+          timestamp: timestamp,
+          transactionType: method,
+          cost: cost
+        });
         
         // Add to payment totals
         if (method === 'CASH' || method === 'CREDIT' || method === 'INVOICE') {
@@ -199,7 +209,7 @@ const EventSales = () => {
       }
     }
     
-    return { paymentTotals, categoryBreakdown };
+    return { paymentTotals, categoryBreakdown, items };
   };
 
   // Format date
