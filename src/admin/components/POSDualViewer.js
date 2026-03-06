@@ -101,8 +101,7 @@ export default function POSDualViewer() {
   const horizontalWidth = viewerHeight * (16 / 10);
   const verticalWidth = viewerHeight * (9 / 19);
   
-  // MenuGallery2 will be scaled 30% smaller inside its container
-  const menuGalleryScale = 0.7;
+  // No CSS scaling needed - pass exact dimensions to MenuGallery2 with disableInnerScale
 
   return (
     <div style={{ 
@@ -164,23 +163,14 @@ export default function POSDualViewer() {
                 overflow: 'hidden',
                 background: '#000',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
               }}>
-                <div style={{
-                  transform: `scale(${menuGalleryScale})`,
-                  transformOrigin: 'center center',
-                  width: `${horizontalWidth / menuGalleryScale}px`,
-                  height: `${viewerHeight / menuGalleryScale}px`,
-                }}>
-                  <MenuGallery2 
-                    viewMode="menu"
-                    orientationOverride="horizontal"
-                    outerWidth={horizontalWidth / menuGalleryScale}
-                    outerHeight={viewerHeight / menuGalleryScale}
-                  />
-                </div>
+                <MenuGallery2 
+                  viewMode="menu"
+                  orientationOverride="horizontal"
+                  outerWidth={horizontalWidth}
+                  outerHeight={viewerHeight}
+                  disableInnerScale={true}
+                />
               </div>
             </div>
 

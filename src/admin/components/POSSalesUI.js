@@ -6007,14 +6007,17 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     // If showing brief summary view after event end (only if showEventSetup is false)
     // Also show if isPostEventEdit is true (resumed event in post-event mode)
     if (showSummaryView && (eventSummary || isPostEventEdit) && !showEventSetup) {
+      // Use prop dimensions when available, otherwise use viewport
+      const summaryHeight = (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh';
+      
       return (
         <div style={{
           width: '100%',
-          height: '100%',
-          minHeight: '100vh',
+          height: summaryHeight,
           background: '#fff',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}>
           {/* Header with logo - matching POS UI */}
           <div style={{
@@ -7278,14 +7281,17 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
 
     // If no active event, show start event screen
     if (!eventId) {
+      // Use prop dimensions when available, otherwise use viewport
+      const startEventHeight = (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh';
+      
       return (
         <div style={{
           width: '100%',
-          height: '100%',
-          minHeight: '100vh',
+          height: startEventHeight,
           background: '#fff',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}>
           {/* Header with logo - matching POS UI */}
           <div style={{
@@ -7408,11 +7414,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     // Header height for positioning calculations - exported to POSContent via prop
     const eventHeaderHeight = 50;
     
+    // Use prop dimensions when available, otherwise use viewport
+    const containerWidth = (isStandalone && propOuterWidth) ? `${propOuterWidth}px` : '100%';
+    const containerHeight = (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh';
+    
     return (
       <div
         style={{
-          width: '100%',
-          height: '100vh',
+          width: containerWidth,
+          height: containerHeight,
           boxSizing: 'border-box',
           overflow: 'hidden',
           display: 'flex',

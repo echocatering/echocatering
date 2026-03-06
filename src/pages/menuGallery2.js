@@ -438,6 +438,7 @@ function EchoCocktailSubpage2({
   orientationOverride,
   outerWidthOverride,
   outerHeightOverride,
+  disableInnerScale = false,
   galleryRef,
   selectedCocktails: propSelectedCocktails,
   setSelectedCocktails: propSetSelectedCocktails,
@@ -528,8 +529,8 @@ function EchoCocktailSubpage2({
         innerHeight = outerHeight;
         innerWidth = innerHeight * innerAR;
       }
-      // Scale inner container by 1.10x to extend beyond screen edge (only in app/menu mode)
-      if (viewMode === 'menu') {
+      // Scale inner container by 1.10x to extend beyond screen edge (only in app/menu mode, unless disabled)
+      if (viewMode === 'menu' && !disableInnerScale) {
         innerWidth *= 1.10;
         innerHeight *= 1.10;
       }
@@ -2891,7 +2892,7 @@ function EchoCocktailSubpage2({
 /**
  * Wrapper component preserving data fetch + selected state.
  */
-export default function MenuGallery2({ viewMode = 'web', orientationOverride, outerWidth, outerHeight, selectedCocktails, setSelectedCocktails, initialItem, onItemNavigated, onAllItemsClick }) {
+export default function MenuGallery2({ viewMode = 'web', orientationOverride, outerWidth, outerHeight, selectedCocktails, setSelectedCocktails, initialItem, onItemNavigated, onAllItemsClick, disableInnerScale = false }) {
   const [subpages, setSubpages] = useState({
     cocktails: { title: 'Echo Cocktails', videoFiles: [], cocktailInfo: {} },
     mocktails: { title: 'Echo Mocktails', videoFiles: [], cocktailInfo: {} },
@@ -3276,6 +3277,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       orientationOverride={orientationOverride}
       outerWidthOverride={outerWidth}
       outerHeightOverride={outerHeight}
+      disableInnerScale={disableInnerScale}
       selectedCocktails={selectedCocktails}
       setSelectedCocktails={setSelectedCocktails}
       initialIndex={initialIndex}
