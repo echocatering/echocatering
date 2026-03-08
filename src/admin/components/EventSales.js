@@ -232,39 +232,40 @@ const EventSales = () => {
   };
 
   // Calculate invoice based on payment model
+  // Variables: c=guests, d=permit, e=OHD, f=insurance, i=hours, k=$+HR, l=$2HR, m=$PP, M=MIN
+  // a = l × c  |  b = k × (i − 2)
+  // S: G = d+e+f+a+(b×c)  →  max(G, MIN)
+  // C: N = (c×m)+d+e+f    →  max(N, MIN)
+  // H: o=cash+credit, p=MIN−o, q=invoice×1.08, R=q+p+d+e+f  →  max(R, MIN)
   const calculateInvoice = (event) => {
-    const model = getCurrentValue(event, 'paymentModel') || 'S'; // Default to Standard
-    const G = parseFloat(event.guestCount) || 0; // Number of guests
-    const H = parseFloat(event.durationHours) || 0; // Total hours
-    const { minimum: M, overhead: O, first2Hr: F_first, addHr: F_add, perPerson: S } = pricingVars;
-    
-    // Add specific overhead items to invoice: Permit, Insurance, Accommodation
-    // Exclude: Transportation, Broken Glassware, Spillage, COGS, Labor (covered by flat OHD rate)
-    const permitCost = parseFloat(event.permitCost) || 0;
-    const insuranceCost = parseFloat(event.insuranceCost) || 0;
-    const accommodationCost = parseFloat(event.accommodationCost) || 0;
-    const additionalOverhead = permitCost + insuranceCost + accommodationCost;
-    
+    const model = getCurrentValue(event, 'paymentModel') || 'S';
+    const c = parseFloat(event.guestCount) || 0;       // Total Guests
+    const i = parseFloat(event.durationHours) || 0;    // Total Hours
+    const { minimum: M, overhead: e, first2Hr: l, addHr: k, perPerson: m } = pricingVars;
+    const d = parseFloat(event.permitCost) || 0;       // Permit
+    const f = parseFloat(event.insuranceCost) || 0;    // Insurance
+
     if (model === 'S') {
-      // Model 1: Standard (I Buy Alcohol)
-      const firstHours = Math.min(H, 2);
-      const additionalHours = Math.max(H - 2, 0);
-      const serviceFee = (firstHours * F_first * G) + (additionalHours * F_add * G);
-      const totalFee = serviceFee + O + additionalOverhead;
-      return Math.max(totalFee, M);
+      // G = d + e + f + a + (b × c)
+      const a = l * c;                                  // l × c
+      const b = k * Math.max(i - 2, 0);                // k × (i − 2)
+      const G = d + e + f + a + (b * c);
+      return Math.max(G, M);
     } else if (model === 'C') {
-      // Model 2: Customer Pays for Alcohol
-      const serviceFee = G * S;
-      const totalFee = serviceFee + O + additionalOverhead;
-      return Math.max(totalFee, M);
+      // N = (c × m) + d + e + f
+      const N = (c * m) + d + e + f;
+      return Math.max(N, M);
     } else if (model === 'H') {
-      // Model 3: Hybrid/Cash Bar
-      const totalSales = parseFloat(event.totalSales) || 0;
-      const totalWithOverhead = O + totalSales + additionalOverhead;
-      if (totalWithOverhead < M) {
-        return M - totalWithOverhead; // Customer pays the difference
-      }
-      return 0; // No additional invoice needed
+      // o = cash + credit, p = MIN − o, q = invoice sales + 8% tax
+      const parsed = parseItemData(event.itemData);
+      const cash = parsed.paymentTotals.CASH > 0 ? parsed.paymentTotals.CASH : (event.cashTotal || 0);
+      const credit = parsed.paymentTotals.CREDIT > 0 ? parsed.paymentTotals.CREDIT : (event.creditTotal || 0);
+      const invoiceSales = parsed.paymentTotals.INVOICE > 0 ? parsed.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+      const o = cash + credit;                          // total cash + credit
+      const p = M - o;                                  // MIN − o
+      const q = invoiceSales * 1.08;                    // invoice sales + 8% tax
+      const R = q + p + d + e + f;
+      return Math.max(R, M);
     }
     return 0;
   };
