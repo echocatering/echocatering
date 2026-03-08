@@ -298,7 +298,6 @@ const EventSales = () => {
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
-        { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'lockOverhead', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'overhead', isLockHeader: true },
       ]
     },
@@ -329,6 +328,7 @@ const EventSales = () => {
       collapsable: false,
       columns: [
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
+        { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
         { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
@@ -514,13 +514,17 @@ const EventSales = () => {
         ) : '-';
       case 'invoiceTotal':
         // Invoice payments - use parsed itemData if available, fallback to stored value
-        // Include 8% tax in the displayed amount
+        // Include Tax (8%), Permit, Insurance, and Overhead in the displayed amount
         const parsedInvoice = parseItemData(event.itemData);
-        const invoiceSubtotal = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        const invoiceTotalWithTax = invoiceSubtotal * 1.08;
-        return invoiceSubtotal > 0 ? (
+        const invoiceSubtotalPM = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+        const invoiceTaxPM = invoiceSubtotalPM * 0.08;
+        const permitCostPM = parseFloat(event.permitCost) || 0;
+        const insuranceCostPM = parseFloat(event.insuranceCost) || 0;
+        const overheadCostPM = pricingVars.overhead || 0;
+        const invoiceTotalWithCharges = invoiceSubtotalPM + invoiceTaxPM + permitCostPM + insuranceCostPM + overheadCostPM;
+        return invoiceSubtotalPM > 0 ? (
           <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
-            ${invoiceTotalWithTax.toFixed(2)}
+            ${invoiceTotalWithCharges.toFixed(2)}
           </span>
         ) : '-';
       case 'itemData':
@@ -541,12 +545,7 @@ const EventSales = () => {
           </span>
         );
       case 'expensesTotal':
-        // Sum of all expenses including tax, displayed as negative (loss)
-        const parsedExpTax = parseItemData(event.itemData);
-        const cashExpTax = parsedExpTax.paymentTotals.CASH > 0 ? parsedExpTax.paymentTotals.CASH : (event.cashTotal || 0);
-        const creditExpTax = parsedExpTax.paymentTotals.CREDIT > 0 ? parsedExpTax.paymentTotals.CREDIT : (event.creditTotal || 0);
-        const invoiceExpTax = parsedExpTax.paymentTotals.INVOICE > 0 ? parsedExpTax.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        const totalExpTax = (cashExpTax + creditExpTax + invoiceExpTax) * 0.08;
+        // Sum of all expenses (excluding tax - tax is now just a record in Revenue section)
         const expensesSum = 
           (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
@@ -554,8 +553,7 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0) +
-          totalExpTax;
+          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
         return expensesSum > 0 ? (
           <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
             -${expensesSum.toFixed(2)}
