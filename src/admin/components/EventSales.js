@@ -552,7 +552,24 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'tips':
-        return formatCurrency(event.totalTips);
+        // Count bartenders from laborDetails array
+        const laborDetails = event.laborDetails || [];
+        const bartenderCount = laborDetails.filter(l => 
+          l.title?.toLowerCase().includes('bartender') || 
+          l.job?.toLowerCase().includes('bartender')
+        ).length;
+        const totalTips = parseFloat(event.totalTips) || 0;
+        
+        if (bartenderCount > 1 && totalTips > 0) {
+          const tipsPerPerson = totalTips / bartenderCount;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <span>{formatCurrency(tipsPerPerson)}</span>
+              <span style={{ fontSize: '10px', color: '#666' }}>x{bartenderCount}</span>
+            </div>
+          );
+        }
+        return formatCurrency(totalTips);
       case 'invoice':
         // Invoice total - sum of invoiced tabs (shown as negative since payment pending)
         const invoiceTotal = event.invoiceTotal || 0;
@@ -1553,7 +1570,7 @@ const EventSales = () => {
                       <td
                         key={col.key}
                         style={{
-                          padding: '10px 8px',
+                          padding: '14px 8px',
                           borderBottom: '1px solid #eee',
                           borderRight: isLastInGroup && groupIdx < columnGroups.length - 1 ? '2px solid #999' : '1px solid #e5e5e5',
                           fontSize: '13px',
