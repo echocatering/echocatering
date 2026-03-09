@@ -561,12 +561,21 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'profit':
-        // Profit = Invoice Received + netIncome (if negative, it subtracts)
-        const invoiceReceived = getCurrentValue(event, 'amountReceived') || 0;
-        const netIncome = event.netIncome || 0;
-        const profit = invoiceReceived + netIncome;
+        // Profit = Revenue (Sales + Tips + Invoice Received) - Expenses
+        const profitSales = parseFloat(event.totalSales) || 0;
+        const profitTips = parseFloat(event.totalTips) || 0;
+        const profitReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const profitExpenses = 
+          (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
+          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
+        const profit = profitSales + profitTips + profitReceived - profitExpenses;
         return (
-          <span style={{ color: profit >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
+          <span style={{ color: profit > 0 ? '#22c55e' : profit < 0 ? '#ef4444' : '#666', fontWeight: 'bold' }}>
             {formatCurrency(profit)}
           </span>
         );
