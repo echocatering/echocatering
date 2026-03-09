@@ -617,54 +617,79 @@ const EventSales = () => {
           </span>
         );
       case 'amountReceived':
-        // Always editable amount received field
+        // Editable when paymentModel section is unlocked
         const received = getCurrentValue(event, 'amountReceived') || 0;
         const calcInvoice = calculateInvoice(event);
         const tipAdjustment = Math.max(0, parseFloat(received) - calcInvoice);
+        const isPaymentModelLocked = sectionLocks.paymentModel;
+        
+        // When locked, show read-only display
+        if (isPaymentModelLocked) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <span style={{
+                fontWeight: 'bold',
+                color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
+              }}>
+                {received > 0 ? `$${parseFloat(received).toFixed(2)}` : '-'}
+              </span>
+              {tipAdjustment > 0 && (
+                <span style={{ fontSize: '10px', color: '#22c55e' }}>
+                  +${tipAdjustment.toFixed(2)} tip
+                </span>
+              )}
+            </div>
+          );
+        }
+        
+        // When unlocked, show editable input
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
             <input
               type="text"
               inputMode="decimal"
-              value={received === 0 ? '' : received}
+              value={editedEvents[event._id]?.amountReceived !== undefined 
+                ? editedEvents[event._id].amountReceived 
+                : (received === 0 ? '' : received)}
               onChange={(e) => {
                 e.stopPropagation();
+                const inputValue = e.target.value;
+                // Allow decimal input - store raw string value while typing
+                setEditedEvents(prev => ({
+                  ...prev,
+                  [event._id]: {
+                    ...prev[event._id],
+                    amountReceived: inputValue
+                  }
+                }));
+              }}
+              onBlur={(e) => {
+                // On blur, parse and save the final value
                 const newReceived = parseFloat(e.target.value) || 0;
                 handleFieldChange(event._id, 'amountReceived', newReceived);
-                // If received > invoice, add extra to tips
-                const extraTip = Math.max(0, newReceived - calcInvoice);
-                const baseTips = event.totalTips || 0;
-                // Only update tips if there's extra from received amount
-                if (extraTip > 0) {
-                  handleFieldChange(event._id, 'totalTips', baseTips + extraTip);
-                }
+                // Clear the edited state
+                setEditedEvents(prev => {
+                  const updated = { ...prev };
+                  if (updated[event._id]) {
+                    delete updated[event._id].amountReceived;
+                  }
+                  return updated;
+                });
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                // Clear 0 on click
-                if (parseFloat(e.target.value) === 0 || e.target.value === '') {
-                  e.target.value = '';
-                }
-              }}
-              onFocus={(e) => {
-                // Clear 0 on focus
-                if (parseFloat(e.target.value) === 0 || e.target.value === '0') {
-                  e.target.value = '';
-                }
               }}
               style={{
                 width: '80px',
                 padding: '4px 6px',
-                border: 'none',
+                border: '1px solid #ddd',
                 borderRadius: '4px',
                 fontSize: '12px',
                 textAlign: 'center',
                 fontWeight: 'bold',
                 color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
-                background: 'transparent',
+                background: '#fff',
                 outline: 'none',
-                MozAppearance: 'textfield',
-                WebkitAppearance: 'none',
               }}
             />
             {tipAdjustment > 0 && (
