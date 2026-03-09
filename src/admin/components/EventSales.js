@@ -56,15 +56,22 @@ const EventSales = () => {
   
   // Helper to get lock state for a specific event and section
   const getRowLock = (eventId, lockGroup) => {
-    if (!rowLocks[eventId]) {
-      // Default: basicInfo and overhead locked, paymentModel unlocked
-      return lockGroup === 'paymentModel' ? false : true;
+    // First check local state override
+    if (rowLocks[eventId]?.[lockGroup] !== undefined) {
+      return rowLocks[eventId][lockGroup];
     }
-    return rowLocks[eventId][lockGroup] ?? (lockGroup === 'paymentModel' ? false : true);
+    // Then check event data from backend
+    const event = events.find(e => e._id === eventId);
+    if (event?.sectionLocks?.[lockGroup] !== undefined) {
+      return event.sectionLocks[lockGroup];
+    }
+    // Default: basicInfo and overhead locked, paymentModel unlocked
+    return lockGroup === 'paymentModel' ? false : true;
   };
   
-  // Helper to set lock state for a specific event and section
-  const setRowLock = (eventId, lockGroup, locked) => {
+  // Helper to set lock state for a specific event and section (saves to backend when locking)
+  const setRowLock = async (eventId, lockGroup, locked) => {
+    // Update local state immediately
     setRowLocks(prev => ({
       ...prev,
       [eventId]: {
@@ -72,6 +79,82 @@ const EventSales = () => {
         [lockGroup]: locked
       }
     }));
+    
+    // When locking, save all pending changes and lock state to backend
+    if (locked) {
+      try {
+        const changes = editedEvents[eventId] || {};
+        const event = events.find(e => e._id === eventId);
+        const currentLocks = event?.sectionLocks || {};
+        
+        await apiCall(`/catering-events/${eventId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            ...changes,
+            sectionLocks: {
+              ...currentLocks,
+              [lockGroup]: true
+            }
+          })
+        });
+        
+        // Update local events state
+        setEvents(prev => prev.map(e => {
+          if (e._id === eventId) {
+            return {
+              ...e,
+              ...changes,
+              sectionLocks: {
+                ...e.sectionLocks,
+                [lockGroup]: true
+              }
+            };
+          }
+          return e;
+        }));
+        
+        // Clear edited state for this event
+        setEditedEvents(prev => {
+          const updated = { ...prev };
+          delete updated[eventId];
+          return updated;
+        });
+      } catch (err) {
+        console.error('Error saving lock state:', err);
+      }
+    } else {
+      // When unlocking, just save the unlock state to backend
+      try {
+        const event = events.find(e => e._id === eventId);
+        const currentLocks = event?.sectionLocks || {};
+        
+        await apiCall(`/catering-events/${eventId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            sectionLocks: {
+              ...currentLocks,
+              [lockGroup]: false
+            }
+          })
+        });
+        
+        // Update local events state
+        setEvents(prev => prev.map(e => {
+          if (e._id === eventId) {
+            return {
+              ...e,
+              sectionLocks: {
+                ...e.sectionLocks,
+                [lockGroup]: false
+              }
+            };
+          }
+          return e;
+        }));
+      } catch (err) {
+        console.error('Error saving unlock state:', err);
+      }
+    }
   };
   
   const [unlockConfirm, setUnlockConfirm] = useState(null); // { eventId, lockGroup } to confirm unlock
@@ -532,20 +615,22 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'invoiceTotal':
-        // Invoice payments - use parsed itemData if available, fallback to stored value
-        // Include Tax (8%), Permit, Insurance, and Overhead in the displayed amount
+        // Invoice payments - always show OHD + Insurance + Permit, plus invoice tab if exists
         const parsedInvoice = parseItemData(event.itemData);
         const invoiceSubtotalPM = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
         const invoiceTaxPM = invoiceSubtotalPM * 0.08;
         const permitCostPM = parseFloat(event.permitCost) || 0;
         const insuranceCostPM = parseFloat(event.insuranceCost) || 0;
         const overheadCostPM = pricingVars.overhead || 0;
-        const invoiceTotalWithCharges = invoiceSubtotalPM + invoiceTaxPM + permitCostPM + insuranceCostPM + overheadCostPM;
+        // Always include OHD, Insurance, Permit - even if no invoice tab
+        const baseCharges = permitCostPM + insuranceCostPM + overheadCostPM;
+        const invoiceTotalWithCharges = invoiceSubtotalPM + invoiceTaxPM + baseCharges;
         // Check if received >= calculated invoice to determine color
         const receivedForInvoice = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
         const calcInvoiceForColor = calculateInvoice(event);
         const invoicePaid = receivedForInvoice >= calcInvoiceForColor;
-        return invoiceSubtotalPM > 0 ? (
+        // Always show if there are any charges (OHD, Insurance, Permit, or invoice tab)
+        return invoiceTotalWithCharges > 0 ? (
           <span style={{ color: invoicePaid ? '#22c55e' : '#666', fontWeight: 'bold' }}>
             ${invoiceTotalWithCharges.toFixed(2)}
           </span>
@@ -1304,23 +1389,40 @@ const EventSales = () => {
                       
                       {/* Lines for each series (categories in 'all' mode, items in specific category mode) */}
                       {seriesList.map(seriesName => {
-                        const points = sortedIntervals.map(([key, interval], idx) => {
+                        // Calculate points for curved line
+                        const pointsArray = sortedIntervals.map(([key, interval], idx) => {
                           const x = padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth;
                           const dataSource = isAllMode ? interval.categories : interval.items;
                           const count = dataSource[seriesName]?.count || 0;
                           const y = height - padding.bottom - (count / maxCount) * graphHeight;
-                          return `${x},${y}`;
-                        }).join(' ');
+                          return { x, y };
+                        });
+                        
+                        // Generate smooth curve path using cubic bezier
+                        let pathD = '';
+                        if (pointsArray.length > 0) {
+                          pathD = `M ${pointsArray[0].x},${pointsArray[0].y}`;
+                          for (let i = 1; i < pointsArray.length; i++) {
+                            const prev = pointsArray[i - 1];
+                            const curr = pointsArray[i];
+                            // Control point offset (tension factor)
+                            const tension = 0.3;
+                            const dx = (curr.x - prev.x) * tension;
+                            // Cubic bezier: C cp1x,cp1y cp2x,cp2y x,y
+                            pathD += ` C ${prev.x + dx},${prev.y} ${curr.x - dx},${curr.y} ${curr.x},${curr.y}`;
+                          }
+                        }
                         
                         const lineColor = isAllMode ? (categoryColors[seriesName] || '#6b7280') : itemColors[seriesName];
                         
                         return (
                           <g key={seriesName}>
-                            <polyline
-                              points={points}
+                            <path
+                              d={pathD}
                               fill="none"
                               stroke={lineColor}
                               strokeWidth="2"
+                              strokeLinecap="round"
                               strokeLinejoin="round"
                             />
                             {/* Data points */}
