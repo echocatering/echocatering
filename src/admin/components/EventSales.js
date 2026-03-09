@@ -541,8 +541,12 @@ const EventSales = () => {
         const insuranceCostPM = parseFloat(event.insuranceCost) || 0;
         const overheadCostPM = pricingVars.overhead || 0;
         const invoiceTotalWithCharges = invoiceSubtotalPM + invoiceTaxPM + permitCostPM + insuranceCostPM + overheadCostPM;
+        // Check if received >= calculated invoice to determine color
+        const receivedForInvoice = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const calcInvoiceForColor = calculateInvoice(event);
+        const invoicePaid = receivedForInvoice >= calcInvoiceForColor;
         return invoiceSubtotalPM > 0 ? (
-          <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+          <span style={{ color: invoicePaid ? '#22c55e' : '#666', fontWeight: 'bold' }}>
             ${invoiceTotalWithCharges.toFixed(2)}
           </span>
         ) : '-';
@@ -630,7 +634,7 @@ const EventSales = () => {
         // Calculated invoice based on payment model
         const invoiceAmount = calculateInvoice(event);
         return (
-          <span style={{ color: '#800080', fontWeight: 'bold' }}>
+          <span style={{ color: '#666', fontWeight: 'bold' }}>
             ${invoiceAmount.toFixed(2)}
           </span>
         );
@@ -638,84 +642,75 @@ const EventSales = () => {
         // Editable when paymentModel section is unlocked
         const received = getCurrentValue(event, 'amountReceived') || 0;
         const calcInvoice = calculateInvoice(event);
-        const tipAdjustment = Math.max(0, parseFloat(received) - calcInvoice);
         const isPaymentModelLocked = getRowLock(event._id, 'paymentModel');
         
-        // When locked, show read-only display
+        // When locked, show read-only display (no +tip display - extra goes to Tips column)
         if (isPaymentModelLocked) {
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span style={{
-                fontWeight: 'bold',
-                color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
-              }}>
-                {received > 0 ? `$${parseFloat(received).toFixed(2)}` : '-'}
-              </span>
-              {tipAdjustment > 0 && (
-                <span style={{ fontSize: '10px', color: '#22c55e' }}>
-                  +${tipAdjustment.toFixed(2)} tip
-                </span>
-              )}
-            </div>
+            <span style={{
+              fontWeight: 'bold',
+              color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#666',
+            }}>
+              {received > 0 ? `$${parseFloat(received).toFixed(2)}` : '-'}
+            </span>
           );
         }
         
-        // When unlocked, show editable input
+        // When unlocked, show editable input (extra amount goes to Tips column on blur)
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={editedEvents[event._id]?.amountReceived !== undefined 
-                ? editedEvents[event._id].amountReceived 
-                : (received === 0 ? '' : received)}
-              onChange={(e) => {
-                e.stopPropagation();
-                const inputValue = e.target.value;
-                // Allow decimal input - store raw string value while typing
-                setEditedEvents(prev => ({
-                  ...prev,
-                  [event._id]: {
-                    ...prev[event._id],
-                    amountReceived: inputValue
-                  }
-                }));
-              }}
-              onBlur={(e) => {
-                // On blur, parse and save the final value
-                const newReceived = parseFloat(e.target.value) || 0;
-                handleFieldChange(event._id, 'amountReceived', newReceived);
-                // Clear the edited state
-                setEditedEvents(prev => {
-                  const updated = { ...prev };
-                  if (updated[event._id]) {
-                    delete updated[event._id].amountReceived;
-                  }
-                  return updated;
-                });
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              style={{
-                width: '80px',
-                padding: '4px 6px',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
-                background: 'transparent',
-                outline: 'none',
-              }}
-            />
-            {tipAdjustment > 0 && (
-              <span style={{ fontSize: '10px', color: '#22c55e' }}>
-                +${tipAdjustment.toFixed(2)} tip
-              </span>
-            )}
-          </div>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={editedEvents[event._id]?.amountReceived !== undefined 
+              ? editedEvents[event._id].amountReceived 
+              : (received === 0 ? '' : received)}
+            onChange={(e) => {
+              e.stopPropagation();
+              const inputValue = e.target.value;
+              // Allow decimal input - store raw string value while typing
+              setEditedEvents(prev => ({
+                ...prev,
+                [event._id]: {
+                  ...prev[event._id],
+                  amountReceived: inputValue
+                }
+              }));
+            }}
+            onBlur={(e) => {
+              // On blur, parse and save the final value
+              const newReceived = parseFloat(e.target.value) || 0;
+              handleFieldChange(event._id, 'amountReceived', newReceived);
+              // If received > invoice, add extra to Tips
+              const extraTip = Math.max(0, newReceived - calcInvoice);
+              if (extraTip > 0) {
+                const currentTips = parseFloat(event.totalTips) || 0;
+                handleFieldChange(event._id, 'totalTips', currentTips + extraTip);
+              }
+              // Clear the edited state
+              setEditedEvents(prev => {
+                const updated = { ...prev };
+                if (updated[event._id]) {
+                  delete updated[event._id].amountReceived;
+                }
+                return updated;
+              });
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            style={{
+              width: '80px',
+              padding: '4px 6px',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '12px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#666',
+              background: 'transparent',
+              outline: 'none',
+            }}
+          />
         );
       default:
         return '-';
