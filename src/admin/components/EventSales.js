@@ -50,13 +50,31 @@ const EventSales = () => {
   const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
   const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(true); // Side panel collapsed by default
   
-  // Section lock states - controls whether fields in each section are editable
-  const [sectionLocks, setSectionLocks] = useState({
-    basicInfo: true,      // Initially locked
-    overhead: true,       // Initially locked
-    paymentModel: false,  // Initially unlocked
-  });
-  const [unlockConfirm, setUnlockConfirm] = useState(null); // Section name to confirm unlock
+  // Section lock states - per-row (per-event) controls whether fields in each section are editable
+  // Structure: { [eventId]: { basicInfo: true/false, overhead: true/false, paymentModel: true/false } }
+  const [rowLocks, setRowLocks] = useState({});
+  
+  // Helper to get lock state for a specific event and section
+  const getRowLock = (eventId, lockGroup) => {
+    if (!rowLocks[eventId]) {
+      // Default: basicInfo and overhead locked, paymentModel unlocked
+      return lockGroup === 'paymentModel' ? false : true;
+    }
+    return rowLocks[eventId][lockGroup] ?? (lockGroup === 'paymentModel' ? false : true);
+  };
+  
+  // Helper to set lock state for a specific event and section
+  const setRowLock = (eventId, lockGroup, locked) => {
+    setRowLocks(prev => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        [lockGroup]: locked
+      }
+    }));
+  };
+  
+  const [unlockConfirm, setUnlockConfirm] = useState(null); // { eventId, lockGroup } to confirm unlock
   const [showRatePanel, setShowRatePanel] = useState(false); // Rate panel visibility
 
   // Fetch events from API
@@ -388,7 +406,7 @@ const EventSales = () => {
       case 'lockOverhead':
       case 'lockPaymentModel':
         const lockGroup = column.lockGroup;
-        const isLocked = sectionLocks[lockGroup];
+        const isLocked = getRowLock(event._id, lockGroup);
         return (
           <img
             src={isLocked ? '/assets/icons/LOCKED.png' : '/assets/icons/UNLOCKED.png'}
@@ -396,9 +414,9 @@ const EventSales = () => {
             onClick={(e) => {
               e.stopPropagation();
               if (isLocked) {
-                setUnlockConfirm(lockGroup);
+                setUnlockConfirm({ eventId: event._id, lockGroup });
               } else {
-                setSectionLocks(prev => ({ ...prev, [lockGroup]: true }));
+                setRowLock(event._id, lockGroup, true);
               }
             }}
             style={{
@@ -621,7 +639,7 @@ const EventSales = () => {
         const received = getCurrentValue(event, 'amountReceived') || 0;
         const calcInvoice = calculateInvoice(event);
         const tipAdjustment = Math.max(0, parseFloat(received) - calcInvoice);
-        const isPaymentModelLocked = sectionLocks.paymentModel;
+        const isPaymentModelLocked = getRowLock(event._id, 'paymentModel');
         
         // When locked, show read-only display
         if (isPaymentModelLocked) {
@@ -682,13 +700,13 @@ const EventSales = () => {
               style={{
                 width: '80px',
                 padding: '4px 6px',
-                border: '1px solid #ddd',
+                border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
                 textAlign: 'center',
                 fontWeight: 'bold',
                 color: parseFloat(received) >= calcInvoice ? '#22c55e' : '#f59e0b',
-                background: '#fff',
+                background: 'transparent',
                 outline: 'none',
               }}
             />
@@ -1447,7 +1465,7 @@ const EventSales = () => {
                           textAlign: 'center',
                         }}
                       >
-                        {col.editable && col.lockGroup && !sectionLocks[col.lockGroup] && col.key !== 'paymentModel' ? (
+                        {col.editable && col.lockGroup && !getRowLock(event._id, col.lockGroup) && col.key !== 'paymentModel' ? (
                           <input
                             type="text"
                             value={getCurrentValue(event, col.field) ?? ''}
@@ -1456,10 +1474,12 @@ const EventSales = () => {
                             style={{
                               width: '90%',
                               padding: '4px',
-                              border: '1px solid #ddd',
+                              border: 'none',
                               borderRadius: '4px',
                               fontSize: '13px',
                               textAlign: 'center',
+                              background: 'transparent',
+                              outline: 'none',
                             }}
                           />
                         ) : (
@@ -1616,7 +1636,7 @@ const EventSales = () => {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
-                  setSectionLocks(prev => ({ ...prev, [unlockConfirm]: false }));
+                  setRowLock(unlockConfirm.eventId, unlockConfirm.lockGroup, false);
                   setUnlockConfirm(null);
                 }}
                 style={{
