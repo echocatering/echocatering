@@ -80,17 +80,36 @@ const EventSales = () => {
       }
     }));
     
-    // When locking, save all pending changes and lock state to backend
+    // When locking, save all fields in the group and lock state to backend
     if (locked) {
       try {
-        const changes = editedEvents[eventId] || {};
         const event = events.find(e => e._id === eventId);
         const currentLocks = event?.sectionLocks || {};
+        const editedChanges = editedEvents[eventId] || {};
+        
+        // Define which fields belong to each lock group
+        const groupFields = {
+          basicInfo: ['name', 'date', 'guestCount', 'startTime', 'endTime'],
+          overhead: ['accommodationCost', 'travelCost', 'permitCost', 'insuranceCost', 'laborCost'],
+          paymentModel: ['paymentModel', 'amountReceived']
+        };
+        
+        // Gather all current values for fields in this group
+        const fieldsToSave = {};
+        const fields = groupFields[lockGroup] || [];
+        fields.forEach(field => {
+          // Use edited value if exists, otherwise use current event value
+          if (editedChanges[field] !== undefined) {
+            fieldsToSave[field] = editedChanges[field];
+          } else if (event[field] !== undefined) {
+            fieldsToSave[field] = event[field];
+          }
+        });
         
         await apiCall(`/catering-events/${eventId}`, {
           method: 'PUT',
           body: JSON.stringify({
-            ...changes,
+            ...fieldsToSave,
             sectionLocks: {
               ...currentLocks,
               [lockGroup]: true
@@ -103,7 +122,7 @@ const EventSales = () => {
           if (e._id === eventId) {
             return {
               ...e,
-              ...changes,
+              ...fieldsToSave,
               sectionLocks: {
                 ...e.sectionLocks,
                 [lockGroup]: true
@@ -113,10 +132,15 @@ const EventSales = () => {
           return e;
         }));
         
-        // Clear edited state for this event
+        // Clear edited state for this event's group fields
         setEditedEvents(prev => {
           const updated = { ...prev };
-          delete updated[eventId];
+          if (updated[eventId]) {
+            fields.forEach(field => delete updated[eventId][field]);
+            if (Object.keys(updated[eventId]).length === 0) {
+              delete updated[eventId];
+            }
+          }
           return updated;
         });
       } catch (err) {
@@ -1570,7 +1594,7 @@ const EventSales = () => {
                       <td
                         key={col.key}
                         style={{
-                          padding: '14px 8px',
+                          padding: '10px 8px',
                           borderBottom: '1px solid #eee',
                           borderRight: isLastInGroup && groupIdx < columnGroups.length - 1 ? '2px solid #999' : '1px solid #e5e5e5',
                           fontSize: '13px',
