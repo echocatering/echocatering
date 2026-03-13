@@ -69,16 +69,14 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
     if (!mapSvgContent || mapError) return;
 
     const container = mapRef.current;
-    
-    // Clear any existing content
-    container.innerHTML = '';
 
     try {
-      // Parse SVG (minimal processing for speed)
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(mapSvgContent, 'image/svg+xml');
-      const svg = doc.querySelector('svg');
-      
+      // Inject SVG via innerHTML so the browser parses it natively in the HTML context.
+      // This avoids the namespace issues that occur when DOMParser creates an XML document
+      // and the SVG element is then moved into the HTML DOM via appendChild.
+      container.innerHTML = mapSvgContent;
+      const svg = container.querySelector('svg');
+
       if (!svg) {
         container.innerHTML = '<div style="text-align: center; color: #b91c1c; font-family: Montserrat, sans-serif; padding: 1rem;">Invalid SVG content</div>';
         return;
@@ -100,10 +98,8 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
       svg.style.display = 'block';
       svg.setAttribute('stroke', '#ececec');
 
-      // Mount SVG first for immediate display
-      container.appendChild(svg);
       svgMountedRef.current = true;
-      
+
       // Set svgRef for direct access (used for map snapshot saving)
       if (svgRef) {
         svgRef.current = svg;
