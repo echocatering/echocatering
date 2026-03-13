@@ -87,10 +87,12 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
       // Configure SVG attributes (minimal setup)
       // Use xMidYMin meet to scale SVG to fit container height, centered horizontally
       svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-      // Use the correct viewBox for the active map type:
-      //   World map: 2000x857  |  US map: 959x593
-      const correctViewBox = mapType === 'us' ? '0 0 959 593' : '0 0 2000 857';
-      svg.setAttribute('viewBox', correctViewBox);
+      // Only set viewBox if the SVG file doesn't define its own.
+      // worldmap.svg has no viewBox → needs 0 0 2000 857.
+      // Blank_US_Map.svg already has viewBox="0 0 2000 857" → use it as-is.
+      if (!svg.getAttribute('viewBox')) {
+        svg.setAttribute('viewBox', '0 0 2000 857');
+      }
       svg.removeAttribute('width');
       svg.removeAttribute('height');
       svg.style.width = '100%';
@@ -341,6 +343,7 @@ const MenuManager = () => {
   const prevEditingCocktailIdRef = useRef(null);
   const activeCocktailIdRef = useRef(null);
   const isNavigatingRef = useRef(false); // Prevents useEffect from overwriting during navigation
+  const navVersionRef = useRef(0); // Increments on every navigation — async results check this before applying
   const recipeRef = useRef(null);
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
@@ -1504,6 +1507,8 @@ const MenuManager = () => {
               // Set navigation flag to prevent useEffect from interfering
               isNavigatingRef.current = true;
               
+              // Increment generation counter — any async result that captured an older version is discarded
+              navVersionRef.current++;
               // Cancel any in-flight recipe fetch before switching
               recipeRequestIdRef.current += 1;
               activeCocktailIdRef.current = clickedCocktail._id || null;
@@ -1886,6 +1891,8 @@ const MenuManager = () => {
         // Set navigation flag to prevent useEffect from interfering
         isNavigatingRef.current = true;
         
+        // Increment generation counter — any async result that captured an older version is discarded
+        navVersionRef.current++;
         // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
         recipeRequestIdRef.current += 1;
         activeCocktailIdRef.current = nextCocktail._id || null;
@@ -2491,9 +2498,11 @@ const MenuManager = () => {
   // Fetch recipe for a cocktail
   const fetchRecipeForCocktail = useCallback(async (cocktail) => {
     const requestId = ++recipeRequestIdRef.current;
+    const myNavVersion = navVersionRef.current; // Capture nav version at start of fetch
     const targetCocktailId = cocktail?._id || null;
     const setHydratedRecipe = (nextRecipe) => {
       if (recipeRequestIdRef.current !== requestId) return;
+      if (navVersionRef.current !== myNavVersion) return; // User navigated away while fetching
       if (targetCocktailId && activeCocktailIdRef.current && activeCocktailIdRef.current !== targetCocktailId) return;
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
@@ -2599,9 +2608,10 @@ const MenuManager = () => {
   // Sync garnish from recipe.metadata.garnish to MenuManager form when recipe loads
   useEffect(() => {
     if (recipe && recipe.metadata?.garnish !== undefined && editingCocktail) {
-      // Guard: Only sync if recipe belongs to current editingCocktail
-      // This prevents stale recipe data from a previous item from updating the current item
-      if (recipeForCocktailIdRef.current && editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
+      // Guard: Only sync when the recipe has been confirmed for THIS item.
+      // When recipeForCocktailIdRef is null (cleared on navigation) we must wait — prevents
+      // stale recipe from a previous item overwriting the newly-navigated-to item's garnish.
+      if (editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
         return;
       }
       if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
@@ -2621,9 +2631,10 @@ const MenuManager = () => {
   // For PRE-MIX, recipe title drives the cocktail name (Title Case)
   useEffect(() => {
     if (recipe && editingCocktail) {
-      // Guard: Only sync if recipe belongs to current editingCocktail
-      // This prevents stale recipe data from a previous item from updating the current item
-      if (recipeForCocktailIdRef.current && editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
+      // Guard: Only sync when the recipe has been confirmed for THIS item.
+      // When recipeForCocktailIdRef is null (cleared on navigation) we must wait — prevents
+      // stale recipe from a previous item overwriting the newly-navigated-to item's name/title.
+      if (editingCocktail._id && recipeForCocktailIdRef.current !== editingCocktail._id) {
         return;
       }
       if (recipe.itemNumber && editingCocktail.itemNumber && recipe.itemNumber !== editingCocktail.itemNumber) {
