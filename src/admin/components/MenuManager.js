@@ -87,9 +87,10 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
       // Configure SVG attributes (minimal setup)
       // Use xMidYMin meet to scale SVG to fit container height, centered horizontally
       svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-      // Always use world map viewBox dimensions (2000x857) so container is same size
-      // The US map content will be centered within this larger viewBox
-      svg.setAttribute('viewBox', '0 0 2000 857');
+      // Use the correct viewBox for the active map type:
+      //   World map: 2000x857  |  US map: 959x593
+      const correctViewBox = mapType === 'us' ? '0 0 959 593' : '0 0 2000 857';
+      svg.setAttribute('viewBox', correctViewBox);
       svg.removeAttribute('width');
       svg.removeAttribute('height');
       svg.style.width = '100%';
@@ -575,8 +576,9 @@ const MenuManager = () => {
     try {
       fetchInProgressRef.current = true;
       setLoading(true);
-      // Preserve current editingCocktail ID to maintain selection after fetch
-      const currentEditingId = editingCocktail?._id;
+      // Use ref instead of closure over editingCocktail?._id to avoid stale state
+      // and to prevent fetchCocktails from being recreated on every navigation
+      const currentEditingId = activeCocktailIdRef.current;
       
       // Use menu-manager endpoint which merges Inventory (source of truth) with Cocktail data
       const data = await apiCall('/menu-items/menu-manager?includeArchived=true');
@@ -595,6 +597,11 @@ const MenuManager = () => {
       });
 
       setCocktails(normalized);
+      
+      // Guard: if the user navigated during the async fetch, don't override their current position
+      if (activeCocktailIdRef.current !== currentEditingId) {
+        return normalized;
+      }
       
       // If we had an editingCocktail, try to preserve it by finding its index
       if (currentEditingId && !String(currentEditingId).startsWith('new-')) {
@@ -626,7 +633,7 @@ const MenuManager = () => {
       fetchInProgressRef.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiCall, editingCocktail?._id, selectedCategory]);
+  }, [apiCall, selectedCategory]);
 
   // Filter cocktails by selected category / status
   const filteredCocktails = cocktails.filter(cocktail => {
@@ -684,6 +691,13 @@ const MenuManager = () => {
     setSelectedRegions(next);
   }, [selectedRegions, setSelectedRegions]);
 
+  // Ref kept current so map click handlers always call the latest toggleRegion,
+  // even though the SVG is never re-mounted and the closure from setup time is stale.
+  const toggleRegionRef = useRef(toggleRegion);
+  useEffect(() => {
+    toggleRegionRef.current = toggleRegion;
+  }, [toggleRegion]);
+
   const handleCountrySelectChange = useCallback((event) => {
     const options = Array.from(event.target.selectedOptions || []);
     const next = options
@@ -720,13 +734,11 @@ const MenuManager = () => {
       }
       return;
     }
-    // Only update if:
-    // 1. We're not editing a new draft
-    // 2. editingCocktail is null OR doesn't match the fallback
-    // 3. The fallback actually exists
-    // This prevents overwriting a valid editingCocktail that's already correctly set
-    const shouldUpdate = (!editingCocktailId || editingCocktailId !== fallback._id) && 
-                         (!editingCocktail || editingCocktail._id !== fallback._id);
+    // Only update if the active cocktail ref doesn't already match the fallback.
+    // Using activeCocktailIdRef (a ref, not state) prevents this effect from running
+    // on every field edit (which editingCocktail in deps would cause).
+    const activeId = activeCocktailIdRef.current;
+    const shouldUpdate = (!activeId || activeId !== fallback._id);
     
     if (shouldUpdate) {
       // Don't overwrite if we're creating a new item
@@ -751,7 +763,7 @@ const MenuManager = () => {
         });
       }
     }
-  }, [filteredCocktails, currentIndex, editingCocktailId, selectedCategory, editingCocktail]);
+  }, [filteredCocktails, currentIndex, editingCocktailId, selectedCategory]);
 
   // Fetch countries list for selection
   useEffect(() => {
@@ -1688,7 +1700,8 @@ const MenuManager = () => {
       const handlePathClick = (event) => {
         const code = event.target?.dataset?.code;
         if (code) {
-          toggleRegion(code);
+          // Use ref so we always call the latest toggleRegion, not a stale closure
+          toggleRegionRef.current(code);
         }
       };
 
@@ -1706,7 +1719,7 @@ const MenuManager = () => {
     };
 
     setupInteractions();
-  }, [toggleRegion, refreshMapHighlights]);
+  }, [refreshMapHighlights]);
 
   // Update highlights when regions change or when editingCocktail changes (SVG never re-renders)
   useEffect(() => {
