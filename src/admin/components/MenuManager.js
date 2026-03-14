@@ -94,7 +94,10 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
       svg.removeAttribute('width');
       svg.removeAttribute('height');
       svg.style.width = '100%';
-      svg.style.height = '100%';
+      // Do NOT set height: '100%' — the container only has minHeight (no explicit height),
+      // so percentage height resolves to 0 making the SVG invisible.
+      // Removing height lets the browser derive intrinsic height from the viewBox aspect ratio.
+      svg.style.height = 'auto';
       svg.style.display = 'block';
       svg.setAttribute('stroke', '#ececec');
 
@@ -2647,16 +2650,10 @@ const MenuManager = () => {
           }));
         }
       } else {
-        // For other categories: bidirectional sync
-        // If recipe title exists and differs from cocktail name, sync recipe → MenuManager
-        if (recipe.title && recipe.title !== editingCocktail.name) {
-          setEditingCocktail(prev => ({
-            ...prev,
-            name: recipe.title
-          }));
-        }
-        // If cocktail name exists and differs from recipe title, sync MenuManager → recipe
-        else if (editingCocktail.name && editingCocktail.name !== recipe.title) {
+        // For other categories: cocktail name is the source of truth for the form.
+        // Only sync form → recipe (not recipe → form) to prevent an async recipe load
+        // from overwriting the name that was just set during navigation.
+        if (editingCocktail.name && editingCocktail.name !== recipe.title) {
           setRecipe(prev => {
             if (!prev) return null;
             return { ...prev, title: editingCocktail.name };
