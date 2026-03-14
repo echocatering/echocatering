@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { buildCountryList, buildCountryMap, ISO_CODE_REGEX } from '../../shared/countryUtils';
 import countryAliasMap from '../../shared/countryAliasMap.json';
@@ -35,164 +35,72 @@ const getCodeFromAttributes = (pathEl) => {
   return null;
 };
 
-// Map container that renders SVG ONCE outside React's render cycle
-// The SVG is mounted directly to the DOM and never re-rendered
-// Only highlights are updated via direct DOM manipulation
+// Map container — React owns the SVG content via dangerouslySetInnerHTML,
+// useLayoutEffect configures it synchronously before paint.
 const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, mapType }) => {
-  const svgMountedRef = useRef(false);
-  const lastMapTypeRef = useRef(mapType);
-  const statusRef = useRef(null);
   const onMapReadyRef = useRef(onMapReady);
 
-  // Keep callback ref up to date without causing re-renders
   useEffect(() => {
     onMapReadyRef.current = onMapReady;
   }, [onMapReady]);
 
-  // Reset when mapType changes
-  useEffect(() => {
-    if (lastMapTypeRef.current !== mapType) {
-      svgMountedRef.current = false;
-      lastMapTypeRef.current = mapType;
-      if (mapRef.current) {
-        mapRef.current.innerHTML = '';
-      }
-      if (svgRef) {
-        svgRef.current = null;
-      }
+  // Configure the SVG synchronously after React injects it via dangerouslySetInnerHTML.
+  // useLayoutEffect runs before the browser paints, preventing any flash of unstyled SVG.
+  useLayoutEffect(() => {
+    if (!mapRef.current || !mapSvgContent) return;
+
+    const svg = mapRef.current.querySelector('svg');
+    if (!svg) return;
+
+    // worldmap.svg has no viewBox → set it. Blank_US_Map.svg already has one → leave it.
+    if (!svg.getAttribute('viewBox')) {
+      svg.setAttribute('viewBox', '0 0 2000 857');
     }
-  }, [mapType, mapRef, svgRef]);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+    svg.style.width = '100%';
+    svg.style.height = 'auto';
+    svg.style.display = 'block';
+    svg.setAttribute('stroke', '#ececec');
 
-  // Mount SVG directly to DOM - re-mount when mapType changes
-  useEffect(() => {
-    if (!mapRef.current || svgMountedRef.current) return;
-    if (!mapSvgContent || mapError) return;
+    if (svgRef) svgRef.current = svg;
 
-    const container = mapRef.current;
+    // Process paths in batches asynchronously (non-blocking)
+    const allPaths = svg.querySelectorAll('path');
+    const batchSize = 200;
 
-    try {
-      // Inject SVG via innerHTML so the browser parses it natively in the HTML context.
-      // This avoids the namespace issues that occur when DOMParser creates an XML document
-      // and the SVG element is then moved into the HTML DOM via appendChild.
-      container.innerHTML = mapSvgContent;
-      const svg = container.querySelector('svg');
-
-      if (!svg) {
-        container.innerHTML = '<div style="text-align: center; color: #b91c1c; font-family: Montserrat, sans-serif; padding: 1rem;">Invalid SVG content</div>';
-        return;
-      }
-
-      // Configure SVG attributes (minimal setup)
-      // Use xMidYMin meet to scale SVG to fit container height, centered horizontally
-      svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-      // Only set viewBox if the SVG file doesn't define its own.
-      // worldmap.svg has no viewBox → needs 0 0 2000 857.
-      // Blank_US_Map.svg already has viewBox="0 0 2000 857" → use it as-is.
-      if (!svg.getAttribute('viewBox')) {
-        svg.setAttribute('viewBox', '0 0 2000 857');
-      }
-      svg.removeAttribute('width');
-      svg.removeAttribute('height');
-      svg.style.width = '100%';
-      // Do NOT set height: '100%' — the container only has minHeight (no explicit height),
-      // so percentage height resolves to 0 making the SVG invisible.
-      // Removing height lets the browser derive intrinsic height from the viewBox aspect ratio.
-      svg.style.height = 'auto';
-      svg.style.display = 'block';
-      svg.setAttribute('stroke', '#ececec');
-
-      svgMountedRef.current = true;
-
-      // Set svgRef for direct access (used for map snapshot saving)
-      if (svgRef) {
-        svgRef.current = svg;
-      }
-
-      // Process paths asynchronously after mount (non-blocking)
-      // This allows the map to appear immediately while paths are being configured
-      requestAnimationFrame(() => {
-        if (!mapRef.current) return;
-        
-        const allPaths = svg.querySelectorAll('path');
-        const batchSize = 200; // Increased batch size for faster processing
-        
-        const processBatch = (startIndex) => {
-          const endIndex = Math.min(startIndex + batchSize, allPaths.length);
-          
-          for (let i = startIndex; i < endIndex; i++) {
-            const path = allPaths[i];
-            path.setAttribute('stroke', '#d0d0d0');
-            path.setAttribute('stroke-width', '0.4');
-            
-            const code = getCodeFromAttributes(path);
-            if (code) {
-              path.dataset.code = code;
-              path.style.cursor = 'pointer';
-              path.style.transition = 'fill 0.15s ease';
-              path.style.setProperty('fill', '#d0d0d0', 'important');
-              path.style.setProperty('stroke', '#d0d0d0', 'important');
-            }
-          }
-          
-          // Continue with next batch if needed
-          if (endIndex < allPaths.length) {
-            requestAnimationFrame(() => processBatch(endIndex));
-          } else {
-            // All paths processed, notify parent
-            if (onMapReadyRef.current) {
-              onMapReadyRef.current();
-            }
-          }
-        };
-        
-        processBatch(0);
-      });
-    } catch (err) {
-      console.warn('Failed to mount SVG:', err);
-      container.innerHTML = '<div style="text-align: center; color: #b91c1c; font-family: Montserrat, sans-serif; padding: 1rem;">Failed to load map</div>';
-    }
-  }, [mapSvgContent, mapError, mapRef]);
-
-  // Render status messages (these can change, but SVG never re-renders)
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    // Only update status div, never touch the SVG
-    if (mapError) {
-      if (statusRef.current) {
-        statusRef.current.textContent = mapError;
-        statusRef.current.style.display = 'block';
-      } else {
-        const statusDiv = document.createElement('div');
-        statusDiv.style.cssText = 'text-align: center; color: #b91c1c; font-family: Montserrat, sans-serif; padding: 1rem;';
-        statusDiv.textContent = mapError;
-        statusRef.current = statusDiv;
-        mapRef.current.insertBefore(statusDiv, mapRef.current.firstChild);
-      }
-    } else if (!mapSvgContent && !svgMountedRef.current) {
-      if (statusRef.current) {
-        statusRef.current.textContent = '';
-        statusRef.current.style.color = '#6b7280';
-        statusRef.current.style.display = 'block';
-      } else {
-        const statusDiv = document.createElement('div');
-        statusDiv.style.cssText = 'text-align: center; color: #6b7280; font-family: Montserrat, sans-serif; padding: 1rem;';
-        statusDiv.textContent = '';
-        statusRef.current = statusDiv;
-        if (mapRef.current) {
-          mapRef.current.appendChild(statusDiv);
+    const processBatch = (startIndex) => {
+      const endIndex = Math.min(startIndex + batchSize, allPaths.length);
+      for (let i = startIndex; i < endIndex; i++) {
+        const path = allPaths[i];
+        path.setAttribute('stroke', '#d0d0d0');
+        path.setAttribute('stroke-width', '0.4');
+        const code = getCodeFromAttributes(path);
+        if (code) {
+          path.dataset.code = code;
+          path.style.cursor = 'pointer';
+          path.style.transition = 'fill 0.15s ease';
+          path.style.setProperty('fill', '#d0d0d0', 'important');
+          path.style.setProperty('stroke', '#d0d0d0', 'important');
         }
       }
-    } else if (statusRef.current && svgMountedRef.current) {
-      statusRef.current.style.display = 'none';
-    }
-  }, [mapError, mapSvgContent, mapRef]);
+      if (endIndex < allPaths.length) {
+        requestAnimationFrame(() => processBatch(endIndex));
+      } else {
+        if (onMapReadyRef.current) onMapReadyRef.current();
+      }
+    };
 
-  // This component renders ONLY the container div - the SVG is managed entirely via refs and DOM manipulation
-  // React will re-render this component, but the SVG inside is never touched by React
+    requestAnimationFrame(() => {
+      if (mapRef.current) processBatch(0);
+    });
+  }, [mapSvgContent, mapType, mapRef, svgRef]);
+
   return (
     <div
       ref={mapRef}
+      dangerouslySetInnerHTML={{ __html: mapError ? '' : (mapSvgContent || '') }}
       style={{ width: '100%', minHeight: '260px', borderRadius: '8px', paddingTop: 0, paddingRight: '40px', paddingBottom: 0, paddingLeft: 0, background: 'transparent', position: 'relative', marginLeft: '-60px', overflow: 'hidden' }}
     />
   );
