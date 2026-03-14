@@ -495,6 +495,7 @@ function EchoCocktailSubpage2({
   const innerContainerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchEndX = useRef(null);
+  const tapCenterStartRef = useRef(null);
   const [verticalInfoFontScale, setVerticalInfoFontScale] = useState(1);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(60);
 
@@ -771,6 +772,75 @@ function EchoCocktailSubpage2({
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
     // Scroll to align bottom with viewport
     setTimeout(scrollToBottomAlign, 100);
+  };
+
+  // Shared toggle handler used by the info button AND the center-screen tap zone
+  const handleInfoToggle = () => {
+    if (sidebarOpen) {
+      setSidebarOpen?.(false);
+      if (viewMode === 'web') setForceRecalc(prev => prev + 1);
+      setTimeout(scrollToBottomAlign, 100);
+      return;
+    }
+
+    animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
+    animationTimeoutsRef.current = [];
+
+    const newValue = !showConceptInfo;
+    setShowConceptInfo(newValue);
+    setShowCategories(false);
+    if (viewMode === 'web') setForceRecalc(prev => prev + 1);
+    setTimeout(scrollToBottomAlign, 100);
+
+    if (newValue) {
+      const count = countryDisplayList.length;
+      const visibleCount = Math.min(count, 5);
+      setCountriesVisible(new Array(visibleCount).fill(false));
+      setTitleVisible(false);
+      setIngredientsVisible(false);
+      setGarnishVisible(false);
+      const conceptMapTimeout = setTimeout(() => {
+        setConceptVisible(true);
+        setMapVisible(true);
+        setCountriesSidebarVisible(true);
+      }, 400);
+      animationTimeoutsRef.current.push(conceptMapTimeout);
+      for (let i = 0; i < visibleCount; i++) {
+        const countryTimeout = setTimeout(() => {
+          setCountriesVisible((prev) => {
+            if (prev.length !== visibleCount) return prev;
+            const next = [...prev];
+            next[i] = true;
+            return next;
+          });
+        }, 1000 + i * 500);
+        animationTimeoutsRef.current.push(countryTimeout);
+      }
+    } else {
+      setConceptVisible(false);
+      setMapVisible(false);
+      setCountriesSidebarVisible(false);
+      setCountriesVisible(new Array(Math.min(countryDisplayList.length, 5)).fill(false));
+      const titleTimeout = setTimeout(() => {
+        setTitleVisible(true);
+        const ingredientsTimeout = setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              scaleFontToFitRef.current?.();
+              const separatorTimeout = setTimeout(async () => {
+                await adjustSeparatorsRef.current?.();
+                setIngredientsVisible(true);
+                const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                animationTimeoutsRef.current.push(garnishTimeout);
+              }, 50);
+              animationTimeoutsRef.current.push(separatorTimeout);
+            });
+          });
+        }, 400);
+        animationTimeoutsRef.current.push(ingredientsTimeout);
+      }, 500);
+      animationTimeoutsRef.current.push(titleTimeout);
+    }
   };
 
   const handleSidebarNav = (key) => {
@@ -2183,6 +2253,40 @@ function EchoCocktailSubpage2({
     const topFadeHeight = size?.height ? `${size.height / 3}px` : `${layout.inner.height / 3}px`;
     return (
       <>
+        {/* Center tap zone — mobile only, toggles info overlay when video center is tapped */}
+        {info?.concept && isProbablyMobileDevice() && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${innerLeft}px`,
+              top: `${(size.height || layout.inner.height) * 0.25}px`,
+              width: `${layout.inner.width}px`,
+              height: `${(size.height || layout.inner.height) * 0.5}px`,
+              zIndex: 12,
+              background: 'transparent',
+              pointerEvents: 'auto',
+              WebkitTapHighlightColor: 'transparent',
+              WebkitTouchCallout: 'none',
+              userSelect: 'none',
+            }}
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              tapCenterStartRef.current = { x: t.clientX, y: t.clientY };
+            }}
+            onTouchEnd={(e) => {
+              if (!tapCenterStartRef.current) return;
+              const t = e.changedTouches[0];
+              const dx = Math.abs(t.clientX - tapCenterStartRef.current.x);
+              const dy = Math.abs(t.clientY - tapCenterStartRef.current.y);
+              tapCenterStartRef.current = null;
+              if (dx < 15 && dy < 15) {
+                e.preventDefault();
+                handleInfoToggle();
+              }
+            }}
+            onTouchCancel={() => { tapCenterStartRef.current = null; }}
+          />
+        )}
         <VideoStage videoSrc={videoSrc} layout={layout} />
 
         {/* Gaussian blur vignette over inner container */}
@@ -2516,91 +2620,7 @@ function EchoCocktailSubpage2({
           <div style={{ pointerEvents: 'auto', marginLeft: '6.25vw' }}>
             {(info?.concept ? (
               <button
-            onClick={() => {
-              if (sidebarOpen) {
-                // Close the sidebar when X is clicked
-                setSidebarOpen?.(false);
-                if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-                // Scroll to align bottom with viewport
-                setTimeout(scrollToBottomAlign, 100);
-                return;
-              }
-
-              // Normal information button functionality
-              // Clear any existing animation timeouts
-              animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
-              animationTimeoutsRef.current = [];
-
-              const newValue = !showConceptInfo;
-              setShowConceptInfo(newValue);
-              setShowCategories(false);
-              if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-              // Scroll to align bottom with viewport
-              setTimeout(scrollToBottomAlign, 100);
-
-              if (newValue) {
-                // Show concept, map, and countries with animations
-                const count = countryDisplayList.length;
-                const visibleCount = Math.min(count, 5);
-                setCountriesVisible(new Array(visibleCount).fill(false));
-
-                // Hide title, ingredients, and garnish immediately
-                setTitleVisible(false);
-                setIngredientsVisible(false);
-                setGarnishVisible(false);
-
-                // Show concept and map with animation
-                const conceptMapTimeout = setTimeout(() => {
-                  setConceptVisible(true);
-                  setMapVisible(true);
-                  setCountriesSidebarVisible(true);
-                }, 400);
-                animationTimeoutsRef.current.push(conceptMapTimeout);
-
-                // Show countries with staggered animation
-                for (let i = 0; i < visibleCount; i++) {
-                  const countryTimeout = setTimeout(() => {
-                    setCountriesVisible((prev) => {
-                      if (prev.length !== visibleCount) return prev;
-                      const next = [...prev];
-                      next[i] = true;
-                      return next;
-                    });
-                  }, 1000 + i * 500);
-                  animationTimeoutsRef.current.push(countryTimeout);
-                }
-              } else {
-                // Hide concept, map, and countries immediately
-                setConceptVisible(false);
-                setMapVisible(false);
-                setCountriesSidebarVisible(false);
-                setCountriesVisible(new Array(Math.min(countryDisplayList.length, 5)).fill(false));
-
-                // Show title, ingredients, and garnish with animations
-                const titleTimeout = setTimeout(() => {
-                  setTitleVisible(true);
-                  const ingredientsTimeout = setTimeout(() => {
-                    requestAnimationFrame(() => {
-                      requestAnimationFrame(() => {
-                        // 1) Scale font to 100% fit
-                        scaleFontToFitRef.current?.();
-                        // 2) Brief hesitation, then adjust separators row by row
-                        const separatorTimeout = setTimeout(async () => {
-                          await adjustSeparatorsRef.current?.();
-                          // 3) Fade in after all rows processed
-                          setIngredientsVisible(true);
-                          const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
-                          animationTimeoutsRef.current.push(garnishTimeout);
-                        }, 50);
-                        animationTimeoutsRef.current.push(separatorTimeout);
-                      });
-                    });
-                  }, 400);
-                  animationTimeoutsRef.current.push(ingredientsTimeout);
-                }, 500);
-                animationTimeoutsRef.current.push(titleTimeout);
-              }
-            }}
+            onClick={handleInfoToggle}
             onMouseEnter={(e) => {
               if (!isVertical) {
                 e.currentTarget.style.transform = 'scale(1.1)';
