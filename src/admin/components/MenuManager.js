@@ -546,16 +546,17 @@ const MenuManager = () => {
   }, [apiCall, selectedCategory]);
 
   // Filter cocktails by selected category / status
-  const filteredCocktails = cocktails.filter(cocktail => {
+  // Memoized so the reference only changes when cocktails data or category actually changes,
+  // preventing the fallback useEffect from firing on every unrelated re-render (recipe loads, etc.).
+  const filteredCocktails = useMemo(() => cocktails.filter(cocktail => {
     const key = normalizeCategoryKey(cocktail.category);
     if (selectedCategory === 'archived') {
       return cocktail.status === 'archived';
     }
-    // Include cocktails that are active (status is 'active' or undefined/null, and isActive is true or undefined)
     const isActive = cocktail.status !== 'archived' && (cocktail.isActive !== false);
     const categoryMatches = key === normalizeCategoryKey(selectedCategory);
     return isActive && categoryMatches;
-  });
+  }), [cocktails, selectedCategory]);
 
   const archivedGroups = useMemo(() => {
     if (selectedCategory !== 'archived') return {};
@@ -2500,8 +2501,9 @@ const MenuManager = () => {
     // Update active cocktail ref to prevent stale recipe data from populating fields
     activeCocktailIdRef.current = editingCocktail?._id || null;
     
-    // Cancel any in-flight recipe fetch when cocktail changes
-    recipeRequestIdRef.current += 1;
+    // navigateBy already pre-cancels by incrementing recipeRequestIdRef synchronously;
+    // fetchRecipeForCocktail does the definitive ++ internally when it starts.
+    // A third increment here causes triple-counting that skews the stale-result guard.
     recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
     
     if (editingCocktail && shouldShowRecipeBuilder(editingCocktail.category)) {

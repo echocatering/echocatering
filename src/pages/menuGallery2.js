@@ -2264,7 +2264,7 @@ function EchoCocktailSubpage2({
               height: `${(size.height || layout.inner.height) * 0.5}px`,
               zIndex: 12,
               background: 'transparent',
-              pointerEvents: 'auto',
+              pointerEvents: showCategories ? 'none' : 'auto',
               WebkitTapHighlightColor: 'transparent',
               WebkitTouchCallout: 'none',
               userSelect: 'none',

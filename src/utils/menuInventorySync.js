@@ -273,6 +273,13 @@ export const mergeInventoryWithCocktail = (inventoryRow, cocktailData, category)
     merged.page = cocktailData.page;
   }
   
+  // mapType (world/us) — saved to Inventory, must also be read back here
+  if (values.mapType !== undefined && values.mapType !== null) {
+    merged.mapType = values.mapType;
+  } else if (cocktailData && cocktailData.mapType !== undefined) {
+    merged.mapType = cocktailData.mapType;
+  }
+
   // narrative stays in Cocktail model (not moved to Inventory)
   if (cocktailData && cocktailData.narrative !== undefined) {
     merged.narrative = cocktailData.narrative;
