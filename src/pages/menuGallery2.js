@@ -1902,156 +1902,6 @@ function EchoCocktailSubpage2({
     const arrowBottom = (layout && layout.inner && layout.inner.height) ? (size.height - ((innerTop + layout.inner.height) - (layout.inner.height / 5))) : 0;
     return (
       <>
-        {/* Mobile Header - web viewMode only */}
-        {viewMode === 'web' && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '60px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            boxSizing: 'border-box',
-            zIndex: 1000,
-          }}>
-            <DynamicLogo
-              style={{
-                height: '40px',
-                width: 'auto',
-                objectFit: 'contain',
-              }}
-              altText="ECHO Catering Logo"
-            />
-            <div 
-              data-dropdown
-              style={{
-                cursor: 'pointer',
-                padding: '8px',
-              }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  display: 'block',
-                  color: 'rgba(0,0,0,0.6)'
-                }}
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        )}
-
-        {/* Dropdown Menu - web viewMode only */}
-        {viewMode === 'web' && dropdownOpen && (
-          <>
-            <div 
-              data-dropdown
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0.3)',
-                zIndex: 999,
-              }}
-              onClick={() => setDropdownOpen(false)}
-            />
-            <div style={{
-              position: 'fixed',
-              top: '60px',
-              right: '16px',
-              background: 'white',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              zIndex: 1001,
-              minWidth: '200px',
-            }} onClick={(e) => e.stopPropagation()}>
-              
-              {/* MENU */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/menu', '_blank');
-                }}
-              >
-                MENU
-              </div>
-              
-              {/* EVENTS */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#events', '_blank');
-                }}
-              >
-                EVENTS
-              </div>
-              
-              {/* ABOUT */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#about', '_blank');
-                }}
-              >
-                ABOUT
-              </div>
-              
-              {/* CONTACT */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#contact', '_blank');
-                }}
-              >
-                CONTACT
-              </div>
-            </div>
-          </>
-        )}
         <VideoStage videoSrc={videoSrc} layout={layout} />
 
         {/* Gaussian blur vignette over inner container */}
@@ -2102,19 +1952,19 @@ function EchoCocktailSubpage2({
               let color;
               
               if (isNavHovered) {
-                // When mouse is in nav: all white, hovered item is grey
-                color = isHovered ? '#888' : '#fff';
+                // When mouse is in nav: all white, hovered item is black
+                color = isHovered ? '#000' : '#fff';
               } else {
-                // When mouse is not in nav: selected is grey, others are white
-                color = isSelected ? '#888' : '#fff';
+                // When mouse is not in nav: selected is black, others are white
+                color = isSelected ? '#000' : '#fff';
               }
               
               // Determine icon filter based on state
               let iconFilter;
               if (isNavHovered) {
-                iconFilter = isHovered ? 'brightness(0) saturate(0) invert(0.47)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
+                iconFilter = isHovered ? 'brightness(0) saturate(0) opacity(1)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
               } else {
-                iconFilter = isSelected ? 'brightness(0) saturate(0) invert(0.47)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
+                iconFilter = isSelected ? 'brightness(0) saturate(0) opacity(1)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
               }
               
               return (
@@ -2187,8 +2037,8 @@ function EchoCocktailSubpage2({
                 onMouseLeave={() => setHoveredButton(null)}
                 style={{
                   background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'schedule-event' ? '#888' : '#fff'}`,
-                  color: hoveredButton === 'schedule-event' ? '#888' : '#fff',
+                  border: `2px solid ${hoveredButton === 'schedule-event' ? '#000' : '#fff'}`,
+                  color: hoveredButton === 'schedule-event' ? '#000' : '#fff',
                   padding: '10px 16px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
@@ -2237,8 +2087,8 @@ function EchoCocktailSubpage2({
                   onMouseLeave={() => setHoveredButton(null)}
                   style={{
                     background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'add-item' ? '#888' : '#fff'}`,
-                  color: hoveredButton === 'add-item' ? '#888' : '#fff',
+                  border: `2px solid ${hoveredButton === 'add-item' ? '#000' : '#fff'}`,
+                  color: hoveredButton === 'add-item' ? '#000' : '#fff',
                     padding: '10px 16px',
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -2265,8 +2115,8 @@ function EchoCocktailSubpage2({
                   onMouseLeave={() => setHoveredButton(null)}
                   style={{
                     background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'all-items' ? '#888' : '#888'}`,
-                  color: hoveredButton === 'all-items' ? '#888' : '#888',
+                  border: `2px solid ${hoveredButton === 'all-items' ? '#000' : '#888'}`,
+                  color: hoveredButton === 'all-items' ? '#000' : '#888',
                     padding: '10px 16px',
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -3122,7 +2972,7 @@ function EchoCocktailSubpage2({
                 textTransform: 'uppercase',
                 fontWeight: 300,
                 fontSize: getFontSize(28, 0.9, 1.4),
-                color: selected === key ? '#888' : '#555',
+                color: selected === key ? '#222' : '#555',
                 cursor: 'pointer',
                 transition: 'color 0.2s ease',
                 position: 'relative',
@@ -3130,12 +2980,12 @@ function EchoCocktailSubpage2({
               }}
               onMouseEnter={(e) => {
                 if (!isVertical) {
-                  e.currentTarget.style.color = '#888';
+                  e.currentTarget.style.color = '#222';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isVertical) {
-                  e.currentTarget.style.color = selected === key ? '#888' : '#555';
+                  e.currentTarget.style.color = selected === key ? '#222' : '#555';
                 }
               }}
             >
