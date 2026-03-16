@@ -230,6 +230,19 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
   );
 }
 
+// Determine map type from cocktail data.
+// Priority: 1) explicit mapType field from inventory/DB, 2) detect from regions, 3) default 'world'
+const US_STATE_CODES = new Set(US_STATES.map(s => s.code.toUpperCase()));
+const inferMapType = (cocktail) => {
+  const explicit = cocktail?.mapType;
+  if (explicit === 'us' || explicit === 'world') return explicit;
+  // Location-based fallback: if any saved region is a US state code, use 'us'
+  if (Array.isArray(cocktail?.regions) && cocktail.regions.length > 0) {
+    if (cocktail.regions.some(r => US_STATE_CODES.has(String(r).toUpperCase()))) return 'us';
+  }
+  return 'world';
+};
+
 const MenuManager = () => {
   const { apiCall, isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -671,7 +684,7 @@ const MenuManager = () => {
           return { ...fallback };
         });
         // Sync mapType from loaded cocktail data (use saved value or default to 'world')
-        setMapType(fallback.mapType || 'world');
+        setMapType(inferMapType(fallback));
         setVideoUpload(null);
         setVideoPreviewUrl(prev => {
           if (prev) {
@@ -1807,7 +1820,7 @@ const MenuManager = () => {
     requestAnimationFrame(() => {
       if (navVersionRef.current !== myNavVersion) return; // Navigated away
 
-      setMapType(targetCocktail.mapType || 'world');
+      setMapType(inferMapType(targetCocktail));
       setVideoUpload(null);
       setVideoPreviewUrl(prev => {
         if (prev) URL.revokeObjectURL(prev);
@@ -2443,7 +2456,15 @@ const MenuManager = () => {
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
       recipeForCocktailIdRef.current = targetCocktailId; // Track which cocktail this recipe belongs to
-      setRecipe(nextRecipe);
+      // For non-premix: ensure the recipe title matches the cocktail name so the bidirectional
+      // name sync doesn't fire onChange and overwrite the title field with stale data.
+      let recipeToSet = nextRecipe;
+      if (recipeToSet && cocktail?.name &&
+          normalizeCategoryKey(cocktail.category) !== 'premix' &&
+          recipeToSet.title !== cocktail.name) {
+        recipeToSet = { ...recipeToSet, title: cocktail.name };
+      }
+      setRecipe(recipeToSet);
     };
     if (!cocktail || !cocktail._id || String(cocktail._id).startsWith('new-')) {
       // New item - create blank recipe with itemNumber if available
@@ -2479,7 +2500,7 @@ const MenuManager = () => {
             ? itemNumberResponse 
             : (itemNumberResponse?.recipes || []);
           
-          const matchingRecipe = itemNumberRecipes.find(r => r.itemNumber === cocktail.itemNumber);
+          const matchingRecipe = itemNumberRecipes.find(r => String(r.itemNumber) === String(cocktail.itemNumber));
           if (matchingRecipe) {
             setHydratedRecipe(matchingRecipe);
             return;
@@ -2489,21 +2510,60 @@ const MenuManager = () => {
         }
       }
       
+      // NAME-BASED FALLBACK: search all recipes of this type and match by title.
+      // Recovers orphaned recipes saved before itemNumber was written to the recipe
+      // (e.g. early March recipes for Black Forest, Golden Hour, etc.).
+      const tryNameFallback = async () => {
+        if (!cocktail.name) return false;
+        try {
+          const allResponse = await apiCall(`/recipes?type=${recipeType}`);
+          const allRecipes = Array.isArray(allResponse)
+            ? allResponse
+            : (allResponse?.recipes || []);
+          const nameMatch = allRecipes.find(r =>
+            r.title && r.title.toLowerCase().trim() === cocktail.name.toLowerCase().trim()
+          );
+          if (nameMatch) {
+            setHydratedRecipe(nameMatch);
+            return true;
+          }
+        } catch (nameErr) {
+          console.warn('Recipe name-fallback lookup failed:', nameErr);
+        }
+        return false;
+      };
+
       // FALLBACK: The menu-manager endpoint already attaches recipe data to each item.
-      // If we didn't find by itemNumber, check if the cocktail already has recipe data attached.
+      // Only use it if the itemNumber matches — prevents a stale/mismatched recipe from
+      // a prior cocktail being displayed for the current one.
       if (cocktail.recipe && cocktail.recipe._id) {
         const attachedRecipe = cocktail.recipe;
-        if (cocktail.itemNumber && !attachedRecipe.itemNumber) {
-          attachedRecipe.itemNumber = cocktail.itemNumber;
+        const attachedNum = attachedRecipe.itemNumber;
+        const cocktailNum = cocktail.itemNumber;
+        const numMatch = !attachedNum || !cocktailNum ||
+          String(attachedNum) === String(cocktailNum);
+        if (numMatch) {
+          if (cocktailNum && !attachedNum) attachedRecipe.itemNumber = cocktailNum;
+          setHydratedRecipe(attachedRecipe);
+        } else {
+          // itemNumber mismatch — try name lookup before falling back to blank
+          const found = await tryNameFallback();
+          if (!found) {
+            const blankFallback = createBlankRecipe(recipeType);
+            if (cocktailNum) blankFallback.itemNumber = cocktailNum;
+            setHydratedRecipe(blankFallback);
+          }
         }
-        setHydratedRecipe(attachedRecipe);
       } else {
-        // No recipe found - create blank
-        const blankRecipe = createBlankRecipe(recipeType);
-        if (cocktail.itemNumber) {
-          blankRecipe.itemNumber = cocktail.itemNumber;
+        // No attached recipe — try name lookup before creating blank
+        const found = await tryNameFallback();
+        if (!found) {
+          const blankRecipe = createBlankRecipe(recipeType);
+          if (cocktail.itemNumber) {
+            blankRecipe.itemNumber = cocktail.itemNumber;
+          }
+          setHydratedRecipe(blankRecipe);
         }
-        setHydratedRecipe(blankRecipe);
       }
     } catch (error) {
       console.error('Error fetching recipe:', error);
