@@ -498,7 +498,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
                     setMobileCurrentPage('contact');
                   } else {
                     // Fallback for desktop
-                    const contactSection = document.getElementById('event-request-section');
+                    const contactSection = document.getElementById('contact');
                     if (contactSection) {
                       contactSection.scrollIntoView({ behavior: 'smooth' });
                     }

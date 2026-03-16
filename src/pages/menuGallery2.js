@@ -2331,10 +2331,10 @@ function EchoCocktailSubpage2({
             onClick={() => setDropdownOpen(false)}
           >
             <div className="dropdown-content" onClick={(e) => e.stopPropagation()}>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/echo-originals'); }}>MENU</div>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/event-gallery'); }}>EVENTS</div>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/about'); }}>ABOUT</div>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/contact'); }}>CONTACT</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#menu'); }}>MENU</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#events'); }}>EVENTS</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#about'); }}>ABOUT</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#contact'); }}>CONTACT</div>
             </div>
           </div>
         )}

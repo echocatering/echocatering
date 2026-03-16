@@ -527,9 +527,12 @@ const MenuManager = () => {
         const preservedIndex = filtered.findIndex(c => c._id === currentEditingId);
         if (preservedIndex >= 0) {
           setCurrentIndex(preservedIndex);
-        } else {
+        } else if (!currentEditingId) {
+          // Only reset to 0 if nothing is being actively edited
           setCurrentIndex(0);
         }
+        // If preservedIndex < 0 but currentEditingId is set, the cocktail may be in a
+        // different category or the filter is temporarily inconsistent — leave index alone.
       } else {
         setCurrentIndex(0);
       }
@@ -636,7 +639,12 @@ const MenuManager = () => {
       });
       return;
     }
-    const fallback = filteredCocktails[currentIndex] || filteredCocktails[0];
+    // ID-first lookup: prevents index drift when a server refresh reorders the list.
+    // Without this, filteredCocktails[currentIndex] could point to the wrong cocktail
+    // (e.g., Birchwood at index 0) after fetchCocktails returns fresh data.
+    const activeId = activeCocktailIdRef.current;
+    const fallbackById = activeId ? filteredCocktails.find(c => c._id === activeId) : null;
+    const fallback = fallbackById || filteredCocktails[currentIndex] || filteredCocktails[0];
     if (!fallback) {
       // Only clear editingCocktail if we're not in the middle of creating a new item
       // This allows "New Item" to work even when category is empty
@@ -648,7 +656,6 @@ const MenuManager = () => {
     // Only update if the active cocktail ref doesn't already match the fallback.
     // Using activeCocktailIdRef (a ref, not state) prevents this effect from running
     // on every field edit (which editingCocktail in deps would cause).
-    const activeId = activeCocktailIdRef.current;
     const shouldUpdate = (!activeId || activeId !== fallback._id);
     
     if (shouldUpdate) {
@@ -1777,7 +1784,7 @@ const MenuManager = () => {
     activeCocktailIdRef.current = targetCocktail._id || null;
     recipeForCocktailIdRef.current = null;
 
-    const myName = targetCocktail.name;
+    const myId = targetCocktail._id;
 
     setRecipeLoading(false);
     setRecipe(null);
@@ -1807,7 +1814,7 @@ const MenuManager = () => {
         return '';
       });
       setEditingCocktail(prev => {
-        if (!prev || prev.name !== myName) return prev; // Name changed → abort stage
+        if (!prev || prev._id !== myId) return prev; // ID changed → abort stage
         return {
           ...prev,
           videoFile: targetCocktail.videoFile || '',
@@ -1823,8 +1830,8 @@ const MenuManager = () => {
         if (navVersionRef.current !== myNavVersion) return; // Navigated away
 
         setEditingCocktail(prev => {
-          if (!prev || prev.name !== myName) return prev; // Name changed → abort stage
-          return { ...targetCocktail }; // Full data — name confirmed correct
+          if (!prev || prev._id !== myId) return prev; // ID changed → abort stage
+          return { ...targetCocktail }; // Full data — ID confirmed correct
         });
       });
     });
@@ -2440,7 +2447,7 @@ const MenuManager = () => {
     };
     if (!cocktail || !cocktail._id || String(cocktail._id).startsWith('new-')) {
       // New item - create blank recipe with itemNumber if available
-      const recipeType = getRecipeType(cocktail?.category || selectedCategory);
+      const recipeType = getRecipeType(cocktail?.category);
       if (recipeType) {
         const blankRecipe = createBlankRecipe(recipeType);
         if (cocktail?.itemNumber) {
@@ -2515,7 +2522,7 @@ const MenuManager = () => {
         setRecipeLoading(false);
       }
     }
-  }, [apiCall, selectedCategory]);
+  }, [apiCall]); // selectedCategory removed: caused recipe guard to reset on category change, allowing stale recipe data through
 
   // Update recipe when editingCocktail changes
   useEffect(() => {

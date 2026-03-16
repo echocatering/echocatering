@@ -434,6 +434,59 @@ const Home = forwardRef((props, ref) => {
     }
   }, [isMobile, mobileCurrentPage]);
 
+  // Handle hash-based section navigation (e.g. /#events, /#about, /#contact, /#menu)
+  // Fires on mount (covers navigation from /menu or other pages) and on hashchange.
+  useEffect(() => {
+    const scrollToHash = () => {
+      const section = window.location.hash.replace('#', '').toLowerCase();
+      if (!section) return;
+
+      // Remove hash from URL so it doesn't interfere with future navigation
+      window.history.replaceState(null, '', window.location.pathname);
+
+      setTimeout(() => {
+        if (section === 'menu') {
+          if (isMobile) {
+            if (setMobileCurrentPage) setMobileCurrentPage('gallery');
+          } else if (galleryRef.current) {
+            galleryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else if (section === 'events') {
+          if (isMobile) {
+            if (eventsRef.current) {
+              const headerHeight = 80;
+              const elementTop = eventsRef.current.getBoundingClientRect().top + window.pageYOffset;
+              window.scrollTo({ top: elementTop - headerHeight, behavior: 'smooth' });
+            }
+          } else if (eventsRef.current) {
+            const rect = eventsRef.current.getBoundingClientRect();
+            window.scrollTo({ top: rect.top + window.pageYOffset, behavior: 'smooth' });
+          }
+        } else if (section === 'about') {
+          if (isMobile) {
+            if (setMobileCurrentPage) setMobileCurrentPage('about');
+          } else if (aboutRectangleRef.current) {
+            const rect = aboutRectangleRef.current.getBoundingClientRect();
+            const elementBottom = rect.top + window.pageYOffset + rect.height;
+            window.scrollTo({ top: elementBottom, behavior: 'smooth' });
+          } else if (aboutRef.current) {
+            aboutRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else if (section === 'contact') {
+          if (isMobile) {
+            if (setMobileCurrentPage) setMobileCurrentPage('contact');
+          } else if (contactRef.current) {
+            contactRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 400); // Delay allows page layout to stabilise before scrolling
+    };
+
+    if (window.location.hash) scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+    return () => window.removeEventListener('hashchange', scrollToHash);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
 
   // Expose scrollAndActivate, scrollToMenuSection, scrollToAboutSection, and scrollToEventsSection to parent via ref
@@ -3482,7 +3535,7 @@ const Home = forwardRef((props, ref) => {
       }} />
       
       <div style={{ background: '#fff', position: 'relative', zIndex: 0 }}>
-        <div ref={galleryRef} style={{ 
+        <div id="menu" ref={galleryRef} style={{ 
           height: 'calc(100vh * 17 / 16)', // Menu gallery - 17/16 screen height
           minHeight: 'calc(100vh * 17 / 16)',
           boxSizing: 'border-box', // Ensure consistent padding calculation
@@ -3648,6 +3701,7 @@ const Home = forwardRef((props, ref) => {
         {/* ===== EVENT GALLERY CONTAINER - This is the main wrapper with white background and grey gradient ===== */}
         {/* Event Gallery Section */}
         <div
+          id="events"
           ref={eventsRef}
           style={{
             background: '#fff',
@@ -3718,6 +3772,7 @@ const Home = forwardRef((props, ref) => {
         
         {/* About Section */}
         <div
+          id="about"
           ref={aboutRef}
           style={{
             backgroundColor: '#111111',
@@ -4050,7 +4105,7 @@ const Home = forwardRef((props, ref) => {
         {/* Event Request Form Section */}
         <div
           ref={contactRef}
-          id="event-request-section"
+          id="contact"
           style={{
             background: '#fff',
             paddingTop: '96px',
