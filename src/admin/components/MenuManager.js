@@ -4149,6 +4149,7 @@ const MenuManager = () => {
                   if (updatedRecipe?.title !== undefined) {
                     setEditingCocktail(prev => {
                       if (!prev) return prev;
+                      if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
                       return { ...prev, name: updatedRecipe.title };
                     });
                   }
