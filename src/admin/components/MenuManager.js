@@ -1412,31 +1412,7 @@ const MenuManager = () => {
           if (resolvedIndex >= 0) {
             const clickedCocktail = filteredCocktails[resolvedIndex];
             if (clickedCocktail) {
-              // Set navigation flag to prevent useEffect from interfering
-              isNavigatingRef.current = true;
-              
-              // Increment generation counter — any async result that captured an older version is discarded
-              navVersionRef.current++;
-              // Cancel any in-flight recipe fetch before switching
-              recipeRequestIdRef.current += 1;
-              activeCocktailIdRef.current = clickedCocktail._id || null;
-              recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
-              
-              // Clear recipe state
-              setRecipeLoading(false);
-              setRecipe(null);
-              
-              // Set new index and cocktail data - editingCocktail set directly to prevent stale data
-              setCurrentIndex(resolvedIndex);
-              setEditingCocktail({ ...clickedCocktail });
-              setMapType(clickedCocktail.mapType || 'world');
-              
-              // Clear video preview
-              setVideoUpload(null);
-              setVideoPreviewUrl(prev => {
-                if (prev) URL.revokeObjectURL(prev);
-                return '';
-              });
+              navigateToCocktail(clickedCocktail, resolvedIndex);
             }
           }
         }}
@@ -1782,6 +1758,78 @@ const MenuManager = () => {
   // Sync flipped video with main video
 
   // Navigation functions
+
+  // Staged navigation — guarantees fields never show data from a different cocktail.
+  // Stage 1 (sync):  name only — user sees the correct title instantly.
+  // Stage 2 (rAF):   video + mapType — checked against name before applying.
+  // Stage 3 (rAF):   all remaining fields — checked against name before applying.
+  // If the user presses an arrow again before a stage fires, the navVersion guard
+  // short-circuits that stage so stale data never reaches the form.
+  const navigateToCocktail = useCallback((targetCocktail, targetIndex) => {
+    if (!targetCocktail) return;
+
+    // Bump epoch — any in-flight async result that captured an older version is discarded
+    const myNavVersion = ++navVersionRef.current;
+    isNavigatingRef.current = true;
+
+    // Pre-cancel any in-flight recipe fetch
+    recipeRequestIdRef.current += 1;
+    activeCocktailIdRef.current = targetCocktail._id || null;
+    recipeForCocktailIdRef.current = null;
+
+    const myName = targetCocktail.name;
+
+    setRecipeLoading(false);
+    setRecipe(null);
+    setCurrentIndex(targetIndex);
+
+    // === STAGE 1: Name only — renders immediately ===
+    setEditingCocktail({
+      _id: targetCocktail._id,
+      name: targetCocktail.name,
+      category: targetCocktail.category,
+      itemNumber: targetCocktail.itemNumber || null,
+      order: targetCocktail.order || 0,
+      status: targetCocktail.status || 'active',
+      isActive: targetCocktail.isActive !== false,
+      regions: [],
+      recipe: targetCocktail.recipe || null, // Keep for recipe fetch to find attached recipe
+    });
+
+    // === STAGE 2: Video + mapType — after name renders ===
+    requestAnimationFrame(() => {
+      if (navVersionRef.current !== myNavVersion) return; // Navigated away
+
+      setMapType(targetCocktail.mapType || 'world');
+      setVideoUpload(null);
+      setVideoPreviewUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return '';
+      });
+      setEditingCocktail(prev => {
+        if (!prev || prev.name !== myName) return prev; // Name changed → abort stage
+        return {
+          ...prev,
+          videoFile: targetCocktail.videoFile || '',
+          cloudinaryVideoUrl: targetCocktail.cloudinaryVideoUrl || '',
+          videoUrl: targetCocktail.videoUrl || '',
+          cloudinaryVideoId: targetCocktail.cloudinaryVideoId || '',
+          mapType: targetCocktail.mapType || 'world',
+        };
+      });
+
+      // === STAGE 3: All remaining fields — after video renders ===
+      requestAnimationFrame(() => {
+        if (navVersionRef.current !== myNavVersion) return; // Navigated away
+
+        setEditingCocktail(prev => {
+          if (!prev || prev.name !== myName) return prev; // Name changed → abort stage
+          return { ...targetCocktail }; // Full data — name confirmed correct
+        });
+      });
+    });
+  }, []);
+
   const navigateBy = (direction) => {
     if (filteredCocktails.length <= 0) return;
     const computeIndex = (prev) => {
@@ -1790,37 +1838,10 @@ const MenuManager = () => {
       return prev;
     };
     const nextIndex = computeIndex(currentIndex);
-    
-    // Immediately switch the editing cocktail (keeps RecipeBuilder + form in sync)
-    // Do not override a new draft.
     if (!isNewDraft) {
       const nextCocktail = filteredCocktails[nextIndex];
       if (nextCocktail) {
-        // Set navigation flag to prevent useEffect from interfering
-        isNavigatingRef.current = true;
-        
-        // Increment generation counter — any async result that captured an older version is discarded
-        navVersionRef.current++;
-        // Cancel any in-flight recipe fetch for the previous item before the new item's fetch starts.
-        recipeRequestIdRef.current += 1;
-        activeCocktailIdRef.current = nextCocktail._id || null;
-        recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
-        
-        // Clear recipe state
-        setRecipeLoading(false);
-        setRecipe(null);
-        
-        // Set new index and cocktail data directly - no intermediate null state
-        setCurrentIndex(nextIndex);
-        setEditingCocktail({ ...nextCocktail });
-        setMapType(nextCocktail.mapType || 'world');
-        
-        // Clear video preview
-        setVideoUpload(null);
-        setVideoPreviewUrl(prev => {
-          if (prev) URL.revokeObjectURL(prev);
-          return '';
-        });
+        navigateToCocktail(nextCocktail, nextIndex);
       } else {
         setCurrentIndex(nextIndex);
       }

@@ -5,6 +5,7 @@ import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
 import { isCloudinaryUrl } from '../utils/cloudinaryUtils';
 import { normalizeIngredients } from '../utils/ingredientUtils';
 import FullMenu from '../admin/components/FullMenu';
+import DynamicLogo from '../components/DynamicLogo';
 
 const isProbablyIOS = () => {
   if (typeof navigator === 'undefined') return false;
@@ -1890,6 +1891,23 @@ function EchoCocktailSubpage2({
       <>
         <VideoStage videoSrc={videoSrc} layout={layout} />
 
+        {/* Logo — web view only */}
+        {viewMode === 'web' && (
+          <DynamicLogo
+            style={{
+              position: 'absolute',
+              left: `${innerLeft + (layout?.inner?.width ? layout.inner.width / 32 : 12)}px`,
+              top: `${innerTop + (layout?.inner?.height ? layout.inner.height / 24 : 12)}px`,
+              height: `${layout?.inner?.height ? layout.inner.height / 10 : 48}px`,
+              width: 'auto',
+              objectFit: 'contain',
+              zIndex: 20,
+              pointerEvents: 'none',
+            }}
+            altText="ECHO Catering Logo"
+          />
+        )}
+
         {/* Gaussian blur vignette over inner container */}
         <div
           style={{
@@ -1938,19 +1956,19 @@ function EchoCocktailSubpage2({
               let color;
               
               if (isNavHovered) {
-                // When mouse is in nav: all white, hovered item is black
-                color = isHovered ? '#000' : '#fff';
+                // When mouse is in nav: all white, hovered item is grey
+                color = isHovered ? '#888' : '#fff';
               } else {
-                // When mouse is not in nav: selected is black, others are white
-                color = isSelected ? '#000' : '#fff';
+                // When mouse is not in nav: selected is grey, others are white
+                color = isSelected ? '#888' : '#fff';
               }
               
               // Determine icon filter based on state
               let iconFilter;
               if (isNavHovered) {
-                iconFilter = isHovered ? 'brightness(0) saturate(0) opacity(1)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
+                iconFilter = isHovered ? 'brightness(0) saturate(0) invert(0.47)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
               } else {
-                iconFilter = isSelected ? 'brightness(0) saturate(0) opacity(1)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
+                iconFilter = isSelected ? 'brightness(0) saturate(0) invert(0.47)' : 'brightness(0) saturate(0) invert(1) opacity(1)';
               }
               
               return (
@@ -2023,8 +2041,8 @@ function EchoCocktailSubpage2({
                 onMouseLeave={() => setHoveredButton(null)}
                 style={{
                   background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'schedule-event' ? '#000' : '#fff'}`,
-                  color: hoveredButton === 'schedule-event' ? '#000' : '#fff',
+                  border: `2px solid ${hoveredButton === 'schedule-event' ? '#888' : '#fff'}`,
+                  color: hoveredButton === 'schedule-event' ? '#888' : '#fff',
                   padding: '10px 16px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
@@ -2073,8 +2091,8 @@ function EchoCocktailSubpage2({
                   onMouseLeave={() => setHoveredButton(null)}
                   style={{
                     background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'add-item' ? '#000' : '#fff'}`,
-                  color: hoveredButton === 'add-item' ? '#000' : '#fff',
+                  border: `2px solid ${hoveredButton === 'add-item' ? '#888' : '#fff'}`,
+                  color: hoveredButton === 'add-item' ? '#888' : '#fff',
                     padding: '10px 16px',
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -2101,8 +2119,8 @@ function EchoCocktailSubpage2({
                   onMouseLeave={() => setHoveredButton(null)}
                   style={{
                     background: 'transparent',
-                  border: `2px solid ${hoveredButton === 'all-items' ? '#000' : '#888'}`,
-                  color: hoveredButton === 'all-items' ? '#000' : '#888',
+                  border: `2px solid ${hoveredButton === 'all-items' ? '#888' : '#888'}`,
+                  color: hoveredButton === 'all-items' ? '#888' : '#888',
                     padding: '10px 16px',
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -2253,6 +2271,23 @@ function EchoCocktailSubpage2({
     const topFadeHeight = size?.height ? `${size.height / 3}px` : `${layout.inner.height / 3}px`;
     return (
       <>
+        {/* Logo — web view only */}
+        {viewMode === 'web' && (
+          <DynamicLogo
+            style={{
+              position: 'absolute',
+              left: `${innerLeft + (layout?.inner?.width ? layout.inner.width / 24 : 12)}px`,
+              top: `${innerTop + (layout?.inner?.height ? layout.inner.height / 32 : 12)}px`,
+              height: `${layout?.inner?.height ? layout.inner.height / 12 : 48}px`,
+              width: 'auto',
+              objectFit: 'contain',
+              zIndex: 20,
+              pointerEvents: 'none',
+            }}
+            altText="ECHO Catering Logo"
+          />
+        )}
+
         {/* Center tap zone — mobile only, toggles info overlay when video center is tapped */}
         {info?.concept && isProbablyMobileDevice() && (
           <div
@@ -2264,7 +2299,7 @@ function EchoCocktailSubpage2({
               height: `${(size.height || layout.inner.height) * 0.5}px`,
               zIndex: 12,
               background: 'transparent',
-              pointerEvents: showCategories ? 'none' : 'auto',
+              pointerEvents: (showCategories || sidebarOpen) ? 'none' : 'auto',
               WebkitTapHighlightColor: 'transparent',
               WebkitTouchCallout: 'none',
               userSelect: 'none',
@@ -2808,7 +2843,7 @@ function EchoCocktailSubpage2({
                 textTransform: 'uppercase',
                 fontWeight: 300,
                 fontSize: getFontSize(28, 0.9, 1.4),
-                color: selected === key ? '#222' : '#555',
+                color: selected === key ? '#888' : '#555',
                 cursor: 'pointer',
                 transition: 'color 0.2s ease',
                 position: 'relative',
@@ -2816,18 +2851,41 @@ function EchoCocktailSubpage2({
               }}
               onMouseEnter={(e) => {
                 if (!isVertical) {
-                  e.currentTarget.style.color = '#222';
+                  e.currentTarget.style.color = '#888';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isVertical) {
-                  e.currentTarget.style.color = selected === key ? '#222' : '#555';
+                  e.currentTarget.style.color = selected === key ? '#888' : '#555';
                 }
               }}
             >
               {label}
             </button>
           ))}
+          <a
+            href="https://echocatering.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              padding: '0.25rem 0',
+              paddingLeft: isVertical && layout?.inner?.width ? `${layout.inner.width / 24}px` : '0',
+              textTransform: 'uppercase',
+              fontWeight: 300,
+              fontSize: getFontSize(28, 0.9, 1.4),
+              color: '#555',
+              cursor: 'pointer',
+              transition: 'color 0.2s ease',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            Website
+          </a>
         </div>
       </>
     );
