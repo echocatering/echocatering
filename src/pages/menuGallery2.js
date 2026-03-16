@@ -472,9 +472,22 @@ function EchoCocktailSubpage2({
   const [showConceptInfo, setShowConceptInfo] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [isNavHovered, setIsNavHovered] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   // Checkmark state management
   // Use props if provided, otherwise use local state
   const [localSelectedCocktails, setLocalSelectedCocktails] = useState([]);
+
+  // Handle clicking outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownOpen && !event.target.closest('[data-dropdown]')) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
   
   // Use props if provided, otherwise use local state
   const selectedCocktailsList = propSelectedCocktails !== undefined ? propSelectedCocktails : localSelectedCocktails;
@@ -1889,24 +1902,157 @@ function EchoCocktailSubpage2({
     const arrowBottom = (layout && layout.inner && layout.inner.height) ? (size.height - ((innerTop + layout.inner.height) - (layout.inner.height / 5))) : 0;
     return (
       <>
-        <VideoStage videoSrc={videoSrc} layout={layout} />
-
-        {/* Logo — web view only */}
+        {/* Mobile Header - web viewMode only */}
         {viewMode === 'web' && (
-          <DynamicLogo
-            style={{
-              position: 'absolute',
-              left: `${innerLeft + (layout?.inner?.width ? layout.inner.width / 32 : 12)}px`,
-              top: `${innerTop + (layout?.inner?.height ? layout.inner.height / 24 : 12)}px`,
-              height: `${layout?.inner?.height ? layout.inner.height / 10 : 48}px`,
-              width: 'auto',
-              objectFit: 'contain',
-              zIndex: 20,
-              pointerEvents: 'none',
-            }}
-            altText="ECHO Catering Logo"
-          />
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '60px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 16px',
+            boxSizing: 'border-box',
+            zIndex: 1000,
+          }}>
+            <DynamicLogo
+              style={{
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain',
+              }}
+              altText="ECHO Catering Logo"
+            />
+            <div 
+              data-dropdown
+              style={{
+                cursor: 'pointer',
+                padding: '8px',
+              }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  display: 'block',
+                  color: 'rgba(0,0,0,0.6)'
+                }}
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
         )}
+
+        {/* Dropdown Menu - web viewMode only */}
+        {viewMode === 'web' && dropdownOpen && (
+          <>
+            <div 
+              data-dropdown
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.3)',
+                zIndex: 999,
+              }}
+              onClick={() => setDropdownOpen(false)}
+            />
+            <div style={{
+              position: 'fixed',
+              top: '60px',
+              right: '16px',
+              background: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              zIndex: 1001,
+              minWidth: '200px',
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              {/* MENU */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/menu', '_blank');
+                }}
+              >
+                MENU
+              </div>
+              
+              {/* EVENTS */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#events', '_blank');
+                }}
+              >
+                EVENTS
+              </div>
+              
+              {/* ABOUT */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#about', '_blank');
+                }}
+              >
+                ABOUT
+              </div>
+              
+              {/* CONTACT */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#contact', '_blank');
+                }}
+              >
+                CONTACT
+              </div>
+            </div>
+          </>
+        )}
+        <VideoStage videoSrc={videoSrc} layout={layout} />
 
         {/* Gaussian blur vignette over inner container */}
         <div
@@ -2271,23 +2417,156 @@ function EchoCocktailSubpage2({
     const topFadeHeight = size?.height ? `${size.height / 3}px` : `${layout.inner.height / 3}px`;
     return (
       <>
-        {/* Logo — web view only */}
+        {/* Mobile Header - web viewMode only */}
         {viewMode === 'web' && (
-          <DynamicLogo
-            style={{
-              position: 'absolute',
-              left: `${innerLeft + (layout?.inner?.width ? layout.inner.width / 24 : 12)}px`,
-              top: `${innerTop + (layout?.inner?.height ? layout.inner.height / 32 : 12)}px`,
-              height: `${layout?.inner?.height ? layout.inner.height / 12 : 48}px`,
-              width: 'auto',
-              objectFit: 'contain',
-              zIndex: 20,
-              pointerEvents: 'none',
-            }}
-            altText="ECHO Catering Logo"
-          />
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '60px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 16px',
+            boxSizing: 'border-box',
+            zIndex: 1000,
+          }}>
+            <DynamicLogo
+              style={{
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain',
+              }}
+              altText="ECHO Catering Logo"
+            />
+            <div 
+              data-dropdown
+              style={{
+                cursor: 'pointer',
+                padding: '8px',
+              }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  display: 'block',
+                  color: 'rgba(0,0,0,0.6)'
+                }}
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
         )}
 
+        {/* Dropdown Menu - web viewMode only */}
+        {viewMode === 'web' && dropdownOpen && (
+          <>
+            <div 
+              data-dropdown
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.3)',
+                zIndex: 999,
+              }}
+              onClick={() => setDropdownOpen(false)}
+            />
+            <div style={{
+              position: 'fixed',
+              top: '60px',
+              right: '16px',
+              background: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              zIndex: 1001,
+              minWidth: '200px',
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              {/* MENU */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/menu', '_blank');
+                }}
+              >
+                MENU
+              </div>
+              
+              {/* EVENTS */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#events', '_blank');
+                }}
+              >
+                EVENTS
+              </div>
+              
+              {/* ABOUT */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#about', '_blank');
+                }}
+              >
+                ABOUT
+              </div>
+              
+              {/* CONTACT */}
+              <div 
+                style={{
+                  padding: '16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.open('https://echocatering.com/#contact', '_blank');
+                }}
+              >
+                CONTACT
+              </div>
+            </div>
+          </>
+        )}
         {/* Center tap zone — mobile only, toggles info overlay when video center is tapped */}
         {info?.concept && isProbablyMobileDevice() && (
           <div
@@ -2299,7 +2578,7 @@ function EchoCocktailSubpage2({
               height: `${(size.height || layout.inner.height) * 0.5}px`,
               zIndex: 12,
               background: 'transparent',
-              pointerEvents: (showCategories || sidebarOpen) ? 'none' : 'auto',
+              pointerEvents: (showCategories || sidebarOpen || dropdownOpen) ? 'none' : 'auto',
               WebkitTapHighlightColor: 'transparent',
               WebkitTouchCallout: 'none',
               userSelect: 'none',
@@ -2863,29 +3142,6 @@ function EchoCocktailSubpage2({
               {label}
             </button>
           ))}
-          <a
-            href="https://echocatering.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: '0.25rem 0',
-              paddingLeft: isVertical && layout?.inner?.width ? `${layout.inner.width / 24}px` : '0',
-              textTransform: 'uppercase',
-              fontWeight: 300,
-              fontSize: getFontSize(28, 0.9, 1.4),
-              color: '#555',
-              cursor: 'pointer',
-              transition: 'color 0.2s ease',
-              textDecoration: 'none',
-              position: 'relative',
-              zIndex: 1,
-            }}
-          >
-            Website
-          </a>
         </div>
       </>
     );
