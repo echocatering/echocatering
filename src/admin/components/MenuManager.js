@@ -2926,11 +2926,14 @@ const MenuManager = () => {
                     setHasUnsavedChanges(true);
                   }
                   // Update cocktail name to match recipe title (Title Case)
+                  // Guard: only apply when the recipe is confirmed to belong to the current cocktail.
+                  // Without this, an async recipe load for a previous item overwrites the navigated-to name.
                   if (updatedRecipe?.title !== undefined) {
-                    setEditingCocktail(prev => ({
-                      ...prev,
-                      name: updatedRecipe.title || prev.name
-                    }));
+                    setEditingCocktail(prev => {
+                      if (!prev) return prev;
+                      if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
+                      return { ...prev, name: updatedRecipe.title || prev.name };
+                    });
                   }
                   // Sync recipe metadata type → editingCocktail.ingredients for inventory sync
                   if (updatedRecipe?.metadata?.type !== undefined) {

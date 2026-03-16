@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IconComponent } from '../utils/iconData';
 import { getCountryDisplayList } from '../shared/countryUtils';
 import { fetchMenuGalleryData } from '../utils/menuGalleryApi';
@@ -472,6 +473,7 @@ function EchoCocktailSubpage2({
   const [showConceptInfo, setShowConceptInfo] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [isNavHovered, setIsNavHovered] = useState(false);
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // Checkmark state management
   // Use props if provided, otherwise use local state
@@ -2275,10 +2277,10 @@ function EchoCocktailSubpage2({
             left: 0,
             right: 0,
             height: '60px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+            background: 'transparent',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            borderBottom: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -2321,101 +2323,20 @@ function EchoCocktailSubpage2({
           </div>
         )}
 
-        {/* Dropdown Menu - web viewMode only */}
+        {/* Dropdown Menu - web viewMode only, same style as website */}
         {viewMode === 'web' && dropdownOpen && (
-          <>
-            <div 
-              data-dropdown
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0.3)',
-                zIndex: 999,
-              }}
-              onClick={() => setDropdownOpen(false)}
-            />
-            <div style={{
-              position: 'fixed',
-              top: '60px',
-              right: '16px',
-              background: 'white',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              zIndex: 1001,
-              minWidth: '200px',
-            }} onClick={(e) => e.stopPropagation()}>
-              
-              {/* MENU */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/menu', '_blank');
-                }}
-              >
-                MENU
-              </div>
-              
-              {/* EVENTS */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#events', '_blank');
-                }}
-              >
-                EVENTS
-              </div>
-              
-              {/* ABOUT */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#about', '_blank');
-                }}
-              >
-                ABOUT
-              </div>
-              
-              {/* CONTACT */}
-              <div 
-                style={{
-                  padding: '16px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-                onClick={() => {
-                  setDropdownOpen(false);
-                  window.open('https://echocatering.com/#contact', '_blank');
-                }}
-              >
-                CONTACT
-              </div>
+          <div
+            data-dropdown
+            className="dropdown-overlay"
+            onClick={() => setDropdownOpen(false)}
+          >
+            <div className="dropdown-content" onClick={(e) => e.stopPropagation()}>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/echo-originals'); }}>MENU</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/event-gallery'); }}>EVENTS</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/about'); }}>ABOUT</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/submenu/contact'); }}>CONTACT</div>
             </div>
-          </>
+          </div>
         )}
         {/* Center tap zone — mobile only, toggles info overlay when video center is tapped */}
         {info?.concept && isProbablyMobileDevice() && (
