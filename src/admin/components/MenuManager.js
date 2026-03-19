@@ -231,14 +231,17 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
 }
 
 // Determine map type from cocktail data.
-// Priority: 1) explicit mapType field from inventory/DB, 2) detect from regions, 3) default 'world'
+// Priority: 1) explicit mapType from inventory/DB, 2) location-based detection, 3) default 'world'.
+// Uses every() not some() — only infers 'us' when ALL saved regions are US state codes.
+// This avoids false positives for world cocktails that include one code that happens to overlap
+// with a US state abbreviation (e.g. CA=Canada vs California). A world cocktail will almost
+// always have at least one region code that isn't a US state (FR, GB, JP, IT, etc.).
 const US_STATE_CODES = new Set(US_STATES.map(s => s.code.toUpperCase()));
 const inferMapType = (cocktail) => {
   const explicit = cocktail?.mapType;
   if (explicit === 'us' || explicit === 'world') return explicit;
-  // Location-based fallback: if any saved region is a US state code, use 'us'
   if (Array.isArray(cocktail?.regions) && cocktail.regions.length > 0) {
-    if (cocktail.regions.some(r => US_STATE_CODES.has(String(r).toUpperCase()))) return 'us';
+    if (cocktail.regions.every(r => US_STATE_CODES.has(String(r).toUpperCase()))) return 'us';
   }
   return 'world';
 };
@@ -268,6 +271,7 @@ const MenuManager = () => {
   const lastRecipeHydrateAtRef = useRef(0);
   const recipeBuilderInteractedRef = useRef(false);
   const recipeRequestIdRef = useRef(0);
+  const preserveRecipeViewRef = useRef(false); // Set by arrows so recipe view survives navigation
   const recipeForCocktailIdRef = useRef(null); // Tracks which cocktail ID the current recipe belongs to
   const [newCocktail, setNewCocktail] = useState({
     name: '',
@@ -323,6 +327,7 @@ const MenuManager = () => {
   const [recipe, setRecipe] = useState(null);
   const [recipeLoading, setRecipeLoading] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
+  const [recipeViewActive, setRecipeViewActive] = useState(false);
   
   useEffect(() => {
     return () => {
@@ -447,6 +452,9 @@ const MenuManager = () => {
       activeCocktailIdRef.current = id;
       setHasUnsavedChanges(false);
       recipeBuilderInteractedRef.current = false;
+      // Preserve recipe view when navigating via arrows (preserveRecipeViewRef set by handleNext/handlePrev)
+      setRecipeViewActive(preserveRecipeViewRef.current);
+      preserveRecipeViewRef.current = false;
     }
   }, [editingCocktail?._id]);
 
@@ -1551,12 +1559,9 @@ const MenuManager = () => {
           setMapLoaded(false);
           setMapSvgContent(svgText);
           setMapError('');
-          // Small delay to ensure DOM updates
-          setTimeout(() => {
-            if (!cancelled) {
-              setMapLoaded(true);
-            }
-          }, 50);
+          // mapLoaded(true) is set inside handleMapReady, after processBatch
+          // has finished stamping all [data-code] attributes. Using a fixed
+          // timeout here caused highlights to fire before paths were ready.
         }
       } catch (err) {
         console.warn(`Failed to load ${mapType} map SVG`, err);
@@ -1598,7 +1603,7 @@ const MenuManager = () => {
     const svg = container.querySelector('svg');
     if (!svg) return;
 
-    // Wait for paths to be ready
+    // Wait for paths to be ready (processBatch stamps [data-code] asynchronously)
     const setupInteractions = () => {
       const interactivePaths = container.querySelectorAll('[data-code]');
       if (interactivePaths.length === 0) {
@@ -1621,14 +1626,13 @@ const MenuManager = () => {
         pathEl.addEventListener('click', handlePathClick);
       });
 
-      // Initial highlight refresh - reduced delay for faster display
-      setTimeout(() => {
-        refreshMapHighlights();
-      }, 50);
+      // All paths are stamped — signal readiness so the highlights useEffect fires
+      // with the correct selectedRegions. Avoids stale-closure highlights call here.
+      setMapLoaded(true);
     };
 
     setupInteractions();
-  }, [refreshMapHighlights]);
+  }, []);
 
   // Update highlights when regions change or when editingCocktail changes (SVG never re-renders)
   useEffect(() => {
@@ -1812,7 +1816,7 @@ const MenuManager = () => {
       order: targetCocktail.order || 0,
       status: targetCocktail.status || 'active',
       isActive: targetCocktail.isActive !== false,
-      regions: [],
+      regions: targetCocktail.regions || [], // Include regions early so highlights are correct immediately
       recipe: targetCocktail.recipe || null, // Keep for recipe fetch to find attached recipe
     });
 
@@ -1878,8 +1882,8 @@ const MenuManager = () => {
     navigateBy(direction);
   };
 
-  const handleNext = () => requestNavigateBy('next');
-  const handlePrev = () => requestNavigateBy('prev');
+  const handleNext = () => { preserveRecipeViewRef.current = recipeViewActive; requestNavigateBy('next'); };
+  const handlePrev = () => { preserveRecipeViewRef.current = recipeViewActive; requestNavigateBy('prev'); };
 
   const showVideoArrows = ['cocktails', 'mocktails', 'spirits', 'wine', 'beer'].includes(
     normalizeCategoryKey(selectedCategory)
@@ -2456,12 +2460,12 @@ const MenuManager = () => {
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
       recipeForCocktailIdRef.current = targetCocktailId; // Track which cocktail this recipe belongs to
-      // For non-premix: ensure the recipe title matches the cocktail name so the bidirectional
-      // name sync doesn't fire onChange and overwrite the title field with stale data.
+      // Always align the loaded recipe's title with the saved cocktail name.
+      // This applies to ALL categories (including premix) so that the name field in
+      // MenuManager is always the source of truth on load. The recipe title will only
+      // diverge from the cocktail name when the user actively edits it (see onChange guard).
       let recipeToSet = nextRecipe;
-      if (recipeToSet && cocktail?.name &&
-          normalizeCategoryKey(cocktail.category) !== 'premix' &&
-          recipeToSet.title !== cocktail.name) {
+      if (recipeToSet && cocktail?.name && recipeToSet.title !== cocktail.name) {
         recipeToSet = { ...recipeToSet, title: cocktail.name };
       }
       setRecipe(recipeToSet);
@@ -2640,8 +2644,10 @@ const MenuManager = () => {
       
       const isPremix = normalizeCategoryKey(editingCocktail.category) === 'premix';
       if (isPremix) {
-        // For PRE-MIX, recipe title drives the cocktail name (Title Case - handled by RecipeBuilder)
-        if (recipe.title && recipe.title !== editingCocktail.name) {
+        // For PRE-MIX, recipe title drives the cocktail name — but ONLY during active editing.
+        // On load, setHydratedRecipe already aligns recipe.title with cocktail.name so this
+        // block is a no-op at that point. Without the guard it would fire on every recipe load.
+        if (recipeBuilderInteractedRef.current && recipe.title && recipe.title !== editingCocktail.name) {
           setEditingCocktail(prev => ({
             ...prev,
             name: recipe.title
@@ -2920,48 +2926,45 @@ const MenuManager = () => {
         </div>
       )}
       <div className="menu-manager bg-white min-h-screen px-6 pb-6 w-full" style={{ paddingTop: 0, position: 'relative' }}>
-        {/* Category Navigation Header - For non-premix: absolute positioned. For premix: in document flow */}
-        {normalizeCategoryKey(selectedCategory) !== 'premix' && (
-          <header style={{ position: 'absolute', top: '60px', right: 0, zIndex: 101, display: 'flex', justifyContent: 'flex-end', paddingRight: '100px' }}>
-            <div className="flex gap-4">
-              {menuCategories.map((category) => (
-                <button
-                  key={category.key}
-                  onClick={() => setSelectedCategory(category.key)}
-                  className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
-                    selectedCategory === category.key
-                      ? 'bg-gray-800 text-white border-gray-800'
-                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
-          </header>
-        )}
-        
-        {/* For PRE-MIX: Category Navigation Header in document flow above RecipeBuilder */}
-        {normalizeCategoryKey(selectedCategory) === 'premix' && (
-          <header style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '100px', paddingTop: '60px', paddingBottom: '20px' }}>
-            <div className="flex gap-4">
-              {menuCategories.map((category) => (
-                <button
-                  key={category.key}
-                  onClick={() => setSelectedCategory(category.key)}
-                  className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
-                    selectedCategory === category.key
-                      ? 'bg-gray-800 text-white border-gray-800'
-                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
-          </header>
-        )}
-        
+        {/* Unified header — always in document flow above all content */}
+        <header style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: '100px', paddingRight: '100px', paddingTop: '120px', paddingBottom: '20px' }}>
+          {/* VIEW RECIPE / VIEW ITEM toggle on left — cocktails & mocktails only */}
+          {normalizeCategoryKey(selectedCategory) !== 'premix' && shouldShowRecipeBuilder(selectedCategory) ? (
+            <button
+              onClick={() => setRecipeViewActive(prev => !prev)}
+              className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                recipeViewActive
+                  ? 'bg-gray-800 text-white border-gray-800'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {recipeViewActive ? 'VIEW ITEM' : 'VIEW RECIPE'}
+            </button>
+          ) : (
+            <div />
+          )}
+          {/* Category buttons on right */}
+          <div className="flex gap-4">
+            {menuCategories.map((category) => (
+              <button
+                key={category.key}
+                onClick={() => { setSelectedCategory(category.key); setRecipeViewActive(false); }}
+                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                  selectedCategory === category.key
+                    ? 'bg-gray-800 text-white border-gray-800'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Content area — flex: 1 so it fills the remaining viewport height below the header;
+             justifyContent: center vertically centers all content in that space */}
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: recipeViewActive ? 'flex-start' : 'center' }}>
+
         {/* Recipe Builder for PRE-MIX - Display below header */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
           <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
@@ -2992,10 +2995,10 @@ const MenuManager = () => {
                   if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
                     setHasUnsavedChanges(true);
                   }
-                  // Update cocktail name to match recipe title (Title Case)
-                  // Guard: only apply when the recipe is confirmed to belong to the current cocktail.
-                  // Without this, an async recipe load for a previous item overwrites the navigated-to name.
-                  if (updatedRecipe?.title !== undefined) {
+                  // Update cocktail name to match recipe title ONLY when user is actively editing.
+                  // On initial recipe load recipeBuilderInteractedRef is false, preventing the
+                  // loaded recipe title from overwriting the authoritative cocktail name.
+                  if (updatedRecipe?.title !== undefined && recipeBuilderInteractedRef.current) {
                     setEditingCocktail(prev => {
                       if (!prev) return prev;
                       if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
@@ -3035,7 +3038,7 @@ const MenuManager = () => {
         )}
         
         {filteredCocktails.length > 0 || editingCocktail ? (
-          normalizeCategoryKey(selectedCategory) !== 'premix' ? (
+          normalizeCategoryKey(selectedCategory) !== 'premix' && !recipeViewActive ? (
             /* Viewer container wrapper with vignette */
             <div style={{ position: 'relative', width: '100%', paddingTop: '62.5%' }}>
               {/* White vignette overlay - around viewer container edges */}
@@ -4187,54 +4190,93 @@ const MenuManager = () => {
           </div>
         )}
 
-        {/* Recipe Builder - Show for COCKTAILS and MOCKTAILS only (not PRE-MIX) */}
-        {editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && recipe && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
-          <div className="rounded-lg p-6" style={{ position: 'relative', backgroundColor: 'transparent', border: 'none', background: 'transparent' }}>
-            <div
-              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
-              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
-            >
-              <RecipeBuilder
-                key={`${editingCocktail?._id || ''}`}
-                recipe={{
-                  ...recipe,
-                  title: editingCocktail.name || recipe.title // Keep MM name as initial title
-                }}
-                onChange={(updatedRecipe) => {
-                  // Allow title edits and keep MM name in sync with RecipeBuilder
-                  const prev = recipeRef.current;
-                  const isHydrationUpdate = !hasUnsavedChanges &&
-                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
-                    prev &&
-                    updatedRecipe &&
-                    updatedRecipe.itemNumber === prev.itemNumber &&
-                    updatedRecipe.title === prev.title;
-                  setRecipe(updatedRecipe);
-                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
-                    setHasUnsavedChanges(true);
-                  }
-                  if (updatedRecipe?.title !== undefined) {
-                    setEditingCocktail(prev => {
-                      if (!prev) return prev;
-                      if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
-                      return { ...prev, name: updatedRecipe.title };
-                    });
-                  }
-                }}
-                type={getRecipeType(editingCocktail.category)}
-                saving={savingRecipe}
-                onSave={async () => {
-                  // Save Recipe button - calls handleSave to save the entire cocktail (including recipe)
-                  if (editingCocktail) {
-                    handleSave(editingCocktail);
-                  }
-                }}
-                onDelete={null}
-                disableTitleEdit={false} // Allow typing; MM name stays synced via onChange
-                hideActions={true} // Hide SAVE and DELETE buttons - saving is handled by MenuManager's "Save Changes" button
-              />
-            </div>
+        {/* Recipe View - Cocktails / Mocktails only.
+            Mounted ONLY when the user clicks VIEW RECIPE, eliminating the loading
+            competition between the item form and the recipe builder. */}
+        {recipeViewActive && editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
+          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '200px' }}>
+            {recipeLoading ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
+                Loading recipe…
+              </div>
+            ) : recipe ? (
+              <div
+                onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
+                onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
+              >
+                <RecipeBuilder
+                  key={`${editingCocktail?._id || ''}`}
+                  recipe={{
+                    ...recipe,
+                    title: editingCocktail.name || recipe.title
+                  }}
+                  onChange={(updatedRecipe) => {
+                    const prev = recipeRef.current;
+                    const isHydrationUpdate = !hasUnsavedChanges &&
+                      (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
+                      prev &&
+                      updatedRecipe &&
+                      updatedRecipe.itemNumber === prev.itemNumber &&
+                      updatedRecipe.title === prev.title;
+                    setRecipe(updatedRecipe);
+                    if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
+                      setHasUnsavedChanges(true);
+                    }
+                    if (updatedRecipe?.title !== undefined && recipeBuilderInteractedRef.current) {
+                      setEditingCocktail(prev => {
+                        if (!prev) return prev;
+                        if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
+                        return { ...prev, name: updatedRecipe.title || prev.name };
+                      });
+                    }
+                  }}
+                  type={getRecipeType(editingCocktail.category)}
+                  saving={savingRecipe}
+                  onSave={async () => {
+                    if (editingCocktail) {
+                      handleSave(editingCocktail);
+                    }
+                  }}
+                  onDelete={null}
+                  onNewItem={handleNewItem}
+                  disableTitleEdit={false}
+                  hideActions={false}
+                />
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
+                No recipe found. Save the item first to create a recipe.
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Recipe view footer — mirrors header size/position, holds prev/next arrows */}
+        {recipeViewActive && normalizeCategoryKey(selectedCategory) !== 'premix' && filteredCocktails.length > 1 && (
+          <footer style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '120px', paddingTop: '20px', gap: 32 }}>
+            <button
+              aria-label="Previous"
+              onClick={handlePrev}
+              style={{ background: 'transparent', color: '#888', border: 'none', borderRadius: '50%', width: 56, height: 56, fontWeight: 700, cursor: 'pointer', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, margin: 0, transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#222'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              aria-label="Next"
+              onClick={handleNext}
+              style={{ background: 'transparent', color: '#888', border: 'none', borderRadius: '50%', width: 56, height: 56, fontWeight: 700, cursor: 'pointer', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, margin: 0, transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#222'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </footer>
         )}
 
         {normalizeCategoryKey(selectedCategory) === 'premix' && filteredCocktails.length > 1 && (
@@ -4307,6 +4349,8 @@ const MenuManager = () => {
             </button>
           </div>
         )}
+
+        </div>{/* end content centering wrapper */}
 
     </div>
     </>
