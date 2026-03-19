@@ -2963,7 +2963,7 @@ const MenuManager = () => {
 
         {/* Content area — flex: 1 so it fills the remaining viewport height below the header;
              justifyContent: center vertically centers all content in that space */}
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: recipeViewActive ? 'flex-start' : 'center' }}>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: recipeViewActive ? 'flex-start' : 'center', paddingBottom: recipeViewActive ? 0 : '40px' }}>
 
         {/* Recipe Builder for PRE-MIX - Display below header */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
@@ -4194,7 +4194,7 @@ const MenuManager = () => {
             Mounted ONLY when the user clicks VIEW RECIPE, eliminating the loading
             competition between the item form and the recipe builder. */}
         {recipeViewActive && editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
-          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '200px' }}>
+          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '230px' }}>
             {recipeLoading ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
                 Loading recipe…
