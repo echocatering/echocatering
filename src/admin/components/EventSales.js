@@ -374,9 +374,11 @@ const EventSales = () => {
       const S = (2 * l * c) + (Math.max(i - 2, 0) * k * c) + e;
       return Math.max(S, M);
     } else if (model === 'C') {
-      // N = (c × m) + d + e + f
-      const N = (c * m) + d + e + f;
-      return Math.max(N, M);
+      // Z = max(i − 4, 0) × (c × $/PP)
+      // X = ($/PP × c) + Z + OHD
+      const Z = Math.max(i - 4, 0) * (c * m);
+      const X = (m * c) + Z + e;
+      return Math.max(X, M);
     } else if (model === 'H') {
       // o = cash + credit, p = MIN − o, q = invoice sales + 8% tax
       const parsed = parseItemData(event.itemData);
@@ -560,6 +562,8 @@ const EventSales = () => {
       case 'cogs':
         return formatCurrency(event.cogsCost);
       case 'salesTax':
+        // Model C = no alcohol sold, so no sales tax
+        if ((getCurrentValue(event, 'paymentModel') || 'S') === 'C') return '-';
         // Tax - 8% of all payment methods (CASH + CREDIT + INVOICE)
         const parsedForTax = parseItemData(event.itemData);
         const cashForTax = parsedForTax.paymentTotals.CASH > 0 ? parsedForTax.paymentTotals.CASH : (event.cashTotal || 0);
@@ -716,11 +720,12 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
+        const profitModel = getCurrentValue(event, 'paymentModel') || 'S';
         const profitParsed = parseItemData(event.itemData);
         const profitCash = profitParsed.paymentTotals.CASH > 0 ? profitParsed.paymentTotals.CASH : (event.cashTotal || 0);
         const profitCredit = profitParsed.paymentTotals.CREDIT > 0 ? profitParsed.paymentTotals.CREDIT : (event.creditTotal || 0);
         const profitInvoice = profitParsed.paymentTotals.INVOICE > 0 ? profitParsed.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        const profitTax = (profitCash + profitCredit + profitInvoice) * 0.08;
+        const profitTax = profitModel === 'C' ? 0 : (profitCash + profitCredit + profitInvoice) * 0.08;
         const profit = profitReceived - profitExpenses - profitTax;
         return (
           <span style={{ color: profit > 0 ? '#22c55e' : profit < 0 ? '#ef4444' : '#666', fontWeight: 'bold' }}>
@@ -1235,9 +1240,9 @@ const EventSales = () => {
                   return hours * 60 + minutes;
                 };
                 
-                // Get event start/end times first
-                let eventStartMinutes = parseTimeStr(graphEvent.startTime);
-                let eventEndMinutes = parseTimeStr(graphEvent.endTime);
+                // Get event start/end times first — use getCurrentValue to catch unsaved edits
+                let eventStartMinutes = parseTimeStr(getCurrentValue(graphEvent, 'startTime') || graphEvent.startTime);
+                let eventEndMinutes = parseTimeStr(getCurrentValue(graphEvent, 'endTime') || graphEvent.endTime);
                 
                 // Parse ALL itemData to collect sales (don't filter by category yet for time range)
                 const allSaleTimes = [];
@@ -1303,6 +1308,11 @@ const EventSales = () => {
                   });
                 }
                 
+                // Last-resort default: 6 PM – 11 PM so the graph always renders something
+                if (eventStartMinutes === null && eventEndMinutes === null && allSaleTimes.length === 0) {
+                  eventStartMinutes = 18 * 60;  // 6:00 PM
+                  eventEndMinutes   = 23 * 60;  // 11:00 PM
+                }
                 // Fallback to sales data range if event times not available
                 if ((eventStartMinutes === null || eventEndMinutes === null) && allSaleTimes.length > 0) {
                   eventStartMinutes = Math.min(...allSaleTimes);
