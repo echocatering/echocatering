@@ -658,6 +658,17 @@ const EventSales = () => {
         ) : '-';
       case 'invoiceTotal':
         // Invoice payments - always show OHD + Insurance + Permit, plus invoice tab if exists
+        const modelForInvoice = getCurrentValue(event, 'paymentModel') || 'S';
+        if (modelForInvoice === 'C') {
+          // Model C: invoice = calculateInvoice (no alcohol tax)
+          const calcInvC = calculateInvoice(event);
+          const rcvdC = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+          return calcInvC > 0 ? (
+            <span style={{ color: rcvdC >= calcInvC ? '#22c55e' : '#666', fontWeight: 'bold' }}>
+              ${calcInvC.toFixed(2)}
+            </span>
+          ) : '-';
+        }
         const parsedInvoice = parseItemData(event.itemData);
         const invoiceSubtotalPM = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
         const invoiceTaxPM = invoiceSubtotalPM * 0.08;
@@ -817,14 +828,7 @@ const EventSales = () => {
                 const currentTips = parseFloat(event.totalTips) || 0;
                 handleFieldChange(event._id, 'totalTips', currentTips + extraTip);
               }
-              // Clear the edited state
-              setEditedEvents(prev => {
-                const updated = { ...prev };
-                if (updated[event._id]) {
-                  delete updated[event._id].amountReceived;
-                }
-                return updated;
-              });
+              // Keep amountReceived in editedEvents so the lock save picks it up
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -1309,9 +1313,9 @@ const EventSales = () => {
                 }
                 
                 // Last-resort default: 6 PM – 11 PM so the graph always renders something
-                if (eventStartMinutes === null && eventEndMinutes === null && allSaleTimes.length === 0) {
-                  eventStartMinutes = 18 * 60;  // 6:00 PM
-                  eventEndMinutes   = 23 * 60;  // 11:00 PM
+                if ((eventStartMinutes === null || eventEndMinutes === null) && allSaleTimes.length === 0) {
+                  if (eventStartMinutes === null) eventStartMinutes = 18 * 60;  // 6:00 PM
+                  if (eventEndMinutes === null)   eventEndMinutes   = 23 * 60;  // 11:00 PM
                 }
                 // Fallback to sales data range if event times not available
                 if ((eventStartMinutes === null || eventEndMinutes === null) && allSaleTimes.length > 0) {
@@ -1889,12 +1893,21 @@ const EventSales = () => {
         const event = events.find(e => e._id === invoiceDetailsEventId);
         if (!event) return null;
         
+        const isModelC = (getCurrentValue(event, 'paymentModel') || 'S') === 'C';
         const parsed = parseItemData(event.itemData);
         const invoiceItems = parsed.items.filter(item => item.transactionType === 'INVOICE');
         const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
-        const invoiceTax = invoiceSubtotal * 0.08;
+        const invoiceTax = isModelC ? 0 : invoiceSubtotal * 0.08;
         const invoiceTotal = invoiceSubtotal + invoiceTax;
-        
+        // Group items by name for combined display (e.g. "2x Vodka Soda")
+        const groupedInvoiceItems = Object.values(
+          invoiceItems.reduce((acc, item) => {
+            if (!acc[item.name]) acc[item.name] = { name: item.name, count: 0, total: 0 };
+            acc[item.name].count += 1;
+            acc[item.name].total += item.cost;
+            return acc;
+          }, {})
+        );
         // Additional invoice items: Permit, Insurance, Overhead (OHD)
         const permitCost = parseFloat(event.permitCost) || 0;
         const insuranceCost = parseFloat(event.insuranceCost) || 0;
@@ -1956,11 +1969,11 @@ const EventSales = () => {
                 
                 {/* Items */}
                 <div style={{ marginBottom: '20px' }}>
-                  {invoiceItems.length > 0 ? (
-                    invoiceItems.map((item, i) => (
+                  {groupedInvoiceItems.length > 0 ? (
+                    groupedInvoiceItems.map((item, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                        <span style={{ color: '#333' }}>{item.name}</span>
-                        <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${item.cost.toFixed(2)}</span>
+                        <span style={{ color: '#333' }}>{item.count > 1 ? `${item.count}x ${item.name}` : item.name}</span>
+                        <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${item.total.toFixed(2)}</span>
                       </div>
                     ))
                   ) : (
@@ -1969,16 +1982,18 @@ const EventSales = () => {
                 </div>
                 
                 {/* Totals */}
-                {invoiceItems.length > 0 && (
+                {groupedInvoiceItems.length > 0 && (
                   <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '15px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
                       <span>Subtotal</span>
                       <span>&nbsp;— ${invoiceSubtotal.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                      <span>Tax (8%)</span>
-                      <span>&nbsp;— ${invoiceTax.toFixed(2)}</span>
-                    </div>
+                    {!isModelC && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                        <span>Tax (8%)</span>
+                        <span>&nbsp;— ${invoiceTax.toFixed(2)}</span>
+                      </div>
+                    )}
                     {/* Additional charges: Permit, Insurance, Overhead */}
                     {permitCost > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
@@ -2056,11 +2071,11 @@ const EventSales = () => {
                           <div class="event-name">${event.name}</div>
                         </div>
                         <div class="items">
-                          ${invoiceItems.map(item => `<div class="item"><span>${item.name}</span><span>&nbsp;— $${item.cost.toFixed(2)}</span></div>`).join('')}
+                          ${groupedInvoiceItems.map(item => `<div class="item"><span>${item.count > 1 ? item.count + 'x ' + item.name : item.name}</span><span>&nbsp;— $${item.total.toFixed(2)}</span></div>`).join('')}
                         </div>
                         <div class="totals">
                           <div class="total-row"><span>Subtotal</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
-                          <div class="total-row"><span>Tax (8%)</span><span>&nbsp;— $${invoiceTax.toFixed(2)}</span></div>
+                          ${!isModelC ? `<div class="total-row"><span>Tax (8%)</span><span>&nbsp;— $${invoiceTax.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="total-row"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${overheadCost > 0 ? `<div class="total-row"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
