@@ -1256,14 +1256,15 @@ const EventSales = () => {
                       const timeStr = parts[2];
                       const cost = parts.length >= 5 ? parseFloat(parts[4]) || 0 : 0;
                       
-                      const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                      const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
                       if (timeParts) {
                         let hours = parseInt(timeParts[1]);
                         const minutes = parseInt(timeParts[2]);
-                        const ampm = timeParts[3].toUpperCase();
+                        const ampm = timeParts[3]?.toUpperCase();
                         
                         if (ampm === 'PM' && hours !== 12) hours += 12;
                         if (ampm === 'AM' && hours === 12) hours = 0;
+                        if (!ampm && hours >= 1 && hours <= 11) hours += 12;
                         
                         const totalMinutes = hours * 60 + minutes;
                         allSaleTimes.push(totalMinutes);

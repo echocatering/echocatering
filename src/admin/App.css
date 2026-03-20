@@ -801,6 +801,25 @@ button.recipes-tab.recipes-tab-white.active {
   min-height: 0;
 }
 
+.recipe-drag-handle {
+  width: 24px;
+  min-width: 24px;
+  text-align: center;
+  cursor: grab;
+  color: #aaa;
+  font-size: 1.1rem;
+  user-select: none;
+  padding: 0 2px;
+}
+
+.recipe-drag-handle:active {
+  cursor: grabbing;
+}
+
+tr[draggable]:hover .recipe-drag-handle {
+  color: #555;
+}
+
 .recipe-media-placeholder {
   background: #ededed;
   border-radius: 0;

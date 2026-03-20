@@ -470,6 +470,8 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   const recipeRef = useRef(recipe); // Keep a ref to the current recipe
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const dragIndexRef = useRef(null);
   const recipeCardRef = useRef(null);
 
   // Get save button label based on recipe type
@@ -1067,6 +1069,38 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   const updateItems = (nextItems) => {
     const totals = calculateTotals(nextItems);
     updateRecipe({ ...recipe, items: nextItems, totals });
+  };
+
+  const handleDragStart = (e, index) => {
+    dragIndexRef.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) setDragOverIndex(index);
+  };
+
+  const handleDrop = (e, index) => {
+    e.preventDefault();
+    const from = dragIndexRef.current;
+    if (from == null || from === index) {
+      dragIndexRef.current = null;
+      setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...items];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(index, 0, moved);
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+    updateItems(reordered);
+  };
+
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
   };
 
   const handleTitleChange = (value) => {
@@ -2133,6 +2167,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
           <table className="inventory-table recipe-table">
             <thead>
               <tr>
+                <th style={{ width: '24px', padding: '0' }} />
                 <th>INGREDIENT</th>
                 <th>AMT</th>
                 <th>UNIT</th>
@@ -2149,7 +2184,16 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 const state = searchState[rowKey] || { items: [] };
                 const options = state.items || [];
                 return (
-                <tr key={rowKey}>
+                <tr
+                  key={rowKey}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  style={dragOverIndex === index ? { borderTop: '2px solid #888' } : {}}
+                >
+                  <td className="recipe-drag-handle" onMouseDown={(e) => e.stopPropagation()}>⠿</td>
                   <td>
                     <div className="ingredient-selector">
                       <input
@@ -2272,7 +2316,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               );
               })}
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <button type="button" className="recipes-add-row" onClick={addRow}>
                     + Add ingredient
                   </button>
@@ -2281,7 +2325,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
             </tbody>
             <tfoot>
               <tr style={{ backgroundColor: '#d0d0d0' }}>
-                <td colSpan={3} className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
+                <td colSpan={4} className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
                   TOTAL
                 </td>
                 <td className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>{formatNumber(totals.volumeOz, 2)} oz</td>
