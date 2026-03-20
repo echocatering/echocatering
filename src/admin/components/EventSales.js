@@ -91,7 +91,7 @@ const EventSales = () => {
         const groupFields = {
           basicInfo: ['name', 'date', 'guestCount', 'startTime', 'endTime'],
           overhead: ['accommodationCost', 'travelCost', 'permitCost', 'insuranceCost', 'laborCost'],
-          paymentModel: ['paymentModel', 'amountReceived']
+          paymentModel: ['paymentModel', 'amountReceived', 'totalTips']
         };
         
         // Gather all current values for fields in this group
@@ -214,6 +214,13 @@ const EventSales = () => {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // Auto-select the most recent event for the graph when events first load
+  useEffect(() => {
+    if (events.length > 0 && !graphEventId) {
+      setGraphEventId(events[0]._id);
+    }
+  }, [events]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Delete event
   const handleDelete = async (eventId) => {
@@ -656,38 +663,16 @@ const EventSales = () => {
             +${creditTotal.toFixed(2)}
           </span>
         ) : '-';
-      case 'invoiceTotal':
-        // Invoice payments - always show OHD + Insurance + Permit, plus invoice tab if exists
-        const modelForInvoice = getCurrentValue(event, 'paymentModel') || 'S';
-        if (modelForInvoice === 'C') {
-          // Model C: invoice = calculateInvoice (no alcohol tax)
-          const calcInvC = calculateInvoice(event);
-          const rcvdC = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
-          return calcInvC > 0 ? (
-            <span style={{ color: rcvdC >= calcInvC ? '#22c55e' : '#666', fontWeight: 'bold' }}>
-              ${calcInvC.toFixed(2)}
-            </span>
-          ) : '-';
-        }
-        const parsedInvoice = parseItemData(event.itemData);
-        const invoiceSubtotalPM = parsedInvoice.paymentTotals.INVOICE > 0 ? parsedInvoice.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        const invoiceTaxPM = invoiceSubtotalPM * 0.08;
-        const permitCostPM = parseFloat(event.permitCost) || 0;
-        const insuranceCostPM = parseFloat(event.insuranceCost) || 0;
-        const overheadCostPM = pricingVars.overhead || 0;
-        // Always include OHD, Insurance, Permit - even if no invoice tab
-        const baseCharges = permitCostPM + insuranceCostPM + overheadCostPM;
-        const invoiceTotalWithCharges = invoiceSubtotalPM + invoiceTaxPM + baseCharges;
-        // Check if received >= calculated invoice to determine color
-        const receivedForInvoice = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
-        const calcInvoiceForColor = calculateInvoice(event);
-        const invoicePaid = receivedForInvoice >= calcInvoiceForColor;
-        // Always show if there are any charges (OHD, Insurance, Permit, or invoice tab)
-        return invoiceTotalWithCharges > 0 ? (
-          <span style={{ color: invoicePaid ? '#22c55e' : '#666', fontWeight: 'bold' }}>
-            ${invoiceTotalWithCharges.toFixed(2)}
+      case 'invoiceTotal': {
+        // Show the formula-calculated invoice total for the selected payment model
+        const calcInv = calculateInvoice(event);
+        const rcvdInv = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        return calcInv > 0 ? (
+          <span style={{ color: rcvdInv >= calcInv ? '#22c55e' : '#666', fontWeight: 'bold' }}>
+            ${calcInv.toFixed(2)}
           </span>
         ) : '-';
+      }
       case 'itemData':
         // Show hamburger menu icon for item data
         const itemDataStr = event.itemData || '';
@@ -1526,7 +1511,7 @@ const EventSales = () => {
           </div>
           
           {/* Spreadsheet - Bottom Half */}
-          <div style={{ height: '50%', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px' }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}>
             <thead>
               {/* Group headers */}
@@ -1913,6 +1898,8 @@ const EventSales = () => {
         const insuranceCost = parseFloat(event.insuranceCost) || 0;
         const overheadCost = pricingVars.overhead || 0;
         const adjustedTotal = invoiceTotal + permitCost + insuranceCost + overheadCost;
+        const finalTotal = Math.max(adjustedTotal, pricingVars.minimum);
+        const showMinimumLine = adjustedTotal < pricingVars.minimum;
         
         const eventDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
           year: 'numeric', 
@@ -2013,9 +2000,19 @@ const EventSales = () => {
                         <span>&nbsp;— ${overheadCost.toFixed(2)}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '16px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
                       <span>Adjusted Total</span>
                       <span>&nbsp;— ${adjustedTotal.toFixed(2)}</span>
+                    </div>
+                    {showMinimumLine && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: '#f59e0b', fontWeight: 'bold' }}>
+                        <span>Event Minimum</span>
+                        <span>&nbsp;— ${pricingVars.minimum.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
+                      <span>Total</span>
+                      <span>&nbsp;— ${finalTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 )}
@@ -2079,7 +2076,9 @@ const EventSales = () => {
                           ${permitCost > 0 ? `<div class="total-row"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${overheadCost > 0 ? `<div class="total-row"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
-                          <div class="total-row final"><span>Adjusted Total</span><span>&nbsp;— $${adjustedTotal.toFixed(2)}</span></div>
+                          <div class="total-row"><span>Adjusted Total</span><span>&nbsp;— $${adjustedTotal.toFixed(2)}</span></div>
+                          ${showMinimumLine ? `<div class="total-row" style="color:#f59e0b;font-weight:bold"><span>Event Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>` : ''}
+                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${finalTotal.toFixed(2)}</span></div>
                         </div>
                         <div class="payment-method">Payment method: Invoice</div>
                         <div class="footer">Thank you for your business!<br>echocatering.com</div>
