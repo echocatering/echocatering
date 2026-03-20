@@ -1566,10 +1566,10 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   const totals = calculateTotals(items);
 
   // Always use default background color for all sections
-  const backgroundColor = '#ebebeb';
+  const backgroundColor = '#d0d0d0';
 
   return (
-    <div className="recipe-builder-card" ref={recipeCardRef} style={{ backgroundColor: '#ebebeb', border: 'none' }}>
+    <div className="recipe-builder-card" ref={recipeCardRef} style={{ backgroundColor: '#d0d0d0', border: 'none' }}>
       <div className="recipe-builder-header" style={{ backgroundColor }}>
         <div className="recipe-title-section" style={{ backgroundColor }}>
           <div style={{ position: 'relative' }}>
@@ -1960,7 +1960,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 }}
                 style={{ 
                   position: 'relative',
-                  backgroundColor: '#ebebeb',
+                  backgroundColor: '#d0d0d0',
                   color: '#000',
                   borderRadius: '8px'
                 }}
@@ -1971,7 +1971,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 }}
                 onMouseLeave={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = '#ebebeb';
+                    e.currentTarget.style.backgroundColor = '#d0d0d0';
                   }
                 }}
               >
@@ -2280,16 +2280,16 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               </tr>
             </tbody>
             <tfoot>
-              <tr style={{ backgroundColor: '#ebebeb' }}>
-                <td colSpan={3} className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
+              <tr style={{ backgroundColor: '#d0d0d0' }}>
+                <td colSpan={3} className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
                   TOTAL
                 </td>
-                <td className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>{formatNumber(totals.volumeOz, 2)} oz</td>
-                <td style={{ backgroundColor: '#ebebeb' }} />
-                <td className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
+                <td className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>{formatNumber(totals.volumeOz, 2)} oz</td>
+                <td style={{ backgroundColor: '#d0d0d0' }} />
+                <td className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
                   {`$${formatNumber(totals.costEach, 2)}`}
                 </td>
-                <td style={{ backgroundColor: '#ebebeb' }} />
+                <td style={{ backgroundColor: '#d0d0d0' }} />
               </tr>
             </tfoot>
           </table>
@@ -2300,9 +2300,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
             <table className="recipe-batch-table">
               <thead>
                 <tr>
-                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>OZ</th>
-                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>BATCH</th>
-                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>ML</th>
+                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>OZ</th>
+                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>BATCH</th>
+                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>ML</th>
                 </tr>
               </thead>
               <tbody>
@@ -2339,19 +2339,19 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ backgroundColor: '#ebebeb' }}>
-                  <td className="text-center font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
+                <tr style={{ backgroundColor: '#d0d0d0' }}>
+                  <td className="text-center font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
                     {totalBatchOzDisplay || ''}
                   </td>
-                  <td style={{ backgroundColor: '#ebebeb' }}></td>
-                  <td className="text-center font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
+                  <td style={{ backgroundColor: '#d0d0d0' }}></td>
+                  <td className="text-center font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
                     {totalBatchMlRounded > 0 
                       ? `${totalBatchMlRounded.toFixed(0)} ML` 
                       : ''}
                   </td>
                 </tr>
-                <tr style={{ backgroundColor: '#ebebeb' }}>
-                  <td colSpan={3} className="recipe-batch-input-row" style={{ backgroundColor: '#ebebeb' }}>
+                <tr style={{ backgroundColor: '#d0d0d0' }}>
+                  <td colSpan={3} className="recipe-batch-input-row" style={{ backgroundColor: '#d0d0d0' }}>
                     <div className="recipe-batch-input-group">
                       <input
                         type="number"
@@ -2479,9 +2479,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 <table className="recipe-batch-table">
                   <thead>
                     <tr>
-                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>Ingredient</th>
-                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>oz</th>
-                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>ml</th>
+                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>Ingredient</th>
+                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>oz</th>
+                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>ml</th>
                     </tr>
                   </thead>
                   <tbody>
