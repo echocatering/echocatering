@@ -437,7 +437,7 @@ button.recipes-tab.recipes-tab-white.active {
   background: white;
   color: #000;
   padding: 0.3rem 1.25rem;
-  border-radius: 0;
+  border-radius: 8px;
   font-size: 0.75rem;
   letter-spacing: 0.09em;
   font-weight: 600;
@@ -453,10 +453,11 @@ button.recipes-tab.recipes-tab-white.active {
   justify-content: center;
 }
 
+
 .recipes-primary-btn:hover {
-  background: #000;
-  color: white;
-  border: 1px solid #000;
+  background: #d0d0d0;
+  color: #000;
+  border: 1px solid #d0d0d0;
 }
 
 .recipes-primary-btn:disabled {
@@ -484,16 +485,11 @@ button.recipes-tab.recipes-tab-white.active {
   justify-content: center;
 }
 
-.recipes-danger-btn:hover {
-  background: #000;
-  color: white;
-  border: 1px solid #000;
-}
 
 .recipes-danger-btn:hover {
-  background: #000;
-  color: white;
-  border: 1px solid #000;
+  background: #d0d0d0;
+  color: #000;
+  border: 1px solid #d0d0d0;
 }
 
 .recipes-danger-btn:disabled {
@@ -699,12 +695,12 @@ button.recipes-tab.recipes-tab-white.active {
 
 .recipe-builder-card {
   position: relative;
-  border: 12px solid transparent;
-  outline: 1px solid transparent;
-  box-shadow: none;
-  border-radius: 0;
+  border: none;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  border-radius: 12px;
   padding: 1.5rem;
-  background: transparent;
+  background: #ebebeb;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -719,6 +715,7 @@ button.recipes-tab.recipes-tab-white.active {
   gap: 1rem;
   padding: 1rem;
   border-radius: 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .recipe-title-section {
@@ -738,13 +735,14 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-title-input {
-  border: 2px solid #666666;
-  border-radius: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 1.25rem;
   font-family: 'Montserrat', "Helvetica Neue", Helvetica, Arial, sans-serif;
   width: min(360px, 100%);
   background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .recipe-input {
@@ -790,9 +788,10 @@ button.recipes-tab.recipes-tab-white.active {
 .recipe-side-panel,
 .recipe-info-card,
 .recipe-batch-card {
-  background: #fdfdfd;
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -850,19 +849,19 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-table th {
-  background-color: #d0d0d0 !important;
-  color: #000 !important;
-  background: #f0f0f0;
+  background-color: white !important;
+  color: #666 !important;
   font-size: 0.7rem;
   font-family: 'Montserrat', "Helvetica Neue", Helvetica, Arial, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 0.45rem;
+  border-bottom: 2px solid #eee;
 }
 
 .recipe-table td {
   padding: 0.35rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #f5f5f5;
   font-family: 'Montserrat', "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -884,12 +883,16 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipes-add-row {
-  border: 1px dashed #b0b0b0;
+  border: 1px dashed #ccc;
   background: transparent;
   width: 100%;
   padding: 0.5rem;
-  border-radius: 0;
-  color: #2d2d2d;
+  border-radius: 6px;
+  color: #800080;
+  font-family: 'Montserrat', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
 }
 
 .ingredient-selector {
@@ -972,11 +975,11 @@ button.recipes-tab.recipes-tab-white.active {
   font-size: 0.9rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #111;
+  color: #666;
   text-align: center;
-  background: #f0f0f0;
+  background: white;
   padding: 0.5rem;
-  border: 1px solid #e0e0e0;
+  border-bottom: 1px solid #eee;
 }
 
 .recipe-batch-table {
@@ -989,14 +992,14 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-batch-table thead {
-  background: #d0d0d0 !important;
+  background: #ebebeb !important;
   overflow: visible;
 }
 
 .recipe-batch-table thead tr {
   height: 50.23px;
   overflow: visible;
-  background: #d0d0d0 !important;
+  background: #ebebeb !important;
 }
 
 .recipe-batch-table thead th {
@@ -1005,7 +1008,7 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-batch-table tfoot {
-  background: #d0d0d0 !important;
+  background: #ebebeb !important;
   border-top: none;
 }
 
@@ -1121,7 +1124,7 @@ button.recipes-tab.recipes-tab-white.active {
   padding: 0.5rem !important;
   border-left: none !important;
   border-right: none !important;
-  background-color: #d0d0d0 !important;
+  background-color: #ebebeb !important;
 }
 
 .recipe-batch-input-row td {
@@ -1150,9 +1153,10 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-notes-panel {
-  background: #fdfdfd;
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   padding: 1rem;
 }
 
@@ -1269,8 +1273,8 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-type-display-box {
-  border: 2px solid #666666;
-  border-radius: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   background: white;
   padding: 0.5rem 0.75rem;
   height: 40px;
@@ -1289,8 +1293,8 @@ button.recipes-tab.recipes-tab-white.active {
   font-size: 0.85rem;
   font-family: 'Montserrat', "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #111;
-  border: 2px solid #666666;
-  border-radius: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   background: white;
   padding: 0.5rem 0.75rem;
   height: 40px;
@@ -1329,8 +1333,8 @@ button.recipes-tab.recipes-tab-white.active {
 }
 
 .recipe-type-select {
-  border: 1px solid #d4d4d4;
-  border-radius: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   background: #fff;
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;

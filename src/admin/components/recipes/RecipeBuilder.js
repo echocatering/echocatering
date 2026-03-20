@@ -1566,10 +1566,10 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   const totals = calculateTotals(items);
 
   // Always use default background color for all sections
-  const backgroundColor = '#d0d0d0';
+  const backgroundColor = '#ebebeb';
 
   return (
-    <div className="recipe-builder-card" ref={recipeCardRef} style={{ backgroundColor: '#d0d0d0', border: '2px solid #666666' }}>
+    <div className="recipe-builder-card" ref={recipeCardRef} style={{ backgroundColor: '#ebebeb', border: 'none' }}>
       <div className="recipe-builder-header" style={{ backgroundColor }}>
         <div className="recipe-title-section" style={{ backgroundColor }}>
           <div style={{ position: 'relative' }}>
@@ -1918,6 +1918,28 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               DELETE
             </button>
           ) : null}
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="recipes-primary-btn"
+              disabled={exporting}
+              onClick={() => setShowExportMenu(!showExportMenu)}
+            >
+              {exporting ? 'Exporting…' : 'EXPORT RECIPE'}
+            </button>
+            {showExportMenu && (
+              <div
+                style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #e0e0e0', borderRadius: '8px', boxShadow: '0 4px 14px rgba(0,0,0,0.12)', zIndex: 1000, minWidth: '200px', padding: '8px 0' }}
+                onMouseLeave={() => setShowExportMenu(false)}
+              >
+                <button type="button" onClick={printRecipe} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.9rem' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>🖨️ Print</button>
+                <button type="button" onClick={exportAsPDF} disabled={exporting} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.9rem', opacity: exporting ? 0.5 : 1 }} onMouseEnter={(e) => !exporting && (e.target.style.backgroundColor = '#f0f0f0')} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>📄 Export as PDF</button>
+                <button type="button" onClick={() => exportAsImage('png')} disabled={exporting} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.9rem', opacity: exporting ? 0.5 : 1 }} onMouseEnter={(e) => !exporting && (e.target.style.backgroundColor = '#f0f0f0')} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>🖼️ Export as PNG</button>
+                <button type="button" onClick={() => exportAsImage('jpg')} disabled={exporting} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.9rem', opacity: exporting ? 0.5 : 1 }} onMouseEnter={(e) => !exporting && (e.target.style.backgroundColor = '#f0f0f0')} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>🖼️ Export as JPG</button>
+                <button type="button" onClick={exportAsJSON} style={{ width: '100%', padding: '8px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.9rem' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>📋 Export as JSON</button>
+              </div>
+            )}
+          </div>
         </div>
         )}
         {hideActions && (
@@ -1938,22 +1960,18 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 }}
                 style={{ 
                   position: 'relative',
-                  backgroundColor: '#d0d0d0',
+                  backgroundColor: '#ebebeb',
                   color: '#000',
-                  border: '2px solid #666666',
-                  borderColor: '#666666',
-                  borderRadius: '0'
+                  borderRadius: '8px'
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
                     e.currentTarget.style.backgroundColor = '#b8b8b8';
-                    e.currentTarget.style.borderColor = '#666666';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = '#d0d0d0';
-                    e.currentTarget.style.borderColor = '#666666';
+                    e.currentTarget.style.backgroundColor = '#ebebeb';
                   }
                 }}
               >
@@ -1965,26 +1983,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               className="recipes-primary-btn"
               disabled={saving}
               onClick={() => onSave && onSave()}
-              style={{ 
-                position: 'relative',
-                backgroundColor: '#d0d0d0',
-                color: '#000',
-                border: '2px solid #666666',
-                borderColor: '#666666',
-                borderRadius: '0'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#b8b8b8';
-                  e.currentTarget.style.borderColor = '#666666';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#d0d0d0';
-                  e.currentTarget.style.borderColor = '#666666';
-                }
-              }}
+              style={{ position: 'relative', borderRadius: '8px' }}
             >
               {saving ? 'Saving…' : 'SAVE RECIPE'}
             </button>
@@ -1993,26 +1992,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               className="recipes-primary-btn"
               disabled={exporting}
               onClick={() => setShowExportMenu(!showExportMenu)}
-              style={{ 
-                position: 'relative',
-                backgroundColor: '#d0d0d0',
-                color: '#000',
-                border: '2px solid #666666',
-                borderColor: '#666666',
-                borderRadius: '0'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#b8b8b8';
-                  e.currentTarget.style.borderColor = '#666666';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#d0d0d0';
-                  e.currentTarget.style.borderColor = '#666666';
-                }
-              }}
+              style={{ position: 'relative', borderRadius: '8px' }}
             >
               {exporting ? 'Exporting…' : 'EXPORT RECIPE'}
             </button>
@@ -2136,7 +2116,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
       </div>
 
       <div className={`recipe-layout-grid recipe-layout-with-batch ${shouldShowSidePanel ? '' : 'no-side-panel'}`}>
-        <section className="recipe-media-panel" style={{ border: '2px solid #666666' }}>
+        <section className="recipe-media-panel">
           <div className="recipe-media-inputs">
             <label className="recipe-label">NOTES:</label>
             <textarea
@@ -2149,7 +2129,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
           </div>
         </section>
 
-        <section className="recipe-table-panel" style={{ border: '2px solid #666666' }}>
+        <section className="recipe-table-panel">
           <table className="inventory-table recipe-table">
             <thead>
               <tr>
@@ -2300,29 +2280,29 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
               </tr>
             </tbody>
             <tfoot>
-              <tr style={{ backgroundColor: '#d0d0d0' }}>
-                <td colSpan={3} className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
+              <tr style={{ backgroundColor: '#ebebeb' }}>
+                <td colSpan={3} className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
                   TOTAL
                 </td>
-                <td className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>{formatNumber(totals.volumeOz, 2)} oz</td>
-                <td style={{ backgroundColor: '#d0d0d0' }} />
-                <td className="text-right font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
+                <td className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>{formatNumber(totals.volumeOz, 2)} oz</td>
+                <td style={{ backgroundColor: '#ebebeb' }} />
+                <td className="text-right font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
                   {`$${formatNumber(totals.costEach, 2)}`}
                 </td>
-                <td style={{ backgroundColor: '#d0d0d0' }} />
+                <td style={{ backgroundColor: '#ebebeb' }} />
               </tr>
             </tfoot>
           </table>
         </section>
 
-        <section className="recipe-media-panel" style={{ border: '2px solid #666666' }}>
+        <section className="recipe-media-panel">
           <div className="recipe-batch-section">
             <table className="recipe-batch-table">
               <thead>
                 <tr>
-                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>OZ</th>
-                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>BATCH</th>
-                  <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>ML</th>
+                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>OZ</th>
+                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>BATCH</th>
+                  <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>ML</th>
                 </tr>
               </thead>
               <tbody>
@@ -2359,19 +2339,19 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ backgroundColor: '#d0d0d0' }}>
-                  <td className="text-center font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
+                <tr style={{ backgroundColor: '#ebebeb' }}>
+                  <td className="text-center font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
                     {totalBatchOzDisplay || ''}
                   </td>
-                  <td style={{ backgroundColor: '#d0d0d0' }}></td>
-                  <td className="text-center font-semibold" style={{ backgroundColor: '#d0d0d0', color: '#000' }}>
+                  <td style={{ backgroundColor: '#ebebeb' }}></td>
+                  <td className="text-center font-semibold" style={{ backgroundColor: '#ebebeb', color: '#000' }}>
                     {totalBatchMlRounded > 0 
                       ? `${totalBatchMlRounded.toFixed(0)} ML` 
                       : ''}
                   </td>
                 </tr>
-                <tr style={{ backgroundColor: '#d0d0d0' }}>
-                  <td colSpan={3} className="recipe-batch-input-row" style={{ backgroundColor: '#d0d0d0' }}>
+                <tr style={{ backgroundColor: '#ebebeb' }}>
+                  <td colSpan={3} className="recipe-batch-input-row" style={{ backgroundColor: '#ebebeb' }}>
                     <div className="recipe-batch-input-group">
                       <input
                         type="number"
@@ -2499,9 +2479,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 <table className="recipe-batch-table">
                   <thead>
                     <tr>
-                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>Ingredient</th>
-                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>oz</th>
-                      <th style={{ backgroundColor: '#d0d0d0', color: '#000' }}>ml</th>
+                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>Ingredient</th>
+                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>oz</th>
+                      <th style={{ backgroundColor: '#ebebeb', color: '#000' }}>ml</th>
                     </tr>
                   </thead>
                   <tbody>

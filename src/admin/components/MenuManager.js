@@ -2951,7 +2951,7 @@ const MenuManager = () => {
             {menuCategories.map((category) => (
               <button
                 key={category.key}
-                onClick={() => { setSelectedCategory(category.key); setRecipeViewActive(false); }}
+                onClick={() => { preserveRecipeViewRef.current = recipeViewActive; setSelectedCategory(category.key); }}
                 className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
                   selectedCategory === category.key
                     ? 'bg-gray-800 text-white border-gray-800'
@@ -2966,15 +2966,20 @@ const MenuManager = () => {
 
         {/* Content area — flex: 1 so it fills the remaining viewport height below the header;
              justifyContent: center vertically centers all content in that space */}
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: recipeViewActive ? 'flex-start' : 'center', paddingBottom: recipeViewActive ? 0 : '40px' }}>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: (recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') ? 'flex-start' : 'center', paddingBottom: (recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') ? 0 : '40px' }}>
 
-        {/* Recipe Builder for PRE-MIX - Display below header */}
-        {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && recipe && (
-          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none' }}>
-            <div
-              onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
-              onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
-            >
+        {/* Recipe Builder for PRE-MIX — same layout as other recipe views */}
+        {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && (
+          <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '230px' }}>
+            {recipeLoading ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
+                Loading recipe…
+              </div>
+            ) : recipe ? (
+              <div
+                onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
+                onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
+              >
               <RecipeBuilder
                 key={`${editingCocktail?._id || ''}`}
                 recipe={{
@@ -3038,7 +3043,12 @@ const MenuManager = () => {
                 forceUppercaseTitle={false}
                 showOnlyName={true}
               />
-            </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
+                No recipe found. Save the item first to create a recipe.
+              </div>
+            )}
           </div>
         )}
         
@@ -4259,7 +4269,7 @@ const MenuManager = () => {
         )}
 
         {/* Recipe view footer — mirrors header size/position, holds prev/next arrows */}
-        {recipeViewActive && normalizeCategoryKey(selectedCategory) !== 'premix' && filteredCocktails.length > 1 && (
+        {(recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') && filteredCocktails.length > 1 && (
           <footer style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, height: '160px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
             <button
               aria-label="Previous"
@@ -4286,76 +4296,6 @@ const MenuManager = () => {
           </footer>
         )}
 
-        {normalizeCategoryKey(selectedCategory) === 'premix' && filteredCocktails.length > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: '1rem', position: 'relative', zIndex: 50 }}>
-            <button
-              aria-label="Previous"
-              onClick={handlePrev}
-              style={{
-                background: 'transparent',
-                color: '#888',
-                border: 'none',
-                borderRadius: '50%',
-                width: 56,
-                height: 56,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-                margin: 0,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#222';
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#888';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                <path d="M20 8l-8 8 8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              aria-label="Next"
-              onClick={handleNext}
-              style={{
-                background: 'transparent',
-                color: '#888',
-                border: 'none',
-                borderRadius: '50%',
-                width: 56,
-                height: 56,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-                margin: 0,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#222';
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#888';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                <path d="M12 8l8 8-8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        )}
 
         </div>{/* end content centering wrapper */}
 

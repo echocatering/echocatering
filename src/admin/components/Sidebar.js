@@ -35,10 +35,10 @@ const Sidebar = () => {
   ];
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => {
+      const isOpen = prev[section];
+      return { echoInterface: false, inventory: false, sales: false, calendar: false, [section]: !isOpen };
+    });
   };
 
   // Logo management functions
@@ -217,7 +217,7 @@ const Sidebar = () => {
       
       <nav className="sidebar-nav">
         <div className="nav-section-header">
-          ECHO INTERFACE
+          INTERFACE
           <button 
             onClick={() => toggleSection('echoInterface')}
             className="expand-btn"
