@@ -357,10 +357,9 @@ const EventSales = () => {
   };
 
   // Calculate invoice based on payment model
-  // Variables: c=guests, d=permit, e=OHD, f=insurance, i=hours, k=$+HR, l=$2HR, m=$PP, M=MIN
-  // a = l × c  |  b = k × (i − 2)
-  // S: G = d+e+f+a+(b×c)  →  max(G, MIN)
-  // C: N = (c×m)+d+e+f    →  max(N, MIN)
+  // Variables: c=guests, e=OHD, i=hours, k=$+HR, l=$2HR, m=$PP, M=MIN
+  // S: S = 2(l×c) + max(i-2,0)(k×c) + e  →  max(S, MIN)
+  // C: N = (c×m)+d+e+f                   →  max(N, MIN)
   // H: o=cash+credit, p=MIN−o, q=invoice×1.08, R=q+p+d+e+f  →  max(R, MIN)
   const calculateInvoice = (event) => {
     const model = getCurrentValue(event, 'paymentModel') || 'S';
@@ -371,11 +370,9 @@ const EventSales = () => {
     const f = parseFloat(event.insuranceCost) || 0;    // Insurance
 
     if (model === 'S') {
-      // G = d + e + f + a + (b × c)
-      const a = l * c;                                  // l × c
-      const b = k * Math.max(i - 2, 0);                // k × (i − 2)
-      const G = d + e + f + a + (b * c);
-      return Math.max(G, M);
+      // S = 2($2HR × Patrons) + (Total Hours − 2)($+HR × Patrons) + OHD
+      const S = (2 * l * c) + (Math.max(i - 2, 0) * k * c) + e;
+      return Math.max(S, M);
     } else if (model === 'C') {
       // N = (c × m) + d + e + f
       const N = (c * m) + d + e + f;
@@ -709,11 +706,9 @@ const EventSales = () => {
           </span>
         ) : '-';
       case 'profit':
-        // Profit = Revenue (Sales + Tips + Invoice Received) - Expenses
-        const profitSales = parseFloat(event.totalSales) || 0;
-        const profitTips = parseFloat(event.totalTips) || 0;
+        // Profit = Received − Exp − Tax
         const profitReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
-        const profitExpenses = 
+        const profitExpenses =
           (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
@@ -721,7 +716,12 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
-        const profit = profitSales + profitTips + profitReceived - profitExpenses;
+        const profitParsed = parseItemData(event.itemData);
+        const profitCash = profitParsed.paymentTotals.CASH > 0 ? profitParsed.paymentTotals.CASH : (event.cashTotal || 0);
+        const profitCredit = profitParsed.paymentTotals.CREDIT > 0 ? profitParsed.paymentTotals.CREDIT : (event.creditTotal || 0);
+        const profitInvoice = profitParsed.paymentTotals.INVOICE > 0 ? profitParsed.paymentTotals.INVOICE : (event.invoiceTotal || 0);
+        const profitTax = (profitCash + profitCredit + profitInvoice) * 0.08;
+        const profit = profitReceived - profitExpenses - profitTax;
         return (
           <span style={{ color: profit > 0 ? '#22c55e' : profit < 0 ? '#ef4444' : '#666', fontWeight: 'bold' }}>
             {formatCurrency(profit)}
