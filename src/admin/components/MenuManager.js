@@ -1803,7 +1803,7 @@ const MenuManager = () => {
 
     const myId = targetCocktail._id;
 
-    setRecipeLoading(false);
+    setRecipeLoading(true);  // Show loading immediately so Stage 1 render never flashes "No recipe found"
     setRecipe(null);
     setCurrentIndex(targetIndex);
 
@@ -2482,12 +2482,14 @@ const MenuManager = () => {
       } else {
         setHydratedRecipe(null);
       }
+      setRecipeLoading(false); // Early return bypasses try/finally — must clear loading here
       return;
     }
 
     const recipeType = getRecipeType(cocktail.category);
     if (!recipeType) {
       setHydratedRecipe(null);
+      setRecipeLoading(false); // Early return bypasses try/finally — must clear loading here
       return;
     }
 
@@ -2603,6 +2605,7 @@ const MenuManager = () => {
       fetchRecipeForCocktail(editingCocktail);
     } else {
       setRecipe(null);
+      setRecipeLoading(false); // Non-recipe category — clear any loading state
     }
   }, [editingCocktail?._id, editingCocktail?.category, fetchRecipeForCocktail]);
 
@@ -2991,7 +2994,9 @@ const MenuManager = () => {
                     updatedRecipe &&
                     updatedRecipe.itemNumber === prev.itemNumber &&
                     updatedRecipe.title === prev.title;
-                  setRecipe(updatedRecipe);
+                  // Functional update: if navigation already cleared recipe to null,
+                  // don't let a stale low-priority hydration effect override it
+                  setRecipe(prevRecipe => prevRecipe === null ? null : updatedRecipe);
                   if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
                     setHasUnsavedChanges(true);
                   }
@@ -4218,7 +4223,9 @@ const MenuManager = () => {
                       updatedRecipe &&
                       updatedRecipe.itemNumber === prev.itemNumber &&
                       updatedRecipe.title === prev.title;
-                    setRecipe(updatedRecipe);
+                    // Functional update: if navigation already cleared recipe to null,
+                    // don't let a stale low-priority hydration effect override it
+                    setRecipe(prevRecipe => prevRecipe === null ? null : updatedRecipe);
                     if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
                       setHasUnsavedChanges(true);
                     }
@@ -4253,7 +4260,7 @@ const MenuManager = () => {
 
         {/* Recipe view footer — mirrors header size/position, holds prev/next arrows */}
         {recipeViewActive && normalizeCategoryKey(selectedCategory) !== 'premix' && filteredCocktails.length > 1 && (
-          <footer style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '120px', paddingTop: '20px', gap: 32 }}>
+          <footer style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, height: '160px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
             <button
               aria-label="Previous"
               onClick={handlePrev}
