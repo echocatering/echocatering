@@ -56,19 +56,23 @@ const EventSales = () => {
   const [graphContainerHeight, setGraphContainerHeight] = useState(380);
   const [detailPanelMode, setDetailPanelMode] = useState('inventory'); // 'inventory' | 'labor'
   
-  // ResizeObserver to rerender graph when container width changes
+  // ResizeObserver to rerender graph when container size changes
+  // Deps include events.length so the effect re-runs once the graph div mounts (ref is null before events load)
   useEffect(() => {
     const el = graphContainerRef.current;
     if (!el) return;
+    // Measure immediately on attachment
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0) setGraphContainerWidth(Math.floor(rect.width));
+    if (rect.height > 0) setGraphContainerHeight(Math.floor(rect.height));
     const ro = new ResizeObserver(entries => {
-      const w = entries[0]?.contentRect?.width;
-      const h = entries[0]?.contentRect?.height;
-      if (w && w > 0) setGraphContainerWidth(Math.floor(w));
-      if (h && h > 0) setGraphContainerHeight(Math.floor(h));
+      const r = entries[0]?.contentRect;
+      if (r?.width > 0) setGraphContainerWidth(Math.floor(r.width));
+      if (r?.height > 0) setGraphContainerHeight(Math.floor(r.height));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [events.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Section lock states - per-row (per-event) controls whether fields in each section are editable
   // Structure: { [eventId]: { basicInfo: true/false, overhead: true/false, paymentModel: true/false } }
@@ -1498,9 +1502,9 @@ const EventSales = () => {
                 
                 // SVG dimensions - use actual container pixel size (updated by ResizeObserver)
                 const svgPadding = { top: 20, right: 20, bottom: 60, left: 40 };
-                const width = Math.max(graphContainerWidth - 32, 300); // subtract container padding (16px each side)
+                const width = Math.max(graphContainerWidth, 300);
                 const legendHeight = 28; // legend row above SVG
-                const height = Math.max(graphContainerHeight - legendHeight - 32, 100); // fill remaining container height
+                const height = Math.max(graphContainerHeight - legendHeight - 8, 100); // fill remaining container height
                 const padding = svgPadding;
                 const graphWidth = width - padding.left - padding.right;
                 const graphHeight = height - padding.top - padding.bottom;
