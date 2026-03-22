@@ -387,13 +387,12 @@ const EventSales = () => {
       const X = (m * c) + Z + e;
       return Math.max(X, M);
     } else if (model === 'H') {
-      // Invoice = MAX(0, MIN − barSales − OHD − insurance)
+      // Invoice = MAX(0, MIN − barSales)
       const parsed = parseItemData(event.itemData);
       const cash = parsed.paymentTotals.CASH > 0 ? parsed.paymentTotals.CASH : (event.cashTotal || 0);
       const credit = parsed.paymentTotals.CREDIT > 0 ? parsed.paymentTotals.CREDIT : (event.creditTotal || 0);
       const sales = cash + credit;
-      const insurance = parseFloat(event.insuranceCost) || 0;
-      return Math.max((M - sales) - e - insurance, 0);
+      return Math.max(M - sales, 0);
     }
     return 0;
   };
@@ -1950,7 +1949,7 @@ const EventSales = () => {
         const sShowMinLine = sSubtotal < pricingVars.minimum;
 
         // H: bar gap and net calculation
-        const hBarGapSubtotal = isModelH ? (pricingVars.minimum - barSalesTotal - overheadCost - insuranceCost) : 0;
+        const hBarGapSubtotal = isModelH ? (pricingVars.minimum - barSalesTotal) : 0;
         const hNet = isModelH ? (hBarGapSubtotal - invoiceSubtotal) : 0;
 
         // Totals (model-aware)
@@ -2025,18 +2024,6 @@ const EventSales = () => {
                         <span style={{ color: '#333' }}>Less: Bar Sales (Cash &amp; Credit)</span>
                         <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${barSalesTotal.toFixed(2)}</span>
                       </div>
-                      {overheadCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Less: Overhead</span>
-                          <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${overheadCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {insuranceCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Less: Insurance</span>
-                          <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${insuranceCost.toFixed(2)}</span>
-                        </div>
-                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '2px solid #ddd', fontWeight: 'bold' }}>
                         <span>Subtotal</span>
                         <span style={{ color: hBarGapSubtotal < 0 ? '#22c55e' : '#333' }}>&nbsp;— ${hBarGapSubtotal.toFixed(2)}</span>
@@ -2245,8 +2232,6 @@ const EventSales = () => {
                         <div class="items">
                           <div class="item"><span>Event Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
                           <div class="item"><span>Less: Bar Sales (Cash &amp; Credit)</span><span style="color:#c00">&nbsp;— -$${barSalesTotal.toFixed(2)}</span></div>
-                          ${overheadCost > 0 ? `<div class="item"><span>Less: Overhead</span><span style="color:#c00">&nbsp;— -$${overheadCost.toFixed(2)}</span></div>` : ''}
-                          ${insuranceCost > 0 ? `<div class="item"><span>Less: Insurance</span><span style="color:#c00">&nbsp;— -$${insuranceCost.toFixed(2)}</span></div>` : ''}
                           <div class="item" style="font-weight:bold"><span>Subtotal</span><span>&nbsp;— $${hBarGapSubtotal.toFixed(2)}</span></div>
                         </div>
                         ${groupedInvoiceItems.length > 0 ? `
