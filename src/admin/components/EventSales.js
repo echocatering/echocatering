@@ -387,13 +387,13 @@ const EventSales = () => {
       const X = (m * c) + Z + e;
       return Math.max(X, M);
     } else if (model === 'H') {
-      // Invoice = (MIN − Sales) + OHD  where Sales = cash + credit bar sales
+      // Invoice = MAX(0, MIN − barSales − OHD − insurance)
       const parsed = parseItemData(event.itemData);
       const cash = parsed.paymentTotals.CASH > 0 ? parsed.paymentTotals.CASH : (event.cashTotal || 0);
       const credit = parsed.paymentTotals.CREDIT > 0 ? parsed.paymentTotals.CREDIT : (event.creditTotal || 0);
       const sales = cash + credit;
-      const invoice = (M - sales) + e;
-      return Math.max(invoice, 0);
+      const insurance = parseFloat(event.insuranceCost) || 0;
+      return Math.max((M - sales) - e - insurance, 0);
     }
     return 0;
   };
@@ -1548,7 +1548,8 @@ const EventSales = () => {
                       key={groupIdx}
                       colSpan={colSpan}
                       style={{
-                        padding: '8px',
+                        padding: '0 8px',
+                        height: '32px',
                         textAlign: 'center',
                         borderBottom: '1px solid #ccc',
                         borderRight: groupIdx < columnGroups.length - 1 ? '2px solid #999' : 'none',
@@ -1618,7 +1619,8 @@ const EventSales = () => {
                       <td
                         key={col.key}
                         style={{
-                          padding: '10px 8px',
+                          padding: '0 8px',
+                          height: '44px',
                           borderBottom: '1px solid #eee',
                           borderRight: isLastInGroup && groupIdx < columnGroups.length - 1 ? '2px solid #999' : '1px solid #e5e5e5',
                           fontSize: '13px',
@@ -1947,6 +1949,10 @@ const EventSales = () => {
         const sFinalTotal = Math.max(sSubtotal, pricingVars.minimum);
         const sShowMinLine = sSubtotal < pricingVars.minimum;
 
+        // H: bar gap and net calculation
+        const hBarGapSubtotal = isModelH ? (pricingVars.minimum - barSalesTotal - overheadCost - insuranceCost) : 0;
+        const hNet = isModelH ? (hBarGapSubtotal - invoiceSubtotal) : 0;
+
         // Totals (model-aware)
         const hInvoiceTotal = isModelH ? calculateInvoice(event) : 0;
         const adjustedTotal = isModelH ? hInvoiceTotal : receiptModel === 'S' ? sSubtotal : (invoiceTotal + permitCost + insuranceCost + overheadCost);
@@ -2008,50 +2014,68 @@ const EventSales = () => {
                 
                 {isModelH ? (
                   <>
-                    {/* Model H: Cash Bar Sales Summary */}
-                    <div style={{ marginBottom: '6px', color: '#666', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cash Bar Sales</div>
-                    <div style={{ marginBottom: '20px' }}>
-                      {groupedBarItems.length > 0 ? (
-                        groupedBarItems.map((item, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                            <span style={{ color: '#333' }}>{item.count > 1 ? `${item.count}x ${item.name}` : item.name}</span>
-                            <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${item.total.toFixed(2)}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ textAlign: 'center', color: '#999', padding: '12px 0', fontSize: '13px' }}>No bar sales recorded</div>
-                      )}
-                    </div>
-                    {/* Model H: Invoice Breakdown */}
-                    <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '5px' }}>
-                      <div style={{ marginBottom: '8px', color: '#666', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Breakdown</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                        <span>Event Minimum</span>
-                        <span>&nbsp;— ${pricingVars.minimum.toFixed(2)}</span>
+                    {/* Model H: Bar Gap Calculation */}
+                    <div style={{ marginBottom: '6px', color: '#666', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bar Gap</div>
+                    <div style={{ marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                        <span style={{ color: '#333' }}>Event Minimum</span>
+                        <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${pricingVars.minimum.toFixed(2)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                        <span>Less: Bar Sales</span>
-                        <span>&nbsp;— -${barSalesTotal.toFixed(2)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                        <span style={{ color: '#333' }}>Less: Bar Sales (Cash &amp; Credit)</span>
+                        <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${barSalesTotal.toFixed(2)}</span>
                       </div>
                       {overheadCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                          <span>Overhead</span>
-                          <span>&nbsp;— ${overheadCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {permitCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                          <span>Permit</span>
-                          <span>&nbsp;— ${permitCost.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Less: Overhead</span>
+                          <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${overheadCost.toFixed(2)}</span>
                         </div>
                       )}
                       {insuranceCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                          <span>Insurance</span>
-                          <span>&nbsp;— ${insuranceCost.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Less: Insurance</span>
+                          <span style={{ color: '#ef4444', fontWeight: 500 }}>&nbsp;— -${insuranceCost.toFixed(2)}</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '2px solid #ddd', fontWeight: 'bold' }}>
+                        <span>Subtotal</span>
+                        <span style={{ color: hBarGapSubtotal < 0 ? '#22c55e' : '#333' }}>&nbsp;— ${hBarGapSubtotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Model H: Invoice Tab Items */}
+                    {groupedInvoiceItems.length > 0 && (
+                      <>
+                        <div style={{ marginTop: '12px', marginBottom: '6px', color: '#666', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Tab</div>
+                        <div style={{ marginBottom: '4px' }}>
+                          {groupedInvoiceItems.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                              <span style={{ color: '#333' }}>{item.count > 1 ? `${item.count}x ${item.name}` : item.name}</span>
+                              <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${item.total.toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '2px solid #ddd', fontWeight: 'bold' }}>
+                            <span>Invoice Tab Total</span>
+                            <span>&nbsp;— ${invoiceSubtotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Model H: Net Calculation → Invoice Total */}
+                    <div style={{ borderTop: '2px dashed #ddd', paddingTop: '12px', marginTop: '12px' }}>
+                      {hNet > 0 ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: '#f59e0b' }}>
+                          <span>Remaining Balance</span>
+                          <span>&nbsp;— +${hNet.toFixed(2)}</span>
+                        </div>
+                      ) : hNet < 0 ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: '#22c55e' }}>
+                          <span>Tab Offset</span>
+                          <span>&nbsp;— -${Math.abs(hNet).toFixed(2)}</span>
+                        </div>
+                      ) : null}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '8px' }}>
                         <span>Invoice Total</span>
                         <span>&nbsp;— ${hInvoiceTotal.toFixed(2)}</span>
                       </div>
@@ -2217,17 +2241,22 @@ const EventSales = () => {
                           <div class="event-name">${event.name}</div>
                         </div>
                         ${isModelH ? `
-                        <div style="margin-bottom:6px;color:#666;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em">Cash Bar Sales</div>
+                        <div style="margin-bottom:6px;color:#666;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em">Bar Gap</div>
                         <div class="items">
-                          ${groupedBarItems.length > 0 ? groupedBarItems.map(item => `<div class="item"><span>${item.count > 1 ? item.count + 'x ' + item.name : item.name}</span><span>&nbsp;— $${item.total.toFixed(2)}</span></div>`).join('') : '<div style="text-align:center;color:#999;padding:12px 0">No bar sales recorded</div>'}
+                          <div class="item"><span>Event Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
+                          <div class="item"><span>Less: Bar Sales (Cash &amp; Credit)</span><span style="color:#c00">&nbsp;— -$${barSalesTotal.toFixed(2)}</span></div>
+                          ${overheadCost > 0 ? `<div class="item"><span>Less: Overhead</span><span style="color:#c00">&nbsp;— -$${overheadCost.toFixed(2)}</span></div>` : ''}
+                          ${insuranceCost > 0 ? `<div class="item"><span>Less: Insurance</span><span style="color:#c00">&nbsp;— -$${insuranceCost.toFixed(2)}</span></div>` : ''}
+                          <div class="item" style="font-weight:bold"><span>Subtotal</span><span>&nbsp;— $${hBarGapSubtotal.toFixed(2)}</span></div>
                         </div>
+                        ${groupedInvoiceItems.length > 0 ? `
+                        <div style="margin-top:12px;margin-bottom:6px;color:#666;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em">Invoice Tab</div>
+                        <div class="items">
+                          ${groupedInvoiceItems.map(item => `<div class="item"><span>${item.count > 1 ? item.count + 'x ' + item.name : item.name}</span><span>&nbsp;— $${item.total.toFixed(2)}</span></div>`).join('')}
+                          <div class="item" style="font-weight:bold"><span>Invoice Tab Total</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
+                        </div>` : ''}
                         <div class="totals">
-                          <div style="margin-bottom:8px;color:#666;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em">Invoice Breakdown</div>
-                          <div class="total-row"><span>Event Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
-                          <div class="total-row"><span>Less: Bar Sales</span><span>&nbsp;— -$${barSalesTotal.toFixed(2)}</span></div>
-                          ${overheadCost > 0 ? `<div class="total-row"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
-                          ${permitCost > 0 ? `<div class="total-row"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
-                          ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
+                          ${hNet > 0 ? `<div class="total-row" style="color:#f59e0b"><span>Remaining Balance</span><span>&nbsp;— +$${hNet.toFixed(2)}</span></div>` : hNet < 0 ? `<div class="total-row" style="color:green"><span>Tab Offset</span><span>&nbsp;— -$${Math.abs(hNet).toFixed(2)}</span></div>` : ''}
                           <div class="total-row final"><span>Invoice Total</span><span>&nbsp;— $${hInvoiceTotal.toFixed(2)}</span></div>
                         </div>
                         ` : receiptModel === 'S' ? `
