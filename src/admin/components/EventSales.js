@@ -53,6 +53,8 @@ const EventSales = () => {
   const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(true); // Side panel collapsed by default
   const graphContainerRef = useRef(null);
   const [graphContainerWidth, setGraphContainerWidth] = useState(800);
+  const [graphContainerHeight, setGraphContainerHeight] = useState(380);
+  const [detailPanelMode, setDetailPanelMode] = useState('inventory'); // 'inventory' | 'labor'
   
   // ResizeObserver to rerender graph when container width changes
   useEffect(() => {
@@ -60,7 +62,9 @@ const EventSales = () => {
     if (!el) return;
     const ro = new ResizeObserver(entries => {
       const w = entries[0]?.contentRect?.width;
+      const h = entries[0]?.contentRect?.height;
       if (w && w > 0) setGraphContainerWidth(Math.floor(w));
+      if (h && h > 0) setGraphContainerHeight(Math.floor(h));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -883,6 +887,62 @@ const EventSales = () => {
     const event = events.find(e => e._id === selectedEvent);
     if (!event) return null;
 
+    // Labor panel content
+    const laborContent = () => {
+      const laborList = event.laborDetails || [];
+      const totalHours = laborList.reduce((sum, l) => sum + (parseFloat(l.hours) || 0), 0);
+      const storedTips = parseFloat(event.totalTips) || 0;
+      const received = parseFloat(event.amountReceived) || 0;
+      const invoice = calculateInvoice(event);
+      const totalTipsEff = storedTips + Math.max(0, received - invoice);
+      const totalLabor = laborList.reduce((sum, l) => sum + (parseFloat(l.total) || 0), 0);
+      if (laborList.length === 0) return <div style={{ color: '#999', textAlign: 'center', padding: '24px', fontSize: '13px' }}>No labor data recorded</div>;
+      return (
+        <>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <thead>
+              <tr style={{ background: '#f5f5f5' }}>
+                <th style={{ padding: '7px 8px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Position</th>
+                <th style={{ padding: '7px 8px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Hrs</th>
+                <th style={{ padding: '7px 8px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Rate</th>
+                <th style={{ padding: '7px 8px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Earned</th>
+                <th style={{ padding: '7px 8px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Tip Out</th>
+              </tr>
+            </thead>
+            <tbody>
+              {laborList.map((l, idx) => {
+                const hrs = parseFloat(l.hours) || 0;
+                const tipOut = totalHours > 0 ? (totalTipsEff / totalHours) * hrs : 0;
+                return (
+                  <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '7px 8px' }}>{l.title || '—'}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'center' }}>{hrs.toFixed(2)}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'center' }}>${(parseFloat(l.rate) || 0).toFixed(2)}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 500 }}>${(parseFloat(l.total) || 0).toFixed(2)}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'center', color: '#800080', fontWeight: 500 }}>${tipOut.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: '#f9f9f9', borderTop: '2px solid #ddd', fontWeight: 'bold' }}>
+                <td style={{ padding: '7px 8px' }}>Total</td>
+                <td style={{ padding: '7px 8px', textAlign: 'center' }}>{totalHours.toFixed(2)}</td>
+                <td />
+                <td style={{ padding: '7px 8px', textAlign: 'center' }}>${totalLabor.toFixed(2)}</td>
+                <td style={{ padding: '7px 8px', textAlign: 'center', color: '#800080' }}>${totalTipsEff.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          {totalHours > 0 && (
+            <div style={{ marginTop: '10px', fontSize: '11px', color: '#666', padding: '6px 8px', background: '#f9f9f9', borderRadius: '6px' }}>
+              Tip rate: ${(totalTipsEff / totalHours).toFixed(2)}/hr · Total tips: ${totalTipsEff.toFixed(2)}
+            </div>
+          )}
+        </>
+      );
+    };
+
     return (
       <div style={{
         width: '320px',
@@ -892,7 +952,7 @@ const EventSales = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        height: '100%', // Fixed height to match chart container
+        height: '100%',
       }}>
         <div style={{
           padding: '12px 16px',
@@ -902,7 +962,9 @@ const EventSales = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>{event.name}</h3>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
+            {detailPanelMode === 'labor' ? 'Labor' : 'Inventory'} — {event.name}
+          </h3>
           <button
             onClick={() => setDetailPanelCollapsed(true)}
             style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#666' }}
@@ -911,9 +973,10 @@ const EventSales = () => {
           </button>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+          {detailPanelMode === 'labor' ? laborContent() : null}
 
-          {/* Glassware (Rox, Tumbl) - only show if there's data with non-zero values */}
-          {event.glassware && event.glassware.filter(g => g.sent > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0).length > 0 && (
+          {/* Glassware (Rox, Tumbl) - only show in inventory mode */}
+          {detailPanelMode === 'inventory' && event.glassware && event.glassware.filter(g => g.sent > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0).length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Glassware</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -943,8 +1006,8 @@ const EventSales = () => {
             </div>
           )}
 
-          {/* Ice Blocks - only show if there's non-zero data */}
-          {((event.iceBlocksBrought || 0) > 0 || (event.iceBlocksReturned || 0) > 0) && (
+          {/* Ice Blocks - only show in inventory mode */}
+          {detailPanelMode === 'inventory' && ((event.iceBlocksBrought || 0) > 0 || (event.iceBlocksReturned || 0) > 0) && (
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Ice Blocks</h3>
               <div style={{ display: 'flex', gap: '16px' }}>
@@ -966,8 +1029,8 @@ const EventSales = () => {
             </div>
           )}
 
-          {/* Inventory Difference */}
-          {event.bottlesPrepped && event.bottlesPrepped.length > 0 && (
+          {/* Inventory Difference - only show in inventory mode */}
+          {detailPanelMode === 'inventory' && event.bottlesPrepped && event.bottlesPrepped.length > 0 && (
             <div>
               <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Inventory (Sent vs Returned)</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1217,13 +1280,13 @@ const EventSales = () => {
                     return selEvt ? (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
-                          onClick={() => setLaborPopupEvent(selEvt)}
+                          onClick={() => { setDetailPanelMode('labor'); setDetailPanelCollapsed(false); }}
                           style={{ padding: '4px 10px', background: '#800080', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
                         >
                           Labor
                         </button>
                         <button
-                          onClick={() => setInventoryPopupEvent(selEvt)}
+                          onClick={() => { setDetailPanelMode('inventory'); setDetailPanelCollapsed(false); }}
                           style={{ padding: '4px 10px', background: '#800080', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
                         >
                           Inventory
@@ -1433,10 +1496,11 @@ const EventSales = () => {
                   itemColors[name] = colorPalette[idx % colorPalette.length];
                 });
                 
-                // SVG dimensions - use actual container pixel width (updated by ResizeObserver)
+                // SVG dimensions - use actual container pixel size (updated by ResizeObserver)
                 const svgPadding = { top: 20, right: 20, bottom: 60, left: 40 };
                 const width = Math.max(graphContainerWidth - 32, 300); // subtract container padding (16px each side)
-                const height = 220;
+                const legendHeight = 28; // legend row above SVG
+                const height = Math.max(graphContainerHeight - legendHeight - 32, 100); // fill remaining container height
                 const padding = svgPadding;
                 const graphWidth = width - padding.left - padding.right;
                 const graphHeight = height - padding.top - padding.bottom;
