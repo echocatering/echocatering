@@ -377,10 +377,9 @@ const EventSales = () => {
     const f = parseFloat(event.insuranceCost) || 0;    // Insurance
 
     if (model === 'S') {
-      // serviceCost = min(hours,2)×$2HR×patrons + max(hours-2,0)×$+HR×patrons
-      // MIN is a floor on the full total (svc + OHD + permit + insurance)
+      // Total = MAX(svc, MIN); OHD/permit/insurance are itemized within that total
       const svc = (Math.min(i, 2) * l * c) + (Math.max(i - 2, 0) * k * c);
-      return Math.max(svc + e + d + f, M);
+      return Math.max(svc, M);
     } else if (model === 'C') {
       // Total = MAX($/PP×patrons, MIN); extras are itemized within that total
       const chargeBase = m * c;
@@ -1947,7 +1946,8 @@ const EventSales = () => {
         const sDurationHrs = parseFloat(event.durationHours) || 0;
         const sServiceCost = (Math.min(sDurationHrs, 2) * pricingVars.first2Hr * sGuestCount)
           + (Math.max(sDurationHrs - 2, 0) * pricingVars.addHr * sGuestCount);
-        const sFinalTotal = Math.max(sServiceCost + overheadCost + insuranceCost + permitCost, pricingVars.minimum);
+        const sFinalTotal = Math.max(sServiceCost, pricingVars.minimum);
+        const sDisplayServiceCost = sFinalTotal - overheadCost - insuranceCost - permitCost;
 
         // Model C formula components
         const cChargeBase = pricingVars.perPerson * sGuestCount;
@@ -2080,7 +2080,7 @@ const EventSales = () => {
                     <div style={{ marginBottom: '4px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
                         <span style={{ color: '#333' }}>Service Cost</span>
-                        <span style={{ color: '#333', fontWeight: 500 }}>${sServiceCost.toFixed(2)}</span>
+                        <span style={{ color: '#333', fontWeight: 500 }}>${sDisplayServiceCost.toFixed(2)}</span>
                       </div>
                       {overheadCost > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
@@ -2218,7 +2218,7 @@ const EventSales = () => {
                         </div>
                         ` : receiptModel === 'S' ? `
                         <div class="items">
-                          <div class="item"><span>Service Cost</span><span>&nbsp;— $${sServiceCost.toFixed(2)}</span></div>
+                          <div class="item"><span>Service Cost</span><span>&nbsp;— $${sDisplayServiceCost.toFixed(2)}</span></div>
                           ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
