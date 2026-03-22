@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -19,6 +19,8 @@ const EventSales = () => {
   const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
   const [invoiceDetailsEventId, setInvoiceDetailsEventId] = useState(null); // Event ID for invoice details popup
   const [dataPopupEvent, setDataPopupEvent] = useState(null); // Event object for DATA popup modal
+  const [laborPopupEvent, setLaborPopupEvent] = useState(null); // Event object for Labor popup modal
+  const [inventoryPopupEvent, setInventoryPopupEvent] = useState(null); // Event object for Inventory popup modal
   
   // Pricing variables for invoice calculations - load from localStorage
   const [pricingVars, setPricingVars] = useState(() => {
@@ -49,7 +51,21 @@ const EventSales = () => {
   const [graphEventId, setGraphEventId] = useState(null); // Event selected for graph view
   const [graphViewMode, setGraphViewMode] = useState('all'); // 'all', 'cocktails', 'mocktails', 'beer', 'wine', 'spirits'
   const [detailPanelCollapsed, setDetailPanelCollapsed] = useState(true); // Side panel collapsed by default
+  const graphContainerRef = useRef(null);
+  const [graphContainerWidth, setGraphContainerWidth] = useState(800);
   
+  // ResizeObserver to rerender graph when container width changes
+  useEffect(() => {
+    const el = graphContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width;
+      if (w && w > 0) setGraphContainerWidth(Math.floor(w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Section lock states - per-row (per-event) controls whether fields in each section are editable
   // Structure: { [eventId]: { basicInfo: true/false, overhead: true/false, paymentModel: true/false } }
   const [rowLocks, setRowLocks] = useState({});
@@ -385,15 +401,16 @@ const EventSales = () => {
       const chargeBase = m * c;
       return Math.max(chargeBase, M);
     } else if (model === 'H') {
-      // total = invoiceTab + tax(8%) + MAX(0, MIN − (cash+credit+invoiceTab))
+      // tabTotal = invoiceTab × 1.08
+      // serviceCharge = MAX(0, MIN − cash − credit − tabTotal − OHD − permit − insurance)
+      // invoiceTotal = tabTotal + serviceCharge
       const parsed = parseItemData(event.itemData);
       const cash = parsed.paymentTotals.CASH > 0 ? parsed.paymentTotals.CASH : (event.cashTotal || 0);
       const credit = parsed.paymentTotals.CREDIT > 0 ? parsed.paymentTotals.CREDIT : (event.creditTotal || 0);
       const invoicePOS = parsed.paymentTotals.INVOICE > 0 ? parsed.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-      const tax = invoicePOS * 0.08;
-      const totalSales = cash + credit + invoicePOS;
-      const serviceCharge = Math.max(0, M - totalSales);
-      return invoicePOS + tax + serviceCharge;
+      const tabTotal = invoicePOS * 1.08;
+      const serviceCharge = Math.max(0, M - cash - credit - tabTotal - e - d - f);
+      return tabTotal + serviceCharge;
     }
     return 0;
   };
@@ -1195,27 +1212,30 @@ const EventSales = () => {
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     {graphEventId ? events.find(e => e._id === graphEventId)?.name || 'Select an event' : 'Select an event from the table below'}
                   </span>
-                  {selectedEvent && detailPanelCollapsed && (
-                    <button
-                      onClick={() => setDetailPanelCollapsed(false)}
-                      style={{
-                        padding: '4px 10px',
-                        background: '#800080',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                      }}
-                    >
-                      Inventory
-                    </button>
-                  )}
+                  {selectedEvent && (() => {
+                    const selEvt = events.find(e => e._id === selectedEvent);
+                    return selEvt ? (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => setLaborPopupEvent(selEvt)}
+                          style={{ padding: '4px 10px', background: '#800080', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                        >
+                          Labor
+                        </button>
+                        <button
+                          onClick={() => setInventoryPopupEvent(selEvt)}
+                          style={{ padding: '4px 10px', background: '#800080', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                        >
+                          Inventory
+                        </button>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             
             {/* Graph Content */}
-            <div style={{ height: 'calc(100% - 50px)', padding: '16px', overflow: 'auto' }}>
+            <div ref={graphContainerRef} style={{ height: 'calc(100% - 50px)', padding: '16px', overflow: 'auto' }}>
               {graphEventId ? (() => { try {
                 const graphEvent = events.find(e => e._id === graphEventId);
                 if (!graphEvent) {
@@ -1413,10 +1433,11 @@ const EventSales = () => {
                   itemColors[name] = colorPalette[idx % colorPalette.length];
                 });
                 
-                // SVG dimensions - use full container width
-                const width = Math.max(sortedIntervals.length * 50, 400);
+                // SVG dimensions - use actual container pixel width (updated by ResizeObserver)
+                const svgPadding = { top: 20, right: 20, bottom: 60, left: 40 };
+                const width = Math.max(graphContainerWidth - 32, 300); // subtract container padding (16px each side)
                 const height = 220;
-                const padding = { top: 20, right: 20, bottom: 50, left: 40 };
+                const padding = svgPadding;
                 const graphWidth = width - padding.left - padding.right;
                 const graphHeight = height - padding.top - padding.bottom;
                 
@@ -1436,7 +1457,7 @@ const EventSales = () => {
                     </div>
                     
                     {/* SVG Line Graph - full width */}
-                    <svg width="100%" height={height} viewBox={`0 0 ${Math.max(sortedIntervals.length * 50, 400)} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block', flex: 1 }}>
+                    <svg width={width} height={height} style={{ display: 'block', flex: 1 }}>
                       {/* Y-axis */}
                       <line x1={padding.left} y1={padding.top} x2={padding.left} y2={height - padding.bottom} stroke="#ddd" strokeWidth="1" />
                       {/* X-axis */}
@@ -1513,11 +1534,11 @@ const EventSales = () => {
                         <text
                           key={idx}
                           x={padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth}
-                          y={height - padding.bottom + 15}
+                          y={height - padding.bottom + 25}
                           fontSize="10"
                           fill="#666"
                           textAnchor="middle"
-                          transform={`rotate(-45, ${padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth}, ${height - padding.bottom + 15})`}
+                          transform={`rotate(-45, ${padding.left + (idx / (sortedIntervals.length - 1 || 1)) * graphWidth}, ${height - padding.bottom + 25})`}
                         >
                           {label}
                         </text>
@@ -1908,6 +1929,174 @@ const EventSales = () => {
         </div>
       )}
 
+      {/* Labor Popup Modal */}
+      {laborPopupEvent && (() => {
+        const laborList = laborPopupEvent.laborDetails || [];
+        const totalHours = laborList.reduce((sum, l) => sum + (parseFloat(l.hours) || 0), 0);
+        const storedTips = parseFloat(laborPopupEvent.totalTips) || 0;
+        const received = parseFloat(laborPopupEvent.amountReceived) || 0;
+        const invoice = calculateInvoice(laborPopupEvent);
+        const totalTipsEff = storedTips + Math.max(0, received - invoice);
+        const totalLabor = laborList.reduce((sum, l) => sum + (parseFloat(l.total) || 0), 0);
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            onClick={() => setLaborPopupEvent(null)}>
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '700px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Labor — {laborPopupEvent.name}</h3>
+                <button onClick={() => setLaborPopupEvent(null)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#666', padding: '0 8px' }}>×</button>
+              </div>
+              {laborList.length === 0 ? (
+                <div style={{ color: '#999', textAlign: 'center', padding: '24px' }}>No labor data recorded</div>
+              ) : (
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f5f5f5' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Position</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Hours</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Rate</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Earned</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Tip Out</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {laborList.map((l, idx) => {
+                        const hrs = parseFloat(l.hours) || 0;
+                        const tipOut = totalHours > 0 ? (totalTipsEff / totalHours) * hrs : 0;
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '10px 12px' }}>{l.title || '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{hrs.toFixed(2)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>${(parseFloat(l.rate) || 0).toFixed(2)}/hr</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 500 }}>${(parseFloat(l.total) || 0).toFixed(2)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: '#800080', fontWeight: 500 }}>${tipOut.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ background: '#f9f9f9', borderTop: '2px solid #ddd', fontWeight: 'bold' }}>
+                        <td style={{ padding: '10px 12px' }}>Total</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>{totalHours.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px' }}></td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>${totalLabor.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#800080' }}>${totalTipsEff.toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {totalHours > 0 && (
+                    <div style={{ marginTop: '12px', fontSize: '12px', color: '#666', padding: '8px 12px', background: '#f9f9f9', borderRadius: '6px' }}>
+                      Tip rate: ${(totalTipsEff / totalHours).toFixed(2)}/hr · Total tips: ${totalTipsEff.toFixed(2)} ÷ {totalHours.toFixed(2)} hrs
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Inventory Popup Modal */}
+      {inventoryPopupEvent && (() => {
+        const ev = inventoryPopupEvent;
+        const glassware = (ev.glassware || []).filter(g => (g.sent || 0) > 0 || (g.returned || 0) > 0 || (g.returnedClean || 0) + (g.returnedDirty || 0) > 0);
+        const hasIce = (ev.iceBlocksBrought || 0) > 0 || (ev.iceBlocksReturned || 0) > 0;
+        const bottles = ev.bottlesPrepped || [];
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            onClick={() => setInventoryPopupEvent(null)}>
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '620px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Inventory — {ev.name}</h3>
+                <button onClick={() => setInventoryPopupEvent(null)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#666', padding: '0 8px' }}>×</button>
+              </div>
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                {/* Glassware */}
+                {glassware.length > 0 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '600', color: '#333' }}>Glassware</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5' }}>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Type</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Sent</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Returned</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Lost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {glassware.map((g, idx) => {
+                          const ret = g.returned || (g.returnedClean || 0) + (g.returnedDirty || 0);
+                          const lost = Math.max(0, (g.sent || 0) - ret);
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                              <td style={{ padding: '8px 12px' }}>{g.type}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>{g.sent || 0}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>{ret}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center', color: lost > 0 ? '#ef4444' : '#333', fontWeight: lost > 0 ? 'bold' : 'normal' }}>{lost}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {/* Ice Blocks */}
+                {hasIce && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '600', color: '#333' }}>Ice Blocks</h4>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {[
+                        { label: 'Sent', value: ev.iceBlocksBrought || 0, color: '#333' },
+                        { label: 'Returned', value: ev.iceBlocksReturned || 0, color: '#333' },
+                        { label: 'Used', value: (ev.iceBlocksBrought || 0) - (ev.iceBlocksReturned || 0), color: '#800080' },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} style={{ flex: 1, background: '#f5f5f5', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>{label}</div>
+                          <div style={{ fontSize: '22px', fontWeight: 'bold', color }}>{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Bottles / Inventory */}
+                {bottles.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '600', color: '#333' }}>Bottles (Sent vs Returned)</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5' }}>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Item</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Sent</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Returned</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Used</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bottles.map((b, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '8px 12px' }}>{b.name}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>{b.unitsPrepared}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>{b.unitsReturned}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 'bold' }}>{b.unitsUsed}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {glassware.length === 0 && !hasIce && bottles.length === 0 && (
+                  <div style={{ color: '#999', textAlign: 'center', padding: '24px' }}>No inventory data recorded</div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Invoice Receipt Popup Modal */}
       {invoiceDetailsEventId && (() => {
         const event = events.find(e => e._id === invoiceDetailsEventId);
@@ -1967,7 +2156,7 @@ const EventSales = () => {
         const hTabTotal = isModelH ? invoiceSubtotal + hInvoiceTax : 0;
         const hCashBar = isModelH ? barSalesTotal : 0;
         const hTotalSales = isModelH ? (barSalesTotal + invoiceSubtotal) : 0;
-        const hServiceCharge = isModelH ? Math.max(0, pricingVars.minimum - hTotalSales) : 0;
+        const hServiceCharge = isModelH ? Math.max(0, pricingVars.minimum - hCashBar - hTabTotal - overheadCost - insuranceCost - permitCost) : 0;
 
         // Totals (model-aware)
         const hInvoiceTotal = isModelH ? calculateInvoice(event) : 0;
@@ -2074,6 +2263,24 @@ const EventSales = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
                           <span style={{ color: '#333' }}>Service Charge</span>
                           <span style={{ color: '#333', fontWeight: 500 }}>${hServiceCharge.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {overheadCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Overhead</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {insuranceCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Insurance</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>${insuranceCost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {permitCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Permit</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>${permitCost.toFixed(2)}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '2px dashed #ddd', marginTop: '8px' }}>
@@ -2220,6 +2427,9 @@ const EventSales = () => {
                         <hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
                         <div class="items">
                           ${hServiceCharge > 0 ? `<div class="item"><span>Service Charge</span><span>&nbsp;— $${hServiceCharge.toFixed(2)}</span></div>` : ''}
+                          ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
+                          ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
+                          ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                         </div>
                         <div class="totals">
                           <div class="total-row final"><span>Invoice Total</span><span>&nbsp;— $${hInvoiceTotal.toFixed(2)}</span></div>
