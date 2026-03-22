@@ -2272,7 +2272,7 @@ const EventSales = () => {
                       insuranceCost > 0 ? `Insurance: $${insuranceCost.toFixed(2)}` : null,
                       overheadCost > 0 ? `Overhead: $${overheadCost.toFixed(2)}` : null,
                     ].filter(Boolean).join('\n');
-                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\nAdjusted Total: $${adjustedTotal.toFixed(2)}\n\nPayment method: Invoice`;
+                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\nTotal: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
                     
                     if (navigator.share) {
                       try {
