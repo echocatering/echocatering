@@ -580,14 +580,18 @@ const EventSales = () => {
             ${salesTaxAmount.toFixed(2)}
           </span>
         ) : '-';
-      case 'tips':
+      case 'tips': {
         // Count bartenders from laborDetails array
         const laborDetails = event.laborDetails || [];
         const bartenderCount = laborDetails.filter(l => 
           l.title?.toLowerCase().includes('bartender') || 
           l.job?.toLowerCase().includes('bartender')
         ).length;
-        const totalTips = parseFloat(event.totalTips) || 0;
+        const storedTips = parseFloat(event.totalTips) || 0;
+        const tipsReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const tipsInvoice = calculateInvoice(event);
+        const overpaymentTip = Math.max(0, tipsReceived - tipsInvoice);
+        const totalTips = storedTips + overpaymentTip;
         
         if (bartenderCount > 1 && totalTips > 0) {
           const tipsPerPerson = totalTips / bartenderCount;
@@ -598,7 +602,8 @@ const EventSales = () => {
             </div>
           );
         }
-        return formatCurrency(totalTips);
+        return totalTips > 0 ? formatCurrency(totalTips) : '-';
+      }
       case 'invoice':
         // Invoice total - sum of invoiced tabs (shown as negative since payment pending)
         const invoiceTotal = event.invoiceTotal || 0;
@@ -743,9 +748,17 @@ const EventSales = () => {
             {formatCurrency(profit)}
           </span>
         );
-      case 'paymentModel':
+      case 'paymentModel': {
         // S/C/H checkboxes for payment model
         const currentModel = getCurrentValue(event, 'paymentModel') || 'S';
+        const isModelLocked = getRowLock(event._id, 'paymentModel');
+        if (isModelLocked) {
+          return (
+            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#800080' }}>
+              {currentModel}
+            </span>
+          );
+        }
         return (
           <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
             {[
@@ -772,6 +785,7 @@ const EventSales = () => {
             ))}
           </div>
         );
+      }
       case 'calculatedInvoice':
         // Calculated invoice based on payment model
         const invoiceAmount = calculateInvoice(event);
@@ -820,15 +834,9 @@ const EventSales = () => {
             }}
             onBlur={(e) => {
               // On blur, parse and save the final value
+              // Overpayment tip is computed dynamically in the Tips column — no mutation needed
               const newReceived = parseFloat(e.target.value) || 0;
               handleFieldChange(event._id, 'amountReceived', newReceived);
-              // If received > invoice, add extra to Tips
-              const extraTip = Math.max(0, newReceived - calcInvoice);
-              if (extraTip > 0) {
-                const currentTips = parseFloat(event.totalTips) || 0;
-                handleFieldChange(event._id, 'totalTips', currentTips + extraTip);
-              }
-              // Keep amountReceived in editedEvents so the lock save picks it up
             }}
             onClick={(e) => {
               e.stopPropagation();
