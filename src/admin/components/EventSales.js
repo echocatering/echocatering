@@ -1938,11 +1938,20 @@ const EventSales = () => {
         const insuranceCost = parseFloat(event.insuranceCost) || 0;
         const overheadCost = pricingVars.overhead || 0;
 
+        // Model S formula components
+        const sGuestCount = parseFloat(event.guestCount) || 0;
+        const sDurationHrs = parseFloat(event.durationHours) || 0;
+        const sFirst2HrsTotal = 2 * pricingVars.first2Hr * sGuestCount;
+        const sAdditionalHrsTotal = Math.max(sDurationHrs - 2, 0) * pricingVars.addHr * sGuestCount;
+        const sSubtotal = sFirst2HrsTotal + sAdditionalHrsTotal + overheadCost + insuranceCost + permitCost;
+        const sFinalTotal = Math.max(sSubtotal, pricingVars.minimum);
+        const sShowMinLine = sSubtotal < pricingVars.minimum;
+
         // Totals (model-aware)
         const hInvoiceTotal = isModelH ? calculateInvoice(event) : 0;
-        const adjustedTotal = isModelH ? hInvoiceTotal : (invoiceTotal + permitCost + insuranceCost + overheadCost);
-        const finalTotal = isModelH ? hInvoiceTotal : Math.max(adjustedTotal, pricingVars.minimum);
-        const showMinimumLine = !isModelH && adjustedTotal < pricingVars.minimum;
+        const adjustedTotal = isModelH ? hInvoiceTotal : receiptModel === 'S' ? sSubtotal : (invoiceTotal + permitCost + insuranceCost + overheadCost);
+        const finalTotal = isModelH ? hInvoiceTotal : receiptModel === 'S' ? sFinalTotal : Math.max(adjustedTotal, pricingVars.minimum);
+        const showMinimumLine = !isModelH && receiptModel !== 'S' && adjustedTotal < pricingVars.minimum;
         
         const eventDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
           year: 'numeric', 
@@ -2048,9 +2057,60 @@ const EventSales = () => {
                       </div>
                     </div>
                   </>
+                ) : receiptModel === 'S' ? (
+                  <>
+                    {/* Model S: Formula Breakdown */}
+                    <div style={{ marginBottom: '6px', color: '#666', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Service Breakdown</div>
+                    <div style={{ marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                        <span style={{ color: '#333' }}>First 2 Hours ({sGuestCount} guests × ${pricingVars.first2Hr.toFixed(2)}/hr × 2)</span>
+                        <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${sFirst2HrsTotal.toFixed(2)}</span>
+                      </div>
+                      {sAdditionalHrsTotal > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Additional Hours ({sGuestCount} guests × ${pricingVars.addHr.toFixed(2)}/hr × {Math.max(sDurationHrs - 2, 0).toFixed(1)} hrs)</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${sAdditionalHrsTotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {overheadCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Overhead</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${overheadCost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {insuranceCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Insurance</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${insuranceCost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {permitCost > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                          <span style={{ color: '#333' }}>Permit</span>
+                          <span style={{ color: '#333', fontWeight: 500 }}>&nbsp;— ${permitCost.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '16px', fontWeight: 'bold' }}>
+                        <span>Adjusted Total</span>
+                        <span>&nbsp;— ${sSubtotal.toFixed(2)}</span>
+                      </div>
+                      {sShowMinLine && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: '#f59e0b', fontWeight: 'bold' }}>
+                          <span>Event Minimum</span>
+                          <span>&nbsp;— ${pricingVars.minimum.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '1px solid #ddd', marginTop: '10px' }}>
+                        <span>Total</span>
+                        <span>&nbsp;— ${sFinalTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    {/* S/C: Invoice Tab Items */}
+                    {/* Model C: Invoice Tab Items (no tax) */}
                     <div style={{ marginBottom: '20px' }}>
                       {groupedInvoiceItems.length > 0 ? (
                         groupedInvoiceItems.map((item, i) => (
@@ -2063,19 +2123,12 @@ const EventSales = () => {
                         <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>No invoice items</div>
                       )}
                     </div>
-                    {/* S/C: Totals */}
                     {groupedInvoiceItems.length > 0 && (
                       <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '15px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
                           <span>Subtotal</span>
                           <span>&nbsp;— ${invoiceSubtotal.toFixed(2)}</span>
                         </div>
-                        {!isModelC && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
-                            <span>Tax (8%)</span>
-                            <span>&nbsp;— ${invoiceTax.toFixed(2)}</span>
-                          </div>
-                        )}
                         {permitCost > 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
                             <span>Permit</span>
@@ -2177,13 +2230,26 @@ const EventSales = () => {
                           ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           <div class="total-row final"><span>Invoice Total</span><span>&nbsp;— $${hInvoiceTotal.toFixed(2)}</span></div>
                         </div>
+                        ` : receiptModel === 'S' ? `
+                        <div style="margin-bottom:6px;color:#666;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em">Service Breakdown</div>
+                        <div class="items">
+                          <div class="item"><span>First 2 Hours (${sGuestCount} guests × $${pricingVars.first2Hr.toFixed(2)}/hr × 2)</span><span>&nbsp;— $${sFirst2HrsTotal.toFixed(2)}</span></div>
+                          ${sAdditionalHrsTotal > 0 ? `<div class="item"><span>Additional Hours (${sGuestCount} guests × $${pricingVars.addHr.toFixed(2)}/hr × ${Math.max(sDurationHrs - 2, 0).toFixed(1)} hrs)</span><span>&nbsp;— $${sAdditionalHrsTotal.toFixed(2)}</span></div>` : ''}
+                          ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
+                          ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
+                          ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
+                        </div>
+                        <div class="totals">
+                          <div class="total-row"><span>Adjusted Total</span><span>&nbsp;— $${sSubtotal.toFixed(2)}</span></div>
+                          ${sShowMinLine ? `<div class="total-row" style="color:#f59e0b;font-weight:bold"><span>Event Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>` : ''}
+                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${sFinalTotal.toFixed(2)}</span></div>
+                        </div>
                         ` : `
                         <div class="items">
                           ${groupedInvoiceItems.map(item => `<div class="item"><span>${item.count > 1 ? item.count + 'x ' + item.name : item.name}</span><span>&nbsp;— $${item.total.toFixed(2)}</span></div>`).join('')}
                         </div>
                         <div class="totals">
                           <div class="total-row"><span>Subtotal</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
-                          ${!isModelC ? `<div class="total-row"><span>Tax (8%)</span><span>&nbsp;— $${invoiceTax.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="total-row"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="total-row"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${overheadCost > 0 ? `<div class="total-row"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
