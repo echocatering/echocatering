@@ -2223,7 +2223,7 @@ const EventSales = () => {
         const hInvoiceTax = isModelH ? invoiceSubtotal * 0.08 : 0;
         const hTabTotal = isModelH ? invoiceSubtotal + hInvoiceTax : 0;
         const hCashBar = isModelH ? barSalesTotal : 0;
-        const hTotalSales = isModelH ? (barSalesTotal + invoiceSubtotal) : 0;
+        const hTotalSales = isModelH ? (hCashBar + hTabTotal) : 0;
         const hServiceCharge = isModelH ? Math.max(0, pricingVars.minimum - hCashBar - hTabTotal - overheadCost - insuranceCost - permitCost) : 0;
 
         // Totals (model-aware)
