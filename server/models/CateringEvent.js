@@ -57,12 +57,15 @@ const cateringEventSchema = new mongoose.Schema({
   guestCount: { type: Number, default: 0, min: 0 },
   durationHours: { type: Number, default: 0, min: 0 },
 
-  // Payment model
+  // Payment model (POS: consumption/flat_fee/hybrid; Sales page: S/C/H)
   paymentModel: {
     type: String,
-    enum: ['consumption', 'flat_fee', 'hybrid'],
     default: 'consumption'
   },
+
+  // Sales page payment model fields
+  amountReceived: { type: Number, default: 0 },
+  sectionLocks: { type: mongoose.Schema.Types.Mixed, default: {} },
 
   // Flat fee / hybrid config
   flatFeeConfig: {
@@ -176,6 +179,7 @@ cateringEventSchema.methods.recalculate = function () {
     return sum + d.revenue;
   }, 0);
 
+  if (!['consumption', 'flat_fee', 'hybrid'].includes(this.paymentModel)) return;
   if (this.paymentModel === 'consumption') {
     this.totalSales = drinkRevenue;
   } else if (this.paymentModel === 'flat_fee') {
