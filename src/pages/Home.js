@@ -1409,17 +1409,6 @@ const Home = forwardRef((props, ref) => {
                     </>
                   )}
 
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: alignRight
-                        ? 'linear-gradient(to right, rgba(17,17,17,0.85) 0%, rgba(17,17,17,0.35) 55%, rgba(17,17,17,0) 100%)'
-                        : 'linear-gradient(to left, rgba(17,17,17,0.85) 0%, rgba(17,17,17,0.35) 55%, rgba(17,17,17,0) 100%)',
-                      pointerEvents: 'none',
-                      zIndex: 1
-                    }}
-                  />
 
                   <div
                     style={{ display: 'contents' }}
