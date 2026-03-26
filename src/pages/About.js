@@ -303,18 +303,20 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
             backgroundColor: '#000'
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: isOdd
-                ? 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%)'
-                : 'linear-gradient(to left, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%)',
-              mixBlendMode: 'multiply',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          />
+          {!isMobile && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: isOdd
+                  ? 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%)'
+                  : 'linear-gradient(to left, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%)',
+                mixBlendMode: 'multiply',
+                pointerEvents: 'none',
+                zIndex: 1
+              }}
+            />
+          )}
           <img 
             src={isCloudinaryUrl(section.image) ? getAboutOptimizedUrl(section.image) : section.image} 
             alt={section.title} 

@@ -14,6 +14,7 @@ import EventsManager from './components/EventsManager';
 import EventSales from './components/EventSales';
 import OrdersStackedBarChart from '../components/OrdersStackedBarChart';
 import CalendarManager from './components/CalendarManager';
+import EventRequestsManager from './components/EventRequestsManager';
 import POSManager from './components/POSManager';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -67,6 +68,7 @@ const AdminApp = () => {
             <Route path="/sales" element={<SalesManager />} />
             <Route path="/orders-chart" element={<OrdersStackedBarChart />} />
             <Route path="/calendar" element={<CalendarManager />} />
+            <Route path="/calendar/requests" element={<EventRequestsManager />} />
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
             <Route path="/sales/pos-ui" element={<POSDualViewer />} />
             <Route path="/sales/events" element={<EventSales />} />

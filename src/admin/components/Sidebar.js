@@ -290,12 +290,20 @@ const Sidebar = () => {
           </button>
         </div>
         {expandedSections.calendar && (
-          <NavLink
-            to="/admin/calendar"
-            className={`nav-item ${location.pathname === '/admin/calendar' ? 'active' : ''}`}
-          >
-            <span className="nav-text">CALENDAR</span>
-          </NavLink>
+          <>
+            <NavLink
+              to="/admin/calendar"
+              className={`nav-item ${location.pathname === '/admin/calendar' ? 'active' : ''}`}
+            >
+              <span className="nav-text">CALENDAR</span>
+            </NavLink>
+            <NavLink
+              to="/admin/calendar/requests"
+              className={`nav-item ${location.pathname === '/admin/calendar/requests' ? 'active' : ''}`}
+            >
+              <span className="nav-text">REQUESTS</span>
+            </NavLink>
+          </>
         )}
       </nav>
     </div>

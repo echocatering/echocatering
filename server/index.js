@@ -318,6 +318,7 @@ app.use('/api/video-processing', require('./routes/videoProcessing'));
 app.use('/api/video-worker', require('./routes/videoWorker'));
 app.use('/api/video-jobs', require('./routes/videoJobs'));
 app.use('/api/receipts', require('./routes/receipts'));
+app.use('/api/event-requests', require('./routes/eventRequests'));
 
 // Square Sandbox test route
 app.get('/api/square/test', async (req, res) => {

@@ -74,28 +74,38 @@ export default function EventRequestForm() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
-    
-    // Basic validation
+
     if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.eventNature || !form.eventDate || !form.startTime || !form.endTime || !form.numPeople) {
       setError('Please fill in all required fields.');
       setSubmitting(false);
       return;
     }
 
-    // For now, just log the form data and show success
-    // TODO: Configure EmailJS with your service ID, template ID, and public key
-    console.log('Event Request Form Data:', form);
-    
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      const apiBase = process.env.REACT_APP_API_URL || '/api';
+      const response = await fetch(`${apiBase}/event-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Server error ${response.status}`);
+      }
+
       setSuccess(true);
       setForm(initialState);
+    } catch (err) {
+      setError('Failed to submit your request. Please try again or email us directly.');
+      console.error('Form submission error:', err);
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
   if (success) {
@@ -130,8 +140,7 @@ export default function EventRequestForm() {
           lineHeight: '1.5',
           fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
         }}>
-          For now, your form data has been logged to the console. To enable actual email functionality, 
-          please configure EmailJS with your service credentials.
+          We'll review your details and be in touch soon to discuss your event.
         </p>
       </div>
     );
