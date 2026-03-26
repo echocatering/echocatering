@@ -1,8 +1,44 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const { authenticateToken, requireEditor } = require('../middleware/auth');
 const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 const Gallery = require('../models/Gallery');
+
+/**
+ * Compress an image buffer for web delivery.
+ * - Resizes to max 2400px on the longest side (preserves aspect ratio)
+ * - Converts to JPEG at 88% quality (visually lossless, ~10–50x smaller than raw)
+ * - Strips EXIF/metadata
+ * Videos and unsupported formats are returned unchanged.
+ */
+async function compressImageBuffer(buffer, mimetype) {
+  const isImage = (mimetype || '').startsWith('image/');
+  const isSvg = mimetype === 'image/svg+xml';
+  if (!isImage || isSvg) return buffer; // skip non-images and SVGs
+  try {
+    const img = sharp(buffer).rotate(); // auto-rotate from EXIF
+    const meta = await img.metadata();
+    const longest = Math.max(meta.width || 0, meta.height || 0);
+    const MAX_PX = 2400;
+    if (longest > MAX_PX) {
+      img.resize(
+        meta.width > meta.height ? MAX_PX : null,
+        meta.height >= meta.width ? MAX_PX : null,
+        { fit: 'inside', withoutEnlargement: true }
+      );
+    }
+    const compressed = await img
+      .jpeg({ quality: 88, mozjpeg: true })
+      .toBuffer();
+    const saving = ((1 - compressed.length / buffer.length) * 100).toFixed(1);
+    console.log(`🗜️  Image compressed: ${(buffer.length / 1024 / 1024).toFixed(1)}MB → ${(compressed.length / 1024 / 1024).toFixed(1)}MB (${saving}% smaller)`);
+    return compressed;
+  } catch (err) {
+    console.warn('⚠️  sharp compression failed, using original buffer:', err.message);
+    return buffer;
+  }
+}
 
 const router = express.Router();
 
@@ -164,7 +200,9 @@ router.post(
       const nextNumber = lastPhoto?.photoNumber ? lastPhoto.photoNumber + 1 : 1;
       const publicId = `echo-catering/gallery/${nextNumber}_gallery`;
 
-      const cloudinaryResult = await uploadBufferToCloudinary(req.file.buffer, {
+      const uploadBuffer = await compressImageBuffer(req.file.buffer, req.file.mimetype);
+
+      const cloudinaryResult = await uploadBufferToCloudinary(uploadBuffer, {
         folder: 'echo-catering/gallery',
         resourceType: 'auto',
         publicId,
