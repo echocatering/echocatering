@@ -3011,6 +3011,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const [initialItemProcessed, setInitialItemProcessed] = useState(false);
   const [showFullMenu, setShowFullMenu] = useState(false);
   const [fullMenuSelectedItem, setFullMenuSelectedItem] = useState(null);
+  const [randomStartIndex, setRandomStartIndex] = useState(null);
 
   const subpageOrder = useMemo(() => [
     { key: 'cocktails', label: 'Cocktails' },
@@ -3134,6 +3135,13 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const currentCategory = subpages[selected] || subpages.cocktails;
   const { title, videoFiles, cocktailInfo } = currentCategory;
 
+  // Set a random start index once after the cocktails data has loaded
+  useEffect(() => {
+    if (!isLoading && randomStartIndex === null && videoFiles.length > 0 && !initialItem) {
+      setRandomStartIndex(Math.floor(Math.random() * videoFiles.length));
+    }
+  }, [isLoading, videoFiles.length, randomStartIndex, initialItem]);
+
   // Calculate initial index if initialItem is provided and matches current category
   // Also handles navigation from full menu view via fullMenuSelectedItem
   const initialIndex = useMemo(() => {
@@ -3154,7 +3162,10 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       }
     }
     
-    if (!initialItem || isLoading || !videoFiles.length || initialItemProcessed === false) return null;
+    // No specific item requested — fall back to random start index
+    if (!initialItem) return randomStartIndex;
+
+    if (isLoading || !videoFiles.length || initialItemProcessed === false) return null;
     
     const normalizeCategoryKey = (value = '') => {
       const key = String(value).toLowerCase();
@@ -3176,7 +3187,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     });
 
     return itemIndex !== -1 ? itemIndex : null;
-  }, [initialItem, isLoading, videoFiles, cocktailInfo, selected, initialItemProcessed, fullMenuSelectedItem]);
+  }, [initialItem, isLoading, videoFiles, cocktailInfo, selected, initialItemProcessed, fullMenuSelectedItem, randomStartIndex]);
 
   if (isLoading) {
     return (
