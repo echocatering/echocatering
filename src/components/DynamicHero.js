@@ -371,7 +371,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             height: '100%',
             pointerEvents: 'auto'
           }}>
-            {/* Black multiply fade overlay - from right side - behind content */}
+            {/* Multiply fade overlay - preserves photo colors by staying off pure black */}
             <div style={{
               position: 'absolute',
               top: 0,
@@ -379,13 +379,12 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               bottom: 0,
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(to left, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 0.8) 65%, rgba(0, 0, 0, 0.5) 75%, rgba(0, 0, 0, 0.2) 85%, rgba(0, 0, 0, 0) 100%)',
+              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.55) 65%, rgba(0, 0, 0, 0.3) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
               mixBlendMode: 'multiply',
-              opacity: 0.9,
               pointerEvents: 'none',
               zIndex: 0
             }} />
-            {/* Additional darkening overlay for stronger effect */}
+            {/* Secondary multiply layer for depth */}
             <div style={{
               position: 'absolute',
               top: 0,
@@ -393,7 +392,8 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               bottom: 0,
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.25) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
+              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0.1) 80%, rgba(0, 0, 0, 0) 100%)',
+              mixBlendMode: 'multiply',
               pointerEvents: 'none',
               zIndex: 0
             }} />
@@ -1301,7 +1301,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '100%',
           pointerEvents: 'auto'
         }}>
-          {/* Black multiply fade overlay - from right side - behind content */}
+          {/* Multiply fade overlay - preserves photo colors by staying off pure black */}
           <div style={{
             position: 'absolute',
             top: 0,
@@ -1309,21 +1309,21 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             bottom: 0,
             width: '100%',
             height: '100%',
-            background: 'linear-gradient(to left, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)',
+            background: 'linear-gradient(to left, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.55) 65%, rgba(0, 0, 0, 0.3) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
             mixBlendMode: 'multiply',
-            opacity: 0.9,
             pointerEvents: 'none',
             zIndex: 0
           }} />
-          {/* Additional darkening overlay for stronger effect */}
+          {/* Secondary multiply layer for depth */}
           <div style={{
             position: 'absolute',
             top: 0,
             right: 0,
             bottom: 0,
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.25) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0.1) 80%, rgba(0, 0, 0, 0) 100%)',
+            mixBlendMode: 'multiply',
             pointerEvents: 'none',
             zIndex: 0
           }} />
