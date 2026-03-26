@@ -71,7 +71,7 @@ const aboutUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     files: 1,
-    fileSize: 10 * 1024 * 1024, // 10MB cap
+    fileSize: 50 * 1024 * 1024, // 50MB cap — compressed before upload
   },
   fileFilter: (req, file, cb) => {
     const name = (file.originalname || '').toLowerCase();
@@ -100,7 +100,8 @@ router.post(
       }
 
       const publicId = `echo-catering/about/${sectionNumber}_about`;
-      const cloudinaryResult = await uploadBufferToCloudinary(req.file.buffer, {
+      const uploadBuffer = await compressImageBuffer(req.file.buffer, req.file.mimetype);
+      const cloudinaryResult = await uploadBufferToCloudinary(uploadBuffer, {
         folder: 'echo-catering/about',
         resourceType: 'image',
         publicId,
@@ -131,7 +132,7 @@ const logoUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     files: 1,
-    fileSize: 10 * 1024 * 1024, // 10MB cap
+    fileSize: 50 * 1024 * 1024, // 50MB cap — compressed before upload
   },
   fileFilter: (req, file, cb) => {
     const name = (file.originalname || '').toLowerCase();
