@@ -3038,6 +3038,13 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       try {
         const data = await fetchMenuGalleryData();
         setSubpages((prev) => ({ ...prev, ...data }));
+        // Pick random start index now so it's ready before the inner component mounts
+        if (!initialItem) {
+          const files = data?.cocktails?.videoFiles || [];
+          if (files.length > 0) {
+            setRandomStartIndex(Math.floor(Math.random() * files.length));
+          }
+        }
       } catch (e) {
         console.error('Error loading menu data:', e);
       } finally {
@@ -3045,6 +3052,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
       }
     };
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Preload videos: first video immediately, rest in background
@@ -3135,13 +3143,6 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const currentCategory = subpages[selected] || subpages.cocktails;
   const { title, videoFiles, cocktailInfo } = currentCategory;
 
-  // Set a random start index once after the cocktails data has loaded
-  useEffect(() => {
-    if (!isLoading && randomStartIndex === null && videoFiles.length > 0 && !initialItem) {
-      setRandomStartIndex(Math.floor(Math.random() * videoFiles.length));
-    }
-  }, [isLoading, videoFiles.length, randomStartIndex, initialItem]);
-
   // Calculate initial index if initialItem is provided and matches current category
   // Also handles navigation from full menu view via fullMenuSelectedItem
   const initialIndex = useMemo(() => {
@@ -3189,7 +3190,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
     return itemIndex !== -1 ? itemIndex : null;
   }, [initialItem, isLoading, videoFiles, cocktailInfo, selected, initialItemProcessed, fullMenuSelectedItem, randomStartIndex]);
 
-  if (isLoading) {
+  if (isLoading || (!initialItem && randomStartIndex === null)) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div style={{
