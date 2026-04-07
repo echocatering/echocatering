@@ -409,9 +409,10 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               width: '100%',
               zIndex: 2
             }}>
-              {/* Originals Icon SVG - positioned above the cocktail SVG */}
-                <IconComponent
-                  iconName="originals"
+              {/* Echo icon above cocktail SVG */}
+                <img
+                  src="/assets/icons/icon.echo.png"
+                  alt="Echo"
                   style={{
                     width: '6vw',
                     minWidth: '40px',
@@ -1341,9 +1342,10 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '800px',
           pointerEvents: 'none'
         }}>
-        {/* Originals Icon SVG - positioned above the cocktail SVG */}
-        <IconComponent
-          iconName="originals"
+        {/* Echo icon above cocktail SVG */}
+        <img
+          src="/assets/icons/icon.echo.png"
+          alt="Echo"
           style={{
             width: '6vw',
             minWidth: '40px',

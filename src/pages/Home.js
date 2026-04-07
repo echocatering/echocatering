@@ -1110,9 +1110,10 @@ const Home = forwardRef((props, ref) => {
             pointerEvents: 'none'
           }} />
 
-          {/* Originals Icon SVG - positioned above the cocktail SVG */}
-          <IconComponent
-            iconName="originals"
+          {/* Echo icon above cocktail SVG */}
+          <img
+            src="/assets/icons/icon.echo.png"
+            alt="Echo"
             style={{
               width: '6vw',
               minWidth: '40px',
