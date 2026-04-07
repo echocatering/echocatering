@@ -992,7 +992,7 @@ const Home = forwardRef((props, ref) => {
                   e.currentTarget.style.background = '#d0d0d0';
                 }}>
                 </button>
-                <button className="social-button hide-until-mounted" aria-label="Pinterest" onClick={() => window.open('https://www.pinterest.com/echocatering/', '_blank', 'noopener,noreferrer')} style={{
+                <button className="social-button hide-until-mounted" aria-label="Pinterest" onClick={() => window.open('https://www.pinterest.com/echocateringllc/', '_blank', 'noopener,noreferrer')} style={{
                   background: '#d0d0d0',
                   border: 'none',
                   padding: '0',

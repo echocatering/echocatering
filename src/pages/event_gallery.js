@@ -1565,7 +1565,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           <button
             className="social-button hide-until-mounted"
             aria-label="Pinterest"
-            onClick={() => window.open('https://www.pinterest.com/echocatering/', '_blank', 'noopener,noreferrer')}
+            onClick={() => window.open('https://www.pinterest.com/echocateringllc/', '_blank', 'noopener,noreferrer')}
             style={{
               background: '#888888',
               border: 'none',
