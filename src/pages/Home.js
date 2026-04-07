@@ -936,7 +936,7 @@ const Home = forwardRef((props, ref) => {
                 width: '100%',
                 maxWidth: '300px'
               }}>
-                <button className="social-button hide-until-mounted" aria-label="Instagram" style={{
+                <button className="social-button hide-until-mounted" aria-label="Instagram" onClick={() => window.open('https://www.instagram.com/echo.roc/', '_blank', 'noopener,noreferrer')} style={{
                   background: '#d0d0d0',
                   border: 'none',
                   padding: '0',
@@ -964,7 +964,7 @@ const Home = forwardRef((props, ref) => {
                   e.currentTarget.style.background = '#d0d0d0';
                 }}>
                 </button>
-                <button className="social-button hide-until-mounted" aria-label="Facebook" style={{
+                <button className="social-button hide-until-mounted" aria-label="Facebook" onClick={() => window.open('https://www.facebook.com/profile.php?id=61574327858810', '_blank', 'noopener,noreferrer')} style={{
                   background: '#d0d0d0',
                   border: 'none',
                   padding: '0',
@@ -992,7 +992,7 @@ const Home = forwardRef((props, ref) => {
                   e.currentTarget.style.background = '#d0d0d0';
                 }}>
                 </button>
-                <button className="social-button hide-until-mounted" aria-label="Pinterest" style={{
+                <button className="social-button hide-until-mounted" aria-label="Pinterest" onClick={() => window.open('https://www.pinterest.com/echocatering/', '_blank', 'noopener,noreferrer')} style={{
                   background: '#d0d0d0',
                   border: 'none',
                   padding: '0',

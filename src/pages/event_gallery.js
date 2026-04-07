@@ -1477,6 +1477,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           <button
             className="social-button hide-until-mounted"
             aria-label="Instagram"
+            onClick={() => window.open('https://www.instagram.com/echo.roc/', '_blank', 'noopener,noreferrer')}
             style={{
               background: '#888888',
               border: 'none',
@@ -1520,6 +1521,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           <button
             className="social-button hide-until-mounted"
             aria-label="Facebook"
+            onClick={() => window.open('https://www.facebook.com/profile.php?id=61574327858810', '_blank', 'noopener,noreferrer')}
             style={{
               background: '#888888',
               border: 'none',
@@ -1563,6 +1565,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           <button
             className="social-button hide-until-mounted"
             aria-label="Pinterest"
+            onClick={() => window.open('https://www.pinterest.com/echocatering/', '_blank', 'noopener,noreferrer')}
             style={{
               background: '#888888',
               border: 'none',
