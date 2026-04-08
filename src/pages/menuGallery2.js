@@ -502,6 +502,7 @@ function EchoCocktailSubpage2({
   const [topRgb, setTopRgb] = useState({ r: 255, g: 255, b: 255 });
   const [middleRgb, setMiddleRgb] = useState({ r: 235, g: 235, b: 235 });
   const [bottomRgb, setBottomRgb] = useState({ r: 210, g: 210, b: 210 });
+  const isFirstCategoryRender = useRef(true);
   const animationTimeoutsRef = useRef([]);
   const titleRef = useRef(null);
   const ingredientsContainerRef = useRef(null);
@@ -611,8 +612,12 @@ function EchoCocktailSubpage2({
     setConceptVisible(false);
   }, []);
 
-  // Reset index to 0 when category changes
+  // Reset index to 0 when category changes (skip on initial mount so initialIndex wins)
   useEffect(() => {
+    if (isFirstCategoryRender.current) {
+      isFirstCategoryRender.current = false;
+      return;
+    }
     setCurrentIndex(0);
     resetAnimations();
     setBoxesVisible(false);
