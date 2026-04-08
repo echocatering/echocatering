@@ -156,6 +156,7 @@ const Home = forwardRef((props, ref) => {
     },
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [randomStartIndex, setRandomStartIndex] = useState(null);
   const [aboutContent, setAboutContent] = useState({
     storyTitle: '',
     story: '',
@@ -186,6 +187,10 @@ const Home = forwardRef((props, ref) => {
       try {
         const data = await fetchMenuGalleryData();
         setSubpages(data);
+        const files = data?.cocktails?.videoFiles || [];
+        if (files.length > 0) {
+          setRandomStartIndex(Math.floor(Math.random() * files.length));
+        }
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading menu data:', error);
@@ -1309,6 +1314,7 @@ const Home = forwardRef((props, ref) => {
                 sidebarOpen={sidebarOpen}
                 setSidebarOpen={setSidebarOpen}
                 galleryRef={galleryRef}
+                initialIndex={randomStartIndex}
               />
             </div>
           ) : (
@@ -3568,6 +3574,7 @@ const Home = forwardRef((props, ref) => {
                 setSidebarOpen={setSidebarOpen}
                 galleryRef={galleryRef}
                 outerHeightOverride={!isMobile ? window.innerHeight * 17 / 16 : undefined}
+                initialIndex={randomStartIndex}
               />
             </div>
           ) : (
