@@ -2955,9 +2955,6 @@ const MenuManager = () => {
                   alignItems: 'center',
                   gap: '7px',
                   padding: '12px 24px',
-                  borderRadius: '8px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }}
@@ -2969,9 +2966,9 @@ const MenuManager = () => {
                     setEditingCocktail(prev => ({ ...prev, display: e.target.checked }));
                     setHasUnsavedChanges(true);
                   }}
-                  style={{ width: '14px', height: '14px', accentColor: '#374151', cursor: 'pointer' }}
+                  style={{ width: '13px', height: '13px', accentColor: '#4b5563', cursor: 'pointer' }}
                 />
-                <span style={{ fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', letterSpacing: '0.05em' }}>DISPLAY</span>
+                <span style={{ fontFamily: 'inherit', fontSize: '0.65rem', fontWeight: 400, color: '#4b5563', letterSpacing: '0.05em' }}>DISPLAY</span>
               </label>
             )}
           </div>
