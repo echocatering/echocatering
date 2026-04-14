@@ -114,6 +114,10 @@ const cocktailSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  display: {
+    type: Boolean,
+    default: false
+  },
   featured: {
     type: Boolean,
     default: false

@@ -519,6 +519,10 @@ const buildCocktailPayload = (body = {}) => {
     }
   }
 
+  if (body.display !== undefined) {
+    payload.display = body.display === 'true' || body.display === true;
+  }
+
   return payload;
 };
 
@@ -932,6 +936,7 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
         itemNumber: itemNumber ? Number(itemNumber) : null,
         status: cocktail?.status || 'active',
         isActive: cocktail?.isActive !== false,
+        display: cocktail?.display !== false,
         order: cocktail?.order || (itemNumber || 0),
         // NEW: Read MenuManager-only fields from Inventory first (single source of truth)
         // Fallback to Cocktail only if Inventory doesn't have them (for migration)
@@ -1177,13 +1182,16 @@ router.get('/menu-gallery', async (req, res) => {
 
         const key = `item-${itemNumber}`;
 
-        menuGalleryData[category].videoFiles.push(key);
-        
       // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl and cloudinaryMapSnapshotUrl
       // This bypasses any map/caching issues
       const cocktailFromDb = await Cocktail.findOne({ itemNumber: itemNumber })
-        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId mapType').lean();
+        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId mapType display').lean();
       
+      // Skip items where display is explicitly false (exclude from both videoFiles and cocktailInfo)
+      if (cocktailFromDb && cocktailFromDb.display === false) continue;
+
+        menuGalleryData[category].videoFiles.push(key);
+
       const mediaFromDb = buildCocktailMediaFields(cocktailFromDb);
       const videoFileFromDb = cocktailFromDb?.videoFile || null;
       const mapSnapshotFileFromDb = cocktailFromDb?.mapSnapshotFile || null;
@@ -1514,6 +1522,9 @@ const handleCocktailUpdate = async (req, res, cocktail) => {
     cocktail.mapType = payload.mapType || cocktail.mapType || 'world';
     cocktail.featured = merged.featured;
     cocktail.order = merged.order;
+    if (payload.display !== undefined) {
+      cocktail.display = payload.display;
+    }
 
     // Handle video file if uploaded
     if (videoFile) {

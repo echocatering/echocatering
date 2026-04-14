@@ -918,6 +918,8 @@ const MenuManager = () => {
     if (data.mapType) {
       formData.append('mapType', data.mapType);
     }
+    // Append display flag (false = hidden on website, true = visible)
+    formData.append('display', data.display === false ? 'false' : 'true');
 
     if (options.videoFile instanceof File) {
       formData.append('video', options.videoFile);
@@ -2683,6 +2685,7 @@ const MenuManager = () => {
       order: filteredCocktails.length, // Set order to end of list
       isActive: true,
       status: 'active',
+      display: false,
       regions: []
     };
     
@@ -2931,21 +2934,47 @@ const MenuManager = () => {
       <div className="menu-manager bg-white min-h-screen px-6 pb-6 w-full" style={{ paddingTop: 0, position: 'relative' }}>
         {/* Unified header — always in document flow above all content */}
         <header style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: '100px', paddingRight: '100px', paddingTop: '120px', paddingBottom: '20px' }}>
-          {/* VIEW RECIPE / VIEW ITEM toggle on left — cocktails & mocktails only */}
-          {normalizeCategoryKey(selectedCategory) !== 'premix' && shouldShowRecipeBuilder(selectedCategory) ? (
-            <button
-              onClick={() => setRecipeViewActive(prev => !prev)}
-              className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
-                recipeViewActive
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {recipeViewActive ? 'VIEW ITEM' : 'VIEW RECIPE'}
-            </button>
-          ) : (
-            <div />
-          )}
+          {/* VIEW RECIPE / VIEW ITEM toggle + DISPLAY checkbox on left */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {normalizeCategoryKey(selectedCategory) !== 'premix' && shouldShowRecipeBuilder(selectedCategory) && (
+              <button
+                onClick={() => setRecipeViewActive(prev => !prev)}
+                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                  recipeViewActive
+                    ? 'bg-gray-800 text-white border-gray-800'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {recipeViewActive ? 'VIEW ITEM' : 'VIEW RECIPE'}
+              </button>
+            )}
+            {editingCocktail && normalizeCategoryKey(selectedCategory) !== 'archived' && (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editingCocktail.display !== false}
+                  onChange={(e) => {
+                    setEditingCocktail(prev => ({ ...prev, display: e.target.checked }));
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width: '14px', height: '14px', accentColor: '#374151', cursor: 'pointer' }}
+                />
+                <span style={{ fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', letterSpacing: '0.05em' }}>DISPLAY</span>
+              </label>
+            )}
+          </div>
           {/* Category buttons on right */}
           <div className="flex gap-4">
             {menuCategories.map((category) => (

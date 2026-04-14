@@ -291,7 +291,23 @@ const connectToMongoDB = async (retryCount = 0) => {
 };
 
 // Start connection (non-blocking - server starts even if DB connection fails)
-connectToMongoDB().catch(err => {
+connectToMongoDB().then(async () => {
+  if (dbConnected) {
+    // One-time migration: set display:true on all existing items that don't have the field
+    try {
+      const Cocktail = require('./models/Cocktail');
+      const result = await Cocktail.updateMany(
+        { display: { $exists: false } },
+        { $set: { display: true } }
+      );
+      if (result.modifiedCount > 0) {
+        console.log(`✅ Migration: set display=true on ${result.modifiedCount} existing menu item(s)`);
+      }
+    } catch (migErr) {
+      console.error('⚠️  Migration error (non-fatal):', migErr.message);
+    }
+  }
+}).catch(err => {
   console.error('❌ Fatal MongoDB connection error:', err);
   dbConnected = false;
   app.locals.dbConnected = dbConnected;
