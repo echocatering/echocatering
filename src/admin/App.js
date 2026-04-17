@@ -12,6 +12,7 @@ import FullMenu from './components/FullMenu';
 import SalesManager from './components/SalesManager';
 import EventsManager from './components/EventsManager';
 import EventSales from './components/EventSales';
+import QuoteCalculator from './components/QuoteCalculator';
 import OrdersStackedBarChart from '../components/OrdersStackedBarChart';
 import CalendarManager from './components/CalendarManager';
 import EventRequestsManager from './components/EventRequestsManager';
@@ -72,6 +73,7 @@ const AdminApp = () => {
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
             <Route path="/sales/pos-ui" element={<POSDualViewer />} />
             <Route path="/sales/events" element={<EventSales />} />
+            <Route path="/sales/quote-calculator" element={<QuoteCalculator />} />
           </Routes>
         </main>
       </div>

@@ -272,6 +272,12 @@ const Sidebar = () => {
               <span className="nav-text">EVENTS</span>
             </NavLink>
             <NavLink
+              to="/admin/sales/quote-calculator"
+              className={`nav-item ${location.pathname === '/admin/sales/quote-calculator' ? 'active' : ''}`}
+            >
+              <span className="nav-text">QUOTE CALCULATOR</span>
+            </NavLink>
+            <NavLink
               to="/admin/sales/pos-ui"
               className={`nav-item ${location.pathname === '/admin/sales/pos-ui' ? 'active' : ''}`}
             >

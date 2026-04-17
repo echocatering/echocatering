@@ -3335,7 +3335,9 @@ const MenuManager = () => {
                           fontFamily: 'Montserrat, sans-serif',
                           border: focusedField === 'ingredients' ? '1px solid #d1d5db' : 'none',
                           outline: 'none',
-                          background: 'transparent'
+                          background: 'transparent',
+                          overflow: 'hidden',
+                          resize: 'none'
                         }}
                       disabled={!editingCocktail}
                     />
@@ -3373,7 +3375,9 @@ const MenuManager = () => {
                         fontFamily: 'Montserrat, sans-serif',
                         border: focusedField === 'concept' ? '1px solid #d1d5db' : 'none',
                         outline: 'none',
-                        background: 'transparent'
+                        background: 'transparent',
+                        overflow: 'hidden',
+                        resize: 'none'
                       }}
                       disabled={!editingCocktail}
                     />
