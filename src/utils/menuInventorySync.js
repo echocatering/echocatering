@@ -138,6 +138,11 @@ export const extractSharedFieldsForInventory = (cocktailData, category) => {
     sharedFields.mapType = cocktailData.mapType;
   }
 
+  // display flag (true = visible on website, false = hidden)
+  if ('display' in cocktailData) {
+    sharedFields.display = cocktailData.display !== false;
+  }
+
   return sharedFields;
 };
 
@@ -156,7 +161,9 @@ export const extractMenuManagerOnlyFields = (cocktailData) => {
     // itemNumber is read-only from Inventory, but we store it in Cocktail for reference
     itemNumber: cocktailData.itemNumber || null,
     // Keep order for backward compatibility (but Item # is the real identifier)
-    order: cocktailData.order || 0
+    order: cocktailData.order || 0,
+    // display flag — must be passed through so buildCocktailFormData can send it
+    display: cocktailData.display !== false
   };
 };
 
@@ -278,6 +285,13 @@ export const mergeInventoryWithCocktail = (inventoryRow, cocktailData, category)
     merged.mapType = values.mapType;
   } else if (cocktailData && cocktailData.mapType !== undefined) {
     merged.mapType = cocktailData.mapType;
+  }
+
+  // display flag — read from Inventory first, fall back to Cocktail model
+  if (values.display !== undefined && values.display !== null) {
+    merged.display = values.display !== false && values.display !== 'false';
+  } else if (cocktailData && cocktailData.display !== undefined) {
+    merged.display = cocktailData.display !== false;
   }
 
   // narrative stays in Cocktail model (not moved to Inventory)
