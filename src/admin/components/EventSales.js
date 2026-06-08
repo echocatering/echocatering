@@ -437,9 +437,9 @@ const EventSales = () => {
       collapsable: true,
       collapsed: paymentModelCollapsed,
       columns: [
-        { key: 'invoiceDetails', label: '☰', width: '40px', editable: false, isInvoiceMenu: true },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
         { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'all' },
+        { key: 'invoiceDetails', label: '☰', width: '40px', editable: false, isInvoiceMenu: true },
       ]
     },
     {
