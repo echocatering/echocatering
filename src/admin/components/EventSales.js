@@ -88,8 +88,8 @@ const EventSales = () => {
     if (event?.sectionLocks?.[lockGroup] !== undefined) {
       return event.sectionLocks[lockGroup];
     }
-    // Default: basicInfo and overhead locked, paymentModel unlocked
-    return lockGroup === 'paymentModel' ? false : true;
+    // Default: all locked
+    return true;
   };
   
   // Helper to set lock state for a specific event and section (saves to backend when locking)
@@ -114,7 +114,8 @@ const EventSales = () => {
         const groupFields = {
           basicInfo: ['name', 'date', 'guestCount', 'startTime', 'endTime'],
           overhead: ['laborCost'],
-          paymentModel: ['amountReceived', 'totalTips']
+          paymentModel: ['amountReceived', 'totalTips'],
+          all: ['name', 'date', 'guestCount', 'startTime', 'endTime', 'laborCost', 'amountReceived', 'totalTips'],
         };
         
         // Gather all current values for fields in this group
@@ -401,13 +402,12 @@ const EventSales = () => {
       collapsed: basicInfoCollapsed,
       columns: [
         { key: 'delete', label: '', width: '40px', editable: false, isDeleteHeader: true },
-        { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name', lockGroup: 'basicInfo' },
-        { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date', lockGroup: 'basicInfo' },
-        { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount', lockGroup: 'basicInfo' },
-        { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime', lockGroup: 'basicInfo' },
-        { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime', lockGroup: 'basicInfo' },
+        { key: 'name', label: 'Event Name', width: '150px', editable: true, field: 'name', lockGroup: 'all' },
+        { key: 'date', label: 'Event Date', width: '100px', editable: true, field: 'date', lockGroup: 'all' },
+        { key: 'patrons', label: 'Patrons', width: '80px', editable: true, field: 'guestCount', lockGroup: 'all' },
+        { key: 'startTime', label: 'Start Time', width: '80px', editable: true, field: 'startTime', lockGroup: 'all' },
+        { key: 'endTime', label: 'End Time', width: '80px', editable: true, field: 'endTime', lockGroup: 'all' },
         { key: 'hours', label: 'Total Hours', width: '90px', editable: false, field: 'durationHours' },
-        { key: 'lockBasicInfo', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'basicInfo', isLockHeader: true },
       ]
     },
     {
@@ -415,11 +415,11 @@ const EventSales = () => {
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
-        { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
+        { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'all' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
-        { key: 'other', label: 'Other', width: '80px', editable: false, isOtherExpensesMenu: true },
-        { key: 'lockOverhead', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'overhead', isLockHeader: true },
+        { key: 'other', label: 'Other', width: '80px', editable: false },
+        { key: 'otherMenu', label: '☰', width: '40px', editable: false, isOtherExpensesMenu: true },
       ]
     },
     {
@@ -439,8 +439,7 @@ const EventSales = () => {
       columns: [
         { key: 'invoiceDetails', label: '☰', width: '40px', editable: false, isInvoiceMenu: true },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
-        { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'paymentModel' },
-        { key: 'lockPaymentModel', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'paymentModel', isLockHeader: true },
+        { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'all' },
       ]
     },
     {
@@ -449,10 +448,11 @@ const EventSales = () => {
       columns: [
         { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
         { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
-        { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips' },
+        { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips', lockGroup: 'all' },
         { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
         { key: 'itemData', label: 'DATA', width: '60px', editable: false, field: 'itemData', hidden: !showDataColumn },
+        { key: 'lockAll', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'all', isLockHeader: true },
       ]
     }
   ];
@@ -503,9 +503,7 @@ const EventSales = () => {
             ☰
           </button>
         );
-      case 'lockBasicInfo':
-      case 'lockOverhead':
-      case 'lockPaymentModel':
+      case 'lockAll': {
         const lockGroup = column.lockGroup;
         const isLocked = getRowLock(event._id, lockGroup);
         return (
@@ -530,6 +528,7 @@ const EventSales = () => {
             title={isLocked ? 'Click to unlock editing' : 'Click to lock editing'}
           />
         );
+      }
       case 'name':
         return event.name || '-';
       case 'date':
@@ -543,22 +542,23 @@ const EventSales = () => {
       case 'hours':
         return formatHours(event.durationHours);
       case 'other': {
-        const otherArr = event.otherExpenses || [];
-        const otherTotal = otherArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-        const hasOther = otherArr.length > 0 && otherTotal > 0;
+        const otherArrDisplay = event.otherExpenses || [];
+        const otherTotalDisplay = otherArrDisplay.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        return otherTotalDisplay > 0
+          ? <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{formatCurrency(otherTotalDisplay)}</span>
+          : <span style={{ color: '#ccc' }}>-</span>;
+      }
+      case 'otherMenu': {
+        const otherArrMenu = event.otherExpenses || [];
+        const hasOther = otherArrMenu.length > 0 && otherArrMenu.some(e => parseFloat(e.amount) > 0);
         return (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            {otherTotal > 0 && (
-              <span style={{ fontSize: '11px', color: '#666' }}>{formatCurrency(otherTotal)}</span>
-            )}
-            <span
-              style={{ fontSize: '16px', color: hasOther ? '#666' : '#ccc', cursor: hasOther ? 'pointer' : 'default', lineHeight: 1 }}
-              title={hasOther ? 'Click to view other expenses' : 'No other expenses'}
-              onClick={(e) => {
-                if (hasOther) { e.stopPropagation(); setOtherExpensesPopupEvent(event); }
-              }}
-            >☰</span>
-          </div>
+          <span
+            style={{ fontSize: '16px', color: hasOther ? '#666' : '#ccc', cursor: hasOther ? 'pointer' : 'default', lineHeight: 1 }}
+            title={hasOther ? 'Click to view other expenses' : 'No other expenses'}
+            onClick={(e) => {
+              if (hasOther) { e.stopPropagation(); setOtherExpensesPopupEvent(event); }
+            }}
+          >☰</span>
         );
       }
       case 'labor':
@@ -747,7 +747,7 @@ const EventSales = () => {
       case 'paymentModel': {
         // S/C/H checkboxes for payment model
         const currentModel = getCurrentValue(event, 'paymentModel') || 'S';
-        const isModelLocked = getRowLock(event._id, 'paymentModel');
+        const isModelLocked = getRowLock(event._id, 'all');
         if (isModelLocked) {
           return (
             <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#800080' }}>
@@ -794,7 +794,7 @@ const EventSales = () => {
         // Editable when paymentModel section is unlocked
         const received = getCurrentValue(event, 'amountReceived') || 0;
         const calcInvoice = calculateInvoice(event);
-        const isPaymentModelLocked = getRowLock(event._id, 'paymentModel');
+        const isPaymentModelLocked = getRowLock(event._id, 'all');
         
         // When locked, show read-only display (no +tip display - extra goes to Tips column)
         if (isPaymentModelLocked) {
@@ -1663,7 +1663,7 @@ const EventSales = () => {
                           textAlign: 'center',
                         }}
                       >
-                        {col.editable && col.lockGroup && !getRowLock(event._id, col.lockGroup) && col.key !== 'paymentModel' ? (
+                        {col.editable && col.lockGroup && !getRowLock(event._id, 'all') ? (
                           <input
                             type="text"
                             value={getCurrentValue(event, col.field) ?? ''}
