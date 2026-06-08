@@ -1144,6 +1144,20 @@ const EventSales = () => {
             Rate
           </button>
           <button
+            onClick={() => setPaymentMethodsCollapsed(prev => !prev)}
+            style={{
+              padding: '8px 16px',
+              background: !paymentMethodsCollapsed ? '#666' : '#999',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Pay
+          </button>
+          <button
             onClick={() => setShowDataColumn(prev => !prev)}
             style={{
               padding: '8px 16px',
