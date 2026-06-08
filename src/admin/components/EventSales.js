@@ -15,6 +15,7 @@ const EventSales = () => {
   const [basicInfoCollapsed, setBasicInfoCollapsed] = useState(false);
   const [overheadCollapsed, setOverheadCollapsed] = useState(true);
   const [paymentMethodsCollapsed, setPaymentMethodsCollapsed] = useState(true);
+  const [showPayView, setShowPayView] = useState(false); // Pay button — off by default
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
   const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
   const [invoiceDetailsEventId, setInvoiceDetailsEventId] = useState(null); // Event ID for invoice details popup
@@ -447,6 +448,7 @@ const EventSales = () => {
       collapsable: false,
       columns: [
         { key: 'sales', label: 'Σ CPH', width: '90px', editable: false },
+        { key: 'totalSalesCol', label: 'Sales', width: '90px', editable: false, hidden: !showPayView },
         { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips', lockGroup: 'all' },
         { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
@@ -647,6 +649,8 @@ const EventSales = () => {
         const cphTotal = pricingVars.perPerson * (parseFloat(getCurrentValue(event, 'guestCount')) || parseFloat(event.guestCount) || 0);
         return cphTotal > 0 ? formatCurrency(cphTotal) : '-';
       }
+      case 'totalSalesCol':
+        return formatCurrency(event.totalSales);
       case 'cashTotal':
         // Cash payments - use parsed itemData if available, fallback to stored value
         const parsedCash = parseItemData(event.itemData);
@@ -1101,20 +1105,18 @@ const EventSales = () => {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={() => {
-              // Check if P&L Report view is currently active (Basic Info hidden, all 3 P&L sections open)
-              const isPLReportView = basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed;
+              // Check if P&L Report view is currently active (Basic Info hidden, expense + service charge open)
+              const isPLReportView = basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed;
               if (isPLReportView) {
                 // Switch to Summary view - show Basic Info, close P&L sections
                 setBasicInfoCollapsed(false);
                 setOverheadCollapsed(true);
                 setPaymentModelCollapsed(true);
-                setPaymentMethodsCollapsed(true);
               } else {
-                // Switch to P&L Report view - hide Basic Info, open all P&L sections
+                // Switch to P&L Report view - hide Basic Info, open expense + service charge sections
                 setBasicInfoCollapsed(true);
                 setOverheadCollapsed(false);
                 setPaymentModelCollapsed(false);
-                setPaymentMethodsCollapsed(false);
               }
             }}
             style={{
@@ -1127,7 +1129,7 @@ const EventSales = () => {
               fontSize: '14px',
             }}
           >
-            {(basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed && !paymentMethodsCollapsed) ? 'Summary' : 'P&L Report'}
+            {(basicInfoCollapsed && !overheadCollapsed && !paymentModelCollapsed) ? 'Summary' : 'P&L Report'}
           </button>
           <button
             onClick={() => setShowRatePanel(prev => !prev)}
@@ -1144,10 +1146,23 @@ const EventSales = () => {
             Rate
           </button>
           <button
-            onClick={() => setPaymentMethodsCollapsed(prev => !prev)}
+            onClick={() => {
+              if (showPayView) {
+                // Turn Pay off — hide Payment Methods and Sales column
+                setShowPayView(false);
+                setPaymentMethodsCollapsed(true);
+              } else {
+                // Turn Pay on — force P&L Report view, show Payment Methods + Sales column
+                setShowPayView(true);
+                setPaymentMethodsCollapsed(false);
+                setBasicInfoCollapsed(true);
+                setOverheadCollapsed(false);
+                setPaymentModelCollapsed(false);
+              }
+            }}
             style={{
               padding: '8px 16px',
-              background: !paymentMethodsCollapsed ? '#666' : '#999',
+              background: showPayView ? '#666' : '#999',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
