@@ -443,10 +443,10 @@ const EventSales = () => {
       ]
     },
     {
-      name: 'Revenue',
+      name: 'Report',
       collapsable: false,
       columns: [
-        { key: 'sales', label: 'Sales', width: '90px', editable: false, field: 'totalSales' },
+        { key: 'sales', label: 'Σ CPH', width: '90px', editable: false },
         { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips', lockGroup: 'all' },
         { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
@@ -569,19 +569,16 @@ const EventSales = () => {
         return formatCurrency(event.taxesCost);
       case 'cogs':
         return formatCurrency(event.cogsCost);
-      case 'salesTax':
-        // Tax - 8% of all payment methods (CASH + CREDIT + INVOICE)
-        const parsedForTax = parseItemData(event.itemData);
-        const cashForTax = parsedForTax.paymentTotals.CASH > 0 ? parsedForTax.paymentTotals.CASH : (event.cashTotal || 0);
-        const creditForTax = parsedForTax.paymentTotals.CREDIT > 0 ? parsedForTax.paymentTotals.CREDIT : (event.creditTotal || 0);
-        const invoiceForTax = parsedForTax.paymentTotals.INVOICE > 0 ? parsedForTax.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-        const totalForTax = cashForTax + creditForTax + invoiceForTax;
-        const salesTaxAmount = totalForTax * 0.08;
+      case 'salesTax': {
+        // Tax = 8% of the Service Charge invoice total
+        const invoiceForTax = calculateInvoice(event);
+        const salesTaxAmount = invoiceForTax * 0.08;
         return salesTaxAmount > 0 ? (
           <span style={{ color: '#666' }}>
             ${salesTaxAmount.toFixed(2)}
           </span>
         ) : '-';
+      }
       case 'tips': {
         // Count bartenders from laborDetails array
         const laborDetails = event.laborDetails || [];
@@ -645,8 +642,11 @@ const EventSales = () => {
             </label>
           </div>
         );
-      case 'sales':
-        return formatCurrency(event.totalSales);
+      case 'sales': {
+        // Σ CPH = CPH ($/PP) × Total Patrons
+        const cphTotal = pricingVars.perPerson * (parseFloat(getCurrentValue(event, 'guestCount')) || parseFloat(event.guestCount) || 0);
+        return cphTotal > 0 ? formatCurrency(cphTotal) : '-';
+      }
       case 'cashTotal':
         // Cash payments - use parsed itemData if available, fallback to stored value
         const parsedCash = parseItemData(event.itemData);
@@ -733,10 +733,7 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
-        const profitParsed = parseItemData(event.itemData);
-        const profitCash = profitParsed.paymentTotals.CASH > 0 ? profitParsed.paymentTotals.CASH : (event.cashTotal || 0);
-        const profitCredit = profitParsed.paymentTotals.CREDIT > 0 ? profitParsed.paymentTotals.CREDIT : (event.creditTotal || 0);
-        const sTax = (profitCash + profitCredit) * 0.08;
+        const sTax = calculateInvoice(event) * 0.08;
         const profit = profitReceived - profitExpenses - sTax;
         return (
           <span style={{ color: profit > 0 ? '#22c55e' : profit < 0 ? '#ef4444' : '#666', fontWeight: 'bold' }}>
@@ -1089,7 +1086,7 @@ const EventSales = () => {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$/PP</label>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>CPH</label>
             <input
               type="number"
               value={pricingVars.perPerson}
@@ -2115,7 +2112,7 @@ const EventSales = () => {
                     <span style={{ color: '#333', fontWeight: 500 }}>${pricingVars.minimum.toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                    <span style={{ color: '#333' }}>Service Charge (${pricingVars.perPerson}/pp × {guestCount} guests)</span>
+                    <span style={{ color: '#333' }}>Service Charge (${pricingVars.perPerson}/CPH × {guestCount} guests)</span>
                     <span style={{ color: '#333', fontWeight: 500 }}>${serviceChargePP.toFixed(2)}</span>
                   </div>
                   {overheadCost > 0 && (
@@ -2196,7 +2193,7 @@ const EventSales = () => {
                         </div>
                         <div class="items">
                           <div class="item"><span>Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
-                          <div class="item"><span>Service Charge ($${pricingVars.perPerson}/pp × ${guestCount} guests)</span><span>&nbsp;— $${serviceChargePP.toFixed(2)}</span></div>
+                          <div class="item"><span>Service Charge ($${pricingVars.perPerson}/CPH × ${guestCount} guests)</span><span>&nbsp;— $${serviceChargePP.toFixed(2)}</span></div>
                           ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
@@ -2239,7 +2236,7 @@ const EventSales = () => {
                       insuranceCost > 0 ? `Insurance: $${insuranceCost.toFixed(2)}` : null,
                       overheadCost > 0 ? `Overhead: $${overheadCost.toFixed(2)}` : null,
                     ].filter(Boolean).join('\n');
-                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\nMinimum: $${pricingVars.minimum.toFixed(2)}\nService Charge ($${pricingVars.perPerson}/pp × ${guestCount} guests): $${serviceChargePP.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\n\nService Charge Total: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
+                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\nMinimum: $${pricingVars.minimum.toFixed(2)}\nService Charge ($${pricingVars.perPerson}/CPH × ${guestCount} guests): $${serviceChargePP.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\n\nService Charge Total: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
                     
                     if (navigator.share) {
                       try {
