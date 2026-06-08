@@ -6623,75 +6623,84 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             {/* Operating Expenses Section */}
             <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Operating Expenses</h2>
-              
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Accommodation ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={eventSetupData.accommodationCost === '0' || eventSetupData.accommodationCost === 0 ? '' : (eventSetupData.accommodationCost ?? '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
-                      setEventSetupData(prev => ({ ...prev, accommodationCost: val }));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Transportation ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={eventSetupData.transportationCosts === '0' || eventSetupData.transportationCosts === 0 ? '' : (eventSetupData.transportationCosts ?? '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
-                      setEventSetupData(prev => ({ ...prev, transportationCosts: val }));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Permit ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={eventSetupData.permitCost === '0' || eventSetupData.permitCost === 0 ? '' : (eventSetupData.permitCost ?? '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
-                      setEventSetupData(prev => ({ ...prev, permitCost: val }));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '4px' }}>Liability Insurance ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={eventSetupData.liabilityInsuranceCost === '0' || eventSetupData.liabilityInsuranceCost === 0 ? '' : (eventSetupData.liabilityInsuranceCost ?? '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
-                      setEventSetupData(prev => ({ ...prev, liabilityInsuranceCost: val }));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
-                />
-              </div>
-              
+
+              {/* Additional Expenses */}
+              {(() => {
+                const addlExpenses = eventSetupData.additionalExpenses || [];
+                const EXPENSE_OPTIONS = ['Accommodation', 'Transportation', 'Permit', 'Insurance'];
+                return (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '14px', color: '#666' }}>Additional Expenses</label>
+                      <button
+                        onClick={() => {
+                          setEventSetupData(prev => ({
+                            ...prev,
+                            additionalExpenses: [...(prev.additionalExpenses || []), { label: EXPENSE_OPTIONS[0], amount: '' }],
+                          }));
+                        }}
+                        style={{ padding: '6px 14px', background: '#800080', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    {addlExpenses.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {addlExpenses.map((exp, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <select
+                              value={exp.label}
+                              onChange={(e) => {
+                                setEventSetupData(prev => {
+                                  const updated = [...(prev.additionalExpenses || [])];
+                                  updated[idx] = { ...updated[idx], label: e.target.value };
+                                  return { ...prev, additionalExpenses: updated };
+                                });
+                              }}
+                              style={{ flex: 2, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', background: '#fff' }}
+                            >
+                              {EXPENSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="$0.00"
+                              value={exp.amount === '0' || exp.amount === 0 ? '' : (exp.amount ?? '')}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || /^-?\d*\.?\d{0,2}$/.test(val)) {
+                                  setEventSetupData(prev => {
+                                    const updated = [...(prev.additionalExpenses || [])];
+                                    updated[idx] = { ...updated[idx], amount: val };
+                                    return { ...prev, additionalExpenses: updated };
+                                  });
+                                }
+                              }}
+                              onFocus={(e) => e.target.select()}
+                              style={{ flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', background: '#fff', textAlign: 'right' }}
+                            />
+                            <button
+                              onClick={() => {
+                                setEventSetupData(prev => ({
+                                  ...prev,
+                                  additionalExpenses: (prev.additionalExpenses || []).filter((_, i) => i !== idx),
+                                }));
+                              }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '20px', lineHeight: 1, padding: '4px' }}
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {addlExpenses.length === 0 && (
+                      <div style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', padding: '8px 0' }}>
+                        No additional expenses added
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Labor Section */}
               <div style={{ marginTop: '16px' }}>
                 <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '8px' }}>Labor</label>
@@ -7047,31 +7056,16 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
                   <span style={{ fontWeight: 'bold', color: '#333' }}>Expenses</span>
                 </div>
-                {/* Fixed costs */}
-                {parseFloat(eventSetupData.accommodationCost) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                    <span style={{ color: '#333' }}>Accommodation</span>
-                    <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.accommodationCost).toFixed(2)}</span>
-                  </div>
-                )}
-                {parseFloat(eventSetupData.transportationCosts) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                    <span style={{ color: '#333' }}>Transportation</span>
-                    <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.transportationCosts).toFixed(2)}</span>
-                  </div>
-                )}
-                {parseFloat(eventSetupData.permitCost) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                    <span style={{ color: '#333' }}>Permit</span>
-                    <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.permitCost).toFixed(2)}</span>
-                  </div>
-                )}
-                {parseFloat(eventSetupData.liabilityInsuranceCost) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                    <span style={{ color: '#333' }}>Liability Insurance</span>
-                    <span style={{ color: '#ef4444' }}>-${parseFloat(eventSetupData.liabilityInsuranceCost).toFixed(2)}</span>
-                  </div>
-                )}
+                {/* Additional Expenses (single aggregated line) */}
+                {(() => {
+                  const addlTotal = (eventSetupData.additionalExpenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+                  return addlTotal > 0 ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <span style={{ color: '#333' }}>Add. Expenses</span>
+                      <span style={{ color: '#ef4444' }}>-${addlTotal.toFixed(2)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 {/* Spillage - using shared spillageTotal for consistency */}
                 {spillageTotal > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
@@ -7116,10 +7110,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   </>
                 )}
                 {/* Show empty state if no expenses */}
-                {!(parseFloat(eventSetupData.accommodationCost) > 0) && 
-                 !(parseFloat(eventSetupData.transportationCosts) > 0) && 
-                 !(parseFloat(eventSetupData.permitCost) > 0) && 
-                 !(parseFloat(eventSetupData.liabilityInsuranceCost) > 0) && 
+                {!((eventSetupData.additionalExpenses || []).some(e => parseFloat(e.amount) > 0)) &&
                  !(eventSetupData.labor && eventSetupData.labor.length > 0) && (
                   <div style={{ padding: '12px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
                     No expenses entered yet
@@ -7135,10 +7126,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                       }, 0);
                       const salesTax = totalSales * 0.08;
                       return (
-                        (parseFloat(eventSetupData.accommodationCost) || 0) +
-                        (parseFloat(eventSetupData.transportationCosts) || 0) +
-                        (parseFloat(eventSetupData.permitCost) || 0) +
-                        (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
+                        (eventSetupData.additionalExpenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) +
                         (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
                         spillageTotal +
                         salesTax
@@ -7164,10 +7152,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 const tips = totalTips;
                 
                 // Use shared spillageTotal for consistency
-                const operatingExpenses = (parseFloat(eventSetupData.accommodationCost) || 0) +
-                  (parseFloat(eventSetupData.transportationCosts) || 0) +
-                  (parseFloat(eventSetupData.permitCost) || 0) +
-                  (parseFloat(eventSetupData.liabilityInsuranceCost) || 0) +
+                const operatingExpenses =
+                  (eventSetupData.additionalExpenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) +
                   (eventSetupData.labor || []).reduce((sum, l) => sum + (parseFloat(l.rate) || 0) * (parseFloat(l.hours) || 0), 0) +
                   spillageTotal;
                 

@@ -290,10 +290,16 @@ router.post('/finalize', async (req, res) => {
       endTime: setupData.endTime || '',
       durationHours,
       guestCount: parseInt(setupData.numberOfPatrons) || 0,
-      accommodationCost: parseFloat(setupData.accommodationCost) || 0,
-      travelCost: parseFloat(setupData.transportationCosts) || 0,
-      permitCost: parseFloat(setupData.permitCost) || 0,
-      insuranceCost: parseFloat(setupData.liabilityInsuranceCost) || 0,
+      // New additional expenses array
+      otherExpenses: (setupData.additionalExpenses || []).map(e => ({
+        label: e.label || '',
+        amount: parseFloat(e.amount) || 0,
+      })),
+      // Legacy individual fields (cleared for new records; kept for old data via backward compat)
+      accommodationCost: 0,
+      travelCost: 0,
+      permitCost: 0,
+      insuranceCost: 0,
       laborCost,
       laborDetails,
       spillageCost: parseFloat(spillageData?.total) || 0,

@@ -18,6 +18,7 @@ const EventSales = () => {
   const [paymentModelCollapsed, setPaymentModelCollapsed] = useState(false);
   const [showDataColumn, setShowDataColumn] = useState(false); // DATA column hidden by default
   const [invoiceDetailsEventId, setInvoiceDetailsEventId] = useState(null); // Event ID for invoice details popup
+  const [otherExpensesPopupEvent, setOtherExpensesPopupEvent] = useState(null); // Event for Other Expenses popup
   const [dataPopupEvent, setDataPopupEvent] = useState(null); // Event object for DATA popup modal
   const [laborPopupEvent, setLaborPopupEvent] = useState(null); // Event object for Labor popup modal
   const [inventoryPopupEvent, setInventoryPopupEvent] = useState(null); // Event object for Inventory popup modal
@@ -112,7 +113,7 @@ const EventSales = () => {
         // Define which fields belong to each lock group
         const groupFields = {
           basicInfo: ['name', 'date', 'guestCount', 'startTime', 'endTime'],
-          overhead: ['accommodationCost', 'travelCost', 'permitCost', 'insuranceCost', 'laborCost'],
+          overhead: ['laborCost'],
           paymentModel: ['amountReceived', 'totalTips']
         };
         
@@ -414,13 +415,10 @@ const EventSales = () => {
       collapsable: true,
       collapsed: overheadCollapsed,
       columns: [
-        { key: 'accommodation', label: 'Accom.', width: '80px', editable: true, field: 'accommodationCost', lockGroup: 'overhead' },
-        { key: 'transportation', label: 'Transp.', width: '80px', editable: true, field: 'travelCost', lockGroup: 'overhead' },
-        { key: 'permit', label: 'Permit', width: '80px', editable: true, field: 'permitCost', lockGroup: 'overhead' },
-        { key: 'insurance', label: 'Insurance', width: '90px', editable: true, field: 'insuranceCost', lockGroup: 'overhead' },
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'overhead' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
+        { key: 'other', label: 'Other', width: '80px', editable: false, isOtherExpensesMenu: true },
         { key: 'lockOverhead', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'overhead', isLockHeader: true },
       ]
     },
@@ -544,12 +542,25 @@ const EventSales = () => {
         return formatTime(event.endTime);
       case 'hours':
         return formatHours(event.durationHours);
-      case 'transportation':
-        return formatCurrency(event.travelCost);
-      case 'permit':
-        return formatCurrency(event.permitCost);
-      case 'insurance':
-        return formatCurrency(event.insuranceCost);
+      case 'other': {
+        const otherArr = event.otherExpenses || [];
+        const otherTotal = otherArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const hasOther = otherArr.length > 0 && otherTotal > 0;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            {otherTotal > 0 && (
+              <span style={{ fontSize: '11px', color: '#666' }}>{formatCurrency(otherTotal)}</span>
+            )}
+            <span
+              style={{ fontSize: '16px', color: hasOther ? '#666' : '#ccc', cursor: hasOther ? 'pointer' : 'default', lineHeight: 1 }}
+              title={hasOther ? 'Click to view other expenses' : 'No other expenses'}
+              onClick={(e) => {
+                if (hasOther) { e.stopPropagation(); setOtherExpensesPopupEvent(event); }
+              }}
+            >☰</span>
+          </div>
+        );
+      }
       case 'labor':
         return formatCurrency(event.laborCost);
       case 'spillage':
@@ -636,8 +647,6 @@ const EventSales = () => {
         );
       case 'sales':
         return formatCurrency(event.totalSales);
-      case 'accommodation':
-        return formatCurrency(event.accommodationCost);
       case 'cashTotal':
         // Cash payments - use parsed itemData if available, fallback to stored value
         const parsedCash = parseItemData(event.itemData);
@@ -688,13 +697,18 @@ const EventSales = () => {
             ☰
           </span>
         );
-      case 'expensesTotal':
-        // Sum of all expenses (excluding tax - tax is now just a record in Revenue section)
-        const expensesSum = 
-          (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
+      case 'expensesTotal': {
+        // Sum of all expenses (excluding tax)
+        const otherExpArr = (getCurrentValue(event, 'otherExpenses') || event.otherExpenses || []);
+        const otherExpSum = otherExpArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        // Also include legacy fields for old records
+        const legacyExpSum =
+          (parseFloat(event.accommodationCost) || 0) +
+          (parseFloat(event.travelCost) || 0) +
+          (parseFloat(event.permitCost) || 0) +
+          (parseFloat(event.insuranceCost) || 0);
+        const expensesSum =
+          otherExpSum + legacyExpSum +
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
@@ -703,14 +717,19 @@ const EventSales = () => {
             -${expensesSum.toFixed(2)}
           </span>
         ) : '-';
-      case 'profit':
+      }
+      case 'profit': {
         // Profit = Received − Exp − Tax
         const profitReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const profitOtherArr = (getCurrentValue(event, 'otherExpenses') || event.otherExpenses || []);
+        const profitOtherSum = profitOtherArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const profitLegacy =
+          (parseFloat(event.accommodationCost) || 0) +
+          (parseFloat(event.travelCost) || 0) +
+          (parseFloat(event.permitCost) || 0) +
+          (parseFloat(event.insuranceCost) || 0);
         const profitExpenses =
-          (parseFloat(getCurrentValue(event, 'accommodationCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'travelCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'permitCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'insuranceCost')) || 0) +
+          profitOtherSum + profitLegacy +
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
@@ -724,6 +743,7 @@ const EventSales = () => {
             {formatCurrency(profit)}
           </span>
         );
+      }
       case 'paymentModel': {
         // S/C/H checkboxes for payment model
         const currentModel = getCurrentValue(event, 'paymentModel') || 'S';
@@ -2264,6 +2284,58 @@ const EventSales = () => {
                     cursor: 'pointer',
                     fontSize: '14px',
                   }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Other Expenses Popup Modal */}
+      {otherExpensesPopupEvent && (() => {
+        const ev = otherExpensesPopupEvent;
+        const otherArr = ev.otherExpenses || [];
+        const otherTotal = otherArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const eventDate = ev.date ? new Date(ev.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            onClick={() => setOtherExpensesPopupEvent(null)}
+          >
+            <div
+              style={{ background: '#fff', borderRadius: '12px', maxWidth: '420px', width: '90%', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ flex: 1, overflow: 'auto', padding: '24px', fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '20px', paddingBottom: '20px', borderBottom: '2px dashed #ddd' }}>
+                  <img src="/assets/icons/LOGO_echo.png" alt="Echo Catering" style={{ maxWidth: '120px', height: 'auto', marginBottom: '10px' }} />
+                  <div style={{ color: '#666', fontSize: '14px' }}>{eventDate}</div>
+                  <div style={{ color: '#333', fontSize: '16px', fontWeight: 'bold', marginTop: '8px' }}>{ev.name}</div>
+                  <div style={{ color: '#888', fontSize: '13px', marginTop: '4px' }}>Additional Expenses</div>
+                </div>
+                {/* Expense rows */}
+                <div style={{ marginBottom: '4px' }}>
+                  {otherArr.map((exp, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                      <span style={{ color: '#333' }}>{exp.label || 'Other'}</span>
+                      <span style={{ color: '#333', fontWeight: 500 }}>${(parseFloat(exp.amount) || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold' }}>
+                    <span>Total</span>
+                    <span>${otherTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '16px 24px', borderTop: '1px solid #eee', background: '#fafafa' }}>
+                <button
+                  onClick={() => setOtherExpensesPopupEvent(null)}
+                  style={{ width: '100%', padding: '12px', background: '#800080', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}
                 >
                   Close
                 </button>

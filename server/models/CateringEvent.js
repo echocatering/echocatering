@@ -89,10 +89,16 @@ const cateringEventSchema = new mongoose.Schema({
   // Item-level sales data for chart (Item-Category-Timestamp format)
   itemData: { type: String, default: '' },      // Comma-separated: "Margarita-cocktails-2026-03-01T15:30:00Z, ..."
   
-  accommodationCost: { type: Number, default: 0 }, // $ Accommodation
-  travelCost: { type: Number, default: 0 },      // $ Transportation
-  permitCost: { type: Number, default: 0 },      // $ Permit
-  insuranceCost: { type: Number, default: 0 },   // $ Insurance
+  // Legacy individual expense fields (kept for backward compat with old records)
+  accommodationCost: { type: Number, default: 0 },
+  travelCost: { type: Number, default: 0 },
+  permitCost: { type: Number, default: 0 },
+  insuranceCost: { type: Number, default: 0 },
+  // New: array of additional/other expenses  { label: String, amount: Number }
+  otherExpenses: [{
+    label: { type: String, default: '' },
+    amount: { type: Number, default: 0 }
+  }],
   laborCost: { type: Number, default: 0 },       // $ Labor (total)
   spillageCost: { type: Number, default: 0 },    // $ Spillage (using costPerUnit)
   taxesCost: { type: Number, default: 0 },       // $ Taxes
@@ -183,13 +189,15 @@ cateringEventSchema.methods.recalculate = function () {
 
   this.totalRevenue = this.totalSales + this.totalTips;
   
-  // Calculate total costs
-  const totalExpenses = (this.travelCost || 0) + 
-    (this.permitCost || 0) + 
-    (this.insuranceCost || 0) + 
-    (this.laborCost || 0) + 
-    (this.spillageCost || 0) + 
-    (this.taxesCost || 0) + 
+  // Calculate total costs (otherExpenses array replaces legacy individual fields for new records)
+  const otherExpensesTotal = (this.otherExpenses || []).reduce((sum, e) => sum + (e.amount || 0), 0);
+  // Legacy fields still included so old records keep correct totals
+  const legacyOther = (this.travelCost || 0) + (this.permitCost || 0) +
+    (this.insuranceCost || 0) + (this.accommodationCost || 0);
+  const totalExpenses = otherExpensesTotal + legacyOther +
+    (this.laborCost || 0) +
+    (this.spillageCost || 0) +
+    (this.taxesCost || 0) +
     (this.cogsCost || 0);
   
   this.totalCost = totalExpenses;
