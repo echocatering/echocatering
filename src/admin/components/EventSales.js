@@ -424,6 +424,7 @@ const EventSales = () => {
         { key: 'labor', label: 'Labor', width: '80px', editable: true, field: 'laborCost', lockGroup: 'all' },
         { key: 'spillage', label: 'Spillage', width: '90px', editable: false, field: 'spillageCost' },
         { key: 'cogs', label: 'COGS', width: '80px', editable: false, field: 'cogsCost' },
+        { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'other', label: 'Other', width: '80px', editable: false },
         { key: 'otherMenu', label: '☰', width: '40px', editable: false, isOtherExpensesMenu: true },
       ]
@@ -452,10 +453,9 @@ const EventSales = () => {
       name: 'Report',
       collapsable: false,
       columns: [
-        { key: 'minCol', label: 'MIN', width: '80px', editable: false },
-        { key: 'sales', label: 'Σ CPH', width: '90px', editable: false },
+        { key: 'minCol', label: 'Min', width: '80px', editable: false },
+        { key: 'sales', label: 'Σ Cph', width: '90px', editable: false },
         { key: 'totalSalesCol', label: 'Sales', width: '90px', editable: false, hidden: !showPayView },
-        { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
         { key: 'tips', label: 'Tips', width: '80px', editable: true, field: 'totalTips', lockGroup: 'all' },
         { key: 'expensesTotal', label: 'Exp', width: '80px', editable: false },
         { key: 'profit', label: 'Profit', width: '100px', editable: false },
@@ -599,17 +599,24 @@ const EventSales = () => {
         const tipsInvoice = calculateInvoice(event);
         const overpaymentTip = Math.max(0, tipsReceived - tipsInvoice);
         const totalTips = storedTips + overpaymentTip;
-        
+        const tipsPaid = tipsReceived >= tipsInvoice;
+
         if (bartenderCount > 1 && totalTips > 0) {
           const tipsPerPerson = totalTips / bartenderCount;
           return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span>{formatCurrency(tipsPerPerson)}</span>
-              <span style={{ fontSize: '10px', color: '#666' }}>x{bartenderCount}</span>
+              <span style={{ color: tipsPaid ? '#22c55e' : undefined, fontWeight: tipsPaid ? 'bold' : undefined }}>
+                {tipsPaid ? '+' : ''}{formatCurrency(tipsPerPerson)}
+              </span>
+              <span style={{ fontSize: '10px', color: tipsPaid ? '#22c55e' : '#666' }}>x{bartenderCount}</span>
             </div>
           );
         }
-        return totalTips > 0 ? formatCurrency(totalTips) : '-';
+        return totalTips > 0 ? (
+          <span style={{ color: tipsPaid ? '#22c55e' : undefined, fontWeight: tipsPaid ? 'bold' : undefined }}>
+            {tipsPaid ? '+' : ''}{formatCurrency(totalTips)}
+          </span>
+        ) : '-';
       }
       case 'invoice':
         // Invoice total - sum of invoiced tabs (shown as negative since payment pending)
@@ -728,7 +735,7 @@ const EventSales = () => {
           </span>
         );
       case 'expensesTotal': {
-        // Sum of all expenses (excluding tax)
+        // Sum of all expenses including tax
         const otherExpArr = (getCurrentValue(event, 'otherExpenses') || event.otherExpenses || []);
         const otherExpSum = otherExpArr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
         // Also include legacy fields for old records
@@ -741,7 +748,8 @@ const EventSales = () => {
           otherExpSum + legacyExpSum +
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
-          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
+          (parseFloat(getCurrentValue(event, 'cogsCost')) || 0) +
+          calculateInvoice(event) * 0.08;
         return expensesSum > 0 ? (
           <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
             -${expensesSum.toFixed(2)}
