@@ -1115,15 +1115,6 @@ const EventSales = () => {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>OHD</label>
-            <input
-              type="number"
-              value={pricingVars.overhead}
-              onChange={(e) => setPricingVars(prev => ({ ...prev, overhead: parseFloat(e.target.value) || 0 }))}
-              style={{ width: '70px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>CPH</label>
             <input
               type="number"
@@ -2112,7 +2103,6 @@ const EventSales = () => {
         const guestCount = parseFloat(event.guestCount) || 0;
         const permitCost = parseFloat(event.permitCost) || 0;
         const insuranceCost = parseFloat(event.insuranceCost) || 0;
-        const overheadCost = pricingVars.overhead || 0;
         const serviceChargePP = pricingVars.perPerson * guestCount;
         const finalTotal = calculateInvoice(event);
         
@@ -2178,12 +2168,6 @@ const EventSales = () => {
                     <span style={{ color: '#333' }}>Service Charge (${pricingVars.perPerson}/CPH × {guestCount} guests)</span>
                     <span style={{ color: '#333', fontWeight: 500 }}>${serviceChargePP.toFixed(2)}</span>
                   </div>
-                  {overheadCost > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                      <span style={{ color: '#333' }}>Overhead</span>
-                      <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
-                    </div>
-                  )}
                   {insuranceCost > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
                       <span style={{ color: '#333' }}>Insurance</span>
@@ -2257,7 +2241,7 @@ const EventSales = () => {
                         <div class="items">
                           <div class="item"><span>Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
                           <div class="item"><span>Service Charge ($${pricingVars.perPerson}/CPH × ${guestCount} guests)</span><span>&nbsp;— $${serviceChargePP.toFixed(2)}</span></div>
-                          ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
+
                           ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                         </div>
@@ -2297,7 +2281,6 @@ const EventSales = () => {
                     const additionalCharges = [
                       permitCost > 0 ? `Permit: $${permitCost.toFixed(2)}` : null,
                       insuranceCost > 0 ? `Insurance: $${insuranceCost.toFixed(2)}` : null,
-                      overheadCost > 0 ? `Overhead: $${overheadCost.toFixed(2)}` : null,
                     ].filter(Boolean).join('\n');
                     const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\nMinimum: $${pricingVars.minimum.toFixed(2)}\nService Charge ($${pricingVars.perPerson}/CPH × ${guestCount} guests): $${serviceChargePP.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\n\nService Charge Total: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
                     
