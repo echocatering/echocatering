@@ -2592,11 +2592,17 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   const showSummaryView = uiState.showSummaryView;
   const showEventSetup = uiState.showEventSetup;
   const isPostEventEdit = uiState.isPostEventEdit;
+  const testMode = uiState.testMode ?? false;
   
   // Helper functions to update UI state
   const setShowSummaryView = (value) => setUiState(prev => ({ ...prev, showSummaryView: typeof value === 'function' ? value(prev.showSummaryView) : value }));
   const setShowEventSetup = (value) => setUiState(prev => ({ ...prev, showEventSetup: typeof value === 'function' ? value(prev.showEventSetup) : value }));
   const setIsPostEventEdit = (value) => setUiState(prev => ({ ...prev, isPostEventEdit: typeof value === 'function' ? value(prev.isPostEventEdit) : value }));
+  const setTestMode = (value) => setUiState(prev => ({ ...prev, testMode: typeof value === 'function' ? value(prev.testMode ?? false) : value }));
+
+  // Cumulative time offset in minutes added by +15 MIN button during test mode
+  // Resets to 0 when a new event starts
+  const [testTimeOffsetMins, setTestTimeOffsetMins] = useState(0);
   
   // Event management UI state (showSummaryView, showEventSetup, isPostEventEdit are now derived from uiState above)
   const [showEventModal, setShowEventModal] = useState(false);
@@ -3897,6 +3903,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       
       if (response && response._id) {
         startEvent(response._id, response.name);
+        setTestTimeOffsetMins(0);
         // Record start time in eventSetupData
         const startTimeNow = new Date().toTimeString().slice(0, 5);
         setEventSetupData(prev => ({
@@ -4551,7 +4558,9 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   }, [handleProcessPaymentWithTip, readerInfo, readerConnected, updateCheckoutStage, checkoutSubtotal, checkoutTabInfo, sendProcessPayment, sendTipUpdate, setTabs]);
 
   const handleItemClick = useCallback((item, modifierData = null) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = testMode && testTimeOffsetMins > 0
+      ? new Date(Date.now() + testTimeOffsetMins * 60 * 1000).toISOString()
+      : new Date().toISOString();
     const modifierName = typeof modifierData === 'string' ? modifierData : modifierData?.name;
     const modifierPrice = typeof modifierData === 'object' && modifierData !== null && modifierData.priceAdjustment !== undefined ? Number(modifierData.priceAdjustment) : 0;
     console.log(`[POS] Item clicked: "${item.name}"${modifierName ? ` with modifier: "${modifierName}"` : ''} at ${timestamp}`);
@@ -4627,7 +4636,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     
     // Save to server after item added
     setTimeout(() => saveToServer('item-added'), 500);
-  }, [activeTabId, nextTabNumber, tabs, saveToServer]);
+  }, [activeTabId, nextTabNumber, tabs, saveToServer, testMode, testTimeOffsetMins]);
 
   const handleRemoveItem = useCallback((index) => {
     if (!activeTabId) return;
@@ -7486,6 +7495,25 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               >
                 EVENT SETUP
               </button>
+              <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                <button
+                  onClick={() => setTestMode(prev => !prev)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    letterSpacing: '0.08em',
+                    color: testMode ? '#22c55e' : '#888',
+                    fontFamily: 'Montserrat, sans-serif',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  TEST
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -7823,28 +7851,30 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             </button>
           )}
 
-          {/* Test / Live mode toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSquareTestMode(prev => !prev);
-            }}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: squareTestMode ? '#777' : '#22c55e',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              letterSpacing: '0.05em',
-              cursor: 'pointer',
-              fontFamily: 'Montserrat, sans-serif',
-            }}
-          >
-            {squareTestMode ? 'TEST MODE' : 'LIVE MODE'}
-          </button>
+          {/* +15 MIN button - only shown in test mode */}
+          {testMode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setTestTimeOffsetMins(prev => prev + 15);
+              }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: '#22c55e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                fontFamily: 'Montserrat, sans-serif',
+              }}
+            >
+              +15 MIN{testTimeOffsetMins > 0 ? ` (+${testTimeOffsetMins})` : ''}
+            </button>
+          )}
         </div>
 
         {/* POS Content */}

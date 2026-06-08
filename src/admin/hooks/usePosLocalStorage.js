@@ -37,6 +37,7 @@ const DEFAULT_UI_STATE = {
   showEventSetup: false,
   showSummaryView: false,
   isPostEventEdit: false,
+  testMode: false,
 };
 
 // Default event setup data structure
