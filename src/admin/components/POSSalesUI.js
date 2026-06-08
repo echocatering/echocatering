@@ -3997,7 +3997,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     try {
       setSyncing(true);
       // Record end time in eventSetupData
-      const endTimeNow = new Date().toTimeString().slice(0, 5);
+      const endTimeNow = new Date(Date.now() + (testMode ? testTimeOffsetMins * 60 * 1000 : 0)).toTimeString().slice(0, 5);
       setEventSetupData(prev => ({
         ...prev,
         endTime: endTimeNow,
@@ -6268,9 +6268,10 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   onClick={() => {
                     console.log('[Event Summary] FINALIZE EVENT clicked');
                     // Pre-populate setup data from event summary
-                    const endTimeValue = eventSummary?.endTime 
-                      ? new Date(eventSummary.endTime).toTimeString().slice(0, 5) 
-                      : new Date().toTimeString().slice(0, 5);
+                    const offsetMs = testMode ? testTimeOffsetMins * 60 * 1000 : 0;
+                    const endTimeValue = eventSummary?.endTime
+                      ? new Date(new Date(eventSummary.endTime).getTime() + offsetMs).toTimeString().slice(0, 5)
+                      : new Date(Date.now() + offsetMs).toTimeString().slice(0, 5);
                     
                     // Build inventory from menu items
                     const buildInventory = (cat) => allItems
