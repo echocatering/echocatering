@@ -4030,7 +4030,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     } finally {
       setSyncing(false);
     }
-  }, [apiCall, eventId, eventName, tabs, clearEvent]);
+  }, [apiCall, eventId, eventName, tabs, clearEvent, testMode, testTimeOffsetMins]);
 
   /**
    * Force quit the event - bypasses tab checks and forces to summary view
@@ -4043,8 +4043,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       setSyncing(true);
       console.log('[POS] Force quitting event with tabs:', tabs.map(t => ({ id: t.id, name: t.name, status: t.status, itemCount: t.items?.length })));
       
+      // Record end time in eventSetupData (account for test mode time offset)
+      const endTimeNow = new Date(Date.now() + (testMode ? testTimeOffsetMins * 60 * 1000 : 0)).toTimeString().slice(0, 5);
+      setEventSetupData(prev => ({
+        ...prev,
+        endTime: endTimeNow,
+      }));
+
       // Force all non-archived tabs to be marked as archived before ending
-      const forcedTabs = tabs.map(t => 
+      const forcedTabs = tabs.map(t =>
         t.status !== 'archived' ? { ...t, status: 'archived', forceClosed: true } : t
       );
       
@@ -4072,7 +4079,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     } finally {
       setSyncing(false);
     }
-  }, [apiCall, eventId, eventName, tabs]);
+  }, [apiCall, eventId, eventName, tabs, testMode, testTimeOffsetMins]);
 
   /**
    * Close summary view and clear local state
