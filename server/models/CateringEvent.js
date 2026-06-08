@@ -57,6 +57,9 @@ const cateringEventSchema = new mongoose.Schema({
   guestCount: { type: Number, default: 0, min: 0 },
   durationHours: { type: Number, default: 0, min: 0 },
 
+  // Minimum flat rate locked at the time the event row was first saved in EventSales
+  savedMinimum: { type: Number, default: null },
+
   // Payment model (POS: consumption/flat_fee/hybrid; Sales page: S/C/H)
   paymentModel: {
     type: String,

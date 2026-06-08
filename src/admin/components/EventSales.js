@@ -131,6 +131,11 @@ const EventSales = () => {
           }
         });
         
+        // Stamp savedMinimum the first time a row is locked (never overwrite once set)
+        if (event.savedMinimum == null) {
+          fieldsToSave.savedMinimum = pricingVars.minimum;
+        }
+
         await apiCall(`/catering-events/${eventId}`, {
           method: 'PUT',
           body: JSON.stringify({
@@ -447,6 +452,7 @@ const EventSales = () => {
       name: 'Report',
       collapsable: false,
       columns: [
+        { key: 'minCol', label: 'MIN', width: '80px', editable: false },
         { key: 'sales', label: 'Σ CPH', width: '90px', editable: false },
         { key: 'totalSalesCol', label: 'Sales', width: '90px', editable: false, hidden: !showPayView },
         { key: 'salesTax', label: 'Tax', width: '80px', editable: false },
@@ -644,10 +650,30 @@ const EventSales = () => {
             </label>
           </div>
         );
+      case 'minCol': {
+        // MIN stored at lock time; fall back to current pricingVars.minimum for unlocked events
+        const minVal = event.savedMinimum != null ? event.savedMinimum : pricingVars.minimum;
+        const minReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const minInvoice = calculateInvoice(event);
+        const minPaid = minReceived >= minInvoice;
+        return (
+          <span style={{ color: minPaid ? '#22c55e' : '#333', fontWeight: minPaid ? 'bold' : 'normal' }}>
+            {minPaid ? '+' : ''}{formatCurrency(minVal)}
+          </span>
+        );
+      }
       case 'sales': {
-        // Σ CPH = CPH ($/PP) × Total Patrons
-        const cphTotal = pricingVars.perPerson * (parseFloat(getCurrentValue(event, 'guestCount')) || parseFloat(event.guestCount) || 0);
-        return cphTotal > 0 ? formatCurrency(cphTotal) : '-';
+        // Σ CPH = CPH rate × Total Patrons
+        const cphPatrons = parseFloat(getCurrentValue(event, 'guestCount')) || parseFloat(event.guestCount) || 0;
+        const cphTotal = pricingVars.perPerson * cphPatrons;
+        const cphReceived = parseFloat(getCurrentValue(event, 'amountReceived')) || 0;
+        const cphInvoice = calculateInvoice(event);
+        const cphPaid = cphReceived >= cphInvoice;
+        return cphTotal > 0 ? (
+          <span style={{ color: cphPaid ? '#22c55e' : '#333', fontWeight: cphPaid ? 'bold' : 'normal' }}>
+            {cphPaid ? '+' : ''}{formatCurrency(cphTotal)}
+          </span>
+        ) : '-';
       }
       case 'totalSalesCol':
         return formatCurrency(event.totalSales);
