@@ -35,9 +35,7 @@ const EventSales = () => {
     return {
       minimum: 500,      // M = minimum event fee
       overhead: 150,     // O = flat overhead
-      first2Hr: 15,      // F_first = per-guest rate for first 2 hours
-      addHr: 10,         // F_add = per-guest rate for additional hours
-      perPerson: 25,     // S = per-person service fee (for customer pays model)
+      perPerson: 25,     // $/PP = per-person service charge
     };
   });
   
@@ -115,7 +113,7 @@ const EventSales = () => {
         const groupFields = {
           basicInfo: ['name', 'date', 'guestCount', 'startTime', 'endTime'],
           overhead: ['accommodationCost', 'travelCost', 'permitCost', 'insuranceCost', 'laborCost'],
-          paymentModel: ['paymentModel', 'amountReceived', 'totalTips']
+          paymentModel: ['amountReceived', 'totalTips']
         };
         
         // Gather all current values for fields in this group
@@ -387,40 +385,11 @@ const EventSales = () => {
     return num.toFixed(2);
   };
 
-  // Calculate invoice based on payment model
-  // Variables: c=guests, e=OHD, i=hours, k=$+HR, l=$2HR, m=$PP, M=MIN
-  // S: S = 2(l×c) + max(i-2,0)(k×c) + e  →  max(S, MIN)
-  // C: N = (c×m)+d+e+f                   →  max(N, MIN)
-  // H: o=cash+credit, p=MIN−o, q=invoice×1.08, R=q+p+d+e+f  →  max(R, MIN)
+  // Calculate service charge invoice: Min + ($/PP × Patrons)
   const calculateInvoice = (event) => {
-    const model = getCurrentValue(event, 'paymentModel') || 'S';
-    const c = parseFloat(event.guestCount) || 0;       // Total Guests
-    const i = parseFloat(event.durationHours) || 0;    // Total Hours
-    const { minimum: M, overhead: e, first2Hr: l, addHr: k, perPerson: m } = pricingVars;
-    const d = parseFloat(event.permitCost) || 0;       // Permit
-    const f = parseFloat(event.insuranceCost) || 0;    // Insurance
-
-    if (model === 'S') {
-      // Total = MAX(svc, MIN); OHD/permit/insurance are itemized within that total
-      const svc = (Math.min(i, 2) * l * c) + (Math.max(i - 2, 0) * k * c);
-      return Math.max(svc, M);
-    } else if (model === 'C') {
-      // Total = MAX($/PP×patrons, MIN); extras are itemized within that total
-      const chargeBase = m * c;
-      return Math.max(chargeBase, M);
-    } else if (model === 'H') {
-      // tabTotal = invoiceTab × 1.08
-      // serviceCharge = MAX(0, MIN − cash − credit − tabTotal − OHD − permit − insurance)
-      // invoiceTotal = tabTotal + serviceCharge
-      const parsed = parseItemData(event.itemData);
-      const cash = parsed.paymentTotals.CASH > 0 ? parsed.paymentTotals.CASH : (event.cashTotal || 0);
-      const credit = parsed.paymentTotals.CREDIT > 0 ? parsed.paymentTotals.CREDIT : (event.creditTotal || 0);
-      const invoicePOS = parsed.paymentTotals.INVOICE > 0 ? parsed.paymentTotals.INVOICE : (event.invoiceTotal || 0);
-      const tabTotal = invoicePOS * 1.08;
-      const serviceCharge = Math.max(0, M - cash - credit - tabTotal - e - d - f);
-      return tabTotal + serviceCharge;
-    }
-    return 0;
+    const c = parseFloat(event.guestCount) || 0;
+    const { minimum: M, perPerson: m } = pricingVars;
+    return M + (m * c);
   };
 
   // Column definitions with groups
@@ -466,12 +435,11 @@ const EventSales = () => {
       ]
     },
     {
-      name: 'Payment Model',
+      name: 'Service Charge',
       collapsable: true,
       collapsed: paymentModelCollapsed,
       columns: [
         { key: 'invoiceDetails', label: '☰', width: '40px', editable: false, isInvoiceMenu: true },
-        { key: 'paymentModel', label: 'Model', width: '120px', editable: true, field: 'paymentModel', lockGroup: 'paymentModel' },
         { key: 'calculatedInvoice', label: 'Invoice', width: '100px', editable: false },
         { key: 'amountReceived', label: 'Received', width: '100px', editable: true, field: 'amountReceived', lockGroup: 'paymentModel' },
         { key: 'lockPaymentModel', label: '', width: '40px', editable: false, isLock: true, lockGroup: 'paymentModel', isLockHeader: true },
@@ -591,8 +559,6 @@ const EventSales = () => {
       case 'cogs':
         return formatCurrency(event.cogsCost);
       case 'salesTax':
-        // Model C = no alcohol sold, so no sales tax
-        if ((getCurrentValue(event, 'paymentModel') || 'S') === 'C') return '-';
         // Tax - 8% of all payment methods (CASH + CREDIT + INVOICE)
         const parsedForTax = parseItemData(event.itemData);
         const cashForTax = parsedForTax.paymentTotals.CASH > 0 ? parsedForTax.paymentTotals.CASH : (event.cashTotal || 0);
@@ -748,26 +714,11 @@ const EventSales = () => {
           (parseFloat(getCurrentValue(event, 'laborCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'spillageCost')) || 0) +
           (parseFloat(getCurrentValue(event, 'cogsCost')) || 0);
-        const profitModel = getCurrentValue(event, 'paymentModel') || 'S';
         const profitParsed = parseItemData(event.itemData);
         const profitCash = profitParsed.paymentTotals.CASH > 0 ? profitParsed.paymentTotals.CASH : (event.cashTotal || 0);
         const profitCredit = profitParsed.paymentTotals.CREDIT > 0 ? profitParsed.paymentTotals.CREDIT : (event.creditTotal || 0);
-        const profitTips = parseFloat(event.totalTips) || 0;
-        let profit;
-        if (profitModel === 'H') {
-          // Profit = (Invoice + Sales + Tips) − (Tax + Exp)
-          const hInvoice = calculateInvoice(event);
-          const hSales = profitCash + profitCredit;
-          const hTax = hSales * 0.08;
-          profit = (hInvoice + hSales + profitTips) - (hTax + profitExpenses);
-        } else if (profitModel === 'C') {
-          // Profit = Received − Exp  (no tax for C)
-          profit = profitReceived - profitExpenses;
-        } else {
-          // Model S: Profit = Received − Exp − Tax
-          const sTax = (profitCash + profitCredit) * 0.08;
-          profit = profitReceived - profitExpenses - sTax;
-        }
+        const sTax = (profitCash + profitCredit) * 0.08;
+        const profit = profitReceived - profitExpenses - sTax;
         return (
           <span style={{ color: profit > 0 ? '#22c55e' : profit < 0 ? '#ef4444' : '#666', fontWeight: 'bold' }}>
             {formatCurrency(profit)}
@@ -1115,24 +1066,6 @@ const EventSales = () => {
               value={pricingVars.overhead}
               onChange={(e) => setPricingVars(prev => ({ ...prev, overhead: parseFloat(e.target.value) || 0 }))}
               style={{ width: '70px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$2HR</label>
-            <input
-              type="number"
-              value={pricingVars.first2Hr}
-              onChange={(e) => setPricingVars(prev => ({ ...prev, first2Hr: parseFloat(e.target.value) || 0 }))}
-              style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>$+HR</label>
-            <input
-              type="number"
-              value={pricingVars.addHr}
-              onChange={(e) => setPricingVars(prev => ({ ...prev, addHr: parseFloat(e.target.value) || 0 }))}
-              style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2096,66 +2029,12 @@ const EventSales = () => {
         const event = events.find(e => e._id === invoiceDetailsEventId);
         if (!event) return null;
         
-        const receiptModel = getCurrentValue(event, 'paymentModel') || 'S';
-        const isModelC = receiptModel === 'C';
-        const isModelH = receiptModel === 'H';
-        const parsed = parseItemData(event.itemData);
-
-        // S/C: invoice tab items
-        const invoiceItems = parsed.items.filter(item => item.transactionType === 'INVOICE');
-        const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.cost, 0);
-        const invoiceTax = isModelC ? 0 : invoiceSubtotal * 0.08;
-        const invoiceTotal = invoiceSubtotal + invoiceTax;
-        const groupedInvoiceItems = Object.values(
-          invoiceItems.reduce((acc, item) => {
-            if (!acc[item.name]) acc[item.name] = { name: item.name, count: 0, total: 0 };
-            acc[item.name].count += 1;
-            acc[item.name].total += item.cost;
-            return acc;
-          }, {})
-        );
-
-        // H: bar sales items (cash + credit tabs)
-        const barItems = parsed.items.filter(item => item.transactionType === 'CASH' || item.transactionType === 'CREDIT');
-        const groupedBarItems = Object.values(
-          barItems.reduce((acc, item) => {
-            if (!acc[item.name]) acc[item.name] = { name: item.name, count: 0, total: 0 };
-            acc[item.name].count += 1;
-            acc[item.name].total += item.cost;
-            return acc;
-          }, {})
-        );
-        const barSalesTotal = barItems.reduce((sum, item) => sum + item.cost, 0);
-
-        // Additional charges
+        const guestCount = parseFloat(event.guestCount) || 0;
         const permitCost = parseFloat(event.permitCost) || 0;
         const insuranceCost = parseFloat(event.insuranceCost) || 0;
         const overheadCost = pricingVars.overhead || 0;
-
-        // Model S formula components
-        const sGuestCount = parseFloat(event.guestCount) || 0;
-        const sDurationHrs = parseFloat(event.durationHours) || 0;
-        const sServiceCost = (Math.min(sDurationHrs, 2) * pricingVars.first2Hr * sGuestCount)
-          + (Math.max(sDurationHrs - 2, 0) * pricingVars.addHr * sGuestCount);
-        const sFinalTotal = Math.max(sServiceCost, pricingVars.minimum);
-        const sDisplayServiceCost = sFinalTotal - overheadCost - insuranceCost - permitCost;
-
-        // Model C formula components
-        const cChargeBase = pricingVars.perPerson * sGuestCount;
-        const cFinalTotal = Math.max(cChargeBase, pricingVars.minimum);
-        const cDisplayServiceCost = cFinalTotal - overheadCost - insuranceCost - permitCost;
-
-        // H: receipt components
-        const hInvoiceTax = isModelH ? invoiceSubtotal * 0.08 : 0;
-        const hTabTotal = isModelH ? invoiceSubtotal + hInvoiceTax : 0;
-        const hCashBar = isModelH ? barSalesTotal : 0;
-        const hTotalSales = isModelH ? (hCashBar + hTabTotal) : 0;
-        const hServiceCharge = isModelH ? Math.max(0, pricingVars.minimum - hCashBar - hTabTotal - overheadCost - insuranceCost - permitCost) : 0;
-
-        // Totals (model-aware)
-        const hInvoiceTotal = isModelH ? calculateInvoice(event) : 0;
-        const finalTotal = isModelH ? hInvoiceTotal : receiptModel === 'S' ? sFinalTotal : cFinalTotal;
-        const showMinimumLine = false;
+        const serviceChargePP = pricingVars.perPerson * guestCount;
+        const finalTotal = calculateInvoice(event);
         
         const eventDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
           year: 'numeric', 
@@ -2210,148 +2089,40 @@ const EventSales = () => {
                   <div style={{ color: '#333', fontSize: '16px', fontWeight: 'bold', marginTop: '8px' }}>{event.name}</div>
                 </div>
                 
-                {isModelH ? (
-                  <>
-                    {/* Model H: Itemized invoice tab */}
-                    <div style={{ marginBottom: '4px' }}>
-                      {groupedInvoiceItems.length > 0 ? (
-                        groupedInvoiceItems.map((item, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                            <span style={{ color: '#333' }}>{item.count > 1 ? `${item.count}x ${item.name}` : item.name}</span>
-                            <span style={{ color: '#333', fontWeight: 500 }}>${item.total.toFixed(2)}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ textAlign: 'center', color: '#999', padding: '12px 0' }}>No invoice tab items</div>
-                      )}
+                <div style={{ marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                    <span style={{ color: '#333' }}>Minimum</span>
+                    <span style={{ color: '#333', fontWeight: 500 }}>${pricingVars.minimum.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                    <span style={{ color: '#333' }}>Service Charge (${pricingVars.perPerson}/pp × {guestCount} guests)</span>
+                    <span style={{ color: '#333', fontWeight: 500 }}>${serviceChargePP.toFixed(2)}</span>
+                  </div>
+                  {overheadCost > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                      <span style={{ color: '#333' }}>Overhead</span>
+                      <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
                     </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '10px 0' }} />
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                        <span style={{ color: '#333' }}>Subtotal</span>
-                        <span style={{ color: '#333' }}>${invoiceSubtotal.toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                        <span style={{ color: '#333' }}>Tax (8%)</span>
-                        <span style={{ color: '#333' }}>${hInvoiceTax.toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '2px solid #ddd', fontWeight: 'bold' }}>
-                        <span>Tab Total</span>
-                        <span>${hTabTotal.toFixed(2)}</span>
-                      </div>
+                  )}
+                  {insuranceCost > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                      <span style={{ color: '#333' }}>Insurance</span>
+                      <span style={{ color: '#333', fontWeight: 500 }}>${insuranceCost.toFixed(2)}</span>
                     </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '10px 0' }} />
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                        <span style={{ color: '#999' }}>Cash Bar</span>
-                        <span style={{ color: '#999' }}>${hCashBar.toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                        <span style={{ color: '#999' }}>Total Sales</span>
-                        <span style={{ color: '#999' }}>${hTotalSales.toFixed(2)}</span>
-                      </div>
+                  )}
+                  {permitCost > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                      <span style={{ color: '#333' }}>Permit</span>
+                      <span style={{ color: '#333', fontWeight: 500 }}>${permitCost.toFixed(2)}</span>
                     </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '10px 0' }} />
-                    <div style={{ marginBottom: '4px' }}>
-                      {hServiceCharge > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Service Charge</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${hServiceCharge.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {overheadCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Overhead</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {insuranceCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Insurance</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${insuranceCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {permitCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Permit</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${permitCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold', borderTop: '2px dashed #ddd', marginTop: '8px' }}>
-                        <span>Invoice Total</span>
-                        <span>${hInvoiceTotal.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </>
-                ) : receiptModel === 'S' ? (
-                  <>
-                    {/* Model S */}
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                        <span style={{ color: '#333' }}>Service Cost</span>
-                        <span style={{ color: '#333', fontWeight: 500 }}>${sDisplayServiceCost.toFixed(2)}</span>
-                      </div>
-                      {overheadCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Overhead</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {insuranceCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Insurance</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${insuranceCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {permitCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Permit</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${permitCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold' }}>
-                        <span>Total</span>
-                        <span>${sFinalTotal.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Model C */}
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                        <span style={{ color: '#333' }}>Service Cost</span>
-                        <span style={{ color: '#333', fontWeight: 500 }}>${cDisplayServiceCost.toFixed(2)}</span>
-                      </div>
-                      {overheadCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Overhead</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${overheadCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {insuranceCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Insurance</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${insuranceCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {permitCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                          <span style={{ color: '#333' }}>Permit</span>
-                          <span style={{ color: '#333', fontWeight: 500 }}>${permitCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold' }}>
-                        <span>Total</span>
-                        <span>${cFinalTotal.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
+                <div style={{ borderTop: '2px dashed #ddd', paddingTop: '15px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: '20px', fontWeight: 'bold' }}>
+                    <span>Service Charge Total</span>
+                    <span>${finalTotal.toFixed(2)}</span>
+                  </div>
+                </div>
                 
                 {/* Payment Method */}
                 <div style={{ textAlign: 'center', marginTop: '20px', padding: '10px', background: '#f5f5f5', borderRadius: '8px', color: '#666' }}>
@@ -2403,52 +2174,16 @@ const EventSales = () => {
                           <div class="date">${eventDate}</div>
                           <div class="event-name">${event.name}</div>
                         </div>
-                        ${isModelH ? `
                         <div class="items">
-                          ${groupedInvoiceItems.length > 0 ? groupedInvoiceItems.map(item => `<div class="item"><span>${item.count > 1 ? item.count + 'x ' + item.name : item.name}</span><span>&nbsp;— $${item.total.toFixed(2)}</span></div>`).join('') : '<div class="item" style="color:#999">No invoice tab items</div>'}
-                        </div>
-                        <hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
-                        <div class="items">
-                          <div class="item"><span>Subtotal</span><span>&nbsp;— $${invoiceSubtotal.toFixed(2)}</span></div>
-                          <div class="item"><span>Tax (8%)</span><span>&nbsp;— $${hInvoiceTax.toFixed(2)}</span></div>
-                          <div class="item" style="font-weight:bold;border-top:2px solid #ddd;padding-top:4px"><span>Tab Total</span><span>&nbsp;— $${hTabTotal.toFixed(2)}</span></div>
-                        </div>
-                        <hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
-                        <div class="items">
-                          <div class="item" style="color:#999"><span>Cash Bar</span><span>&nbsp;— $${hCashBar.toFixed(2)}</span></div>
-                          <div class="item" style="color:#999"><span>Total Sales</span><span>&nbsp;— $${hTotalSales.toFixed(2)}</span></div>
-                        </div>
-                        <hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
-                        <div class="items">
-                          ${hServiceCharge > 0 ? `<div class="item"><span>Service Charge</span><span>&nbsp;— $${hServiceCharge.toFixed(2)}</span></div>` : ''}
+                          <div class="item"><span>Minimum</span><span>&nbsp;— $${pricingVars.minimum.toFixed(2)}</span></div>
+                          <div class="item"><span>Service Charge ($${pricingVars.perPerson}/pp × ${guestCount} guests)</span><span>&nbsp;— $${serviceChargePP.toFixed(2)}</span></div>
                           ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
                           ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
                           ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
                         </div>
                         <div class="totals">
-                          <div class="total-row final"><span>Invoice Total</span><span>&nbsp;— $${hInvoiceTotal.toFixed(2)}</span></div>
+                          <div class="total-row final"><span>Service Charge Total</span><span>&nbsp;— $${finalTotal.toFixed(2)}</span></div>
                         </div>
-                        ` : receiptModel === 'S' ? `
-                        <div class="items">
-                          <div class="item"><span>Service Cost</span><span>&nbsp;— $${sDisplayServiceCost.toFixed(2)}</span></div>
-                          ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
-                          ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
-                          ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
-                        </div>
-                        <div class="totals">
-                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${sFinalTotal.toFixed(2)}</span></div>
-                        </div>
-                        ` : `
-                        <div class="items">
-                          <div class="item"><span>Service Cost</span><span>&nbsp;— $${cDisplayServiceCost.toFixed(2)}</span></div>
-                          ${overheadCost > 0 ? `<div class="item"><span>Overhead</span><span>&nbsp;— $${overheadCost.toFixed(2)}</span></div>` : ''}
-                          ${insuranceCost > 0 ? `<div class="item"><span>Insurance</span><span>&nbsp;— $${insuranceCost.toFixed(2)}</span></div>` : ''}
-                          ${permitCost > 0 ? `<div class="item"><span>Permit</span><span>&nbsp;— $${permitCost.toFixed(2)}</span></div>` : ''}
-                        </div>
-                        <div class="totals">
-                          <div class="total-row final"><span>Total</span><span>&nbsp;— $${cFinalTotal.toFixed(2)}</span></div>
-                        </div>
-                        `}
                         <div class="payment-method">Payment method: Invoice</div>
                         <div class="footer">Thank you for your business!<br>echocatering.com</div>
                       </body>
@@ -2484,7 +2219,7 @@ const EventSales = () => {
                       insuranceCost > 0 ? `Insurance: $${insuranceCost.toFixed(2)}` : null,
                       overheadCost > 0 ? `Overhead: $${overheadCost.toFixed(2)}` : null,
                     ].filter(Boolean).join('\n');
-                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\n${invoiceItems.map(item => `${item.name}: $${item.cost.toFixed(2)}`).join('\n')}\n\nSubtotal: $${invoiceSubtotal.toFixed(2)}\nTax (8%): $${invoiceTax.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\nTotal: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
+                    const shareText = `Invoice Receipt - ${event.name}\n${eventDate}\n\nMinimum: $${pricingVars.minimum.toFixed(2)}\nService Charge ($${pricingVars.perPerson}/pp × ${guestCount} guests): $${serviceChargePP.toFixed(2)}${additionalCharges ? '\n' + additionalCharges : ''}\n\nService Charge Total: $${finalTotal.toFixed(2)}\n\nPayment method: Invoice`;
                     
                     if (navigator.share) {
                       try {

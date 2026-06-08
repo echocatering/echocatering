@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.*
 import android.widget.Toast
+import androidx.core.view.WindowCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -64,6 +65,8 @@ class WebViewActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         
         super.onCreate(savedInstanceState)
+        // Fix zero-height WebView: opt out of edge-to-edge so system bars reserve space
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         binding = ActivityWebviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
@@ -102,7 +105,6 @@ class WebViewActivity : AppCompatActivity() {
                 
                 // Enable proper viewport sizing for orientation detection
                 useWideViewPort = true
-                loadWithOverviewMode = true
                 
                 // Enable aggressive caching for videos and media
                 cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
@@ -155,29 +157,6 @@ class WebViewActivity : AppCompatActivity() {
                             }
                         } else {
                             // Cache the video for next time
-                            videoCacheManager.cacheVideo(url)
-                        }
-                    }
-                    
-                    // Intercept map images from Cloudinary (PNG files)
-                    if (url.contains("cloudinary") && (url.endsWith(".png") || url.contains("/image/"))) {
-                        val cachedPath = videoCacheManager.getCachedVideoPath(url)
-                        
-                        if (cachedPath != null) {
-                            // Serve from cache
-                            try {
-                                val file = File(cachedPath)
-                                val inputStream = FileInputStream(file)
-                                return WebResourceResponse(
-                                    "image/png",
-                                    "UTF-8",
-                                    inputStream
-                                )
-                            } catch (e: Exception) {
-                                // Fall through to network request
-                            }
-                        } else {
-                            // Cache the image for next time
                             videoCacheManager.cacheVideo(url)
                         }
                     }

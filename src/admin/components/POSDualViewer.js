@@ -164,12 +164,11 @@ export default function POSDualViewer() {
                 background: '#000',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
-                <MenuGallery2 
-                  viewMode="menu"
-                  orientationOverride="horizontal"
+                <POSSalesUI
+                  isStandalone={true}
+                  layoutMode="horizontal"
                   outerWidth={horizontalWidth}
                   outerHeight={viewerHeight}
-                  disableInnerScale={true}
                 />
               </div>
             </div>

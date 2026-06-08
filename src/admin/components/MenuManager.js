@@ -95,7 +95,7 @@ const MapContainer = ({ mapSvgContent, mapError, mapRef, svgRef, onMapReady, map
     requestAnimationFrame(() => {
       if (mapRef.current) processBatch(0);
     });
-  }, [mapSvgContent, mapType, mapRef, svgRef]);
+  }, [mapSvgContent, mapRef, svgRef]);
 
   return (
     <div
@@ -624,7 +624,7 @@ const MenuManager = () => {
     const exists = current.includes(upper);
     const next = exists ? current.filter(c => c !== upper) : [...current, upper];
     setSelectedRegions(next);
-  }, [selectedRegions, setSelectedRegions]);
+  }, [selectedRegions]);
 
   // Ref kept current so map click handlers always call the latest toggleRegion,
   // even though the SVG is never re-mounted and the closure from setup time is stale.
@@ -1581,6 +1581,9 @@ const MenuManager = () => {
     };
   }, [mapType]);
 
+  // Ref so handleMapReady can always call the latest refreshMapHighlights without a dep cycle
+  const refreshMapHighlightsRef = useRef(null);
+
   // Update highlights via direct DOM manipulation - never re-render SVG
   const refreshMapHighlights = useCallback(() => {
     if (!mapRef.current) return;
@@ -1596,6 +1599,11 @@ const MenuManager = () => {
       pathEl.style.setProperty('stroke-width', '0.4', 'important');
     });
   }, [selectedRegions]);
+
+  // Keep the ref current whenever refreshMapHighlights is recreated
+  useEffect(() => {
+    refreshMapHighlightsRef.current = refreshMapHighlights;
+  }, [refreshMapHighlights]);
 
   // Set up click handlers once when map is ready
   const handleMapReady = useCallback(() => {
@@ -1628,8 +1636,9 @@ const MenuManager = () => {
         pathEl.addEventListener('click', handlePathClick);
       });
 
-      // All paths are stamped — signal readiness so the highlights useEffect fires
-      // with the correct selectedRegions. Avoids stale-closure highlights call here.
+      // All paths are stamped — apply highlights immediately (covers case where mapLoaded
+      // was already true so setMapLoaded(true) below won't trigger the effect).
+      if (refreshMapHighlightsRef.current) refreshMapHighlightsRef.current();
       setMapLoaded(true);
     };
 

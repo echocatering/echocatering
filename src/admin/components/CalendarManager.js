@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 const DAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
-const MODEL_COLORS = { S: '#6366f1', C: '#10b981', H: '#f59e0b' };
+const EVENT_DOT_COLOR = '#6366f1';
 
 const lbl = {
   fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', fontWeight: 600,
@@ -22,26 +22,16 @@ const loadPricingVars = () => {
     const s = localStorage.getItem('eventSalesPricingVars');
     if (s) return JSON.parse(s);
   } catch (e) {}
-  return { minimum: 500, overhead: 150, first2Hr: 15, addHr: 10, perPerson: 25 };
+  return { minimum: 500, overhead: 150, perPerson: 25 };
 };
 
-const calcEstimate = (model, patrons, hours, pricingVars) => {
+const calcEstimate = (patrons, pricingVars) => {
   const c = parseFloat(patrons) || 0;
-  const i = parseFloat(hours) || 0;
-  const { minimum: M, first2Hr: l, addHr: k, perPerson: m } = pricingVars;
-  if (model === 'S') return Math.max((Math.min(i, 2) * l * c) + (Math.max(i - 2, 0) * k * c), M);
-  if (model === 'C') return Math.max(m * c, M);
-  return null;
+  const { minimum: M, perPerson: m } = pricingVars;
+  return M + (m * c);
 };
 
 const fmt = (n) => `$${Number(n || 0).toFixed(2)}`;
-
-const normalizeModel = (raw) => {
-  if (raw === 'consumption') return 'S';
-  if (raw === 'flat_fee') return 'C';
-  if (raw === 'hybrid') return 'H';
-  return raw || 'S';
-};
 
 const CalendarManager = () => {
   const { apiCall } = useAuth();
@@ -55,7 +45,7 @@ const CalendarManager = () => {
 
   const emptyForm = {
     name: '', date: '', guestCount: '', startTime: '', endTime: '',
-    paymentModel: 'S', permitCost: '', insuranceCost: '',
+    permitCost: '', insuranceCost: '',
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -99,9 +89,9 @@ const CalendarManager = () => {
   }, [form.startTime, form.endTime]);
 
   const estimate = useMemo(() => {
-    if (form.paymentModel === 'H' || !form.guestCount) return null;
-    return calcEstimate(form.paymentModel, form.guestCount, durationHours, pricingVars);
-  }, [form.paymentModel, form.guestCount, durationHours, pricingVars]);
+    if (!form.guestCount) return null;
+    return calcEstimate(form.guestCount, pricingVars);
+  }, [form.guestCount, pricingVars]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,7 +107,6 @@ const CalendarManager = () => {
           startTime: form.startTime,
           endTime: form.endTime,
           durationHours: parseFloat(durationHours) || 0,
-          paymentModel: form.paymentModel,
           permitCost: parseFloat(form.permitCost) || 0,
           insuranceCost: parseFloat(form.insuranceCost) || 0,
         }),
@@ -171,8 +160,8 @@ const CalendarManager = () => {
                 </span>
                 {dayEvs.length > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', marginTop: '1px' }}>
-                    {dayEvs.slice(0, 3).map((ev, ei) => (
-                      <span key={ei} style={{ width: '4px', height: '4px', borderRadius: '50%', background: MODEL_COLORS[normalizeModel(ev.paymentModel)] || '#6366f1', display: 'inline-block' }} />
+                    {dayEvs.slice(0, 3).map((_, ei) => (
+                      <span key={ei} style={{ width: '4px', height: '4px', borderRadius: '50%', background: EVENT_DOT_COLOR, display: 'inline-block' }} />
                     ))}
                   </div>
                 )}
@@ -220,11 +209,6 @@ const CalendarManager = () => {
               )}
               {upcomingEvent.guestCount > 0 && (
                 <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{upcomingEvent.guestCount} guests</span>
-              )}
-              {upcomingEvent.paymentModel && (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 9px', borderRadius: '99px', background: MODEL_COLORS[normalizeModel(upcomingEvent.paymentModel)] || '#6366f1', color: '#fff' }}>
-                  {normalizeModel(upcomingEvent.paymentModel)}
-                </span>
               )}
               <span style={{ fontSize: '0.62rem', color: '#d1d5db' }}>{upcomingIndex + 1} / {upcoming.length}</span>
             </>
@@ -279,18 +263,8 @@ const CalendarManager = () => {
             </div>
           </div>
 
-          {/* Row 2: model, permit, insurance, summary */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '14px', alignItems: 'end', marginBottom: '20px' }}>
-            <div>
-              <label style={lbl}>Model</label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {['S', 'C', 'H'].map(m => (
-                  <button key={m} type="button" onClick={() => setForm(p => ({ ...p, paymentModel: m }))}
-                    style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '0.85rem', width: '38px', height: '38px', borderRadius: '7px', border: form.paymentModel === m ? `2px solid ${MODEL_COLORS[m]}` : '1px solid #d1d5db', background: form.paymentModel === m ? MODEL_COLORS[m] : '#fff', color: form.paymentModel === m ? '#fff' : '#374151', cursor: 'pointer', transition: 'all 0.12s' }}
-                  >{m}</button>
-                ))}
-              </div>
-            </div>
+          {/* Row 2: permit, insurance, summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', alignItems: 'end', marginBottom: '20px' }}>
             <div>
               <label style={lbl}>Permit Cost</label>
               <input type="number" min="0" value={form.permitCost} onChange={setField('permitCost')} placeholder="$0" style={inp} />
@@ -303,11 +277,9 @@ const CalendarManager = () => {
               {durationHours && (
                 <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginBottom: '4px' }}>Duration: {durationHours} hrs</div>
               )}
-              {estimate !== null ? (
+              {estimate !== null && (
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#111' }}>Estimate: {fmt(estimate)}</div>
-              ) : form.paymentModel === 'H' ? (
-                <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>H model — use Quote Calculator for estimate</div>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -331,12 +303,10 @@ const CalendarManager = () => {
 
       {/* ── Legend ── */}
       <div style={{ display: 'flex', gap: '18px', marginTop: '16px' }}>
-        {Object.entries(MODEL_COLORS).map(([m, c]) => (
-          <div key={m} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.65rem', color: '#6b7280', fontFamily: 'Montserrat, sans-serif' }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: c, display: 'inline-block' }} />
-            Model {m}
-          </div>
-        ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.65rem', color: '#6b7280', fontFamily: 'Montserrat, sans-serif' }}>
+          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: EVENT_DOT_COLOR, display: 'inline-block' }} />
+          Event
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.65rem', color: '#6b7280', fontFamily: 'Montserrat, sans-serif' }}>
           <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#111', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: '#fff', fontWeight: 700 }}>•</span>
           Today

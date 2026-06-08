@@ -82,12 +82,19 @@ function useMeasuredSize() {
 }
 
 // Inner POS Content Component for 9:19 view
-function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onReopenTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems, showSpendLimitWarning, setShowSpendLimitWarning, spendLimitWarningTab, setSpendLimitWarningTab }) {
+function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveCategory, onItemClick, loading, total, categoryCounts, selectedItems, lastAction, onRemoveItem, tabs, activeTabId, onCreateTab, onSelectTab, onDeleteTab, onArchiveTab, onInvoiceTab, onReopenTab, onUpdateTabName, onUpdateItemModifiers, onMoveItems, onCheckout, checkoutLoading, onDuplicateItems, showSpendLimitWarning, setShowSpendLimitWarning, spendLimitWarningTab, setSpendLimitWarningTab, isSidebarOpen }) {
   // Bottom drawer state - starts collapsed, receipt view is default
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [dragCurrentY, setDragCurrentY] = useState(0);
+
+  // Force collapse bottom drawer if sidebar opens
+  useEffect(() => {
+    if (isSidebarOpen) {
+      setDrawerExpanded(false);
+    }
+  }, [isSidebarOpen]);
   
   // Drawer view state: 'receipt' or 'tabs'
   const [drawerView, setDrawerView] = useState('receipt');
@@ -267,6 +274,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   const currentDrawerHeight = getDrawerHeight();
   
   const handleDragStart = (e) => {
+    if (isSidebarOpen) return; // Prevent dragging when sidebar is open
     setIsDragging(true);
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     setDragStartY(clientY);
@@ -607,7 +615,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }}
                   style={{
                     flex: 1,
-                    height: '40px',
+                    height: `${Math.round(footerHeight * 0.7)}px`,
                     border: 'none',
                     background: '#f5f5f5',
                     borderRadius: '4px',
@@ -638,7 +646,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }}
                   style={{
                     flex: 1,
-                    height: '40px',
+                    height: `${Math.round(footerHeight * 0.7)}px`,
                     border: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '2px solid #800080' : 'none',
                     background: tabs.find(t => t.isSpillage && t.id === activeTabId) ? '#f0e6f0' : '#f5f5f5',
                     borderRadius: '4px',
@@ -665,7 +673,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                   }}
                   style={{
                     flex: 1,
-                    height: '40px',
+                    height: `${Math.round(footerHeight * 0.7)}px`,
                     border: 'none',
                     background: '#f5f5f5',
                     borderRadius: '4px',
@@ -692,7 +700,7 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
                 background: '#fff',
                 borderBottom: '1px solid #eee',
                 flexShrink: 0,
-                height: `${Math.max(60, footerHeight * 0.9)}px`
+                height: `${Math.max(Math.round(outerWidth / 7), Math.round(footerHeight))}px`
               }}>
                 {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
@@ -2510,6 +2518,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     }
   }, [forcedOrientation]);
   const [frameRef, frameSize] = useMeasuredSize();
+  const isHorizontalDevice = (layoutMode === 'auto' && orientation === 'horizontal') || layoutMode === 'horizontal';
+  const isVerticalDevice = (layoutMode === 'auto' && orientation === 'vertical') || layoutMode === 'vertical';
   const [activeCategory, setActiveCategory] = useState('cocktails');
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2669,7 +2679,6 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     
     // On horizontal device: don't immediately clear if showing success animation
     // The animation flow (handleWsCheckoutStage 'success' handler) will clean up after 3s + receipt
-    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
     if (isHorizontalDevice) {
       // Let the success animation flow handle the cleanup - just sync tab state above
       return;
@@ -2714,10 +2723,6 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   // Handle checkout stage updates from other devices (for vertical screen sync)
   const handleWsCheckoutStage = useCallback((data) => {
     console.log('[POS] WebSocket checkout_stage received:', data.stage, data.paymentMethod ? `(${data.paymentMethod})` : '');
-    
-    // Determine device type
-    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
-    const isVerticalDevice = layoutMode === 'auto' && orientation === 'vertical';
     
     // Vertical device IGNORES success/failed stages from WebSocket
     // It manages its own state locally in handleCompleteCashPayment / onPaymentComplete
@@ -3227,7 +3232,6 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   
   // When horizontal view returns to menu (checkoutMode false), clear vertical's transaction messages
   useEffect(() => {
-    const isHorizontalDevice = layoutMode === 'auto' && orientation === 'horizontal';
     if (isHorizontalDevice && !checkoutMode) {
       // Send empty stage to clear any lingering transaction messages on vertical
       sendCheckoutStage('');
@@ -3807,18 +3811,17 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
    * Shows: Test, Reader, Cancel Payment (during checkout) or End Event (outside checkout)
    */
   const handleHeaderTap = useCallback(() => {
-    // Clear any existing timeout
-    if (endEventTimeoutRef.current) {
-      clearTimeout(endEventTimeoutRef.current);
-    }
-    
-    // Show the buttons
-    setShowEndEventButton(true);
-    
-    // Auto-hide after 3 seconds
-    endEventTimeoutRef.current = setTimeout(() => {
-      setShowEndEventButton(false);
-    }, 3000);
+    setShowEndEventButton(prev => {
+      if (prev) {
+        if (endEventTimeoutRef.current) clearTimeout(endEventTimeoutRef.current);
+        return false;
+      }
+      if (endEventTimeoutRef.current) clearTimeout(endEventTimeoutRef.current);
+      endEventTimeoutRef.current = setTimeout(() => {
+        setShowEndEventButton(false);
+      }, 5000);
+      return true;
+    });
   }, []);
 
   /**
@@ -4648,8 +4651,10 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   }, [tabs]);
 
   // Use prop dimensions when isStandalone with explicit dimensions, otherwise use measured size
+  // When using prop height, subtract the event header (50px) because frameSize.height already excludes it
+  // (frameRef sits below the header, so the measured height is correct without adjustment)
   const effectiveWidth = (isStandalone && propOuterWidth) ? propOuterWidth : frameSize.width;
-  const effectiveHeight = (isStandalone && propOuterHeight) ? propOuterHeight : frameSize.height;
+  const effectiveHeight = (isStandalone && propOuterHeight) ? propOuterHeight - 50 : frameSize.height;
   const frameReady = effectiveWidth > 0 && effectiveHeight > 0;
 
   const stageDims = useMemo(() => {
@@ -4669,7 +4674,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   // - If checkoutMode is true: show receipt/tipping screen
   // - Otherwise: show MenuGallery2
   // ============================================
-  if (layoutMode === 'auto' && orientation === 'horizontal') {
+  if (isHorizontalDevice) {
     // CHECKOUT MODE: Show receipt with tip options (Square-style light theme)
     // Also show when checkoutStage is 'success' to display the Thank You animation
     // Also show receipt prompt/keypad screens
@@ -4682,8 +4687,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       
       return (
         <div style={{ 
-          width: '100vw', 
-          height: '100vh', 
+          width: (isStandalone && propOuterWidth) ? `${propOuterWidth}px` : '100vw', 
+          height: (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh', 
           overflow: 'hidden', 
           background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
           display: 'flex',
@@ -5987,8 +5992,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     // DEFAULT: Show MenuGallery2
     return (
       <div style={{ 
-        width: '100vw', 
-        height: '100vh', 
+        width: (isStandalone && propOuterWidth) ? `${propOuterWidth}px` : '100%', 
+        height: (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh', 
         overflow: 'hidden', 
         background: '#fff',
         fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
@@ -5996,6 +6001,9 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         <MenuGallery2 
           viewMode="menu"
           orientationOverride="horizontal"
+          outerWidth={propOuterWidth}
+          outerHeight={propOuterHeight}
+          disableInnerScale={true}
         />
       </div>
     );
@@ -6360,7 +6368,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         <div 
           className="scrollable-content"
           style={{
-            position: 'fixed',
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
@@ -6399,7 +6407,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 }
               `}</style>
               <div style={{
-                position: 'fixed',
+                position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
@@ -7423,10 +7431,17 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
     // Use prop dimensions when available, otherwise use viewport
     const containerWidth = (isStandalone && propOuterWidth) ? `${propOuterWidth}px` : '100%';
     const containerHeight = (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh';
+
+    // Calculate footer and handle bar heights to position the sidebar just above the footer
+    const calcItemButtonSize = (effectiveWidth - 16) / 3;
+    const calcFooterHeight = calcItemButtonSize / 2;
+    const calcHandleBarHeight = 36;
+    const sidebarBottomOffset = calcFooterHeight + calcHandleBarHeight;
     
     return (
       <div
         style={{
+          position: 'relative',
           width: containerWidth,
           height: containerHeight,
           boxSizing: 'border-box',
@@ -7458,9 +7473,6 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             display: 'flex', 
             alignItems: 'center', 
             flexShrink: 0,
-            transition: 'opacity 0.3s ease',
-            opacity: showEndEventButton ? 0 : 1,
-            pointerEvents: showEndEventButton ? 'none' : 'auto',
           }}>
             {logoUrl && (
               <img 
@@ -7493,9 +7505,6 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             <div style={{ 
               fontSize: '14px',
               textAlign: 'right',
-              transition: 'opacity 0.3s ease',
-              opacity: showEndEventButton ? 0 : 1,
-              pointerEvents: showEndEventButton ? 'none' : 'auto',
             }}>
               {checkoutMode ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-end' }}>
@@ -7550,93 +7559,130 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             </div>
           </div>
           
-          {/* Buttons container - absolutely positioned to overlay when shown */}
-          {/* During checkout: always visible with CANCEL PAYMENT button */}
-          {/* Outside checkout: shown on header tap with END EVENT button */}
-          {/* Scale button sizes based on container width for dual viewer */}
-          {(() => {
-            const containerW = (isStandalone && propOuterWidth) ? propOuterWidth : 400;
-            const isSmallContainer = containerW < 350;
-            const btnPadding = isSmallContainer ? '4px 6px' : '6px 12px';
-            const btnFontSize = isSmallContainer ? '10px' : '12px';
-            const btnGap = isSmallContainer ? '4px' : '8px';
-            const rightPadding = isSmallContainer ? '8px' : '16px';
-            
-            return (
-          <div style={{
+        </div>
+
+        {/* Sidebar backdrop - tap anywhere outside sidebar to close */}
+        {showEndEventButton && (
+          <div
+            onClick={() => {
+              if (endEventTimeoutRef.current) clearTimeout(endEventTimeoutRef.current);
+              setShowEndEventButton(false);
+            }}
+            style={{
+              position: 'absolute',
+              top: `${eventHeaderHeight}px`,
+              left: 0,
+              right: 0,
+              bottom: `${sidebarBottomOffset}px`,
+              width: '100%',
+              background: 'rgba(0,0,0,0.25)',
+              zIndex: 110,
+            }}
+          />
+        )}
+
+        {/* Right slide-in sidebar menu */}
+        <div
+          style={{
             position: 'absolute',
-            right: rightPadding,
-            top: '50%',
-            transform: 'translateY(-50%)',
+            top: `${eventHeaderHeight}px`,
+            right: 0,
+            bottom: `${sidebarBottomOffset}px`,
+            width: '50%',
+            background: '#fff',
+            zIndex: 111,
+            borderLeft: '1px solid #e0e0e0',
+            boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
             display: 'flex',
-            alignItems: 'center',
-            gap: btnGap,
-            transition: 'opacity 0.3s ease',
-            opacity: showEndEventButton ? 1 : 0,
-            pointerEvents: showEndEventButton ? 'auto' : 'none',
-            zIndex: 10,
-          }}>
-            {/* TEST/LIVE Button - shown on header tap */}
+            flexDirection: 'column',
+            padding: '20px 16px',
+            gap: '10px',
+            boxSizing: 'border-box',
+            transform: showEndEventButton ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.25s ease',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* End Event / Summary */}
+          {!checkoutMode && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setSquareTestMode(prev => !prev);
+                if (forceQuitLongPressRef.current) {
+                  clearTimeout(forceQuitLongPressRef.current);
+                  forceQuitLongPressRef.current = null;
+                }
+                if (endEventTimeoutRef.current) clearTimeout(endEventTimeoutRef.current);
+                setShowEndEventButton(false);
+                if (isPostEventEdit) {
+                  setShowEventSetup(true);
+                  setShowSummaryView(false);
+                } else {
+                  setShowEndEventModal(true);
+                }
+              }}
+              onTouchStart={(e) => {
+                forceQuitLongPressRef.current = setTimeout(() => {
+                  e.preventDefault();
+                  setShowEndEventButton(false);
+                  setShowForceQuitConfirm(true);
+                }, 1500);
+              }}
+              onTouchEnd={() => {
+                if (forceQuitLongPressRef.current) {
+                  clearTimeout(forceQuitLongPressRef.current);
+                  forceQuitLongPressRef.current = null;
+                }
+              }}
+              onTouchCancel={() => {
+                if (forceQuitLongPressRef.current) {
+                  clearTimeout(forceQuitLongPressRef.current);
+                  forceQuitLongPressRef.current = null;
+                }
+              }}
+              onMouseDown={() => {
+                forceQuitLongPressRef.current = setTimeout(() => {
+                  setShowEndEventButton(false);
+                  setShowForceQuitConfirm(true);
+                }, 1500);
+              }}
+              onMouseUp={() => {
+                if (forceQuitLongPressRef.current) {
+                  clearTimeout(forceQuitLongPressRef.current);
+                  forceQuitLongPressRef.current = null;
+                }
+              }}
+              onMouseLeave={() => {
+                if (forceQuitLongPressRef.current) {
+                  clearTimeout(forceQuitLongPressRef.current);
+                  forceQuitLongPressRef.current = null;
+                }
               }}
               style={{
-                background: '#666',
+                width: '100%',
+                padding: '14px',
+                background: isPostEventEdit ? '#3b82f6' : '#ef4444',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '6px',
-                padding: btnPadding,
-                fontSize: btnFontSize,
+                borderRadius: '8px',
+                fontSize: '13px',
                 fontWeight: 'bold',
+                letterSpacing: '0.05em',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                fontFamily: 'Montserrat, sans-serif',
               }}
             >
-              {squareTestMode ? 'TEST' : 'LIVE'}
+              {isPostEventEdit ? 'SUMMARY' : 'END EVENT'}
             </button>
-            
-            {/* Reader Button - shown on header tap */}
-            {window.stripeBridge && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.stripeBridge.openReaderSetup) {
-                    window.stripeBridge.openReaderSetup();
-                  } else {
-                    setShowReaderSetup(true);
-                  }
-                }}
-                style={{
-                  background: '#666',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: btnPadding,
-                  fontSize: btnFontSize,
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>{readerConnected ? '●' : '○'}</span>
-                <span>READER</span>
-              </button>
-            )}
-            
-            {/* Cancel Payment button - always visible and clickable to handle app crash recovery */}
+          )}
+
+          {/* Cancel Payment - only shown during active checkout */}
+          {checkoutMode && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (endEventTimeoutRef.current) {
-                  clearTimeout(endEventTimeoutRef.current);
-                }
+                if (endEventTimeoutRef.current) clearTimeout(endEventTimeoutRef.current);
                 setShowEndEventButton(false);
-                // Cancel Payment - return to menu (always send message to horizontal view)
                 setCheckoutMode(false);
                 setCheckoutItems([]);
                 setCheckoutSubtotal(0);
@@ -7648,110 +7694,89 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 setCheckoutStage('');
                 setPaymentStatus(null);
                 setPaymentStatusMessage(null);
-                sendCheckoutCancel(); // Always send cancel message to horizontal view
+                sendCheckoutCancel();
               }}
               style={{
+                width: '100%',
+                padding: '14px',
                 background: '#f59e0b',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '6px',
-                padding: btnPadding,
-                fontSize: btnFontSize,
+                borderRadius: '8px',
+                fontSize: '13px',
                 fontWeight: 'bold',
+                letterSpacing: '0.05em',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                fontFamily: 'Montserrat, sans-serif',
               }}
             >
               CANCEL PAYMENT
             </button>
-            
-            {/* End Event / Summary button - hidden during checkout */}
-            {/* Long-press on END EVENT triggers force quit option */}
-            {!checkoutMode && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Clear long press timer if it exists
-                  if (forceQuitLongPressRef.current) {
-                    clearTimeout(forceQuitLongPressRef.current);
-                    forceQuitLongPressRef.current = null;
-                  }
-                  if (endEventTimeoutRef.current) {
-                    clearTimeout(endEventTimeoutRef.current);
-                  }
-                  setShowEndEventButton(false);
-                  
-                  if (isPostEventEdit) {
-                    // Summary - return to Event Summary page
-                    setShowEventSetup(true);
-                    setShowSummaryView(false);
-                  } else {
-                    // End Event - show confirmation modal
-                    setShowEndEventModal(true);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  // Start long press timer for force quit (1.5 seconds)
-                  forceQuitLongPressRef.current = setTimeout(() => {
-                    e.preventDefault();
-                    setShowEndEventButton(false);
-                    setShowForceQuitConfirm(true);
-                  }, 1500);
-                }}
-                onTouchEnd={() => {
-                  // Clear long press timer
-                  if (forceQuitLongPressRef.current) {
-                    clearTimeout(forceQuitLongPressRef.current);
-                    forceQuitLongPressRef.current = null;
-                  }
-                }}
-                onTouchCancel={() => {
-                  // Clear long press timer
-                  if (forceQuitLongPressRef.current) {
-                    clearTimeout(forceQuitLongPressRef.current);
-                    forceQuitLongPressRef.current = null;
-                  }
-                }}
-                onMouseDown={() => {
-                  // Start long press timer for force quit (1.5 seconds) - mouse support
-                  forceQuitLongPressRef.current = setTimeout(() => {
-                    setShowEndEventButton(false);
-                    setShowForceQuitConfirm(true);
-                  }, 1500);
-                }}
-                onMouseUp={() => {
-                  // Clear long press timer
-                  if (forceQuitLongPressRef.current) {
-                    clearTimeout(forceQuitLongPressRef.current);
-                    forceQuitLongPressRef.current = null;
-                  }
-                }}
-                onMouseLeave={() => {
-                  // Clear long press timer
-                  if (forceQuitLongPressRef.current) {
-                    clearTimeout(forceQuitLongPressRef.current);
-                    forceQuitLongPressRef.current = null;
-                  }
-                }}
-                style={{
-                  background: isPostEventEdit ? '#3b82f6' : '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: btnPadding,
-                  fontSize: btnFontSize,
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isPostEventEdit ? 'SUMMARY' : 'END EVENT'}
-              </button>
-            )}
-            
-          </div>
-            );
-          })()}
+          )}
+
+          {/* Reader */}
+          {window.stripeBridge && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.stripeBridge.openReaderSetup) {
+                  window.stripeBridge.openReaderSetup();
+                } else {
+                  setShowReaderSetup(true);
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: '#555',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                fontFamily: 'Montserrat, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: readerConnected ? '#4ade80' : '#f87171',
+                flexShrink: 0,
+              }} />
+              READER
+            </button>
+          )}
+
+          {/* Test / Live mode toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSquareTestMode(prev => !prev);
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: squareTestMode ? '#777' : '#22c55e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              letterSpacing: '0.05em',
+              cursor: 'pointer',
+              fontFamily: 'Montserrat, sans-serif',
+            }}
+          >
+            {squareTestMode ? 'TEST MODE' : 'LIVE MODE'}
+          </button>
         </div>
 
         {/* POS Content */}
@@ -7796,6 +7821,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               setShowSpendLimitWarning={setShowSpendLimitWarning}
               spendLimitWarningTab={spendLimitWarningTab}
               setSpendLimitWarningTab={setSpendLimitWarningTab}
+              isSidebarOpen={showEndEventButton}
             />
           ) : (
             <div style={{
@@ -7836,7 +7862,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             
             return (
               <div style={{
-                position: 'fixed',
+                position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
@@ -8178,40 +8204,42 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
+            overflowY: 'auto',
             zIndex: 1000,
-            padding: '20px',
+            padding: '16px 10px',
           }}>
             <div style={{
               background: '#1a1a1a',
               borderRadius: '16px',
-              padding: '24px',
+              padding: '16px',
               width: '100%',
               maxWidth: '350px',
               textAlign: 'center',
+              margin: 'auto 0',
+              boxSizing: 'border-box',
             }}>
-              <h2 style={{ color: '#fff', fontSize: '18px', marginBottom: '16px' }}>
+              <h2 style={{ color: '#fff', fontSize: '16px', marginBottom: '10px' }}>
                 RECEIVING PAYMENT
               </h2>
-              <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
+              <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>
                 Total Due (incl. 8% tax)
               </div>
-              <div style={{ color: '#4caf50', fontSize: '36px', fontWeight: 'bold', marginBottom: '24px' }}>
+              <div style={{ color: '#4caf50', fontSize: '28px', fontWeight: 'bold', marginBottom: '12px' }}>
                 ${(checkoutSubtotal * 1.08).toFixed(2)}
               </div>
               
-              <div style={{ color: '#888', fontSize: '14px', marginBottom: '8px' }}>
+              <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>
                 Cash Tendered
               </div>
               <div style={{ 
                 background: '#333', 
                 borderRadius: '8px', 
-                padding: '12px', 
-                marginBottom: '16px',
-                fontSize: '28px',
+                padding: '8px', 
+                marginBottom: '10px',
+                fontSize: '22px',
                 fontWeight: 'bold',
                 color: '#fff',
-                minHeight: '50px',
+                minHeight: '40px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -8223,11 +8251,11 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               <div style={{ 
                 background: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#1b5e20' : '#333', 
                 borderRadius: '8px', 
-                padding: '12px', 
-                marginBottom: '16px',
+                padding: '8px', 
+                marginBottom: '10px',
               }}>
-                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#a5d6a7' : '#888', fontSize: '14px' }}>Change Due</div>
-                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#4caf50' : '#fff', fontSize: '28px', fontWeight: 'bold' }}>
+                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#a5d6a7' : '#888', fontSize: '12px' }}>Change Due</div>
+                <div style={{ color: parseFloat(cashTendered) >= (checkoutSubtotal * 1.08) && parseFloat(cashTendered) > 0 ? '#4caf50' : '#fff', fontSize: '22px', fontWeight: 'bold' }}>
                   ${parseFloat(cashTendered) > 0 ? Math.max(0, parseFloat(cashTendered) - (checkoutSubtotal * 1.08)).toFixed(2) : '0.00'}
                 </div>
               </div>
@@ -8236,8 +8264,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(3, 1fr)', 
-                gap: '8px',
-                marginBottom: '16px',
+                gap: '6px',
+                marginBottom: '10px',
               }}>
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((key) => (
                   <button
@@ -8261,8 +8289,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                       }
                     }}
                     style={{
-                      padding: '16px',
-                      fontSize: '20px',
+                      padding: '10px',
+                      fontSize: '16px',
                       fontWeight: 'bold',
                       background: key === '⌫' ? '#ef4444' : '#444',
                       color: '#fff',
@@ -8277,15 +8305,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               </div>
               
               {/* Quick amount buttons */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
                 {[20, 50, 100].map((amount) => (
                   <button
                     key={amount}
                     onClick={() => setCashTendered(amount.toFixed(2))}
                     style={{
                       flex: 1,
-                      padding: '10px',
-                      fontSize: '14px',
+                      padding: '8px',
+                      fontSize: '12px',
                       fontWeight: 'bold',
                       background: '#333',
                       color: '#fff',
@@ -8301,8 +8329,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   onClick={() => setCashTendered((checkoutSubtotal * 1.08).toFixed(2))}
                   style={{
                     flex: 1,
-                    padding: '10px',
-                    fontSize: '14px',
+                    padding: '8px',
+                    fontSize: '12px',
                     fontWeight: 'bold',
                     background: '#333',
                     color: '#4caf50',
@@ -8315,7 +8343,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 </button>
               </div>
               
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={() => {
                     setCheckoutMode(false);
@@ -8329,12 +8357,12 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   style={{
                     flex: 1,
-                    padding: '14px',
+                    padding: '10px',
                     background: '#444',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     cursor: 'pointer',
                   }}
                 >
@@ -8345,12 +8373,12 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   disabled={!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)}
                   style={{
                     flex: 1,
-                    padding: '14px',
+                    padding: '10px',
                     background: (!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)) ? '#555' : '#4caf50',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: 'bold',
                     cursor: (!cashTendered || parseFloat(cashTendered) < (checkoutSubtotal * 1.08)) ? 'not-allowed' : 'pointer',
                   }}
@@ -8365,7 +8393,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         {/* Checkout Success Overlay */}
         {showCheckoutSuccess && (
           <div style={{
-            position: 'fixed',
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
@@ -8391,7 +8419,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         {/* Payment Confirmation Dialog - Shows when user returns from Square */}
         {showPaymentConfirmDialog && (
           <div style={{
-            position: 'fixed',
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
@@ -8449,7 +8477,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         {/* Reader Setup Modal */}
         {showReaderSetup && (
           <div style={{
-            position: 'fixed',
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
@@ -8604,7 +8632,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
         {/* Payment Status Overlay - Shows result after confirmation (not for 'processing' or 'payment_failed' - those show in header) */}
         {paymentStatus && paymentStatus !== 'processing' && paymentStatus !== 'payment_failed' && !showPaymentConfirmDialog && (
           <div style={{
-            position: 'fixed',
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
@@ -8808,6 +8836,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 setShowSpendLimitWarning={setShowSpendLimitWarning}
                 spendLimitWarningTab={spendLimitWarningTab}
                 setSpendLimitWarningTab={setSpendLimitWarningTab}
+                isSidebarOpen={showEndEventButton}
               />
             </div>
           )}

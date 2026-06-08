@@ -179,28 +179,7 @@ cateringEventSchema.methods.recalculate = function () {
     return sum + d.revenue;
   }, 0);
 
-  if (!['consumption', 'flat_fee', 'hybrid'].includes(this.paymentModel)) return;
-  if (this.paymentModel === 'consumption') {
-    this.totalSales = drinkRevenue;
-  } else if (this.paymentModel === 'flat_fee') {
-    const cfg = this.flatFeeConfig;
-    const baseDrinks = this.guestCount * cfg.drinksPerGuestPerHour * cfg.baseHours;
-    const extraHours = Math.max(0, this.durationHours - cfg.baseHours);
-    const extraDrinks = this.guestCount * cfg.additionalDrinksPerHour * extraHours;
-    const totalCoveredDrinks = baseDrinks + extraDrinks;
-    this.totalSales = this.guestCount * cfg.baseRate + extraDrinks * (cfg.pricePerExtraDrink || 0);
-    this._coveredDrinks = totalCoveredDrinks;
-  } else if (this.paymentModel === 'hybrid') {
-    const cfg = this.flatFeeConfig;
-    const baseDrinks = this.guestCount * cfg.drinksPerGuestPerHour * cfg.baseHours;
-    const extraHours = Math.max(0, this.durationHours - cfg.baseHours);
-    const coveredDrinks = baseDrinks + this.guestCount * cfg.additionalDrinksPerHour * extraHours;
-    const totalDrinksSold = this.drinkSales.reduce((s, d) => s + d.quantity, 0);
-    const overageDrinks = Math.max(0, totalDrinksSold - coveredDrinks);
-    const flatBase = this.guestCount * cfg.baseRate;
-    const overage = overageDrinks * cfg.pricePerExtraDrink;
-    this.totalSales = flatBase + overage;
-  }
+  this.totalSales = drinkRevenue;
 
   this.totalRevenue = this.totalSales + this.totalTips;
   

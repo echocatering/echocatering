@@ -5,11 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 const fmt$ = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
-const PAYMENT_MODELS = [
-  { value: 'consumption', label: 'Consumption-Based' },
-  { value: 'flatfee',     label: 'Flat Fee' },
-  { value: 'hybrid',      label: 'Hybrid' },
-];
 const STATUS_OPTIONS = ['draft', 'active', 'completed', 'cancelled'];
 const CATEGORIES = ['cocktail', 'mocktail', 'beer', 'wine', 'spirit', 'other'];
 
@@ -235,21 +230,8 @@ const InfoTab = ({ form, setForm, posEvents }) => {
         <p style={{ fontSize:'12px', color:'#aaa', margin:0 }}>Linking a POS event pulls live sales data into the Sales tab.</p>
       </Card>
 
-      <Card title="Payment Model">
-        <Field label="Model">
-          <select value={form.paymentModel} onChange={e=>set('paymentModel',e.target.value)} style={{ ...iStyle, cursor:'pointer' }}>
-            {PAYMENT_MODELS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-        </Field>
-        {(form.paymentModel==='flatfee'||form.paymentModel==='hybrid') && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginTop:'8px' }}>
-            <Field label="Base Rate ($)"><NumInput value={form.flatFeeConfig?.baseRate} onChange={v=>setFF('baseRate',v)} step={0.01} /></Field>
-            <Field label="Base Hours"><NumInput value={form.flatFeeConfig?.baseHours} onChange={v=>setFF('baseHours',v)} step={0.5} /></Field>
-            <Field label="Drinks/Guest/Hr (base)"><NumInput value={form.flatFeeConfig?.drinksPerGuestPerHour} onChange={v=>setFF('drinksPerGuestPerHour',v)} step={0.5} /></Field>
-            <Field label="Drinks/Guest/Hr (extra)"><NumInput value={form.flatFeeConfig?.additionalDrinksPerHour} onChange={v=>setFF('additionalDrinksPerHour',v)} step={0.5} /></Field>
-            <Field label="Price / Extra Drink ($)" col="1 / -1"><NumInput value={form.flatFeeConfig?.pricePerExtraDrink} onChange={v=>setFF('pricePerExtraDrink',v)} step={0.01} /></Field>
-          </div>
-        )}
+      <Card title="Service Charge">
+        <p style={{ fontSize:'12px', color:'#aaa', margin:0 }}>Invoice = Min + ($/PP × Patrons). Rates are configured in the Events Sales Rate panel.</p>
       </Card>
     </div>
   );
