@@ -27,6 +27,81 @@ export default function POSDualViewer() {
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Set up virtual/mock Stripe Terminal Reader Bridge for local development on desktop
+  useEffect(() => {
+    // Only set up mock if not running in native android (which already has stripeBridge)
+    if (!window.stripeBridge) {
+      console.log('[POS Dual Viewer] Injecting Virtual Stripe Terminal Bridge');
+      
+      let readerConnected = false;
+      
+      const mockBridge = {
+        getReaderStatus: () => {
+          return JSON.stringify(readerConnected ? {
+            connected: true,
+            serialNumber: "SIMULATOR-DESKTOP-READER",
+            batteryLevel: 99,
+            deviceType: "Chipper2X"
+          } : {
+            connected: false
+          });
+        },
+        discoverReaders: () => {
+          console.log('[Mock Stripe Bridge] discoverReaders started');
+          setTimeout(() => {
+            if (window.onReadersDiscovered) {
+              window.onReadersDiscovered([
+                { index: 0, serialNumber: "SIMULATOR-DESKTOP-READER", deviceType: "Chipper2X" }
+              ]);
+            }
+          }, 1500); // Simulate a 1.5s scan
+        },
+        connectReader: (index) => {
+          console.log('[Mock Stripe Bridge] connectReader called for index:', index);
+          readerConnected = true;
+          if (window.onReaderStatusUpdate) {
+            window.onReaderStatusUpdate({
+              connected: true,
+              serialNumber: "SIMULATOR-DESKTOP-READER",
+              batteryLevel: 99,
+              deviceType: "Chipper2X"
+            });
+          }
+        },
+        disconnectReader: () => {
+          console.log('[Mock Stripe Bridge] disconnectReader called');
+          readerConnected = false;
+          if (window.onReaderStatusUpdate) {
+            window.onReaderStatusUpdate({
+              connected: false
+            });
+          }
+        },
+        processPayment: (amountCents, currency) => {
+          console.log(`[Mock Stripe Bridge] processPayment called for ${amountCents} cents`);
+          // Auto-simulate a card tap/swipe after a delay when checked out locally from vertical view
+          setTimeout(() => {
+            if (window.onPaymentComplete) {
+              window.onPaymentComplete({
+                success: true,
+                transactionId: 'SIM-DESKTOP-' + Date.now(),
+                cardBrand: 'visa',
+                cardLast4: '1111'
+              });
+            }
+          }, 2000);
+        }
+      };
+      
+      window.stripeBridge = mockBridge;
+      
+      return () => {
+        console.log('[POS Dual Viewer] Cleaning up Virtual Stripe Terminal Bridge');
+        delete window.stripeBridge;
+      };
+    }
+  }, []);
+
   // Fetch menu items
   useEffect(() => {
     const fetchItems = async () => {

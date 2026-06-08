@@ -2479,6 +2479,49 @@ function POSContent({ outerWidth, outerHeight, items, activeCategory, setActiveC
   );
 }
 
+const registerGlobalCallback = (name, callback) => {
+  if (!window[name]) {
+    window[name] = callback;
+    return () => {
+      if (window[name] === callback) {
+        window[name] = null;
+      }
+    };
+  }
+  
+  const existing = window[name];
+  if (existing.isMulticast) {
+    existing.listeners.push(callback);
+    return () => {
+      existing.listeners = existing.listeners.filter(l => l !== callback);
+      if (existing.listeners.length === 1) {
+        window[name] = existing.listeners[0];
+      } else if (existing.listeners.length === 0) {
+        window[name] = null;
+      }
+    };
+  } else {
+    const multicast = (...args) => {
+      multicast.listeners.forEach(l => {
+        try { l(...args); } catch (e) { console.error('[Multicast Error]', e); }
+      });
+    };
+    multicast.isMulticast = true;
+    multicast.listeners = [existing, callback];
+    window[name] = multicast;
+    return () => {
+      if (window[name] === multicast) {
+        multicast.listeners = multicast.listeners.filter(l => l !== callback);
+        if (multicast.listeners.length === 1) {
+          window[name] = multicast.listeners[0];
+        } else if (multicast.listeners.length === 0) {
+          window[name] = null;
+        }
+      }
+    };
+  }
+};
+
 export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterWidth, outerHeight: propOuterHeight, isStandalone = false }) {
   // layoutMode: 'vertical' | 'horizontal' | 'auto'
   // When layoutMode is 'vertical' or 'horizontal', force that layout and ignore device orientation
@@ -2847,8 +2890,16 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       
       console.log('[POS] Processing payment for amount:', amountCents, 'cents');
       
+      let cleanupComplete = null;
+      let cleanupError = null;
+      const cleanupCallbacks = () => {
+        if (cleanupComplete) cleanupComplete();
+        if (cleanupError) cleanupError();
+      };
+
       // Set up payment callbacks to broadcast result to H
-      window.onPaymentComplete = (result) => {
+      cleanupComplete = registerGlobalCallback('onPaymentComplete', (result) => {
+        cleanupCallbacks();
         console.log('[POS] Simulated payment completed:', result);
         if (result.success) {
           setPaymentStatus('payment_success');
@@ -2912,9 +2963,10 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             setCheckoutStage('payment');
           }, 1500);
         }
-      };
+      });
       
-      window.onPaymentError = (error) => {
+      cleanupError = registerGlobalCallback('onPaymentError', (error) => {
+        cleanupCallbacks();
         console.error('[POS] Simulated payment error:', error);
         setPaymentStatus('payment_failed');
         setCheckoutStage('failed');
@@ -2928,7 +2980,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
           setPaymentStatus(null);
           setCheckoutStage('payment');
         }, 1500);
-      };
+      });
       
       // Check if this is a simulated reader
       const status = JSON.parse(window.stripeBridge.getReaderStatus());
@@ -3080,14 +3132,21 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
   
   // Set up reader status update callback
   useEffect(() => {
-    window.onReaderStatusUpdate = (status) => {
+    const cleanupStatus = registerGlobalCallback('onReaderStatusUpdate', (status) => {
       console.log('[POS] Reader status update:', status);
       setReaderConnected(status.connected);
       setReaderInfo(status.connected ? status : null);
-    };
+    });
+
+    const cleanupDiscovered = registerGlobalCallback('onReadersDiscovered', (readers) => {
+      console.log('[POS] Readers discovered callback:', readers);
+      setDiscoveredReaders(readers);
+      setScanningReaders(false);
+    });
     
     return () => {
-      window.onReaderStatusUpdate = null;
+      cleanupStatus();
+      cleanupDiscovered();
     };
   }, []);
   
@@ -4306,8 +4365,16 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       if (window.stripeBridge) {
         console.log('[POS Checkout] Using Stripe Terminal native bridge');
         
+        let cleanupComplete = null;
+        let cleanupError = null;
+        const cleanupCallbacks = () => {
+          if (cleanupComplete) cleanupComplete();
+          if (cleanupError) cleanupError();
+        };
+
         // Set up payment status handlers
-        window.onPaymentComplete = (result) => {
+        cleanupComplete = registerGlobalCallback('onPaymentComplete', (result) => {
+          cleanupCallbacks();
           console.log('[POS Checkout] Payment completed:', result);
           if (result.success) {
             setPaymentStatus('payment_success');
@@ -4362,9 +4429,10 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               // Stay on scan card screen so user can retry
             }, 1500);
           }
-        };
+        });
         
-        window.onPaymentError = (error) => {
+        cleanupError = registerGlobalCallback('onPaymentError', (error) => {
+          cleanupCallbacks();
           console.error('[POS Checkout] Payment error:', error);
           setPaymentStatus('payment_failed');
           setPaymentStatusMessage(`Payment error: ${error}`);
@@ -4376,7 +4444,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             updateCheckoutStage('payment'); // Return to payment screen
             // Stay on scan card screen so user can retry
           }, 1500);
-        };
+        });
         
         // Process payment via Stripe Terminal
         updateCheckoutStage('processing'); // Show "Processing Payment" on vertical screen
