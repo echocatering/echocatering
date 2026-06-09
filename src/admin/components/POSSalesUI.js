@@ -6108,6 +6108,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
       // Use prop dimensions when available, otherwise use viewport
       const summaryHeight = (isStandalone && propOuterHeight) ? `${propOuterHeight}px` : '100vh';
       
+      // Responsive sizing based on container width
+      const sw = propOuterWidth || 375;
+      const bigNum = Math.max(20, Math.min(32, sw / 10));
+      const medNum = Math.max(16, Math.min(24, sw / 13));
+      const labelFs = Math.max(11, Math.min(14, sw / 26));
+      const headFs  = Math.max(16, Math.min(24, sw / 15));
+      const subHeadFs = Math.max(13, Math.min(18, sw / 20));
+      const padH = Math.max(10, Math.min(20, sw / 18));
+
       return (
         <div style={{
           width: '100%',
@@ -6116,6 +6125,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          boxSizing: 'border-box',
         }}>
           {/* Header with logo - matching POS UI */}
           <div style={{
@@ -6125,13 +6135,14 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             display: 'flex',
             alignItems: 'center',
             flexShrink: 0,
+            boxSizing: 'border-box',
           }}>
             {logoUrl && (
-              <img 
-                src={logoUrl} 
-                alt="Echo" 
-                style={{ 
-                  height: '32px', 
+              <img
+                src={logoUrl}
+                alt="Echo"
+                style={{
+                  height: '32px',
                   width: 'auto',
                 }}
                 onError={(e) => {
@@ -6140,12 +6151,15 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               />
             )}
           </div>
-          
+
           {/* Summary content */}
           <div style={{
             flex: 1,
-            overflow: 'auto',
-            padding: '20px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: `${padH}px`,
+            boxSizing: 'border-box',
+            width: '100%',
           }}>
             {(() => {
               // Calculate summary from tabs if eventSummary is null
@@ -6160,110 +6174,112 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 const totalTabs = paidTabs.length;
                 return { totalRevenue, totalTips, totalItems, totalTabs };
               })();
-              
+
               return (
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <h1 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center', color: '#333' }}>
+            <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', boxSizing: 'border-box' }}>
+              <h1 style={{ fontSize: `${headFs}px`, marginBottom: `${padH}px`, textAlign: 'center', color: '#333' }}>
                 {eventName || 'Event'}
               </h1>
-              
+
               {/* Totals */}
               <div style={{
                 background: '#f5f5f5',
                 borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '20px',
+                padding: `${padH}px`,
+                marginBottom: `${padH}px`,
                 border: '1px solid #e0e0e0',
+                boxSizing: 'border-box',
               }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>
+                    <div style={{ fontSize: `${bigNum}px`, fontWeight: 'bold', color: '#4CAF50', wordBreak: 'break-all' }}>
                       ${(computedSummary.totalRevenue || 0).toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>Sales</div>
+                    <div style={{ fontSize: `${labelFs}px`, color: '#666' }}>Sales</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>
+                    <div style={{ fontSize: `${bigNum}px`, fontWeight: 'bold', color: '#2196F3', wordBreak: 'break-all' }}>
                       ${(computedSummary.totalTips || 0).toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>Tips</div>
+                    <div style={{ fontSize: `${labelFs}px`, color: '#666' }}>Tips</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
+                    <div style={{ fontSize: `${medNum}px`, fontWeight: 'bold', color: '#333' }}>
                       {computedSummary.totalItems || 0}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>Total Items</div>
+                    <div style={{ fontSize: `${labelFs}px`, color: '#666' }}>Total Items</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
+                    <div style={{ fontSize: `${medNum}px`, fontWeight: 'bold', color: '#333' }}>
                       {computedSummary.totalTabs || 0}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>Total Tabs</div>
+                    <div style={{ fontSize: `${labelFs}px`, color: '#666' }}>Total Tabs</div>
                   </div>
                 </div>
               </div>
-              
+
               {/* Income Statement Section */}
               <div style={{
                 background: '#f5f5f5',
                 borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '20px',
+                padding: `${padH}px`,
+                marginBottom: `${padH}px`,
                 border: '1px solid #e0e0e0',
+                boxSizing: 'border-box',
               }}>
-                <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Income Statement</h2>
-                
+                <h2 style={{ fontSize: `${subHeadFs}px`, marginBottom: '12px', color: '#333' }}>Income Statement</h2>
+
                 {/* Spillage - using shared spillageTotal for consistency */}
                 {spillageTotal > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontWeight: 'bold', color: '#333' }}>Spillage</span>
-                    <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-${spillageTotal.toFixed(2)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#fff', borderRadius: '8px', marginBottom: '8px', boxSizing: 'border-box' }}>
+                    <span style={{ fontWeight: 'bold', color: '#333', fontSize: `${labelFs}px` }}>Spillage</span>
+                    <span style={{ fontWeight: 'bold', color: '#ef4444', fontSize: `${labelFs}px` }}>-${spillageTotal.toFixed(2)}</span>
                   </div>
                 )}
-                
+
                 {/* Net (simplified - full breakdown in Event Setup) */}
                 {(() => {
                   const sales = computedSummary.totalRevenue || 0;
                   const tips = computedSummary.totalTips || 0;
                   const netIncome = sales + tips;
                   return (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px' }}>
-                      <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>Net (before expenses)</span>
-                      <span style={{ fontWeight: 'bold', fontSize: '16px', color: netIncome >= 0 ? '#22c55e' : '#ef4444' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: netIncome >= 0 ? '#dcfce7' : '#fee2e2', borderRadius: '8px', marginTop: '8px', boxSizing: 'border-box', gap: '8px' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: `${labelFs}px`, color: '#333', flexShrink: 0 }}>Net (before expenses)</span>
+                      <span style={{ fontWeight: 'bold', fontSize: `${labelFs}px`, color: netIncome >= 0 ? '#22c55e' : '#ef4444', whiteSpace: 'nowrap' }}>
                         {netIncome >= 0 ? '' : '-'}${Math.abs(netIncome).toFixed(2)}
                       </span>
                     </div>
                   );
                 })()}
-                
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '12px', textAlign: 'center' }}>
+
+                <div style={{ fontSize: `${Math.max(10, labelFs - 1)}px`, color: '#666', marginTop: '10px', textAlign: 'center' }}>
                   Full breakdown with COGS & Operating Expenses available in Finalize Event
                 </div>
               </div>
               
               {/* Action Buttons - Show Finalize Event when in post-event mode */}
               {(eventSummary || isPostEventEdit) ? (
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: `${padH}px`, boxSizing: 'border-box' }}>
                   <button
                     onClick={() => {
                       console.log('[Event Summary] FINALIZE EVENT - returning to event summary page');
-                      // Return to the full event summary page
                       setShowSummaryView(false);
                       setShowEventSetup(true);
                     }}
                     disabled={syncing}
                     style={{
                       flex: 1,
-                      padding: '16px',
+                      padding: '14px 8px',
                       background: syncing ? '#ccc' : '#800080',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '12px',
-                      fontSize: '18px',
+                      fontSize: `${Math.max(14, Math.min(18, sw / 20))}px`,
                       fontWeight: 'bold',
                       cursor: syncing ? 'not-allowed' : 'pointer',
+                      boxSizing: 'border-box',
                     }}
                   >
                     FINALIZE EVENT
@@ -6274,17 +6290,13 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 <button
                   onClick={() => {
                     console.log('[Event Summary] FINALIZE EVENT clicked');
-                    // Pre-populate setup data from event summary
                     const offsetMs = testMode ? testTimeOffsetMins * 60 * 1000 : 0;
                     const endTimeValue = eventSummary?.endTime
                       ? new Date(new Date(eventSummary.endTime).getTime() + offsetMs).toTimeString().slice(0, 5)
                       : new Date(Date.now() + offsetMs).toTimeString().slice(0, 5);
-                    
-                    // Build inventory from menu items
                     const buildInventory = (cat) => allItems
                       .filter(item => normalizeCategoryKey(item.category) === cat)
                       .map(item => ({ name: item.name, sent: '', returned: '' }));
-                    
                     setEventSetupData(prev => ({
                       ...prev,
                       eventName: eventName || '',
@@ -6299,19 +6311,20 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                       },
                     }));
                     console.log('[Event Summary] FINALIZE EVENT - navigating to Event Summary page');
-                    setShowSummaryView(false); // Hide brief summary page
-                    setShowEventSetup(true);   // Show full Event Summary page
+                    setShowSummaryView(false);
+                    setShowEventSetup(true);
                   }}
                   style={{
                     width: '100%',
-                    padding: '16px',
+                    padding: '14px 8px',
                     background: '#800080',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '12px',
-                    fontSize: '18px',
+                    fontSize: `${Math.max(14, Math.min(18, sw / 20))}px`,
                     fontWeight: 'bold',
                     cursor: 'pointer',
+                    boxSizing: 'border-box',
                   }}
                 >
                   FINALIZE EVENT
