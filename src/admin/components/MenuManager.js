@@ -426,8 +426,8 @@ const MenuManager = () => {
 
   // Menu categories configuration - ordered as specified: COCKTAILS, MOCKTAILS, BEER, WINE, SPIRITS, PRE-MIX
   const menuCategories = [
-    { key: 'cocktails', label: 'COCKTAILS', icon: 'classics' },
-    { key: 'mocktails', label: 'MOCKTAILS', icon: 'originals' },
+    { key: 'cocktails', label: 'SOCIAL TONICS', icon: 'classics' },
+    { key: 'mocktails', label: 'ALC +', icon: 'originals' },
     { key: 'beer', label: 'BEER', icon: 'spirits' },
     { key: 'wine', label: 'WINE', icon: 'spirits' },
     { key: 'spirits', label: 'SPIRITS', icon: 'spirits' },

@@ -14,8 +14,8 @@ import { isCloudinaryUrl, getHeroOptimizedUrl, getAboutOptimizedUrl } from '../u
 
 
 const defaultSubpageOrder = [
-  { key: 'cocktails', label: 'Cocktails' },
-  { key: 'mocktails', label: 'Mocktails' },
+  { key: 'cocktails', label: 'Social Tonics' },
+  { key: 'mocktails', label: 'ALC +' },
   { key: 'spirits', label: 'Spirits' },
 ];
 
@@ -1716,7 +1716,7 @@ const Home = forwardRef((props, ref) => {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text'
-                  }}>MOCKTAILS</span>
+                  }}>ALC +</span>
                 </button>
 
                 <button
@@ -1798,7 +1798,7 @@ const Home = forwardRef((props, ref) => {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text'
-                  }}>COCKTAILS</span>
+                  }}>SOCIAL TONICS</span>
                 </button>
 
                 <button

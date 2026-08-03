@@ -3056,8 +3056,8 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
   const [randomStartIndex, setRandomStartIndex] = useState(null);
 
   const subpageOrder = useMemo(() => [
-    { key: 'cocktails', label: 'Cocktails' },
-    { key: 'mocktails', label: 'Mocktails' },
+    { key: 'cocktails', label: 'Social Tonics' },
+    { key: 'mocktails', label: 'ALC +' },
     { key: 'beer', label: 'Beer' },
     { key: 'wine', label: 'Wine' },
     { key: 'spirits', label: 'Spirits' },

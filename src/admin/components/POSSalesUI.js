@@ -6,8 +6,8 @@ import { usePosWebSocket } from '../hooks/usePosWebSocket';
 import MenuGallery2 from '../../pages/menuGallery2';
 
 const CATEGORIES = [
-  { id: 'cocktails', label: 'C', fullName: 'Cocktails' },
-  { id: 'mocktails', label: 'M', fullName: 'Mocktails' },
+  { id: 'cocktails', label: 'C', fullName: 'Social Tonics' },
+  { id: 'mocktails', label: 'M', fullName: 'ALC +' },
   { id: 'beer', label: 'B', fullName: 'Beer' },
   { id: 'wine', label: 'W', fullName: 'Wine' },
   { id: 'spirits', label: 'S', fullName: 'Spirits' }
@@ -6970,8 +6970,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               </div>
               
               {/* Beverage Inventory */}
-              {renderInventorySection('Cocktails', 'cocktails')}
-              {renderInventorySection('Mocktails', 'mocktails')}
+              {renderInventorySection('Social Tonics', 'cocktails')}
+              {renderInventorySection('ALC +', 'mocktails')}
               {renderInventorySection('Beer', 'beer')}
               {renderInventorySection('Wine', 'wine')}
             </div>

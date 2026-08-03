@@ -1406,7 +1406,11 @@ const commitBeerNumUnitsValue = (rowId) => {
         <header className="mb-6 flex flex-col gap-4" style={{ position: 'relative', zIndex: 1001, pointerEvents: 'auto' }}>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl tracking-wide uppercase" style={{ fontWeight: 4 }}>
-              {resolvedSheetKey === 'mocktails' ? 'MOCKTAILS' : (activeSheetMeta?.name || 'Inventory').toUpperCase()}
+              {resolvedSheetKey === 'mocktails'
+                ? 'ALC +'
+                : resolvedSheetKey === 'cocktails'
+                  ? 'SOCIAL TONICS'
+                  : (activeSheetMeta?.name || 'Inventory').toUpperCase()}
             </h1>
 
             {canConfigureMenuNav && (
@@ -1924,8 +1928,8 @@ const commitBeerNumUnitsValue = (rowId) => {
                                       className="inventory-name-input w-full text-sm px-1 py-1"
                                     >
                                       <option value="">--</option>
-                                      <option value="cocktails">COCKTAILS</option>
-                                      <option value="mocktails">MOCKTAILS</option>
+                                      <option value="cocktails">SOCIAL TONICS</option>
+                                      <option value="mocktails">ALC +</option>
                                       <option value="beer">BEER</option>
                                       <option value="wine">WINE</option>
                                       <option value="spirits">SPIRITS</option>

@@ -5,8 +5,8 @@ import { isCloudinaryUrl } from '../../utils/cloudinaryUtils';
 
 // Menu categories configuration - matches MenuManager
 const MENU_CATEGORIES = [
-  { key: 'cocktails', label: 'COCKTAILS' },
-  { key: 'mocktails', label: 'MOCKTAILS' },
+  { key: 'cocktails', label: 'SOCIAL TONICS' },
+  { key: 'mocktails', label: 'ALC +' },
   { key: 'beer', label: 'BEER' },
   { key: 'wine', label: 'WINE' },
   { key: 'spirits', label: 'SPIRITS' },

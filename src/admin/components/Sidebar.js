@@ -25,8 +25,8 @@ const Sidebar = () => {
   ];
 
   const inventoryNavItems = [
-    { path: '/admin/inventory/cocktails', text: 'COCKTAILS' },
-    { path: '/admin/inventory/mocktails', text: 'MOCKTAILS' },
+    { path: '/admin/inventory/cocktails', text: 'SOCIAL TONICS' },
+    { path: '/admin/inventory/mocktails', text: 'ALC +' },
     { path: '/admin/inventory/wine', text: 'WINE' },
     { path: '/admin/inventory/beer', text: 'BEER' },
     { path: '/admin/inventory/spirits', text: 'SPIRITS' },
