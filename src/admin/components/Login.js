@@ -56,8 +56,9 @@ const Login = () => {
   const buttonStyle = {
     background: 'transparent',
     border: '2px solid #666666',
+    borderRadius: '2.5rem',
     padding: '10px 32px',
-    fontFamily: 'Montserrat, sans-serif',
+    fontFamily: "'Trajin Pro', serif",
     fontWeight: 500,
     fontSize: '14px',
     cursor: 'pointer',
@@ -90,7 +91,7 @@ const Login = () => {
             <img 
               src={logoUrl} 
               alt="Echo" 
-              style={{ height: '80px', width: 'auto' }}
+              style={{ maxHeight: '130px', maxWidth: '100%', height: 'auto', width: 'auto', display: 'block', margin: '0 auto' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
@@ -152,7 +153,7 @@ const Login = () => {
                 e.currentTarget.style.borderColor = '#666666';
               }}
             >
-              {loading && destination === 'pos' ? 'Loading...' : 'ECHO POS'}
+              {loading && destination === 'pos' ? 'Loading...' : 'MOBILE POS'}
             </button>
             
             <button

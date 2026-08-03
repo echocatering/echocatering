@@ -179,7 +179,7 @@ const Sidebar = () => {
               src={currentLogo}
               alt="Logo"
               style={{
-                width: '172.8px',
+                width: '220px',
                 height: 'auto',
                 objectFit: 'contain'
               }}
@@ -190,8 +190,8 @@ const Sidebar = () => {
             />
           ) : (
             <div style={{
-              width: '172.8px',
-              height: '172.8px',
+              width: '220px',
+              height: '220px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
