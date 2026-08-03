@@ -86,12 +86,6 @@ export default function Layout({
                   src={logoPath}
                   alt="ECHO Catering Logo"
                   className="logo-image"
-                  style={{
-                    width: 'auto',
-                    height: 'calc(100vh / 16.875)',
-                    display: 'block',
-                    objectFit: 'contain'
-                  }}
                   onError={(e) => {
                     console.error('Logo failed to load:', logoPath);
                     e.target.style.display = 'none';

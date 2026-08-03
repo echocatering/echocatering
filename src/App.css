@@ -570,6 +570,7 @@ a:focus {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   border: 1px solid transparent;
+  border-radius: 0.25rem;
   box-shadow: none;
   outline: none;
   text-align: center;
@@ -610,6 +611,7 @@ a:focus {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   border: 1px solid var(--color-text-dark);
+  border-radius: 0.25rem;
   z-index: 10;
 }
 
@@ -1513,11 +1515,13 @@ div[class*="sidebar-no-fade"] {
   cursor: pointer;
   position: relative;
   z-index: 10;
+  height: 100%;
+  padding: 6px 0;
 }
 
 .logo-image {
   width: auto;
-  height: calc(100vh / 18);
+  height: 100%;
   display: block;
   object-fit: contain;
 }
@@ -1836,9 +1840,40 @@ div[class*="sidebar-no-fade"] {
   }
 }
 
-/* Force Montserrat font globally */
-body,
-.app-root,
-.app-root * {
-  font-family: Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+/* Menu gallery: everything else uses the same generic serif as the header nav */
+.menu-serif-text,
+.menu-serif-text * {
+  font-family: 'Trajin Pro', serif !important;
+}
+
+/* Cocktail info panel titles use Cinzel */
+.cocktail-title,
+.cocktail-title *,
+.cocktail-ingredients-label,
+.cocktail-ingredients-label *,
+.cocktail-garnish-label,
+.cocktail-garnish-label * {
+  font-family: 'Cinzel', Georgia, serif !important;
+}
+
+/* Cocktail info panel content (actual ingredients/garnish) uses Helvetica Neue Light */
+.cocktail-ingredients-list,
+.cocktail-ingredients-list *,
+.cocktail-garnish-text,
+.cocktail-garnish-text * {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+  font-weight: 300 !important;
+}
+
+/* Header navigation menu font */
+.app-root .mainmenu-btn,
+.app-root .submenu-btn,
+.app-root .nav-link {
+  font-family: 'Trajin Pro', serif !important;
+  font-size: 1.125rem;
+}
+
+/* Header navigation rounded corners */
+.app-root .mainmenu-btn {
+  border-radius: 2.5rem !important;
 }

@@ -5,7 +5,7 @@ const twilio = require('twilio');
 const puppeteer = require('puppeteer');
 
 // Resend client for email
-const resend = new Resend(process.env.RESEND_API_KEY || 're_DBu7uZNQ_N5p2wMrLfW9cG7MJbngMDcmW');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Twilio client for SMS (configure with your Twilio credentials)
 let twilioClient = null;
@@ -123,7 +123,7 @@ function generateReceiptHTML(data) {
     </head>
     <body>
       <div class="header">
-        <div class="logo"><img src="https://echocatering.com/assets/icons/LOGO_echo.png" alt="Echo Catering" /></div>
+        <div class="logo"><img src="https://peddlersmobilebar.com/assets/icons/LOGO_echo.png" alt="Echo Catering" /></div>
         <div class="date">${date}</div>
       </div>
       
@@ -163,7 +163,7 @@ function generateReceiptHTML(data) {
       
       <div class="footer">
         Thank you for your business!<br>
-        echocatering.com
+        peddlersmobilebar.com
       </div>
     </body>
     </html>
@@ -229,7 +229,7 @@ function detectContactType(contact) {
 async function sendEmailReceipt(email, receiptImage, receiptHTML) {
   try {
     const emailData = {
-      from: 'Echo Catering <receipts@echocatering.com>',
+      from: 'Echo Catering <receipts@peddlersmobilebar.com>',
       to: email,
       subject: 'Your Receipt from Echo Catering',
       html: receiptHTML,

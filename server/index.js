@@ -43,7 +43,7 @@ if (!Number.isFinite(PORT) || PORT <= 0) {
 
 // Get allowed origins from environment.
 // In production, this MUST include your custom domain(s), e.g.:
-// ALLOWED_ORIGINS=https://echocatering.com,https://www.echocatering.com
+// ALLOWED_ORIGINS=https://peddlersmobilebar.com,https://www.peddlersmobilebar.com
 function normalizeOrigin(o) {
   return String(o || '')
     .trim()
@@ -54,7 +54,7 @@ function expandAllowedOriginEntry(entry) {
   const raw = normalizeOrigin(entry);
   if (!raw) return [];
 
-  // If user provided a bare hostname (e.g. echocatering.com), accept https/http forms.
+  // If user provided a bare hostname (e.g. peddlersmobilebar.com), accept https/http forms.
   if (!/^https?:\/\//i.test(raw)) {
     return [`https://${raw}`, `http://${raw}`];
   }

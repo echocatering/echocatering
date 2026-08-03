@@ -2196,7 +2196,7 @@ const EventSales = () => {
                 {/* Footer */}
                 <div style={{ textAlign: 'center', marginTop: '20px', color: '#999', fontSize: '12px' }}>
                   Thank you for your business!<br />
-                  echocatering.com
+                  peddlersmobilebar.com
                 </div>
               </div>
               
@@ -2249,7 +2249,7 @@ const EventSales = () => {
                           <div class="total-row final"><span>Service Charge Total</span><span>&nbsp;— $${finalTotal.toFixed(2)}</span></div>
                         </div>
                         <div class="payment-method">Payment method: Invoice</div>
-                        <div class="footer">Thank you for your business!<br>echocatering.com</div>
+                        <div class="footer">Thank you for your business!<br>peddlersmobilebar.com</div>
                       </body>
                       </html>
                     `;

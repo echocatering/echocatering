@@ -1102,156 +1102,6 @@ const Home = forwardRef((props, ref) => {
             pointerEvents: 'none'
           }} />
 
-          {/* Shadow gradient behind text */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '800px',
-            height: '600px',
-            background: 'radial-gradient(ellipse 110% 70% at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.4) 20%, rgba(0, 0, 0, 0.25) 35%, rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0.06) 50%, rgba(0, 0, 0, 0.03) 55%, rgba(0, 0, 0, 0.015) 60%, rgba(0, 0, 0, 0.007) 65%, rgba(0, 0, 0, 0.003) 70%, rgba(0, 0, 0, 0) 80%)',
-            zIndex: 4,
-            pointerEvents: 'none'
-          }} />
-
-          {/* Echo icon above cocktail SVG */}
-          <img
-            src="/assets/icons/icon.echo.png"
-            alt="Echo"
-            style={{
-              width: '6vw',
-              minWidth: '40px',
-              maxWidth: '80px',
-              height: 'auto',
-              filter: 'brightness(0) invert(1)',
-              backgroundColor: 'transparent',
-              display: 'block',
-              WebkitBackfaceVisibility: 'hidden',
-              WebkitPerspective: 1000,
-              WebkitTransform: 'translate3d(0, 0, 0)',
-              isolation: 'isolate',
-              position: 'relative',
-              zIndex: 10,
-              marginBottom: '3px'
-            }}
-          />
-          
-          {/* COCKTAILS SVG, Plus, and EVENT CATERING */}
-          <div style={{
-            textAlign: 'center',
-            maxWidth: '90vw',
-            position: 'relative',
-            zIndex: 5,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 0
-          }}>
-            <div
-              style={{
-                fontSize: 'clamp(2.25rem, 6vw, 3.75rem)',
-                color: '#ffffff',
-                fontWeight: 400,
-                textAlign: 'center',
-                letterSpacing: '0.12em',
-                display: 'block',
-                whiteSpace: 'nowrap',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                textShadow: '0 4px 8px rgba(0,0,0,0.5)'
-              }}
-            >
-              COCKTAILS
-            </div>
-            <div style={{
-              fontSize: 'clamp(1.2rem, 3.2vw, 2rem)',
-              color: '#ffffff',
-              fontWeight: 500,
-              textAlign: 'center',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-              lineHeight: '1',
-              textShadow: '0 4px 8px rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 'auto',
-              marginTop: '-10px'
-            }}>
-              +
-            </div>
-            <div style={{
-              fontSize: 'clamp(1.05rem, 2.8vw, 1.75rem)',
-              color: '#ffffff',
-              fontWeight: 400,
-              textAlign: 'center',
-              letterSpacing: '0.12em',
-              display: 'block',
-              whiteSpace: 'nowrap',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-              lineHeight: '1.2',
-              textShadow: '0 4px 8px rgba(0,0,0,0.5)',
-              marginTop: '0px'
-            }}>
-              EVENT CATERING
-            </div>
-
-            {/* BOOK NOW Button */}
-            <div 
-              onClick={() => {
-                const contactSection = document.getElementById('mobile-contact-section');
-                if (contactSection) {
-                  contactSection.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              style={{
-                border: '2px solid #ffffff',
-                borderRadius: 0,
-                width: 'clamp(150px, 45vw, 200px)',
-                padding: '0.6rem 0',
-                fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
-                color: '#ffffff',
-                fontWeight: 600,
-                textAlign: 'center',
-                letterSpacing: '0.12em',
-                backgroundColor: 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                marginTop: '1.5rem',
-                transition: 'all 0.2s ease',
-                minHeight: '44px',
-                touchAction: 'manipulation',
-                textShadow: '0 2px 8px rgba(0,0,0,0.7)',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent',
-                outline: 'none',
-                WebkitUserSelect: 'none',
-                userSelect: 'none'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#ffffff';
-                e.target.style.color = '#000000';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = '#ffffff';
-              }}
-              onTouchStart={(e) => {
-                e.target.style.backgroundColor = '#ffffff';
-                e.target.style.color = '#000000';
-              }}
-              onTouchEnd={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = '#ffffff';
-              }}
-            >
-              BOOK NOW
-            </div>
-          </div>
-
         </div>
 
         {/* SECTION 2: MENU GALLERY - Cocktail Gallery */}
@@ -3610,7 +3460,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -3628,7 +3478,7 @@ const Home = forwardRef((props, ref) => {
                 </span>
               </div>
               
-              {/* Triangle to the right of Event Gallery tab */}
+              {/* Quarter circle to the right of Event Gallery tab */}
               <div style={{
                 position: 'absolute',
                 bottom: '-3px',
@@ -3636,7 +3486,7 @@ const Home = forwardRef((props, ref) => {
                 width: '50px',
                 height: '50px',
                 backgroundColor: 'white',
-                clipPath: 'polygon(0 0, 0 100%, 100% 100%)',
+                borderTopRightRadius: '50px',
                 zIndex: 20,
               }} />
             </>
@@ -3808,8 +3658,17 @@ const Home = forwardRef((props, ref) => {
                     flex: 1,
                     height: '100%',
                     backgroundColor: '#d0d0d0',
-                    clipPath: 'polygon(0 0, 100% 0, calc(100% - 45px) 100%, 0 100%)',
-                    overflow: 'hidden',
+                    position: 'relative',
+                    top: '-1px'
+                  }}
+                />
+
+                {/* Negative-space quarter circle connector into ABOUT box */}
+                <div
+                  style={{
+                    width: '45px',
+                    height: '45px',
+                    background: 'radial-gradient(circle at bottom right, transparent 0, transparent 45px, #d0d0d0 45px)',
                     position: 'relative',
                     top: '-1px'
                   }}
@@ -3825,7 +3684,7 @@ const Home = forwardRef((props, ref) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontFamily: "'Trajin Pro', serif",
                     fontSize: '1rem',
                     fontWeight: 400,
                     textTransform: 'uppercase',
@@ -4066,7 +3925,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -4084,7 +3943,7 @@ const Home = forwardRef((props, ref) => {
                 </span>
               </div>
 
-              {/* Triangle matching request form top gradient color */}
+              {/* Quarter circle matching request form top gradient color */}
               <div style={{
                 position: 'absolute',
                 bottom: '-3px',
@@ -4092,7 +3951,7 @@ const Home = forwardRef((props, ref) => {
                 width: '50px',
                 height: '50px',
                 backgroundColor: '#e6e6e6',
-                clipPath: 'polygon(0 0, 0 100%, 100% 100%)',
+                borderTopRightRadius: '50px',
                 zIndex: 20,
               }} />
             </>

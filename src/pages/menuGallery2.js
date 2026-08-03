@@ -344,10 +344,11 @@ function VideoBackground({ videoSrc, isVertical = false, viewMode = 'web' }) {
         width: '100%',
         height: '100%',
         objectFit: 'cover',
-        objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : 'center',
+        objectPosition: isVertical && viewMode === 'web' ? 'center 40%' : (!isVertical && viewMode === 'web' ? 'left center' : 'center'),
         pointerEvents: 'none',
         zIndex: 0,
-        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-3vh)' : 'scale(1)')),
+        transformOrigin: !isVertical && viewMode === 'web' ? 'left center' : 'center',
+        transform: isVertical && viewMode === 'web' ? 'scale(1.36) translateY(-2vh)' : (isVertical ? 'scale(1.32)' : (viewMode === 'menu' ? 'scale(1.20) translateY(-3vh)' : (viewMode === 'web' ? 'scale(1.215) translateX(8.4vw) translateY(-3vh)' : 'scale(1)'))),
         background: (viewMode === 'menu' || viewMode === 'web') ? 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)' : '#000',
       }}
     >
@@ -1540,8 +1541,8 @@ function EchoCocktailSubpage2({
   const getTitleFontSize = () => {
     if (!layout?.inner?.height) return isVertical ? '1.2rem' : '1.95rem';
     // Scale with inner height; slightly larger range.
-    const px = isVertical ? layout.inner.height / 35 : layout.inner.height / 26;
-    const clamped = isVertical ? Math.max(14, Math.min(24, px)) : Math.max(17, Math.min(32, px));
+    const px = isVertical ? layout.inner.height / 32 : layout.inner.height / 24;
+    const clamped = isVertical ? Math.max(15, Math.min(26, px)) : Math.max(18, Math.min(34, px));
     return `${clamped.toFixed(1)}px`;
   };
 
@@ -1568,6 +1569,7 @@ function EchoCocktailSubpage2({
           maxHeight: baseHeight ? `${baseHeight * 2}px` : 'none',
           padding: isVertical ? '0.3rem 0.6rem' : '0.4rem 0.8rem',
           fontSize: getTitleFontSize(),
+          fontFamily: "'Cinzel', Georgia, serif",
           fontWeight: 300,
           textAlign: 'center',
           display: 'flex',
@@ -1576,8 +1578,8 @@ function EchoCocktailSubpage2({
           letterSpacing: '0.12em',
           background: 'transparent',
           color: '#111',
-          border: '2px solid',
-          borderImage: 'linear-gradient(to bottom, #222, #aaa) 1',
+          border: '2px solid #666',
+          borderRadius: '2.5rem',
           opacity: titleVisible ? 1 : 0,
           transition: titleVisible ? 'opacity 0.9s ease' : 'none',
           boxSizing: 'border-box',
@@ -1615,10 +1617,12 @@ function EchoCocktailSubpage2({
         }}
       >
         <div
+          className="cocktail-ingredients-label"
           style={{
             textTransform: 'uppercase',
             fontWeight: 300,
-            fontSize: isVertical ? getFontSize(55, 0.9, 1.4) : getFontSize(35, 1.1, 1.8),
+            fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
+            fontFamily: "'Cinzel', Georgia, serif",
             marginBottom: '0.4rem',
             color: '#222',
           }}
@@ -1627,8 +1631,11 @@ function EchoCocktailSubpage2({
         </div>
         <div
           ref={ingredientsContainerRef}
+          className="cocktail-ingredients-list"
           style={{
-            fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(40, 1.0, 1.6),
+            fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4),
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fontWeight: 300,
             marginBottom: 0,
             lineHeight: isVertical ? '1.2' : '1.4',
           }}
@@ -1664,17 +1671,19 @@ function EchoCocktailSubpage2({
         }}
       >
         <div
+          className="cocktail-garnish-label"
           style={{
             textTransform: 'uppercase',
             fontWeight: 300,
-            fontSize: isVertical ? getFontSize(55, 0.9, 1.4) : getFontSize(40, 0.9, 1.4),
+            fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
+            fontFamily: "'Cinzel', Georgia, serif",
             marginBottom: '0.4rem',
             color: '#222',
           }}
         >
           Garnish
         </div>
-        <div style={{ fontSize: isVertical ? `calc(${getFontSize(58, 0.85, 1.3)} * var(--verticalInfoFontScale, 1))` : getFontSize(45, 0.85, 1.3) }}>{info.garnish}</div>
+        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontWeight: 300 }}>{info.garnish}</div>
       </div>
     );
   };
@@ -1977,6 +1986,7 @@ function EchoCocktailSubpage2({
               return (
               <button
                 key={key}
+                className="menu-serif-text"
                 onClick={() => {
                   // Remove all checkmarks when category icon is clicked (same as arrow behavior)
                   const allCheckmarks = document.querySelectorAll('.pos-checkmark');
@@ -1998,7 +2008,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: color,
                   fontSize: viewMode === 'menu' ? '1.8rem' : '1.3rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2036,6 +2046,7 @@ function EchoCocktailSubpage2({
           <div style={{ display: 'flex', gap: 12 }}>
             {viewMode === 'web' && (
               <button
+                className="menu-serif-text"
                 onClick={() => {
                   const section = document.getElementById('event-request-section');
                   if (section) section.scrollIntoView({ behavior: 'smooth' });
@@ -2045,6 +2056,7 @@ function EchoCocktailSubpage2({
                 style={{
                   background: 'transparent',
                   border: `2px solid ${hoveredButton === 'schedule-event' ? '#000' : '#fff'}`,
+                  borderRadius: '2.5rem',
                   color: hoveredButton === 'schedule-event' ? '#000' : '#fff',
                   padding: '10px 16px',
                   letterSpacing: '0.08em',
@@ -2052,7 +2064,7 @@ function EchoCocktailSubpage2({
                   cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                   fontSize: '1.1rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2066,6 +2078,7 @@ function EchoCocktailSubpage2({
             {viewMode === 'pos' && (
               <>
                 <button
+                  className="menu-serif-text"
                   onClick={() => {
                     // Get the current cocktail title from the MenuGallery
                     const cocktailTitleElement = document.querySelector('.cocktail-title');
@@ -2102,7 +2115,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2113,6 +2126,7 @@ function EchoCocktailSubpage2({
                   {hasCheckmark ? 'REMOVE ITEM' : 'ADD ITEM'}
                 </button>
                 <button
+                  className="menu-serif-text"
                   onClick={() => {
                     if (onAllItemsClick) {
                       onAllItemsClick();
@@ -2130,7 +2144,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2182,7 +2196,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: hoveredButton === 'full-menu' ? '#000' : '#fff',
                   fontSize: '1.8rem',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontFamily: "'Trajin Pro', serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2208,14 +2222,17 @@ function EchoCocktailSubpage2({
         <div
           style={{
             position: 'absolute',
-            left: `${innerLeft}px`,
-            top: `${originalInnerTop + layout.inner.height / 5}px`,
+            left: `${viewMode === 'web' ? innerLeft + layout.inner.width / 2 - layout.inner.width / 3 : innerLeft}px`,
+            top: `${originalInnerTop + layout.inner.height / 5 + (viewMode === 'web' ? size.height * 0.02 : 0)}px`,
             width: `${layout.inner.width / 3}px`,
-            paddingLeft: layout?.inner?.height ? `${(layout.inner.height / 16).toFixed(1)}px` : '0.75rem',
+            paddingLeft: viewMode === 'web' ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 16).toFixed(1)}px` : '0.75rem'),
             paddingTop: layout?.inner?.height ? `${(layout.inner.height / 42).toFixed(1)}px` : '0.35rem',
-            paddingRight: layout?.inner?.height ? `${(layout.inner.height / 32).toFixed(1)}px` : '0.5rem',
+            paddingRight: viewMode === 'web'
+              ? (layout?.inner?.height ? `${(layout.inner.height / 8).toFixed(1)}px` : '1.5rem')
+              : (layout?.inner?.height ? `${(layout.inner.height / 32).toFixed(1)}px` : '0.5rem'),
             paddingBottom: 0,
             boxSizing: 'border-box',
+            zIndex: 2,
             pointerEvents: 'auto',
           }}
         >
@@ -2224,7 +2241,8 @@ function EchoCocktailSubpage2({
           {renderGarnish()}
         </div>
 
-        {/* Right info */}
+        {/* Right info - removed in web view */}
+        {viewMode !== 'web' && (
         <div
           style={{
             position: 'absolute',
@@ -2242,6 +2260,7 @@ function EchoCocktailSubpage2({
           {renderConcept()}
         </div>
         </div>
+        )}
 
         {/* QR Code - bottom right of inner container (menu view only) - stays in place, dark grey */}
         {viewMode === 'menu' && (
@@ -2446,7 +2465,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontFamily: "'Trajin Pro', serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2481,7 +2500,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontFamily: "'Trajin Pro', serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2927,13 +2946,14 @@ function EchoCocktailSubpage2({
     return (
       <div
         ref={ref}
+        className="menu-serif-text"
         style={{
           position: 'relative',
           width: outerWidthOverride ? `${outerWidthOverride}px` : '100%',
           height: outerHeightOverride ? `${outerHeightOverride}px` : '100vh',
           overflow: 'hidden',
           background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontFamily: "'Trajin Pro', serif",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2948,6 +2968,7 @@ function EchoCocktailSubpage2({
   return (
     <div
       ref={ref}
+      className="menu-serif-text"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -2957,7 +2978,7 @@ function EchoCocktailSubpage2({
         height: outerHeightOverride ? `${outerHeightOverride}px` : (viewMode === 'web' ? `${size.height}px` : '100vh'),
         overflow: 'hidden',
         background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontFamily: "'Trajin Pro', serif",
       }}
     >
       {/* Video background fills entire outer container/viewport */}
@@ -2975,6 +2996,22 @@ function EchoCocktailSubpage2({
         }}>
           {/* No video available */}
         </div>
+      )}
+      
+      {/* 1/2 width white fade on top of the video from the left side of the screen (web view only) */}
+      {!isVertical && viewMode === 'web' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '50%',
+            height: '100%',
+            background: 'linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 1) 8.4vw, rgba(255, 255, 255, 0) 100%)',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
       )}
       
       {/* Gradient mask at bottom of outer container (16:10 horizontal view) - behind nav */}
@@ -3253,7 +3290,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             border: 'none',
             color: '#333',
             fontSize: '1.4rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+            fontFamily: "'Trajin Pro', serif",
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             cursor: 'pointer',

@@ -6420,8 +6420,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               const net = (sent - returned).toFixed(2);
               
               return (
-                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                  <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ flex: '2 1 0', minWidth: 0, padding: '8px 6px', background: '#fff', borderRadius: '6px', fontSize: '13px', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>
                     {item.name}
                   </div>
                   <input
@@ -6436,7 +6436,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                     }}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                    style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                   />
                   <input
                     type="text"
@@ -6450,9 +6450,9 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                     }}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                    style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                   />
-                  <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: parseFloat(net) > 0 ? '#ef4444' : '#333' }}>
+                  <div style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', background: '#fff', borderRadius: '6px', fontSize: '13px', textAlign: 'center', fontWeight: 'bold', color: parseFloat(net) > 0 ? '#ef4444' : '#333', boxSizing: 'border-box' }}>
                     {net}
                   </div>
                 </div>
@@ -6634,7 +6634,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             </div>
             
             {/* Operating Expenses Section */}
-            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Operating Expenses</h2>
 
               {/* Additional Expenses */}
@@ -6660,7 +6660,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                     {addlExpenses.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {addlExpenses.map((exp, idx) => (
-                          <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
                             <select
                               value={exp.label}
                               onChange={(e) => {
@@ -6670,7 +6670,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                                   return { ...prev, additionalExpenses: updated };
                                 });
                               }}
-                              style={{ flex: 2, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', background: '#fff' }}
+                              style={{ flex: '1 1 0', minWidth: 0, padding: '8px 6px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '13px', background: '#fff', boxSizing: 'border-box' }}
                             >
                               {EXPENSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
@@ -6690,7 +6690,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                                 }
                               }}
                               onFocus={(e) => e.target.select()}
-                              style={{ flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', background: '#fff', textAlign: 'right' }}
+                              style={{ flex: '0 0 80px', width: '80px', padding: '8px 6px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '13px', background: '#fff', textAlign: 'right', boxSizing: 'border-box' }}
                             />
                             <button
                               onClick={() => {
@@ -6699,7 +6699,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                                   additionalExpenses: (prev.additionalExpenses || []).filter((_, i) => i !== idx),
                                 }));
                               }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '20px', lineHeight: 1, padding: '4px' }}
+                              style={{ flex: '0 0 auto', background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '20px', lineHeight: 1, padding: '2px 4px' }}
                             >×</button>
                           </div>
                         ))}
@@ -6720,11 +6720,11 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 
                 {/* Column Headers - only show if there are labor entries */}
                 {eventSetupData.labor && eventSetupData.labor.length > 0 && (
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ flex: 4, textAlign: 'left' }}>Job</span>
-                    <span style={{ flex: 2, textAlign: 'center' }}>Rate ($/hr)</span>
-                    <span style={{ flex: 2, textAlign: 'center' }}>Hours</span>
-                    <span style={{ flex: 2, textAlign: 'center' }}>Pay</span>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'flex', gap: '6px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                    <span style={{ flex: '2 1 0', minWidth: 0, textAlign: 'left' }}>Job</span>
+                    <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>$/hr</span>
+                    <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>Hrs</span>
+                    <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>Pay</span>
                   </div>
                 )}
                 
@@ -6732,7 +6732,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                 {eventSetupData.labor && eventSetupData.labor.map((laborer, idx) => {
                   const pay = (parseFloat(laborer.rate) || 0) * (parseFloat(laborer.hours) || 0);
                   return (
-                    <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                    <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
                       <select
                         value={laborer.job}
                         onChange={(e) => {
@@ -6749,7 +6749,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                             });
                           }
                         }}
-                        style={{ flex: 4, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', background: '#fff' }}
+                        style={{ flex: '2 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', background: '#fff', boxSizing: 'border-box' }}
                       >
                         <option value="Bartender">Bartender</option>
                         <option value="Barback">Barback</option>
@@ -6773,8 +6773,8 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                           }
                         }}
                         onFocus={(e) => e.target.select()}
-                        placeholder="$0.00"
-                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                        placeholder="$/hr"
+                        style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                       />
                       <input
                         type="text"
@@ -6791,10 +6791,10 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                           }
                         }}
                         onFocus={(e) => e.target.select()}
-                        placeholder="0.00"
-                        style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                        placeholder="hrs"
+                        style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                       />
-                      <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>
+                      <div style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', background: '#fff', borderRadius: '6px', fontSize: '13px', textAlign: 'center', fontWeight: 'bold', boxSizing: 'border-box' }}>
                         ${pay.toFixed(2)}
                       </div>
                     </div>
@@ -6844,20 +6844,20 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
             </div>
             
             {/* Inventory Section */}
-            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+            <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>Inventory</h2>
-              
+
               {/* Column Headers */}
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px', display: 'flex', gap: '8px' }}>
-                <span style={{ flex: 2 }}>Item</span>
-                <span style={{ flex: 1, textAlign: 'center' }}>Sent</span>
-                <span style={{ flex: 1, textAlign: 'center' }}>Returned</span>
-                <span style={{ flex: 1, textAlign: 'center' }}>Net</span>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px', display: 'flex', gap: '6px', width: '100%', boxSizing: 'border-box' }}>
+                <span style={{ flex: '2 1 0', minWidth: 0 }}>Item</span>
+                <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>Sent</span>
+                <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>Returned</span>
+                <span style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center' }}>Net</span>
               </div>
               
               {/* Glassware Rox */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ flex: '2 1 0', minWidth: 0, padding: '8px 6px', background: '#fff', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box' }}>
                   Rox
                 </div>
                 <input
@@ -6872,7 +6872,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
                 <input
                   type="text"
@@ -6886,16 +6886,16 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
-                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.rox > 0 ? '#ef4444' : '#333' }}>
+                <div style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', background: '#fff', borderRadius: '6px', fontSize: '13px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.rox > 0 ? '#ef4444' : '#333', boxSizing: 'border-box' }}>
                   {glasswareLost.rox}
                 </div>
               </div>
-              
+
               {/* Glassware Tmbl */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ flex: '2 1 0', minWidth: 0, padding: '8px 6px', background: '#fff', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box' }}>
                   Tmbl
                 </div>
                 <input
@@ -6910,7 +6910,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
                 <input
                   type="text"
@@ -6924,16 +6924,16 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
-                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.tmbl > 0 ? '#ef4444' : '#333' }}>
+                <div style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', background: '#fff', borderRadius: '6px', fontSize: '13px', textAlign: 'center', fontWeight: 'bold', color: glasswareLost.tmbl > 0 ? '#ef4444' : '#333', boxSizing: 'border-box' }}>
                   {glasswareLost.tmbl}
                 </div>
               </div>
-              
+
               {/* Ice */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                <div style={{ flex: 2, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ flex: '2 1 0', minWidth: 0, padding: '8px 6px', background: '#fff', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box' }}>
                   Ice (blocks)
                 </div>
                 <input
@@ -6948,7 +6948,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
                 <input
                   type="text"
@@ -6962,9 +6962,9 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
                   }}
                   onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center' }}
+                  style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box' }}
                 />
-                <div style={{ flex: 1, padding: '8px', background: '#fff', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: ((parseFloat(eventSetupData.iceSent) || 0) - (parseFloat(eventSetupData.iceReturned) || 0)) > 0 ? '#ef4444' : '#333' }}>
+                <div style={{ flex: '1 1 0', minWidth: 0, padding: '8px 4px', background: '#fff', borderRadius: '6px', fontSize: '13px', textAlign: 'center', fontWeight: 'bold', color: ((parseFloat(eventSetupData.iceSent) || 0) - (parseFloat(eventSetupData.iceReturned) || 0)) > 0 ? '#ef4444' : '#333', boxSizing: 'border-box' }}>
                   {((parseFloat(eventSetupData.iceSent) || 0) - (parseFloat(eventSetupData.iceReturned) || 0)).toFixed(0)}
                 </div>
               </div>

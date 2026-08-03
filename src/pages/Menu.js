@@ -27,7 +27,7 @@ const Menu = () => {
       top: 0,
       left: 0
     }}>
-      <MenuGallery2 
+      <MenuGallery2
         viewMode="web"
         orientationOverride="vertical"
       />

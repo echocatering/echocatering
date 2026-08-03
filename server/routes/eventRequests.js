@@ -51,7 +51,7 @@ function buildEmailHtml(r) {
     </table>
   </div>
   <div style="background:#f9f9f9;padding:16px 28px;font-size:12px;color:#999;border-top:1px solid #eee;">
-    Submitted via echocatering.com
+    Submitted via peddlersmobilebar.com
   </div>
 </div>`;
 }

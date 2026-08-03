@@ -35,7 +35,7 @@ export default function Contact({ isMobile, mobileCurrentPage, setMobileCurrentP
                 
                 <div style={{ marginBottom: '1rem' }}>
                   <h3 style={{ color: '#333', marginBottom: '0.5rem' }}>Email</h3>
-                  <p style={{ color: '#666' }}>info@echocatering.com</p>
+                  <p style={{ color: '#666' }}>info@peddlersmobilebar.com</p>
                 </div>
                 
                 <div style={{ marginBottom: '1rem' }}>
@@ -76,7 +76,7 @@ export default function Contact({ isMobile, mobileCurrentPage, setMobileCurrentP
               
               <div className="contact-item">
                 <h3>Email</h3>
-                <p>info@echocatering.com</p>
+                <p>info@peddlersmobilebar.com</p>
               </div>
               
               <div className="contact-item">

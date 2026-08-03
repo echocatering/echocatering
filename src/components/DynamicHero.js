@@ -371,32 +371,6 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             height: '100%',
             pointerEvents: 'auto'
           }}>
-            {/* Multiply fade overlay - preserves photo colors by staying off pure black */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.55) 65%, rgba(0, 0, 0, 0.3) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
-              mixBlendMode: 'multiply',
-              pointerEvents: 'none',
-              zIndex: 0
-            }} />
-            {/* Secondary multiply layer for depth */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0.1) 80%, rgba(0, 0, 0, 0) 100%)',
-              mixBlendMode: 'multiply',
-              pointerEvents: 'none',
-              zIndex: 0
-            }} />
             {/* Wmamo and Dropdown Group */}
             <div style={{
               display: 'flex',
@@ -409,145 +383,6 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
               width: '100%',
               zIndex: 2
             }}>
-              {/* Echo icon above cocktail SVG */}
-                <img
-                  src="/assets/icons/icon.echo.png"
-                  alt="Echo"
-                  style={{
-                    width: '6vw',
-                    minWidth: '40px',
-                    maxWidth: '80px',
-                    height: 'auto',
-                    filter: 'brightness(0) invert(1)',
-                    backgroundColor: 'transparent',
-                    display: 'block',
-                    WebkitBackfaceVisibility: 'hidden',
-                    WebkitPerspective: 1000,
-                    WebkitTransform: 'translate3d(0, 0, 0)',
-                    isolation: 'isolate',
-                    position: 'relative',
-                    zIndex: 10,
-                    marginBottom: '3px'
-                  }}
-                />
-                
-                {/* COCKTAILS / Plus / EVENT CATERING grouped */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                width: '95vw',
-                marginTop: '10px',
-                marginBottom: '0px'
-              }}>
-                <div
-                  style={{
-                    fontSize: 'clamp(2.7rem, 6.75vw, 5.25rem)',
-                    color: '#ffffff',
-                    fontWeight: 400,
-                    textAlign: 'center',
-                    letterSpacing: '0.12em',
-                    backgroundColor: 'transparent',
-                    display: 'block',
-                    whiteSpace: 'nowrap',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                    lineHeight: '1.2'
-                  }}
-                >
-                  COCKTAILS
-                </div>
-                <div style={{
-                  fontSize: 'clamp(1.2rem, 3.2vw, 2.4rem)',
-                  color: '#ffffff',
-                  fontWeight: 500,
-                  textAlign: 'center',
-                  backgroundColor: 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  lineHeight: '1',
-                  height: '5px',
-                  overflow: 'visible',
-                  marginTop: '-16px'
-                }}>
-                  +
-                </div>
-                <div style={{
-                  fontSize: 'clamp(1.26rem, 3.15vw, 2.45rem)',
-                  color: '#ffffff',
-                  fontWeight: 400,
-                  textAlign: 'center',
-                  letterSpacing: '0.12em',
-                  backgroundColor: 'transparent',
-                  display: 'block',
-                  whiteSpace: 'nowrap',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  lineHeight: '1.2',
-                  marginTop: '0px'
-                }}>
-                  EVENT CATERING
-                </div>
-              </div>
-              
-              {/* BOOK NOW Button */}
-              <div 
-                onClick={() => {
-                  if (setMobileCurrentPage) {
-                    setMobileCurrentPage('contact');
-                  } else {
-                    // Fallback for desktop
-                    const contactSection = document.getElementById('contact');
-                    if (contactSection) {
-                      contactSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }
-                }}
-                style={{
-                  border: '2px solid #ffffff',
-                  borderRadius: 0,
-                  width: 'clamp(150px, 18vw, 210px)',
-                  height: 'clamp(32px, 3.5vh, 48px)',
-                  padding: '5px',
-                  fontSize: 'clamp(0.7rem, 1.8vh, 1.1rem)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  textAlign: 'center',
-                  letterSpacing: '0.12em',
-                  backgroundColor: 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                  marginTop: '20px',
-                  transition: 'all 0.2s ease',
-                  minHeight: '44px',
-                  touchAction: 'manipulation',
-                  boxShadow: 'none',
-                  WebkitTapHighlightColor: 'transparent',
-                  outline: 'none',
-                  WebkitUserSelect: 'none',
-                  userSelect: 'none',
-                  zIndex: 10,
-                  position: 'relative',
-                  pointerEvents: 'auto'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#ffffff';
-                  e.target.style.color = '#000000';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#ffffff';
-                }}
-              >
-                BOOK NOW
-              </div>
-              
             </div>
           </div>
 
@@ -1163,7 +998,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           width: dimensions.triangleSize,
           height: dimensions.triangleSize,
           backgroundColor: 'white',
-          clipPath: 'polygon(100% 0, 0 100%, 100% 100%)',
+          borderTopLeftRadius: dimensions.triangleSize,
           zIndex: 20,
         }} />
       )}
@@ -1182,7 +1017,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+            fontFamily: "'Trajin Pro', serif",
             fontSize: dimensions.menuBoxFontSize,
             fontWeight: 400,
             textTransform: 'uppercase',
@@ -1302,32 +1137,6 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '100%',
           pointerEvents: 'auto'
         }}>
-          {/* Multiply fade overlay - preserves photo colors by staying off pure black */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(to left, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.55) 65%, rgba(0, 0, 0, 0.3) 75%, rgba(0, 0, 0, 0.1) 85%, rgba(0, 0, 0, 0) 100%)',
-            mixBlendMode: 'multiply',
-            pointerEvents: 'none',
-            zIndex: 0
-          }} />
-          {/* Secondary multiply layer for depth */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0.1) 80%, rgba(0, 0, 0, 0) 100%)',
-            mixBlendMode: 'multiply',
-            pointerEvents: 'none',
-            zIndex: 0
-          }} />
         {/* Content wrapper to maintain same visual position */}
         <div style={{
           position: 'absolute',
@@ -1342,132 +1151,6 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '800px',
           pointerEvents: 'none'
         }}>
-        {/* Echo icon above cocktail SVG */}
-        <img
-          src="/assets/icons/icon.echo.png"
-          alt="Echo"
-          style={{
-            width: '6vw',
-            minWidth: '40px',
-            maxWidth: '80px',
-            height: 'auto',
-            filter: 'brightness(0) invert(1)',
-            backgroundColor: 'transparent',
-            display: 'block',
-            WebkitBackfaceVisibility: 'hidden',
-            WebkitPerspective: 1000,
-            WebkitTransform: 'translate3d(0, 0, 0)',
-            isolation: 'isolate',
-            position: 'relative',
-            zIndex: 2,
-            marginBottom: '3px'
-          }}
-        />
-        
-        {/* COCKTAILS / Plus / EVENT CATERING grouped - Mobile */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
-          position: 'relative',
-          zIndex: 2,
-          marginTop: 'calc(1vh + 4px)'
-        }}>
-          <div style={{
-            fontSize: 'clamp(2.7rem, 6.75vw, 5.25rem)',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            backgroundColor: 'transparent',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1.2'
-          }}>
-            COCKTAILS
-          </div>
-          <div style={{
-            fontSize: '3vw',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            backgroundColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1',
-            height: '5px',
-            overflow: 'visible',
-            marginTop: '-10px'
-          }}>
-            +
-          </div>
-          <div style={{
-            fontSize: '2.45vw',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            backgroundColor: 'transparent',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1.2'
-          }}>
-            EVENT CATERING
-          </div>
-        </div>
-        
-        {/* BOOK NOW Button - Desktop */}
-        <div 
-          onClick={() => {
-            if (setMobileCurrentPage) {
-              setMobileCurrentPage('contact');
-            } else {
-              // Fallback for desktop
-              const contactSection = document.getElementById('event-request-section');
-              if (contactSection) {
-                contactSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }
-          }}
-          style={{
-            border: '2px solid #ffffff',
-            borderRadius: 0,
-            width: '200px',
-            padding: '0.6rem 0',
-            fontSize: '0.8rem',
-            color: '#ffffff',
-            fontWeight: 600,
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            backgroundColor: 'transparent',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-            marginTop: '40px',
-            margin: '40px auto',
-            transition: 'all 0.2s ease',
-            zIndex: 10,
-            position: 'relative',
-            pointerEvents: 'auto'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = '#ffffff';
-            e.target.style.color = '#000000';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'transparent';
-            e.target.style.color = '#ffffff';
-          }}
-        >
-          BOOK NOW
-        </div>
         </div>
         </div>
 
