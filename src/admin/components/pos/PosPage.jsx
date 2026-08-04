@@ -109,7 +109,7 @@ const PosPage = () => {
     registerServiceWorker();
     
     // Update document title for PWA
-    document.title = 'ECHO POS';
+    document.title = 'Peddlers POS';
     
     // Prevent browser gestures (pull-to-refresh, swipe navigation)
     const preventBrowserGestures = (e) => {
@@ -191,7 +191,7 @@ const PosPage = () => {
       if (manifestLink) {
         manifestLink.href = '/manifest.json';
       }
-      document.title = 'ECHO Catering - Rochester, NY | Craft Cocktails & Events';
+      document.title = 'Peddlers Mobile Bar - Rochester, NY | Craft Cocktails & Social Tonics';
       
       // Clean up event listeners
       document.removeEventListener('touchmove', preventBrowserGestures);
