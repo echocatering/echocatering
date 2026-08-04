@@ -2368,6 +2368,20 @@ body {
   border-color: #000 !important;
 }
 
+/* New (non-legacy) view rounds off the action buttons; legacy keeps square corners. */
+.menu-manager-action-button.is-rounded {
+  border-radius: 2.5rem !important;
+}
+
+/* Top category nav: darken to black on hover. */
+.menu-manager-nav-button {
+  transition: color 0.2s ease;
+}
+
+.menu-manager-nav-button:hover {
+  color: #000 !important;
+}
+
 /* Style file input button to match action buttons - simpler approach */
 input[type="file"].menu-manager-action-button {
   color: transparent !important;

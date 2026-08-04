@@ -6,8 +6,8 @@ import { usePosWebSocket } from '../hooks/usePosWebSocket';
 import MenuGallery2 from '../../pages/menuGallery2';
 
 const CATEGORIES = [
-  { id: 'cocktails', label: 'C', fullName: 'Social Tonics' },
-  { id: 'mocktails', label: 'M', fullName: 'ALC +' },
+  { id: 'cocktails', label: 'NA', fullName: 'Social Tonics' },
+  { id: 'mocktails', label: 'A+', fullName: 'ALC +' },
   { id: 'beer', label: 'B', fullName: 'Beer' },
   { id: 'wine', label: 'W', fullName: 'Wine' },
   { id: 'spirits', label: 'S', fullName: 'Spirits' }

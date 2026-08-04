@@ -507,6 +507,11 @@ const InventoryManager = () => {
     if (!sheetPayload?.columns) return [];
     // Columns to hide/show with the "Show hidden columns" button
     const hideableColumnKeys = ['itemNumber', 'ingredients', 'concept', 'page', 'mapType'];
+    // Region is only hideable on Social Tonics / ALC + — other sheets (wine, spirits)
+    // still surface it as a normal column.
+    if (sheetPayload.sheetKey === 'cocktails' || sheetPayload.sheetKey === 'mocktails') {
+      hideableColumnKeys.push('region');
+    }
     let columns = sheetPayload.columns;
     
     // Filter out hideable columns when showHiddenColumns is false

@@ -153,8 +153,15 @@ function useContainerSize(containerRef) {
 /**
  * Video background component for viewer (based on menugallery2.js VideoBackground)
  */
-function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl, isProcessing }) {
+function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_URL, currentCocktail, videoPreviewUrl, isProcessing, videoScale = 1, videoOffsetX = null }) {
   const shouldRender = isCloudinaryUrl(videoSrc) && !isProcessing;
+
+  // Compose the transform so translate is applied in the parent's coordinate space
+  // (listing it before scale keeps the offset a true distance, unmultiplied by scale).
+  const videoTransform = [
+    videoOffsetX ? `translateX(${videoOffsetX})` : null,
+    videoScale !== 1 ? `scale(${videoScale})` : null,
+  ].filter(Boolean).join(' ') || undefined;
 
   useEffect(() => {
     if (!shouldRender) return;
@@ -223,6 +230,8 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
         objectPosition: 'center',
         pointerEvents: 'none',
         zIndex: 0, // Video should be at the base layer
+        transform: videoTransform,
+        transformOrigin: 'center',
       }}
     >
       <source src={videoSrc} type="video/mp4" />
@@ -310,11 +319,16 @@ const MenuManager = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const viewerContainerRef = useRef(null);
+  const saveButtonRef = useRef(null);
+  const headerRef = useRef(null);
   const videoFileInputRef = useRef(null);
   const viewerSize = useContainerSize(viewerContainerRef);
   const [countries, setCountries] = useState([]);
   const [countryQuery, setCountryQuery] = useState('');
   const [mapType, setMapType] = useState('world'); // 'world' or 'us'
+  // View toggle: off = current view (map/countries panel hidden on Social Tonics / ALC +),
+  // on = legacy view (panel restored). Purely a view preference, not saved to the item.
+  const [legacyView, setLegacyView] = useState(false);
   const mapRef = useRef(null);
   const svgRef = useRef(null); // Direct ref to the SVG element
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -434,6 +448,14 @@ const MenuManager = () => {
     { key: 'premix', label: 'PRE-MIX', icon: 'spirits' },
     { key: 'archived', label: 'ARCHIVED', icon: 'originals', archived: true }
   ];
+
+  // Beer / Wine / Spirits are hidden from the top nav. Ticking LEGACY brings them
+  // back, which keeps them reachable rather than orphaning their data.
+  // Keyed off legacyView (not useNewLayout) so they don't vanish from under you
+  // once you've navigated onto one of them.
+  const visibleMenuCategories = legacyView
+    ? menuCategories
+    : menuCategories.filter((category) => !['beer', 'wine', 'spirits'].includes(category.key));
 
   const normalizeCategoryKey = (value = '') => {
     const key = String(value).toLowerCase();
@@ -1517,6 +1539,75 @@ const MenuManager = () => {
 
   // Use the appropriate list based on mapType
   const filteredRegionsList = mapType === 'us' ? filteredStates : filteredCountries;
+
+  // Social Tonics and ALC + hide the legacy fields (map / countries panel, Concept) by
+  // default; ticking LEGACY brings them back. Every other category shows them as before.
+  const isLegacyToggleCategory = ['cocktails', 'mocktails'].includes(selectedCategory);
+  const showLegacyFields = !isLegacyToggleCategory || legacyView;
+  // True only in the new (non-legacy) view. Gate every layout tweak on this so the
+  // legacy view keeps rendering exactly as it always has.
+  const useNewLayout = isLegacyToggleCategory && !legacyView;
+
+  // In the new layout the left column's content starts flush with the SAVE CHANGES
+  // button. That button sits in a centred, fixed-width flex row, so its left edge
+  // depends on the rendered button widths — measure it rather than hardcoding.
+  const [contentLeftOffset, setContentLeftOffset] = useState(null);
+  // Header padding that lines VIEW RECIPE up with the title's left border and
+  // ARCHIVED up with the ARCHIVE button's right border.
+  const [headerPadding, setHeaderPadding] = useState(null);
+  const measureContentLeftOffset = useCallback(() => {
+    const button = saveButtonRef.current;
+    const container = viewerContainerRef.current;
+    if (!button || !container) return;
+    const buttonRect = button.getBoundingClientRect();
+    // A not-yet-laid-out node reports an all-zero rect; ignore it so we don't latch
+    // onto a bogus offset before the action bar has mounted.
+    if (buttonRect.width === 0) return;
+    const containerRect = container.getBoundingClientRect();
+    const offset = buttonRect.left - containerRect.left;
+    setContentLeftOffset(offset > 0 ? offset : null);
+
+    // The header is absolutely positioned against a different box than the viewer,
+    // so measure the gap between them rather than assuming the parent's padding.
+    // The action bar is centre-aligned, so its right gap mirrors this left offset.
+    const header = headerRef.current;
+    if (!header || offset <= 0) return;
+    const headerRect = header.getBoundingClientRect();
+    const left = (containerRect.left - headerRect.left) + offset;
+    const right = (headerRect.right - containerRect.right) + offset;
+    // Bail out when unchanged — a fresh object every pass would loop the render.
+    setHeaderPadding((prev) => (prev && prev.left === left && prev.right === right)
+      ? prev
+      : { left, right });
+  }, []);
+
+  // Callback ref: fires the moment the button mounts, which is what the plain effect
+  // missed — the action bar appears only once item data has loaded.
+  const attachSaveButton = useCallback((node) => {
+    saveButtonRef.current = node;
+    if (node) measureContentLeftOffset();
+  }, [measureContentLeftOffset]);
+
+  useLayoutEffect(() => {
+    if (!useNewLayout) {
+      setContentLeftOffset(null);
+      setHeaderPadding(null);
+      return;
+    }
+    measureContentLeftOffset();
+    const button = saveButtonRef.current;
+    if (!button || !window.ResizeObserver) return;
+    const observer = new ResizeObserver(() => measureContentLeftOffset());
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [useNewLayout, measureContentLeftOffset, viewerSize?.width, viewerSize?.height, currentCocktail?._id]);
+
+  // Column keeps its original content width (33.33% minus the old 48px padding) and
+  // grows by however much padding the alignment needs, so nothing gets squeezed.
+  const leftColumnPadding = useNewLayout && contentLeftOffset != null ? `${contentLeftOffset}px` : '48px';
+  const leftColumnWidth = useNewLayout && contentLeftOffset != null
+    ? `calc(33.33% - 48px + ${contentLeftOffset}px)`
+    : '33.33%';
 
   const countryLookup = useMemo(() => buildCountryMap(countries), [countries]);
   
@@ -2942,13 +3033,13 @@ const MenuManager = () => {
       )}
       <div className="menu-manager bg-white min-h-screen px-6 pb-6 w-full" style={{ paddingTop: 0, position: 'relative' }}>
         {/* Unified header — always in document flow above all content */}
-        <header style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: '100px', paddingRight: '100px', paddingTop: '120px', paddingBottom: '20px' }}>
+        <header ref={headerRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: useNewLayout && headerPadding ? `${headerPadding.left}px` : '100px', paddingRight: useNewLayout && headerPadding ? `${headerPadding.right}px` : '100px', paddingTop: '120px', paddingBottom: '20px' }}>
           {/* VIEW RECIPE / VIEW ITEM toggle + DISPLAY checkbox on left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {normalizeCategoryKey(selectedCategory) !== 'premix' && shouldShowRecipeBuilder(selectedCategory) && (
               <button
                 onClick={() => setRecipeViewActive(prev => !prev)}
-                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                className={`menu-manager-nav-button px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
                   recipeViewActive
                     ? 'bg-gray-800 text-white border-gray-800'
                     : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
@@ -2980,14 +3071,35 @@ const MenuManager = () => {
                 <span style={{ fontFamily: 'inherit', fontSize: '0.65rem', fontWeight: 400, color: '#4b5563', letterSpacing: '0.05em' }}>DISPLAY</span>
               </label>
             )}
+            {isLegacyToggleCategory && (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '12px 24px',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={legacyView}
+                  onChange={(e) => setLegacyView(e.target.checked)}
+                  style={{ width: '13px', height: '13px', accentColor: '#4b5563', cursor: 'pointer' }}
+                />
+                <span style={{ fontFamily: 'inherit', fontSize: '0.65rem', fontWeight: 400, color: '#4b5563', letterSpacing: '0.05em' }}>LEGACY</span>
+              </label>
+            )}
           </div>
           {/* Category buttons on right */}
-          <div className="flex gap-4">
-            {menuCategories.map((category) => (
+          {/* Real flex + gap: the `flex gap-4` classes are inert (no Tailwind in this project). */}
+          <div className="flex gap-4" style={{ display: 'flex', gap: '24px' }}>
+            {visibleMenuCategories.map((category) => (
               <button
                 key={category.key}
                 onClick={() => { preserveRecipeViewRef.current = recipeViewActive; setSelectedCategory(category.key); }}
-                className={`px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
+                className={`menu-manager-nav-button px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
                   selectedCategory === category.key
                     ? 'bg-gray-800 text-white border-gray-800'
                     : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
@@ -3156,6 +3268,8 @@ const MenuManager = () => {
                   videoPreviewUrl={videoPreviewUrl}
                   API_BASE_URL={API_BASE_URL}
                   isProcessing={!!processingStatus?.active}
+                  videoScale={useNewLayout ? 1.2 : 1}
+                  videoOffsetX={useNewLayout ? 'calc(100vw / 8)' : null}
                   onLoadedData={() => {
                     if (videoRef.current) {
                       const video = videoRef.current;
@@ -3290,9 +3404,9 @@ const MenuManager = () => {
                         position: 'absolute',
                         left: 0,
                   top: 0,
-                  width: '33.33%',
+                  width: leftColumnWidth,
                         height: '100%',
-                  paddingLeft: '48px',
+                  paddingLeft: leftColumnPadding,
                   boxSizing: 'border-box',
                   zIndex: 25,
                   pointerEvents: 'auto',
@@ -3317,7 +3431,7 @@ const MenuManager = () => {
                         style={{ 
                           fontFamily: 'Montserrat, sans-serif',
                           border: '2px solid #666666',
-                          borderRadius: 0,
+                          borderRadius: useNewLayout ? '2.5rem' : 0,
                           outline: 'none',
                           background: 'transparent',
                           fontSize: '2rem',
@@ -3370,6 +3484,7 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                     />
                   </div>
+                  {showLegacyFields && (
                   <div>
                     <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Concept</label>
                     <textarea
@@ -3380,7 +3495,7 @@ const MenuManager = () => {
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter cocktail concept"
                       rows={3}
-                      style={{ 
+                      style={{
                         fontFamily: 'Montserrat, sans-serif',
                         border: focusedField === 'concept' ? '1px solid #d1d5db' : 'none',
                         outline: 'none',
@@ -3391,6 +3506,7 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                     />
                   </div>
+                  )}
                   <div style={{ marginTop: '-0.5rem' }}>
                     <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide mb-2 block">Page</label>
                     {editingCocktail ? (
@@ -3454,7 +3570,7 @@ const MenuManager = () => {
                       type="button"
                       onClick={() => videoFileInputRef.current?.click()}
                       disabled={!editingCocktail}
-                      className="menu-manager-action-button"
+                      className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
                       style={{ 
                         background: 'transparent',
                         border: '2px solid #666666',
@@ -3527,8 +3643,10 @@ const MenuManager = () => {
                   style={{
                     position: 'absolute',
                     left: '50%',
-                    transform: 'translateX(-50%)',
-                    bottom: viewerSize?.height ? `${viewerSize.height / 5 + 200}px` : '200px',
+                    // New layout nudges the arrows right 1/8vw and down 48px (smaller
+                    // `bottom` == lower on screen); legacy keeps the original centring.
+                    transform: useNewLayout ? 'translateX(calc(-50% + 100vw / 8))' : 'translateX(-50%)',
+                    bottom: `${(viewerSize?.height ? viewerSize.height / 5 + 200 : 200) - (useNewLayout ? 48 : 0)}px`,
                     width: '256px',
                     display: 'flex',
                     alignItems: 'center',
@@ -3609,8 +3727,9 @@ const MenuManager = () => {
               )}
 
               {/* RIGHT COLUMN - Map, Countries - positioned absolutely on top */}
+              {showLegacyFields && (
               <div
-                        style={{ 
+                        style={{
                   position: 'absolute',
                   right: 0,
                   top: 0,
@@ -3749,6 +3868,7 @@ const MenuManager = () => {
                   </div>
                   </div>
                 </div>
+              )}
 
               {/* White fade at bottom of viewer */}
               <div
@@ -3785,6 +3905,7 @@ const MenuManager = () => {
                 }}
               >
                 <button
+                  ref={attachSaveButton}
                   onClick={(e) => {
                     if (editingCocktail) {
                       const button = e.currentTarget;
@@ -3801,7 +3922,7 @@ const MenuManager = () => {
                     }
                   }}
                     disabled={!editingCocktail}
-              className="menu-manager-action-button"
+              className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
               style={{ 
                     background: 'transparent',
                     border: '2px solid #666666',
@@ -3867,7 +3988,7 @@ const MenuManager = () => {
                         <button
               onClick={handleRevertChanges}
               disabled={!editingCocktail}
-              className="menu-manager-action-button"
+              className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
               style={{ 
                     background: 'transparent',
                     border: '2px solid #666666',
@@ -3930,7 +4051,7 @@ const MenuManager = () => {
                         <button
               onClick={handleNewItem}
               disabled={selectedCategory === 'archived'}
-              className="menu-manager-action-button"
+              className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
               style={{ 
                     background: 'transparent',
                     border: '2px solid #666666',
@@ -4002,7 +4123,7 @@ const MenuManager = () => {
               <>
                         <button
                   onClick={() => handleDelete(editingCocktail._id)}
-                  className="menu-manager-action-button"
+                  className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
                   style={{ 
                           background: 'transparent',
                           border: '2px solid #666666',
@@ -4062,7 +4183,7 @@ const MenuManager = () => {
                 {canArchive && (
                         <button
                     onClick={() => handleArchive(editingCocktail)}
-                    className="menu-manager-action-button"
+                    className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
                     style={{ 
                           background: 'transparent',
                           border: '2px solid #666666',
@@ -4114,7 +4235,7 @@ const MenuManager = () => {
                 {canRestore && (
             <button 
                     onClick={() => handleRestore(editingCocktail)}
-                    className="menu-manager-action-button"
+                    className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
                     style={{ 
                           background: 'transparent',
                           border: '2px solid #666666',
@@ -4180,7 +4301,7 @@ const MenuManager = () => {
             <button 
               onClick={handleNewItem}
               disabled={selectedCategory === 'archived'}
-              className="menu-manager-action-button"
+              className={`menu-manager-action-button${useNewLayout ? ' is-rounded' : ''}`}
               style={{ 
                 background: 'transparent',
                 border: '2px solid #666666',

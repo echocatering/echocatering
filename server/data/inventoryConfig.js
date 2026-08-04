@@ -5,7 +5,6 @@ const SHEET_DEFINITIONS = [
     description: 'Reference costs for finished cocktails.',
     columns: [
       { key: 'name', label: 'Name', type: 'text', required: true },
-      { key: 'region', label: 'Region', type: 'text' },
       { key: 'style', label: 'Type', type: 'dropdown', datasetId: 'cocktail.type' },
       { key: 'ice', label: 'Ice', type: 'dropdown', datasetId: 'cocktails.ice' },
       { key: 'garnish', label: 'Garnish', type: 'dropdown', datasetId: 'cocktails.garnish' },
@@ -17,7 +16,8 @@ const SHEET_DEFINITIONS = [
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
       { key: 'page', label: 'Page', type: 'text', hidden: true },
-      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true },
+      { key: 'region', label: 'Region', type: 'text', hidden: true }
     ]
   },
   {
@@ -26,7 +26,6 @@ const SHEET_DEFINITIONS = [
     description: 'Reference costs for finished mocktails.',
     columns: [
       { key: 'name', label: 'Name', type: 'text', required: true },
-      { key: 'region', label: 'Region', type: 'text' },
       { key: 'style', label: 'Type', type: 'dropdown', datasetId: 'cocktail.type' },
       { key: 'ice', label: 'Ice', type: 'dropdown', datasetId: 'cocktails.ice' },
       { key: 'garnish', label: 'Garnish', type: 'dropdown', datasetId: 'mocktails.garnish' },
@@ -38,7 +37,8 @@ const SHEET_DEFINITIONS = [
       { key: 'ingredients', label: 'Ingredients', type: 'text', hidden: true },
       { key: 'concept', label: 'Concept', type: 'text', hidden: true },
       { key: 'page', label: 'Page', type: 'text', hidden: true },
-      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true }
+      { key: 'mapType', label: 'Map Type', type: 'dropdown', datasetId: 'shared.mapType', hidden: true },
+      { key: 'region', label: 'Region', type: 'text', hidden: true }
     ]
   },
   {
