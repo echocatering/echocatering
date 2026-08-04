@@ -32,9 +32,9 @@ const app = express();
 
 const PORT = Number(process.env.WORKER_PORT || 8787);
 const WORKER_ID = process.env.WORKER_ID || 'andy-mac-worker';
-const RENDER_API_BASE = (process.env.RENDER_API_BASE || 'https://echocatering.onrender.com').replace(/\/+$/, '');
+const RENDER_API_BASE = (process.env.RENDER_API_BASE || 'https://peddlersmobilebar.onrender.com').replace(/\/+$/, '');
 const WORKER_SECRET = process.env.VIDEO_WORKER_SECRET || '';
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://echocatering.onrender.com';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://peddlersmobilebar.onrender.com';
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
