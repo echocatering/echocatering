@@ -111,14 +111,14 @@ export default function EventRequestForm() {
       <div style={{ 
         padding: '3rem', 
         textAlign: 'center',
-        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+        fontFamily: "'Trajin Pro', serif"
       }}>
         <h2 style={{
           fontSize: '1.8rem',
           fontWeight: 600,
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: "'Trajin Pro', serif"
         }}>
           Thank you!
         </h2>
@@ -127,7 +127,7 @@ export default function EventRequestForm() {
           color: '#333',
           marginBottom: '1rem',
           lineHeight: '1.5',
-          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: "'Trajin Pro', serif"
         }}>
           Your event request has been submitted successfully.
         </p>
@@ -136,7 +136,7 @@ export default function EventRequestForm() {
           color: '#666', 
           marginTop: '1rem',
           lineHeight: '1.5',
-          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: "'Trajin Pro', serif"
         }}>
           We'll review your details and be in touch soon to discuss your event.
         </p>
@@ -154,7 +154,7 @@ export default function EventRequestForm() {
         padding: '3rem',
         paddingTop: width >= 1200 ? '64px' : '3rem',
         borderRadius: '8px',
-        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+        fontFamily: "'Trajin Pro', serif"
       }}
     >
       <h2
@@ -187,10 +187,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             First Name*
           </label>
@@ -205,7 +205,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -215,10 +215,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Last Name*
           </label>
@@ -233,7 +233,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -243,10 +243,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Email Address*
           </label>
@@ -262,7 +262,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -272,10 +272,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Phone Number*
           </label>
@@ -290,7 +290,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -300,10 +300,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Ext.
           </label>
@@ -317,7 +317,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -327,10 +327,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Company
           </label>
@@ -344,7 +344,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -383,10 +383,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Event Date*
           </label>
@@ -402,7 +402,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -413,10 +413,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Start Time*
           </label>
@@ -433,7 +433,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -444,10 +444,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             End Time*
           </label>
@@ -464,7 +464,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -475,10 +475,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Number of Guests*
           </label>
@@ -495,7 +495,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -506,10 +506,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Are you serving alcohol?
           </label>
@@ -523,7 +523,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -538,10 +538,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             How did you hear about us?*
           </label>
@@ -556,7 +556,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -577,10 +577,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Nature of this Event*
           </label>
@@ -595,7 +595,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               minHeight: longTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -613,10 +613,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 300,
-            color: '#333',
+            fontWeight: 400,
+            color: '#555',
             marginBottom: '0.5rem',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            fontFamily: "'Trajin Pro', serif"
           }}>
             Additional Information
           </label>
@@ -630,7 +630,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               minHeight: mediumTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -644,7 +644,7 @@ export default function EventRequestForm() {
           color: '#dc2626',
           marginBottom: '1rem',
           fontSize: '0.9rem',
-          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: "'Trajin Pro', serif"
         }}>
           {error}
         </div>

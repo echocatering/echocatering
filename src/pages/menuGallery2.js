@@ -1634,8 +1634,8 @@ function EchoCocktailSubpage2({
           className="cocktail-ingredients-list"
           style={{
             fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4),
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-            fontWeight: 300,
+            fontFamily: "'Trajin Pro', serif",
+            fontWeight: 400,
             marginBottom: 0,
             lineHeight: isVertical ? '1.2' : '1.4',
           }}
@@ -1683,7 +1683,7 @@ function EchoCocktailSubpage2({
         >
           Garnish
         </div>
-        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontWeight: 300 }}>{info.garnish}</div>
+        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Trajin Pro', serif", fontWeight: 400 }}>{info.garnish}</div>
       </div>
     );
   };

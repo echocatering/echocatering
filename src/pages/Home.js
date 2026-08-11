@@ -2694,10 +2694,10 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#333',
-                // Matches the Menu Gallery's ingredient list, which is weight 300
-                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-                fontWeight: 300,
+                color: '#555',
+                // Body copy face, shared with the About panels and the menu gallery
+                fontFamily: "'Trajin Pro', serif",
+                fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
@@ -2707,10 +2707,10 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#333',
-                // Matches the Menu Gallery's ingredient list, which is weight 300
-                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-                fontWeight: 300,
+                color: '#555',
+                // Body copy face, shared with the About panels and the menu gallery
+                fontFamily: "'Trajin Pro', serif",
+                fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
@@ -3885,11 +3885,10 @@ const Home = forwardRef((props, ref) => {
                           {section.content && (
                             <p
                               style={{
-                                color: '#444',
+                                color: '#666',
                                 margin: 0,
-                                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-                                fontWeight: 300,
-                                WebkitTextStroke: '0.6px currentColor',
+                                fontFamily: "'Trajin Pro', serif",
+                                fontWeight: 400,
                                 lineHeight: 1.6,
                                 fontSize: '1.15em',
                                 whiteSpace: 'pre-wrap',
@@ -4053,10 +4052,10 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#333',
-                    // Matches the Menu Gallery's ingredient list, which is weight 300
-                    fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-                    fontWeight: 300,
+                    color: '#555',
+                    // Body copy face, shared with the About panels and the menu gallery
+                    fontFamily: "'Trajin Pro', serif",
+                    fontWeight: 400,
                     textAlign: 'left'
                   }}
                 >
@@ -4066,10 +4065,10 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#333',
-                    // Matches the Menu Gallery's ingredient list, which is weight 300
-                    fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-                    fontWeight: 300,
+                    color: '#555',
+                    // Body copy face, shared with the About panels and the menu gallery
+                    fontFamily: "'Trajin Pro', serif",
+                    fontWeight: 400,
                     textAlign: 'left'
                   }}
                 >

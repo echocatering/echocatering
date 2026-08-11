@@ -1857,13 +1857,14 @@ div[class*="sidebar-no-fade"] {
   font-family: 'Cinzel', Georgia, serif !important;
 }
 
-/* Cocktail info panel content (actual ingredients/garnish) uses Helvetica Neue Light */
+/* Cocktail info panel content (actual ingredients/garnish) uses Trajin Pro,
+   matching the body copy in the About section and the event request form */
 .cocktail-ingredients-list,
 .cocktail-ingredients-list *,
 .cocktail-garnish-text,
 .cocktail-garnish-text * {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-  font-weight: 300 !important;
+  font-family: 'Trajin Pro', serif !important;
+  font-weight: 400 !important;
 }
 
 /* Header navigation menu font */
