@@ -1168,7 +1168,12 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           position: 'absolute',
           top: '50%',
           left: '50%',
-          transform: 'translate(-50%, calc(-50% - 20px))',
+          // Align the hero content's centre with the header navigation's centre. The nav is
+          // right-anchored (14px from the right edge, 730px wide, so its centre sits 365px in
+          // from that edge) while this wrapper is centred inside a parent offset 25vw from the
+          // left. Shifting by 25vw - 14px - 365px makes the two centres coincide at any width.
+          // If nav items are added or resized, update the 365px — it is half the nav's width.
+          transform: 'translate(calc(-50% + 25vw - 14px - 365px), calc(-50% - 20px))',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -1184,7 +1189,11 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           alt="Craft Cocktails & Social Tonics"
           style={{
             width: 'clamp(264px, 28.8vw, 456px)',
+            // Squashed to 85% of its natural square. objectFit: fill lets it warp rather than
+            // letterbox — a deliberate slight distortion to reduce the lockup's height.
+            aspectRatio: '1 / 0.85',
             height: 'auto',
+            objectFit: 'fill',
             display: 'block',
             backgroundColor: 'transparent',
             WebkitBackfaceVisibility: 'hidden',
@@ -1210,20 +1219,23 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             }
           }}
           style={{
+            // Font and border match the Schedule an Event button; the white-on-transparent
+            // colours and the invert-on-hover behaviour are this button's own.
             border: '2px solid #ffffff',
-            borderRadius: 0,
+            borderRadius: '2.5rem',
             width: '200px',
             padding: '0.6rem 0',
-            fontSize: '0.8rem',
+            fontSize: '1.1rem',
             color: '#ffffff',
-            fontWeight: 600,
+            fontWeight: 400,
             textAlign: 'center',
-            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
             backgroundColor: 'transparent',
             display: 'block',
             whiteSpace: 'nowrap',
             cursor: 'pointer',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+            fontFamily: "'Times New Roman', Times, serif",
             marginTop: '40px',
             margin: '40px auto',
             transition: 'all 0.2s ease',
