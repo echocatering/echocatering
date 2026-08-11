@@ -10,17 +10,13 @@ import InventoryManager from './components/InventoryManager';
 import FullMenu from './components/FullMenu';
 
 import SalesManager from './components/SalesManager';
-import EventsManager from './components/EventsManager';
 import EventSales from './components/EventSales';
-import QuoteCalculator from './components/QuoteCalculator';
 import OrdersStackedBarChart from '../components/OrdersStackedBarChart';
 import CalendarManager from './components/CalendarManager';
 import EventRequestsManager from './components/EventRequestsManager';
-import POSManager from './components/POSManager';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ItemUIPreview from './components/ItemUIPreview';
-import POSUIPreview from './components/POSUIPreview';
 import POSSalesUI from './components/POSSalesUI';
 import POSDualViewer from './components/POSDualViewer';
 import PosPage from './components/pos/PosPage';
@@ -62,8 +58,6 @@ const AdminApp = () => {
             <Route path="/menu" element={<MenuManager />} />
             <Route path="/gallery" element={<GalleryManager />} />
             <Route path="/content" element={<ContentManager />} />
-            <Route path="/pos/ui" element={<POSUIPreview />} />
-            <Route path="/pos/ui-preview" element={<POSUIPreview />} />
             <Route path="/inventory/recipes/:recipeType?" element={<FullMenu />} />
             <Route path="/inventory/:sheetKey?" element={<InventoryManager />} />
             <Route path="/sales" element={<SalesManager />} />
@@ -73,7 +67,6 @@ const AdminApp = () => {
             <Route path="/menu-ui/item" element={<ItemUIPreview />} />
             <Route path="/sales/pos-ui" element={<POSDualViewer />} />
             <Route path="/sales/events" element={<EventSales />} />
-            <Route path="/sales/quote-calculator" element={<QuoteCalculator />} />
           </Routes>
         </main>
       </div>

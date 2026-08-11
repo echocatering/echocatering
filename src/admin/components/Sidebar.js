@@ -20,7 +20,6 @@ const Sidebar = () => {
     { path: '/admin/menu-ui/item', text: 'ITEMS' },
     { path: '/admin/inventory/recipes/cocktails', text: 'MENU' },
     { path: '/admin/gallery', text: 'PHOTOS' },
-    { path: '/admin/pos/ui', text: 'EVENTS' },
     { path: '/admin/content', text: 'ABOUT' }
   ];
 
@@ -270,12 +269,6 @@ const Sidebar = () => {
               className={`nav-item ${location.pathname === '/admin/sales/events' ? 'active' : ''}`}
             >
               <span className="nav-text">EVENTS</span>
-            </NavLink>
-            <NavLink
-              to="/admin/sales/quote-calculator"
-              className={`nav-item ${location.pathname === '/admin/sales/quote-calculator' ? 'active' : ''}`}
-            >
-              <span className="nav-text">QUOTE CALCULATOR</span>
             </NavLink>
             <NavLink
               to="/admin/sales/pos-ui"
