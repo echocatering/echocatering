@@ -2692,10 +2692,12 @@ const Home = forwardRef((props, ref) => {
               }} />
               
               <div style={{
-                fontSize: '1rem',
+                fontSize: '1.25rem',
                 lineHeight: '1.6',
                 color: '#333',
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                // Matches the Menu Gallery's ingredient list, which is weight 300
+                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                fontWeight: 300,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
@@ -2703,10 +2705,12 @@ const Home = forwardRef((props, ref) => {
               </div>
 
               <div style={{
-                fontSize: '1rem',
+                fontSize: '1.25rem',
                 lineHeight: '1.6',
                 color: '#333',
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                // Matches the Menu Gallery's ingredient list, which is weight 300
+                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                fontWeight: 300,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
@@ -3883,7 +3887,8 @@ const Home = forwardRef((props, ref) => {
                               style={{
                                 color: '#444',
                                 margin: 0,
-                                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                                fontWeight: 300,
                                 lineHeight: 1.6,
                                 fontSize: '1em',
                                 whiteSpace: 'pre-wrap',
@@ -4045,10 +4050,12 @@ const Home = forwardRef((props, ref) => {
               >
                 <div
                   style={{
-                    fontSize: '1rem',
+                    fontSize: '1.25rem',
                     lineHeight: '1.6',
                     color: '#333',
-                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    // Matches the Menu Gallery's ingredient list, which is weight 300
+                    fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    fontWeight: 300,
                     textAlign: 'left'
                   }}
                 >
@@ -4056,10 +4063,12 @@ const Home = forwardRef((props, ref) => {
                 </div>
                 <div
                   style={{
-                    fontSize: '1rem',
+                    fontSize: '1.25rem',
                     lineHeight: '1.6',
                     color: '#333',
-                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    // Matches the Menu Gallery's ingredient list, which is weight 300
+                    fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    fontWeight: 300,
                     textAlign: 'left'
                   }}
                 >

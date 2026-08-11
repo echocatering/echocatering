@@ -187,10 +187,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             First Name*
           </label>
@@ -215,10 +215,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Last Name*
           </label>
@@ -243,10 +243,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Email Address*
           </label>
@@ -272,10 +272,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Phone Number*
           </label>
@@ -300,10 +300,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Ext.
           </label>
@@ -327,10 +327,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Company
           </label>
@@ -383,10 +383,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Event Date*
           </label>
@@ -413,10 +413,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Start Time*
           </label>
@@ -444,10 +444,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             End Time*
           </label>
@@ -475,10 +475,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Number of Guests*
           </label>
@@ -506,10 +506,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Are you serving alcohol?
           </label>
@@ -538,10 +538,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             How did you hear about us?*
           </label>
@@ -577,10 +577,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Nature of this Event*
           </label>
@@ -613,10 +613,10 @@ export default function EventRequestForm() {
           <label style={{
             display: 'block',
             fontSize: '0.9rem',
-            fontWeight: 500,
+            fontWeight: 300,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
           }}>
             Additional Information
           </label>
