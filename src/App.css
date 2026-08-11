@@ -1844,7 +1844,7 @@ div[class*="sidebar-no-fade"] {
 /* Menu gallery: everything else uses the same generic serif as the header nav */
 .menu-serif-text,
 .menu-serif-text * {
-  font-family: 'Trajin Pro', serif !important;
+  font-family: 'Times New Roman', Times, serif !important;
 }
 
 /* Cocktail info panel titles use Cinzel */
@@ -1857,13 +1857,13 @@ div[class*="sidebar-no-fade"] {
   font-family: 'Cinzel', Georgia, serif !important;
 }
 
-/* Cocktail info panel content (actual ingredients/garnish) uses Trajin Pro,
-   matching the body copy in the About section and the event request form */
+/* Cocktail info panel content (actual ingredients/garnish) matches the body copy
+   in the About section and the event request form */
 .cocktail-ingredients-list,
 .cocktail-ingredients-list *,
 .cocktail-garnish-text,
 .cocktail-garnish-text * {
-  font-family: 'Trajin Pro', serif !important;
+  font-family: 'Times New Roman', Times, serif !important;
   font-weight: 400 !important;
 }
 
@@ -1871,7 +1871,7 @@ div[class*="sidebar-no-fade"] {
 .app-root .mainmenu-btn,
 .app-root .submenu-btn,
 .app-root .nav-link {
-  font-family: 'Trajin Pro', serif !important;
+  font-family: 'Times New Roman', Times, serif !important;
   font-size: 1.125rem;
 }
 

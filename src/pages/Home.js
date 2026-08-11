@@ -2694,9 +2694,9 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#777',
+                color: '#888',
                 // Body copy face, shared with the About panels and the menu gallery
-                fontFamily: "'Trajin Pro', serif",
+                fontFamily: "'Times New Roman', Times, serif",
                 fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
@@ -2707,9 +2707,9 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#777',
+                color: '#888',
                 // Body copy face, shared with the About panels and the menu gallery
-                fontFamily: "'Trajin Pro', serif",
+                fontFamily: "'Times New Roman', Times, serif",
                 fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
@@ -3454,7 +3454,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -3678,7 +3678,7 @@ const Home = forwardRef((props, ref) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontFamily: "'Trajin Pro', serif",
+                    fontFamily: "'Times New Roman', Times, serif",
                     fontSize: '1rem',
                     fontWeight: 400,
                     textTransform: 'uppercase',
@@ -3885,9 +3885,9 @@ const Home = forwardRef((props, ref) => {
                           {section.content && (
                             <p
                               style={{
-                                color: '#888',
+                                color: '#999',
                                 margin: 0,
-                                fontFamily: "'Trajin Pro', serif",
+                                fontFamily: "'Times New Roman', Times, serif",
                                 fontWeight: 400,
                                 lineHeight: 1.6,
                                 fontSize: '1.15em',
@@ -3927,7 +3927,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -4052,9 +4052,9 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#777',
+                    color: '#888',
                     // Body copy face, shared with the About panels and the menu gallery
-                    fontFamily: "'Trajin Pro', serif",
+                    fontFamily: "'Times New Roman', Times, serif",
                     fontWeight: 400,
                     textAlign: 'left'
                   }}
@@ -4065,9 +4065,9 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#777',
+                    color: '#888',
                     // Body copy face, shared with the About panels and the menu gallery
-                    fontFamily: "'Trajin Pro', serif",
+                    fontFamily: "'Times New Roman', Times, serif",
                     fontWeight: 400,
                     textAlign: 'left'
                   }}

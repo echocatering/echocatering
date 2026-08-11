@@ -1634,7 +1634,7 @@ function EchoCocktailSubpage2({
           className="cocktail-ingredients-list"
           style={{
             fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4),
-            fontFamily: "'Trajin Pro', serif",
+            fontFamily: "'Times New Roman', Times, serif",
             fontWeight: 400,
             marginBottom: 0,
             lineHeight: isVertical ? '1.2' : '1.4',
@@ -1683,7 +1683,7 @@ function EchoCocktailSubpage2({
         >
           Garnish
         </div>
-        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Trajin Pro', serif", fontWeight: 400 }}>{info.garnish}</div>
+        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Times New Roman', Times, serif", fontWeight: 400 }}>{info.garnish}</div>
       </div>
     );
   };
@@ -2008,7 +2008,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: color,
                   fontSize: viewMode === 'menu' ? '1.8rem' : '1.3rem',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2064,7 +2064,7 @@ function EchoCocktailSubpage2({
                   cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                   fontSize: '1.1rem',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2115,7 +2115,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2144,7 +2144,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2196,7 +2196,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: hoveredButton === 'full-menu' ? '#000' : '#fff',
                   fontSize: '1.8rem',
-                  fontFamily: "'Trajin Pro', serif",
+                  fontFamily: "'Times New Roman', Times, serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2465,7 +2465,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: "'Trajin Pro', serif",
+                    fontFamily: "'Times New Roman', Times, serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2500,7 +2500,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: "'Trajin Pro', serif",
+                    fontFamily: "'Times New Roman', Times, serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2953,7 +2953,7 @@ function EchoCocktailSubpage2({
           height: outerHeightOverride ? `${outerHeightOverride}px` : '100vh',
           overflow: 'hidden',
           background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-          fontFamily: "'Trajin Pro', serif",
+          fontFamily: "'Times New Roman', Times, serif",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2978,7 +2978,7 @@ function EchoCocktailSubpage2({
         height: outerHeightOverride ? `${outerHeightOverride}px` : (viewMode === 'web' ? `${size.height}px` : '100vh'),
         overflow: 'hidden',
         background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-        fontFamily: "'Trajin Pro', serif",
+        fontFamily: "'Times New Roman', Times, serif",
       }}
     >
       {/* Video background fills entire outer container/viewport */}
@@ -3290,7 +3290,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             border: 'none',
             color: '#333',
             fontSize: '1.4rem',
-            fontFamily: "'Trajin Pro', serif",
+            fontFamily: "'Times New Roman', Times, serif",
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             cursor: 'pointer',

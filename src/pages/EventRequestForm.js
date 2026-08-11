@@ -111,14 +111,14 @@ export default function EventRequestForm() {
       <div style={{ 
         padding: '3rem', 
         textAlign: 'center',
-        fontFamily: "'Trajin Pro', serif"
+        fontFamily: "'Times New Roman', Times, serif"
       }}>
         <h2 style={{
           fontSize: '1.8rem',
           fontWeight: 600,
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: "'Trajin Pro', serif"
+          fontFamily: "'Times New Roman', Times, serif"
         }}>
           Thank you!
         </h2>
@@ -127,7 +127,7 @@ export default function EventRequestForm() {
           color: '#333',
           marginBottom: '1rem',
           lineHeight: '1.5',
-          fontFamily: "'Trajin Pro', serif"
+          fontFamily: "'Times New Roman', Times, serif"
         }}>
           Your event request has been submitted successfully.
         </p>
@@ -136,7 +136,7 @@ export default function EventRequestForm() {
           color: '#666', 
           marginTop: '1rem',
           lineHeight: '1.5',
-          fontFamily: "'Trajin Pro', serif"
+          fontFamily: "'Times New Roman', Times, serif"
         }}>
           We'll review your details and be in touch soon to discuss your event.
         </p>
@@ -154,7 +154,7 @@ export default function EventRequestForm() {
         padding: '3rem',
         paddingTop: width >= 1200 ? '64px' : '3rem',
         borderRadius: '8px',
-        fontFamily: "'Trajin Pro', serif"
+        fontFamily: "'Times New Roman', Times, serif"
       }}
     >
       <h2
@@ -188,9 +188,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             First Name*
           </label>
@@ -205,7 +205,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -216,9 +216,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Last Name*
           </label>
@@ -233,7 +233,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -244,9 +244,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Email Address*
           </label>
@@ -262,7 +262,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -273,9 +273,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Phone Number*
           </label>
@@ -290,7 +290,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -301,9 +301,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Ext.
           </label>
@@ -317,7 +317,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -328,9 +328,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Company
           </label>
@@ -344,7 +344,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -384,9 +384,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Event Date*
           </label>
@@ -402,7 +402,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -414,9 +414,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Start Time*
           </label>
@@ -433,7 +433,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -445,9 +445,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             End Time*
           </label>
@@ -464,7 +464,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -476,9 +476,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Number of Guests*
           </label>
@@ -495,7 +495,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -507,9 +507,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Are you serving alcohol?
           </label>
@@ -523,7 +523,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -539,9 +539,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             How did you hear about us?*
           </label>
@@ -556,7 +556,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -578,9 +578,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Nature of this Event*
           </label>
@@ -595,7 +595,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               minHeight: longTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -614,9 +614,9 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#777',
+            color: '#888',
             marginBottom: '0.5rem',
-            fontFamily: "'Trajin Pro', serif"
+            fontFamily: "'Times New Roman', Times, serif"
           }}>
             Additional Information
           </label>
@@ -630,7 +630,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               minHeight: mediumTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -644,7 +644,7 @@ export default function EventRequestForm() {
           color: '#dc2626',
           marginBottom: '1rem',
           fontSize: '0.9rem',
-          fontFamily: "'Trajin Pro', serif"
+          fontFamily: "'Times New Roman', Times, serif"
         }}>
           {error}
         </div>

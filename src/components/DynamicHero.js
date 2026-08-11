@@ -1017,7 +1017,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: "'Trajin Pro', serif",
+            fontFamily: "'Times New Roman', Times, serif",
             fontSize: dimensions.menuBoxFontSize,
             fontWeight: 400,
             textTransform: 'uppercase',

@@ -1366,7 +1366,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               opacity: 1,
               visibility: 'visible',
               color: '#888888',
-              fontFamily: "'Trajin Pro', serif",
+              fontFamily: "'Times New Roman', Times, serif",
               fontSize: '1.1rem',
               fontWeight: 400,
               textTransform: 'uppercase',
