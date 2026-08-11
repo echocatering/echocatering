@@ -36,10 +36,8 @@ const hearAboutOptions = [
 
 const provideOptions = [
   '',
-  'Cocktails & Mocktails',
-  'Mocktails',
-  'Beer & Wine',
-  'Full Menu'
+  'Yes — of course we are!',
+  'No — alcohol free, please!'
 ];
 
 const longTextMinHeight = '160px';
@@ -113,14 +111,14 @@ export default function EventRequestForm() {
       <div style={{ 
         padding: '3rem', 
         textAlign: 'center',
-        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
       }}>
         <h2 style={{
           fontSize: '1.8rem',
           fontWeight: 600,
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
         }}>
           Thank you!
         </h2>
@@ -129,7 +127,7 @@ export default function EventRequestForm() {
           color: '#333',
           marginBottom: '1rem',
           lineHeight: '1.5',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
         }}>
           Your event request has been submitted successfully.
         </p>
@@ -138,7 +136,7 @@ export default function EventRequestForm() {
           color: '#666', 
           marginTop: '1rem',
           lineHeight: '1.5',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
         }}>
           We'll review your details and be in touch soon to discuss your event.
         </p>
@@ -156,7 +154,7 @@ export default function EventRequestForm() {
         padding: '3rem',
         paddingTop: width >= 1200 ? '64px' : '3rem',
         borderRadius: '8px',
-        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
       }}
     >
       <h2
@@ -165,7 +163,7 @@ export default function EventRequestForm() {
           fontWeight: 600,
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: 'Cinzel, Georgia, serif'
         }}
       >
         Your Contact Information
@@ -192,7 +190,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             First Name*
           </label>
@@ -207,7 +205,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -220,7 +218,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Last Name*
           </label>
@@ -235,7 +233,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -248,7 +246,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Email Address*
           </label>
@@ -264,7 +262,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -277,7 +275,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Phone Number*
           </label>
@@ -292,7 +290,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -305,7 +303,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Ext.
           </label>
@@ -319,7 +317,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -332,7 +330,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Company
           </label>
@@ -346,7 +344,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -361,7 +359,7 @@ export default function EventRequestForm() {
           marginTop: '1rem',
           marginBottom: '1rem',
           paddingTop: gridColumns === 2 ? '48px' : '0',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: 'Cinzel, Georgia, serif'
         }}
       >
         Your Event Details
@@ -388,7 +386,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Event Date*
           </label>
@@ -404,7 +402,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -418,7 +416,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Start Time*
           </label>
@@ -428,13 +426,14 @@ export default function EventRequestForm() {
             value={form.startTime}
             onChange={handleChange}
             required
+            step={300}
             style={{
               width: '100%',
               padding: '0.75rem',
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -448,7 +447,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             End Time*
           </label>
@@ -458,19 +457,20 @@ export default function EventRequestForm() {
             value={form.endTime}
             onChange={handleChange}
             required
+            step={300}
             style={{
               width: '100%',
               padding: '0.75rem',
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
         </div>
 
-        {/* Number of People */}
+        {/* Number of Guests */}
         <div style={fieldContainerStyle}>
           <label style={{
             display: 'block',
@@ -478,9 +478,9 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
-            Number of People*
+            Number of Guests*
           </label>
           <input
             type="number"
@@ -495,13 +495,13 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           />
         </div>
 
-        {/* What can we provide? */}
+        {/* Are you serving alcohol? */}
         <div style={fieldContainerStyle}>
           <label style={{
             display: 'block',
@@ -509,9 +509,9 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
-            What can we provide?
+            Are you serving alcohol?
           </label>
           <select
             name="provide"
@@ -523,7 +523,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -541,7 +541,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             How did you hear about us?*
           </label>
@@ -556,7 +556,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -580,7 +580,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Nature of this Event*
           </label>
@@ -595,7 +595,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               minHeight: longTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -616,7 +616,7 @@ export default function EventRequestForm() {
             fontWeight: 500,
             color: '#333',
             marginBottom: '0.5rem',
-            fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
             Is there any additional information you would like to add?
           </label>
@@ -630,7 +630,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               minHeight: mediumTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -644,7 +644,7 @@ export default function EventRequestForm() {
           color: '#dc2626',
           marginBottom: '1rem',
           fontSize: '0.9rem',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif'
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
         }}>
           {error}
         </div>
@@ -657,29 +657,31 @@ export default function EventRequestForm() {
         style={{
           width: '100%',
           padding: '1rem 2rem',
-          fontSize: '1rem',
+          // Cinzel to match the section titles ("Your Event Details"); border shape matches
+          // the Schedule an Event button. The gradient text fill and hover are its own.
+          fontSize: '1.1rem',
           fontWeight: '600',
           background: 'linear-gradient(to bottom, #555, #ccc)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
-          border: '1px solid transparent',
-          borderRadius: '0',
+          border: '2px solid transparent',
+          borderRadius: '2.5rem',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontFamily: 'Cinzel, Georgia, serif',
           textTransform: 'uppercase',
-          letterSpacing: '0.12em'
+          letterSpacing: '0.08em'
         }}
         onMouseEnter={(e) => {
-          e.target.style.setProperty('border', '1px solid #222', 'important');
+          e.target.style.setProperty('border', '2px solid #222', 'important');
           e.target.style.setProperty('background', '#222', 'important');
           e.target.style.setProperty('-webkit-background-clip', 'text', 'important');
           e.target.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
           e.target.style.setProperty('background-clip', 'text', 'important');
         }}
         onMouseLeave={(e) => {
-          e.target.style.setProperty('border', '1px solid transparent', 'important');
+          e.target.style.setProperty('border', '2px solid transparent', 'important');
           e.target.style.setProperty('background', 'linear-gradient(to bottom, #555, #ccc)', 'important');
           e.target.style.setProperty('-webkit-background-clip', 'text', 'important');
           e.target.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');

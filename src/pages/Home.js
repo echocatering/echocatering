@@ -2678,10 +2678,10 @@ const Home = forwardRef((props, ref) => {
                 fontWeight: 600,
                 color: '#222',
                 marginBottom: '1rem',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                fontFamily: 'Cinzel, Georgia, serif',
                 lineHeight: '1.2'
               }}>
-                Begin your experience
+                Let's get peddling!
               </h2>
               
               <div style={{
@@ -2695,32 +2695,11 @@ const Home = forwardRef((props, ref) => {
                 fontSize: '1rem',
                 lineHeight: '1.6',
                 color: '#333',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
                 Ready to create a memorable gathering? Share a few details about your event, and we’ll get back to you with a personalized plan.
-              </div>
-              
-              <div style={{
-                fontSize: '1rem',
-                lineHeight: '1.6',
-                color: '#333',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                marginBottom: '1rem',
-                textAlign: 'left'
-              }}>
-                Our team will connect with you to explore your vision, curate a beverage experience, and answer any questions — ensuring every detail reflects the story, flavors, and connections you want to share.
-              </div>
-              <div style={{
-                fontSize: '1rem',
-                lineHeight: '1.6',
-                color: '#333',
-                fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
-                marginBottom: '1rem',
-                textAlign: 'left'
-              }}>
-                Whether it’s a corporate gathering, wedding celebration, or intimate cocktail party, we’ll craft an experience that feels effortless, thoughtful, and unforgettable.
               </div>
             </div>
             
@@ -4008,11 +3987,11 @@ const Home = forwardRef((props, ref) => {
                     fontWeight: 600,
                     color: '#222',
                     marginBottom: '0.5rem',
-                    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontFamily: 'Cinzel, Georgia, serif',
                     lineHeight: '1.2'
                   }}
                 >
-                  Begin your experience
+                  Let's get peddling!
                 </h2>
                 <div
                   style={{
@@ -4058,33 +4037,11 @@ const Home = forwardRef((props, ref) => {
                     fontSize: '1rem',
                     lineHeight: '1.6',
                     color: '#333',
-                    fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
+                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                     textAlign: 'left'
                   }}
                 >
                   Ready to create a memorable gathering? Share a few details about your event, and we'll get back to you with a personalized plan.
-                </div>
-                <div
-                  style={{
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    color: '#333',
-                    fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-                    textAlign: 'left'
-                  }}
-                >
-                  Our team will connect with you to explore your vision, curate a beverage experience, and answer any questions — ensuring every detail reflects the story, flavors, and connections you want to share.
-                </div>
-                <div
-                  style={{
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    color: '#333',
-                    fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-                    textAlign: 'left'
-                  }}
-                >
-                  Whether it's a corporate gathering, wedding celebration, or intimate cocktail party, we'll craft an experience that feels effortless, thoughtful, and unforgettable.
                 </div>
               </div>
               

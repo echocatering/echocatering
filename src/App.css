@@ -159,7 +159,8 @@ a:focus {
 
 /* Override for form submit button to allow custom borders */
 .submit-request-button {
-  border: 1px solid transparent !important;
+  /* 2px to match the Schedule an Event button's border weight */
+  border: 2px solid transparent !important;
   background: linear-gradient(to bottom, #222, #aaa) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
