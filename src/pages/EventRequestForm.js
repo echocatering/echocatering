@@ -188,7 +188,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -216,7 +216,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -244,7 +244,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -273,7 +273,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -301,7 +301,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -328,7 +328,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -384,7 +384,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -414,7 +414,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -445,7 +445,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -476,7 +476,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -507,7 +507,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -539,7 +539,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -578,7 +578,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>
@@ -614,7 +614,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#555',
+            color: '#777',
             marginBottom: '0.5rem',
             fontFamily: "'Trajin Pro', serif"
           }}>

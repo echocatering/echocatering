@@ -380,7 +380,7 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
             )}
             {section.content && (
               <p style={{
-                color: '#666',
+                color: '#888',
                 margin: 0,
                 fontFamily: "'Trajin Pro', serif",
                 fontWeight: 400,
