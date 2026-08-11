@@ -255,6 +255,42 @@ const inferMapType = (cocktail) => {
   return 'world';
 };
 
+// Pure category helpers — module scope so callbacks that reference them (navigateToCocktail,
+// the recipe fetch) can keep honest dependency arrays instead of closing over a new function
+// identity on every render.
+const normalizeCategoryKey = (value = '') => {
+  const key = String(value).toLowerCase();
+  // Map old category names to new ones for backward compatibility
+  const categoryMap = {
+    'classics': 'cocktails',
+    'originals': 'mocktails'
+  };
+  return categoryMap[key] || key;
+};
+
+// Get recipe type from category
+const getRecipeType = (category) => {
+  const cat = normalizeCategoryKey(category);
+  if (cat === 'cocktails') return 'cocktail';
+  if (cat === 'mocktails') return 'mocktail';
+  if (cat === 'premix') return 'premix';
+  return null;
+};
+
+// Check if category should show recipe builder
+const shouldShowRecipeBuilder = (category) => Boolean(getRecipeType(category));
+
+// Create blank recipe
+const createBlankRecipe = (type) => ({
+  title: '',
+  type: type,
+  items: [],
+  totals: { volumeOz: 0, costEach: 0 },
+  metadata: {},
+  backgroundColor: '#e5e5e5',
+  batch: { size: 0, unit: 'ml', yieldCount: 0 }
+});
+
 const MenuManager = () => {
   const { apiCall, isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -339,10 +375,31 @@ const MenuManager = () => {
   const savedCocktailIdRef = useRef(null);
   const savedCategoryRef = useRef(null);
   const [recipe, setRecipe] = useState(null);
+  // Mirrors recipeForCocktailIdRef as state so the render can refuse to draw a recipe that
+  // doesn't belong to the item on screen. A ref alone can't gate rendering.
+  const [recipeOwnerId, setRecipeOwnerId] = useState(null);
   const [recipeLoading, setRecipeLoading] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [recipeViewActive, setRecipeViewActive] = useState(false);
-  
+
+  // Single choke point for every write to `recipe`: the recipe and the id of the cocktail it
+  // belongs to are set together, so they can never drift apart. recipeRef is updated
+  // synchronously here because the guards below read it during the same tick.
+  const applyRecipe = useCallback((nextRecipe, ownerId, { onlyWhenPresent = false } = {}) => {
+    if (onlyWhenPresent && recipeRef.current === null) return;
+    recipeRef.current = nextRecipe;
+    recipeForCocktailIdRef.current = ownerId || null;
+    setRecipeOwnerId(ownerId || null);
+    setRecipe(nextRecipe);
+  }, []);
+
+  const clearRecipe = useCallback(() => {
+    recipeRef.current = null;
+    recipeForCocktailIdRef.current = null;
+    setRecipeOwnerId(null);
+    setRecipe(null);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (videoPreviewUrl) {
@@ -457,16 +514,6 @@ const MenuManager = () => {
     ? menuCategories
     : menuCategories.filter((category) => !['beer', 'wine', 'spirits'].includes(category.key));
 
-  const normalizeCategoryKey = (value = '') => {
-    const key = String(value).toLowerCase();
-    // Map old category names to new ones for backward compatibility
-    const categoryMap = {
-      'classics': 'cocktails',
-      'originals': 'mocktails'
-    };
-    return categoryMap[key] || key;
-  };
-
   useEffect(() => {
     const id = editingCocktail?._id || null;
     if (prevEditingCocktailIdRef.current !== id) {
@@ -517,6 +564,43 @@ const MenuManager = () => {
       return true;
     }
   }, []);
+
+  // Every write originating inside RecipeBuilder is stamped with the cocktail it was rendered
+  // for. RecipeBuilder is keyed by item, so navigating unmounts it — but its in-flight async
+  // work (ingredient hydration) can still resolve afterwards and call this closure. The
+  // identity check below is what stops that result landing on a different item, and mirrors
+  // the `prev._id !== myId` guard that already protects Stage 2/3 of navigateToCocktail.
+  const handleRecipeBuilderChange = useCallback((ownerId, updatedRecipe) => {
+    if (ownerId && ownerId !== activeCocktailIdRef.current) return false;
+    if (ownerId && recipeForCocktailIdRef.current && recipeForCocktailIdRef.current !== ownerId) return false;
+
+    const prev = recipeRef.current;
+    const isHydrationUpdate = !hasUnsavedChanges &&
+      (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
+      prev &&
+      updatedRecipe &&
+      updatedRecipe.itemNumber === prev.itemNumber &&
+      updatedRecipe.title === prev.title;
+
+    // onlyWhenPresent: if navigation already cleared the recipe, don't let a late
+    // low-priority hydration update resurrect it.
+    applyRecipe(updatedRecipe, ownerId || recipeForCocktailIdRef.current, { onlyWhenPresent: true });
+
+    if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
+      setHasUnsavedChanges(true);
+    }
+    // Update cocktail name to match recipe title ONLY when user is actively editing.
+    // On initial recipe load recipeBuilderInteractedRef is false, preventing the
+    // loaded recipe title from overwriting the authoritative cocktail name.
+    if (updatedRecipe?.title !== undefined && recipeBuilderInteractedRef.current) {
+      setEditingCocktail(prevCocktail => {
+        if (!prevCocktail) return prevCocktail;
+        if (prevCocktail._id && recipeForCocktailIdRef.current !== prevCocktail._id) return prevCocktail;
+        return { ...prevCocktail, name: updatedRecipe.title || prevCocktail.name };
+      });
+    }
+    return true;
+  }, [applyRecipe, recipeDidChange, hasUnsavedChanges]);
 
 
   // Fetch all cocktails - use ref to prevent race conditions with rapid refreshes
@@ -622,6 +706,13 @@ const MenuManager = () => {
   const formValues = editingCocktail || {};
   const canArchive = Boolean(editingCocktail && !isNewDraft && editingCocktail.status !== 'archived');
   const canRestore = Boolean(editingCocktail && editingCocktail.status === 'archived');
+
+  // The recipe in state must be proven to belong to the item on screen before it can be
+  // rendered. This makes a mismatched recipe unrenderable rather than merely unlikely — the
+  // guards elsewhere stop bad writes, this stops a bad read from ever reaching the user.
+  const recipeMatchesCurrentItem = Boolean(editingCocktailId) && recipeOwnerId === editingCocktailId;
+  const recipePending = recipeLoading || (Boolean(editingCocktailId) && !recipeMatchesCurrentItem);
+  const recipeReady = !recipePending && recipeMatchesCurrentItem && Boolean(recipe);
 
   // Memoize selected regions to prevent unnecessary re-renders
   const selectedRegions = useMemo(() => {
@@ -1901,12 +1992,29 @@ const MenuManager = () => {
     // Pre-cancel any in-flight recipe fetch
     recipeRequestIdRef.current += 1;
     activeCocktailIdRef.current = targetCocktail._id || null;
-    recipeForCocktailIdRef.current = null;
 
     const myId = targetCocktail._id;
 
-    setRecipeLoading(true);  // Show loading immediately so Stage 1 render never flashes "No recipe found"
-    setRecipe(null);
+    // === STAGE 0: Recipe — hydrated optimistically when possible ===
+    // The menu-manager endpoint already attaches recipe data to each item, so in the common
+    // case the recipe can render in the same frame as the name, exactly like the form fields.
+    // The authoritative fetch still runs, silently, and refines what's on screen.
+    const attachedRecipe = targetCocktail.recipe;
+    const attachedMatchesItem = Boolean(attachedRecipe && attachedRecipe._id) &&
+      (!attachedRecipe.itemNumber || !targetCocktail.itemNumber ||
+        String(attachedRecipe.itemNumber) === String(targetCocktail.itemNumber));
+
+    if (attachedMatchesItem && shouldShowRecipeBuilder(targetCocktail.category)) {
+      applyRecipe(
+        { ...attachedRecipe, title: targetCocktail.name || attachedRecipe.title },
+        myId
+      );
+      setRecipeLoading(false);
+    } else {
+      clearRecipe();
+      setRecipeLoading(true);  // Show loading immediately so Stage 1 render never flashes "No recipe found"
+    }
+
     setCurrentIndex(targetIndex);
 
     // === STAGE 1: Name only — renders immediately ===
@@ -1954,7 +2062,7 @@ const MenuManager = () => {
         });
       });
     });
-  }, []);
+  }, [applyRecipe, clearRecipe]);
 
   const navigateBy = (direction) => {
     if (filteredCocktails.length <= 0) return;
@@ -2274,8 +2382,12 @@ const MenuManager = () => {
         console.warn('⚠️ Could not save map snapshot: missing itemNumber');
       }
       
-      // Save recipe if it exists and category supports it
-      if (recipe && shouldShowRecipeBuilder(targetCategory)) {
+      // Save recipe if it exists and category supports it.
+      // Ownership check: never persist a recipe that belongs to a different item — a save
+      // racing a navigation must not write one item's ingredients onto another.
+      const recipeOwnerAtSave = recipeForCocktailIdRef.current;
+      const recipeBelongsToItem = !recipeOwnerAtSave || recipeOwnerAtSave === (cocktailData?._id || null);
+      if (recipe && recipeBelongsToItem && shouldShowRecipeBuilder(targetCategory)) {
         try {
           setSavingRecipe(true);
           const recipeType = getRecipeType(targetCategory);
@@ -2335,11 +2447,12 @@ const MenuManager = () => {
 
             // Handle both { recipe: {...} } and direct recipe object responses
             const savedRecipe = savedRecipeResponse?.recipe || savedRecipeResponse;
-            if (savedRecipe) {
-              // Reset interaction ref BEFORE setRecipe so the onChange triggered by
+            // Only adopt the saved recipe if the user hasn't navigated away mid-save
+            if (savedRecipe && activeCocktailIdRef.current === recipeOwnerAtSave) {
+              // Reset interaction ref BEFORE applyRecipe so the onChange triggered by
               // the new recipe state doesn't falsely mark unsaved changes
               recipeBuilderInteractedRef.current = false;
-              setRecipe(savedRecipe);
+              applyRecipe(savedRecipe, recipeOwnerAtSave);
             }
           }
         } catch (recipeError) {
@@ -2524,34 +2637,10 @@ const MenuManager = () => {
     }
   };
 
-  // Get recipe type from category
-  const getRecipeType = (category) => {
-    const cat = normalizeCategoryKey(category);
-    if (cat === 'cocktails') return 'cocktail';
-    if (cat === 'mocktails') return 'mocktail';
-    if (cat === 'premix') return 'premix';
-    return null;
-  };
-
-  // Check if category should show recipe builder
-  const shouldShowRecipeBuilder = (category) => {
-    const cat = normalizeCategoryKey(category);
-    return cat === 'cocktails' || cat === 'mocktails' || cat === 'premix';
-  };
-
-  // Create blank recipe
-  const createBlankRecipe = (type) => ({
-    title: '',
-    type: type,
-    items: [],
-    totals: { volumeOz: 0, costEach: 0 },
-    metadata: {},
-    backgroundColor: '#e5e5e5',
-    batch: { size: 0, unit: 'ml', yieldCount: 0 }
-  });
-
   // Fetch recipe for a cocktail
-  const fetchRecipeForCocktail = useCallback(async (cocktail) => {
+  // `silent` is set when navigateToCocktail already hydrated this item optimistically: the
+  // fetch then refines what's on screen without flipping back to the loading placeholder.
+  const fetchRecipeForCocktail = useCallback(async (cocktail, { silent = false } = {}) => {
     const requestId = ++recipeRequestIdRef.current;
     const myNavVersion = navVersionRef.current; // Capture nav version at start of fetch
     const targetCocktailId = cocktail?._id || null;
@@ -2561,7 +2650,6 @@ const MenuManager = () => {
       if (targetCocktailId && activeCocktailIdRef.current && activeCocktailIdRef.current !== targetCocktailId) return;
       lastRecipeHydrateAtRef.current = Date.now();
       recipeBuilderInteractedRef.current = false;
-      recipeForCocktailIdRef.current = targetCocktailId; // Track which cocktail this recipe belongs to
       // Always align the loaded recipe's title with the saved cocktail name.
       // This applies to ALL categories (including premix) so that the name field in
       // MenuManager is always the source of truth on load. The recipe title will only
@@ -2570,17 +2658,23 @@ const MenuManager = () => {
       if (recipeToSet && cocktail?.name && recipeToSet.title !== cocktail.name) {
         recipeToSet = { ...recipeToSet, title: cocktail.name };
       }
-      setRecipe(recipeToSet);
+      applyRecipe(recipeToSet, targetCocktailId);
+    };
+    // Never downgrade an already-hydrated persisted recipe to a blank one. A silent refine
+    // that fails to find anything should leave the optimistic recipe alone rather than wipe it.
+    const setBlankRecipe = (recipeType) => {
+      if (silent && recipeForCocktailIdRef.current === targetCocktailId && recipeRef.current?._id) return;
+      const blankRecipe = createBlankRecipe(recipeType);
+      if (cocktail?.itemNumber) {
+        blankRecipe.itemNumber = cocktail.itemNumber;
+      }
+      setHydratedRecipe(blankRecipe);
     };
     if (!cocktail || !cocktail._id || String(cocktail._id).startsWith('new-')) {
       // New item - create blank recipe with itemNumber if available
       const recipeType = getRecipeType(cocktail?.category);
       if (recipeType) {
-        const blankRecipe = createBlankRecipe(recipeType);
-        if (cocktail?.itemNumber) {
-          blankRecipe.itemNumber = cocktail.itemNumber;
-        }
-        setHydratedRecipe(blankRecipe);
+        setBlankRecipe(recipeType);
       } else {
         setHydratedRecipe(null);
       }
@@ -2596,10 +2690,10 @@ const MenuManager = () => {
     }
 
     try {
-      if (recipeRequestIdRef.current === requestId) {
+      if (!silent && recipeRequestIdRef.current === requestId) {
         setRecipeLoading(true);
       }
-      
+
       // NEW: Try to find recipe by itemNumber first (primary method)
       if (cocktail.itemNumber) {
         try {
@@ -2656,32 +2750,18 @@ const MenuManager = () => {
         } else {
           // itemNumber mismatch — try name lookup before falling back to blank
           const found = await tryNameFallback();
-          if (!found) {
-            const blankFallback = createBlankRecipe(recipeType);
-            if (cocktailNum) blankFallback.itemNumber = cocktailNum;
-            setHydratedRecipe(blankFallback);
-          }
+          if (!found) setBlankRecipe(recipeType);
         }
       } else {
         // No attached recipe — try name lookup before creating blank
         const found = await tryNameFallback();
-        if (!found) {
-          const blankRecipe = createBlankRecipe(recipeType);
-          if (cocktail.itemNumber) {
-            blankRecipe.itemNumber = cocktail.itemNumber;
-          }
-          setHydratedRecipe(blankRecipe);
-        }
+        if (!found) setBlankRecipe(recipeType);
       }
     } catch (error) {
       console.error('Error fetching recipe:', error);
-      const recipeType = getRecipeType(cocktail.category);
-      if (recipeType) {
-        const blankRecipe = createBlankRecipe(recipeType);
-        if (cocktail.itemNumber) {
-          blankRecipe.itemNumber = cocktail.itemNumber;
-        }
-        setHydratedRecipe(blankRecipe);
+      const fallbackType = getRecipeType(cocktail.category);
+      if (fallbackType) {
+        setBlankRecipe(fallbackType);
       } else {
         setHydratedRecipe(null);
       }
@@ -2690,7 +2770,7 @@ const MenuManager = () => {
         setRecipeLoading(false);
       }
     }
-  }, [apiCall]); // selectedCategory removed: caused recipe guard to reset on category change, allowing stale recipe data through
+  }, [apiCall, applyRecipe]); // selectedCategory removed: caused recipe guard to reset on category change, allowing stale recipe data through
 
   // Update recipe when editingCocktail changes
   useEffect(() => {
@@ -2700,16 +2780,22 @@ const MenuManager = () => {
     // navigateBy already pre-cancels by incrementing recipeRequestIdRef synchronously;
     // fetchRecipeForCocktail does the definitive ++ internally when it starts.
     // A third increment here causes triple-counting that skews the stale-result guard.
-    recipeForCocktailIdRef.current = null; // Clear to prevent stale recipe sync
-    
     if (editingCocktail && shouldShowRecipeBuilder(editingCocktail.category)) {
-      setRecipe(null);
-      fetchRecipeForCocktail(editingCocktail);
+      // navigateToCocktail may already have hydrated this exact item from the recipe the
+      // menu-manager endpoint attaches. Keep it on screen and refine it silently — no
+      // loading flash, no blank frame between arrow presses.
+      const alreadyHydrated = Boolean(editingCocktail._id) &&
+        recipeForCocktailIdRef.current === editingCocktail._id;
+      if (!alreadyHydrated) {
+        clearRecipe();
+        setRecipeLoading(true);
+      }
+      fetchRecipeForCocktail(editingCocktail, { silent: alreadyHydrated });
     } else {
-      setRecipe(null);
+      clearRecipe();
       setRecipeLoading(false); // Non-recipe category — clear any loading state
     }
-  }, [editingCocktail?._id, editingCocktail?.category, fetchRecipeForCocktail]);
+  }, [editingCocktail?._id, editingCocktail?.category, fetchRecipeForCocktail, clearRecipe]);
 
   // Sync garnish from recipe.metadata.garnish to MenuManager form when recipe loads
   useEffect(() => {
@@ -2795,9 +2881,9 @@ const MenuManager = () => {
     // Create blank recipe if category supports it
     const recipeType = getRecipeType(blankCocktail.category);
     if (recipeType) {
-      setRecipe(createBlankRecipe(recipeType));
+      applyRecipe(createBlankRecipe(recipeType), blankCocktail._id);
     } else {
-      setRecipe(null);
+      clearRecipe();
     }
     
     setVideoUpload(null);
@@ -3118,11 +3204,11 @@ const MenuManager = () => {
         {/* Recipe Builder for PRE-MIX — same layout as other recipe views */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && (
           <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '230px' }}>
-            {recipeLoading ? (
+            {recipePending ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
                 Loading recipe…
               </div>
-            ) : recipe ? (
+            ) : recipeReady ? (
               <div
                 onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
                 onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
@@ -3137,31 +3223,10 @@ const MenuManager = () => {
                     type: recipe.metadata?.type || editingCocktail.ingredients || '' // Sync type from inventory
                   }
                 }}
-                onChange={(updatedRecipe) => {
+                onChange={((ownerId) => (updatedRecipe) => {
                   // For PRE-MIX, allow title editing and sync it back to cocktail name
-                  const prev = recipeRef.current;
-                  const isHydrationUpdate = !hasUnsavedChanges &&
-                    (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
-                    prev &&
-                    updatedRecipe &&
-                    updatedRecipe.itemNumber === prev.itemNumber &&
-                    updatedRecipe.title === prev.title;
-                  // Functional update: if navigation already cleared recipe to null,
-                  // don't let a stale low-priority hydration effect override it
-                  setRecipe(prevRecipe => prevRecipe === null ? null : updatedRecipe);
-                  if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
-                    setHasUnsavedChanges(true);
-                  }
-                  // Update cocktail name to match recipe title ONLY when user is actively editing.
-                  // On initial recipe load recipeBuilderInteractedRef is false, preventing the
-                  // loaded recipe title from overwriting the authoritative cocktail name.
-                  if (updatedRecipe?.title !== undefined && recipeBuilderInteractedRef.current) {
-                    setEditingCocktail(prev => {
-                      if (!prev) return prev;
-                      if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
-                      return { ...prev, name: updatedRecipe.title || prev.name };
-                    });
-                  }
+                  const accepted = handleRecipeBuilderChange(ownerId, updatedRecipe);
+                  if (!accepted) return; // Stale writer from a previously-mounted item
                   // Sync recipe metadata type → editingCocktail.ingredients for inventory sync
                   if (updatedRecipe?.metadata?.type !== undefined) {
                     setEditingCocktail(prev => ({
@@ -3169,7 +3234,7 @@ const MenuManager = () => {
                       ingredients: updatedRecipe.metadata.type || ''
                     }));
                   }
-                }}
+                })(editingCocktail?._id || null)}
                 type="premix"
                 saving={savingRecipe}
                 onSave={async () => {
@@ -4370,11 +4435,11 @@ const MenuManager = () => {
             competition between the item form and the recipe builder. */}
         {recipeViewActive && editingCocktail && shouldShowRecipeBuilder(editingCocktail.category) && normalizeCategoryKey(editingCocktail.category) !== 'premix' && (
           <div className="rounded-lg p-6" style={{ position: 'relative', zIndex: 1, backgroundColor: 'transparent', borderColor: 'transparent', border: 'none', paddingTop: '230px' }}>
-            {recipeLoading ? (
+            {recipePending ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#888', fontSize: '1.1rem' }}>
                 Loading recipe…
               </div>
-            ) : recipe ? (
+            ) : recipeReady ? (
               <div
                 onMouseDown={() => { recipeBuilderInteractedRef.current = true; }}
                 onKeyDown={() => { recipeBuilderInteractedRef.current = true; }}
@@ -4385,28 +4450,9 @@ const MenuManager = () => {
                     ...recipe,
                     title: editingCocktail.name || recipe.title
                   }}
-                  onChange={(updatedRecipe) => {
-                    const prev = recipeRef.current;
-                    const isHydrationUpdate = !hasUnsavedChanges &&
-                      (Date.now() - lastRecipeHydrateAtRef.current) < 1000 &&
-                      prev &&
-                      updatedRecipe &&
-                      updatedRecipe.itemNumber === prev.itemNumber &&
-                      updatedRecipe.title === prev.title;
-                    // Functional update: if navigation already cleared recipe to null,
-                    // don't let a stale low-priority hydration effect override it
-                    setRecipe(prevRecipe => prevRecipe === null ? null : updatedRecipe);
-                    if (recipeBuilderInteractedRef.current && !isHydrationUpdate && recipeDidChange(prev, updatedRecipe)) {
-                      setHasUnsavedChanges(true);
-                    }
-                    if (updatedRecipe?.title !== undefined && recipeBuilderInteractedRef.current) {
-                      setEditingCocktail(prev => {
-                        if (!prev) return prev;
-                        if (prev._id && recipeForCocktailIdRef.current !== prev._id) return prev;
-                        return { ...prev, name: updatedRecipe.title || prev.name };
-                      });
-                    }
-                  }}
+                  onChange={((ownerId) => (updatedRecipe) => {
+                    handleRecipeBuilderChange(ownerId, updatedRecipe);
+                  })(editingCocktail?._id || null)}
                   type={getRecipeType(editingCocktail.category)}
                   saving={savingRecipe}
                   onSave={async () => {

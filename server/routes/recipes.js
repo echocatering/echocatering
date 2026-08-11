@@ -4,7 +4,13 @@ const path = require('path');
 const Recipe = require('../models/Recipe');
 const InventorySheet = require('../models/InventorySheet');
 const { applyRowValues, mapValuesToPlain, applyFormulas } = require('../utils/inventoryHelpers');
-const { normalizeRecipePayload } = require('../utils/recipeMath');
+const {
+  normalizeRecipePayload,
+  createResolutionContext,
+  resolvePreMixPerOz,
+  derivePricingFromInventory,
+  isPricedPerOz
+} = require('../utils/recipeMath');
 const {
   ensureUploadDirs,
   videoDir,
@@ -149,6 +155,18 @@ router.get('/ingredients/search', async (req, res, next) => {
     const sheets = await InventorySheet.find({ sheetKey: { $in: keys } })
       .select('sheetKey name columns rows updatedAt');
 
+    // Pre-mix rows store no $/oz of their own, so fill it in from the pre-mix's own recipe
+    // before handing the row to the client. Without this the RecipeBuilder sees no price for
+    // any house syrup, acid or cordial and silently costs them at $0.
+    const resolutionCtx = createResolutionContext();
+    const withPreMixPricing = async (payload) => {
+      if (!payload || payload.sheetKey !== 'preMix') return payload;
+      if (isPricedPerOz(derivePricingFromInventory(payload.values))) return payload;
+      const perOz = await resolvePreMixPerOz(payload.values?.itemNumber, resolutionCtx);
+      if (perOz === null) return payload;
+      return { ...payload, values: { ...payload.values, ounceCost: perOz } };
+    };
+
     const makeItemPayload = (sheet, row) => {
       // Apply formulas to get calculated values (like ounceCost for pre-mix)
       // Convert lean row to a format that applyFormulas can work with
@@ -197,33 +215,34 @@ router.get('/ingredients/search', async (req, res, next) => {
           }
         });
       });
-      requestedIds.forEach((id) => {
+      for (const id of requestedIds) {
         const payload = targets.get(id);
         if (payload) {
-          items.push(payload);
+          items.push(await withPreMixPricing(payload));
         }
-      });
+      }
       return res.json({ items });
     }
 
     const queryLower = trimmedQuery.toLowerCase();
-    let reachedLimit = false;
+    const matches = [];
 
     sheets.forEach((sheet) => {
-      if (reachedLimit) return;
+      if (matches.length >= limitValue) return;
       const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
       rows.forEach((row) => {
-        if (reachedLimit) return;
+        if (matches.length >= limitValue) return;
         if (row.isDeleted) return;
         const payload = makeItemPayload(sheet, row);
         if (!payload) return;
         if (!payload.name.toLowerCase().includes(queryLower)) return;
-        items.push(payload);
-        if (items.length >= limitValue) {
-          reachedLimit = true;
-        }
+        matches.push(payload);
       });
     });
+
+    for (const payload of matches) {
+      items.push(await withPreMixPricing(payload));
+    }
 
     res.json({ items });
   } catch (error) {
@@ -822,12 +841,14 @@ const syncRecipeInventoryRow = async (recipe, payloadTotals = null) => {
       costEach = recipe.totals?.costEach;
     }
     
-    // Calculate ounceCost as costEach / volumeOz (cost per ounce)
+    // Calculate ounceCost as costEach / volumeOz (cost per ounce).
+    // Kept at full precision — this rate gets multiplied by quarter-ounce pours downstream,
+    // so rounding it to cents here would distort every cocktail that uses this pre-mix.
     let ounceCost = null;
     if (volumeOz && volumeOz > 0 && costEach && costEach > 0) {
-      ounceCost = Number((costEach / volumeOz).toFixed(2));
+      ounceCost = Number((costEach / volumeOz).toFixed(6));
     }
-    
+
     updateValues.ounceCost = ounceCost !== null ? ounceCost : 0;
     
     console.log(`✅ Synced ${recipe.type} "${recipe.title}" to inventory:`, {

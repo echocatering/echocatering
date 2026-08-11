@@ -20,6 +20,52 @@ const FRACTION_OPTIONS = [
   { label: '3/4', numerator: 3, denominator: 4 }
 ];
 
+// Inventory rows and dataset lists are global data, but RecipeBuilder is keyed by item and
+// therefore remounted on every navigation. Caching at module scope means the second visit to
+// an item — and any item sharing ingredients — hydrates with no network round-trip at all,
+// which is what keeps rapid arrow navigation from stacking up request bursts.
+// Entries are { item, fetchedAt }. Cached rows render instantly, but anything older than the
+// TTL is re-fetched in the background, so a cost edited in the Inventory manager reaches the
+// recipes within a minute without anyone reloading the page.
+const sharedInventoryCache = new Map();
+const INVENTORY_TTL_MS = 60 * 1000;
+
+const snapshotInventoryCache = () => {
+  const out = {};
+  sharedInventoryCache.forEach((entry, id) => {
+    out[id] = entry.item;
+  });
+  return out;
+};
+
+const isInventoryEntryStale = (id, now = Date.now()) => {
+  const entry = sharedInventoryCache.get(id);
+  if (!entry) return false; // Absent is "missing", not "stale"
+  return now - entry.fetchedAt > INVENTORY_TTL_MS;
+};
+
+// Promise-valued so concurrent mounts share one in-flight request instead of racing.
+const datasetPromiseCache = new Map();
+
+const loadDataset = (apiCall, datasetId) => {
+  if (!datasetPromiseCache.has(datasetId)) {
+    datasetPromiseCache.set(
+      datasetId,
+      apiCall(`/inventory/datasets/${datasetId}`)
+        .then((response) => response?.dataset || null)
+        .catch((error) => {
+          datasetPromiseCache.delete(datasetId); // Don't cache failures
+          throw error;
+        })
+    );
+  }
+  return datasetPromiseCache.get(datasetId);
+};
+
+const primeDatasetCache = (datasetId, dataset) => {
+  datasetPromiseCache.set(datasetId, Promise.resolve(dataset));
+};
+
 const UNIT_OPTIONS = [
   { value: 'oz', label: 'oz' },
   { value: 'ml', label: 'ml' },
@@ -102,7 +148,13 @@ const OZ_PER_ML = 1 / ML_PER_OZ;
 const GRAMS_PER_OZ = 28.3495231;
 const OZ_PER_TSP = 0.166667;
 const OZ_PER_TBSP = 0.50000116165;
-const OZ_PER_CUP = 8.11538430287086;
+// US customary cup = 8 fl oz exactly, keeping 1 Cup = 16 Tbsp consistent with OZ_PER_TBSP.
+// (The old 8.11538 was a 240 ml metric cup — 1.4% off and inconsistent with the other units.)
+const OZ_PER_CUP = 8;
+
+// Row text for ingredients whose inventory item no longer exists — two shades lighter than
+// the normal near-black, so the row reads as "still costed, but no longer backed by stock".
+const ORPHAN_TEXT_COLOR = '#808080';
 
 const uniqueId = () => Math.random().toString(36).slice(2, 9);
 
@@ -242,14 +294,15 @@ const derivePricing = (values = {}) => {
   const sumOz = parseValue('sumOz');
   
   // ounceCost (spirits/wine) and gramCost (dryStock) are both formula columns that compute $/oz
-  // For pre-mix, ounceCost is directly set as costEach/volumeOz
+  // For pre-mix, ounceCost is resolved server-side from the pre-mix's own recipe
   // For cocktails/mocktails, derive $/oz from unitCost (total cost) / sumOz (total volume)
   // Priority: ounceCost → gramCost → (unitCost/sumOz) → null
+  // ?? not || so a genuine $0.00/oz (water) reads as a known price, not a missing one.
   let perOz = ounceCost ?? gramCost ?? null;
   if (perOz === null && unitCost != null && sumOz != null && sumOz > 0) {
     perOz = unitCost / sumOz;
   }
-  
+
   return {
     currency: 'USD',
     perUnit: unitCost,
@@ -258,6 +311,10 @@ const derivePricing = (values = {}) => {
     perMl: mlCost ?? null
   };
 };
+
+// An ingredient counts as priced only when we know what an ounce of it costs.
+const isPricedPerOz = (pricing = {}) =>
+  pricing.perOz !== null && pricing.perOz !== undefined && Number.isFinite(Number(pricing.perOz));
 
 const deriveConversions = (amountValue, unit) => {
   const value = Number(amountValue) || 0;
@@ -307,77 +364,48 @@ const deriveConversions = (amountValue, unit) => {
   }
 };
 
-const computeRowCost = (pricing = {}, conversions = {}, amountValue = 0) => {
-  if (pricing.perOz && conversions.toOz) {
-    return conversions.toOz * pricing.perOz;
+// There is deliberately no fall back to perUnit (the whole-container price): billing
+// amount x unitCost treated a half-ounce pour as half a $310 jug, which is how one pre-mix
+// came to report $438.39. An unknown price stays unknown — it contributes $0 and renders
+// as "—" rather than being invented.
+const computeRowCost = (pricing = {}, conversions = {}) => {
+  if (isPricedPerOz(pricing)) {
+    return Number(pricing.perOz) * (conversions.toOz || 0);
   }
-  if (pricing.perGram && conversions.toGram) {
-    return conversions.toGram * pricing.perGram;
-  }
-  if (pricing.perUnit) {
-    return amountValue * pricing.perUnit;
+  if (pricing.perGram != null && Number.isFinite(Number(pricing.perGram))) {
+    return Number(pricing.perGram) * (conversions.toGram || 0);
   }
   return 0;
 };
 
+// Resolves an item's inventory key the same way every lookup path does.
+const rowInventoryKeyOf = (row) =>
+  row?.inventoryKey ||
+  row?.ingredient?.inventoryKey ||
+  (row?.ingredient?.sheetKey && row?.ingredient?.rowId
+    ? `${row.ingredient.sheetKey}:${row.ingredient.rowId}`
+    : null);
+
 const hydrateRow = (row, inventoryMap) => {
-  const ingredientKey =
-    row.inventoryKey ||
-    row.ingredient?.inventoryKey ||
-    (row.ingredient?.sheetKey && row.ingredient?.rowId
-      ? `${row.ingredient.sheetKey}:${row.ingredient.rowId}`
-      : null);
+  const ingredientKey = rowInventoryKeyOf(row);
   const source = ingredientKey ? inventoryMap.get(ingredientKey) : null;
-  
-  // Debug logging when source is missing but we have an ingredientKey
-  // Only warn if inventoryMap has been populated (size > 0) but this specific key is missing
-  // This prevents warnings during initial load when inventoryMap is empty
-  if (ingredientKey && !source && inventoryMap.size > 0) {
-    console.warn('⚠️ Ingredient not found in inventoryMap:', {
-      ingredientKey,
-      ingredientName: row.ingredient?.name,
-      inventoryMapSize: inventoryMap.size,
-      availableKeys: Array.from(inventoryMap.keys()).slice(0, 5)
-    });
-  }
-  
-  
+
+  // When inventory has the row, its price wins — that is how a cost change in the Inventory
+  // manager propagates into every recipe. When it doesn't, the last known pricing stored on
+  // the item is kept so a discontinued ingredient's cost stays put instead of dropping to $0.
   const pricing = source ? derivePricing(source.values) : row.pricing || {};
-  
-  // Debug logging when pricing.perOz is missing
-  // Only warn if the ingredient has pricing fields but perOz couldn't be derived
-  // (Don't warn if ingredient has no pricing fields at all - that's expected for some items)
-  if (ingredientKey && !pricing.perOz && source && inventoryMap.size > 0) {
-    const hasPricingFields = source.values && (
-      'ounceCost' in source.values ||
-      'gramCost' in source.values ||
-      'mlCost' in source.values ||
-      'unitCost' in source.values
-    );
-    
-    // Only warn if pricing fields exist but couldn't be parsed
-    if (hasPricingFields) {
-      console.debug('⚠️ No perOz in pricing for ingredient (has pricing fields but could not derive perOz):', {
-        ingredientName: row.ingredient?.name || source.name,
-        ingredientKey,
-        sourceValues: source.values,
-        derivedPricing: pricing
-      });
-    }
-  }
-  
-  
+
   const amountValue = row.amount?.value ?? fractionToDecimal(row.amount?.fraction);
   const amount = {
     unit: row.amount?.unit || 'oz',
     fraction: row.amount?.fraction || defaultFraction(),
     value: Number.isFinite(amountValue) ? amountValue : 0,
-    display: row.amount?.display !== undefined && row.amount.display !== null 
-      ? row.amount.display 
+    display: row.amount?.display !== undefined && row.amount.display !== null
+      ? row.amount.display
       : (amountValue === 0 || amountValue === undefined || amountValue === null ? '' : decimalToFraction(amountValue))
   };
   const conversions = deriveConversions(amount.value, amount.unit);
-  const extendedCost = computeRowCost(pricing, conversions, amount.value);
+  const extendedCost = computeRowCost(pricing, conversions);
   return {
     ...row,
     amount,
@@ -437,7 +465,9 @@ const labelForSheet = (sheetKey) => {
 
 const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNewItem, disableTitleEdit = false, hideActions = false, forceUppercaseTitle = false, showOnlyName = false }) => {
   const { apiCall } = useAuth();
-  const [inventoryCache, setInventoryCache] = useState({});
+  const [inventoryCache, setInventoryCache] = useState(snapshotInventoryCache);
+  // Inventory keys confirmed absent by BOTH id and name lookup — these rows are orphaned.
+  const [missingInventoryKeys, setMissingInventoryKeys] = useState(() => new Set());
   const [ingredientSearch, setIngredientSearch] = useState({});
   const [searchState, setSearchState] = useState({});
   const [openDropdownKey, setOpenDropdownKey] = useState(null);
@@ -465,9 +495,12 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   });
   const [amountInputs, setAmountInputs] = useState({}); // Store raw input values while typing
   const searchTimersRef = useRef({});
-  const inventoryCacheRef = useRef({});
+  const inventoryCacheRef = useRef(snapshotInventoryCache());
   const isUserUpdatingRef = useRef(false); // Track if user is actively typing/editing
   const recipeRef = useRef(recipe); // Keep a ref to the current recipe
+  const isMountedRef = useRef(true);
+  const attemptedInventoryKeysRef = useRef(new Set()); // Keys already looked up — never retried
+  const onChangeRef = useRef(onChange);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -487,7 +520,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   }, [type]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false; // Invalidates any in-flight hydration — see isStale()
       Object.values(searchTimersRef.current).forEach((timer) => {
         if (timer) clearTimeout(timer);
       });
@@ -495,6 +530,10 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
       setBatchCheckboxes({});
     };
   }, []);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Restore batch size/unit from recipe when recipe changes (e.g. switching items)
   useEffect(() => {
@@ -533,9 +572,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
   const fetchTypeDataset = useCallback(
     async () => {
       try {
-        const response = await apiCall(`/inventory/datasets/${TYPE_DATASET_ID}`);
-        if (response?.dataset) {
-          setTypeDataset(response.dataset);
+        const dataset = await loadDataset(apiCall, TYPE_DATASET_ID);
+        if (dataset && isMountedRef.current) {
+          setTypeDataset(dataset);
         }
       } catch (error) {
         console.error('Failed to load type dataset', error);
@@ -553,9 +592,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
       // Load ice dataset for all recipe types (cocktail, mocktail, premix)
       if (type !== 'cocktail' && type !== 'mocktail' && type !== 'premix') return;
       try {
-        const response = await apiCall(`/inventory/datasets/${ICE_DATASET_ID}`);
-        if (response?.dataset) {
-          setIceDataset(response.dataset);
+        const dataset = await loadDataset(apiCall, ICE_DATASET_ID);
+        if (dataset && isMountedRef.current) {
+          setIceDataset(dataset);
         }
       } catch (error) {
         console.error('Failed to load ice dataset', error);
@@ -572,9 +611,9 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
     async () => {
       if (type !== 'cocktail' && type !== 'mocktail') return;
       try {
-        const response = await apiCall(`/inventory/datasets/${GARNISH_DATASET_ID}`);
-        if (response?.dataset) {
-          setGarnishDataset(response.dataset);
+        const dataset = await loadDataset(apiCall, GARNISH_DATASET_ID);
+        if (dataset && isMountedRef.current) {
+          setGarnishDataset(dataset);
         }
       } catch (error) {
         console.error('Failed to load garnish dataset', error);
@@ -597,6 +636,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
         });
         if (response?.dataset) {
           setIceDataset(response.dataset);
+          primeDatasetCache(ICE_DATASET_ID, response.dataset); // Keep the cross-mount cache in step with the edit
         }
       } catch (error) {
         console.error('Failed to update ice dataset', error);
@@ -678,6 +718,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
         });
         if (response?.dataset) {
           setGarnishDataset(response.dataset);
+          primeDatasetCache(GARNISH_DATASET_ID, response.dataset); // Keep the cross-mount cache in step with the edit
         }
       } catch (error) {
         console.error('Failed to update garnish dataset', error);
@@ -759,6 +800,7 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
         });
         if (response?.dataset) {
           setTypeDataset(response.dataset);
+          primeDatasetCache(TYPE_DATASET_ID, response.dataset); // Keep the cross-mount cache in step with the edit
         }
       } catch (error) {
         console.error('Failed to update type dataset', error);
@@ -843,21 +885,26 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
     return map;
   }, [inventoryCache]);
 
-  useEffect(() => {
-    inventoryCacheRef.current = inventoryCache;
-  }, [inventoryCache]);
-
+  // The ref is written synchronously rather than via an effect: the hydration pass below
+  // reads it immediately after awaiting a fetch, and a ref that lagged by a render made it
+  // re-search ingredients it had just resolved.
   const upsertInventoryItems = useCallback((list = []) => {
     if (!list.length) return;
-    setInventoryCache((prev) => {
-      const next = { ...prev };
-      list.forEach((item) => {
-        if (item?.id) {
-          next[item.id] = item;
-        }
-      });
-      return next;
+    const next = { ...inventoryCacheRef.current };
+    const fetchedAt = Date.now();
+    let changed = false;
+    list.forEach((item) => {
+      if (item?.id) {
+        next[item.id] = item;
+        sharedInventoryCache.set(item.id, { item, fetchedAt });
+        changed = true;
+      }
     });
+    if (!changed) return;
+    inventoryCacheRef.current = next;
+    if (isMountedRef.current) {
+      setInventoryCache(next);
+    }
   }, []);
 
   const fetchInventoryByIds = useCallback(
@@ -954,14 +1001,26 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
       }
       return hydratedItem;
     });
-    // Only update if pricing actually changed (to avoid infinite loops)
-    const hasPricingChanges = hydrated.some((item, idx) => {
-      const oldPricing = items[idx]?.pricing;
-      const newPricing = item.pricing;
-      return JSON.stringify(oldPricing) !== JSON.stringify(newPricing);
+    // Only update if something actually changed (to avoid infinite loops).
+    // extendedCost is compared as well as pricing: recipes saved under the old math carry a
+    // stored extendedCost inflated by the whole-container fallback, and comparing pricing
+    // alone left those stale numbers in place — the rows displayed correctly while TOTAL
+    // still added up the old ones.
+    const hasChanges = hydrated.some((item, idx) => {
+      const old = items[idx];
+      if (!old) return true;
+      if (JSON.stringify(old.pricing) !== JSON.stringify(item.pricing)) return true;
+      return Number(old.extendedCost || 0).toFixed(4) !== Number(item.extendedCost || 0).toFixed(4);
     });
-    if (hasPricingChanges || hydrated.length !== items.length) {
-      updateItems(hydrated);
+    if (hasChanges || hydrated.length !== items.length) {
+      // Programmatic, not a user edit: routing this through updateItems() would raise the
+      // is-typing flag, which suppresses the next re-hydration pass. When no further trigger
+      // happened to arrive after that window, the recalculated costs never landed and TOTAL
+      // stayed on the old figures.
+      updateRecipe(
+        { ...recipe, items: hydrated, totals: calculateTotals(hydrated) },
+        { userInitiated: false }
+      );
     }
   }, [items, inventoryMap, amountInputs, recipeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -976,95 +1035,145 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
     setIngredientSearch(next);
   }, [recipeKey]);
 
-  const updateRecipe = (nextRecipe) => {
-    // Mark that this is a user-initiated update
-    isUserUpdatingRef.current = true;
-    onChange(nextRecipe);
-    // Clear the flag after a short delay to allow re-hydration to resume
-    setTimeout(() => {
-      isUserUpdatingRef.current = false;
-    }, 100);
-  };
+  // Stable identity (onChange is read through a ref) so effects depending on it don't re-run
+  // on every render — that turned the hydration pass below into a render→fetch→render loop.
+  //
+  // userInitiated marks the update as a user edit, which suppresses re-hydration for a beat so
+  // it can't clobber what is being typed. Programmatic updates (repairing a stale inventory
+  // link) must NOT set it: doing so blocked the very re-hydration that prices the repaired row,
+  // leaving the ingredient stuck at "—" with nothing left to re-trigger it.
+  const updateRecipe = useCallback((nextRecipe, { userInitiated = true } = {}) => {
+    if (userInitiated) {
+      isUserUpdatingRef.current = true;
+      // Clear the flag after a short delay to allow re-hydration to resume
+      setTimeout(() => {
+        isUserUpdatingRef.current = false;
+      }, 100);
+    }
+    onChangeRef.current(nextRecipe);
+  }, []);
 
+  // A new recipe means a clean slate for lookup bookkeeping.
   useEffect(() => {
+    attemptedInventoryKeysRef.current = new Set();
+  }, [recipeKey]);
+
+  // Ingredient hydration is async and can easily outlive this component: RecipeBuilder is
+  // keyed by item, so navigating unmounts it mid-flight, and the sequential name-search loop
+  // below can run for seconds. Every step is therefore scoped to a generation token — if the
+  // recipe changed or the component unmounted, results are dropped instead of being written
+  // back through a stale onChange into whatever item is now on screen.
+  useEffect(() => {
+    const myRecipeKey = recipeKey;
+    // Staleness is identity-based, not run-based. The effect re-runs whenever items change —
+    // including from its own write-back — so cancelling on every re-run would throw away
+    // matches it had already paid for. What actually invalidates the work is the component
+    // being unmounted (the parent keys it by item, so that *is* navigation) or the recipe
+    // underneath it being replaced.
+    const isStale = () => {
+      if (!isMountedRef.current) return true;
+      const live = recipeRef.current;
+      return (live?._id || live?.clientId || 'new') !== myRecipeKey;
+    };
+
+    const rowInventoryKey = rowInventoryKeyOf;
+
+    const now = Date.now();
     const missingKeys = (recipe.items || [])
-      .map((row) => {
-        if (row.inventoryKey) return row.inventoryKey;
-        if (row.ingredient?.inventoryKey) return row.ingredient.inventoryKey;
-        if (row.ingredient?.sheetKey && row.ingredient?.rowId) {
-          return `${row.ingredient.sheetKey}:${row.ingredient.rowId}`;
-        }
-        return null;
-      })
+      .map(rowInventoryKey)
       .filter(Boolean)
-      .filter((key) => !inventoryCacheRef.current[key]);
-    
-    if (missingKeys.length) {
-      fetchInventoryByIds(missingKeys).then(async () => {
-        // After fetching by IDs, check if any items are still missing
-        // If so, try searching by ingredient name
-        const stillMissing = (recipe.items || [])
-          .map((row, idx) => {
-            const ingredientKey =
-              row.inventoryKey ||
-              row.ingredient?.inventoryKey ||
-              (row.ingredient?.sheetKey && row.ingredient?.rowId
-                ? `${row.ingredient.sheetKey}:${row.ingredient.rowId}`
-                : null);
-            if (ingredientKey && !inventoryCacheRef.current[ingredientKey] && row.ingredient?.name) {
-              return { row, idx, ingredientName: row.ingredient.name };
-            }
-            return null;
-          })
-          .filter(Boolean);
-        
-        if (stillMissing.length > 0) {
-          // Search for missing ingredients sequentially to avoid 429 rate limiting
-          // Collect all matches first, then do a single recipe update
-          const allMatches = [];
-          for (const { row, idx, ingredientName } of stillMissing) {
-            try {
-              const response = await apiCall(`/recipes/ingredients/search?query=${encodeURIComponent(ingredientName)}&limit=5`);
-              const items = response.items || [];
-              const exactMatch = items.find(
-                (item) => item.name && item.name.toLowerCase() === ingredientName.toLowerCase()
-              );
-              const match = exactMatch || items[0];
-              if (match) {
-                upsertInventoryItems([match]);
-                allMatches.push({ idx, match });
-              } else {
-                console.warn(`⚠️ No match found for ingredient "${ingredientName}"`);
-              }
-            } catch (error) {
-              console.error(`Failed to search for ingredient "${ingredientName}":`, error);
-            }
+      .filter((key) => {
+        // Cached but past its TTL — refresh so an Inventory price edit reaches this recipe.
+        if (inventoryCacheRef.current[key]) return isInventoryEntryStale(key, now);
+        // Never resolved. Attempted keys are not retried: an ingredient with no inventory row
+        // would otherwise keep this effect re-firing forever, hammering the API and
+        // republishing the recipe on every pass.
+        return !attemptedInventoryKeysRef.current.has(key);
+      });
+
+    if (!missingKeys.length) return undefined;
+    missingKeys.forEach((key) => attemptedInventoryKeysRef.current.add(key));
+
+    (async () => {
+      await fetchInventoryByIds(missingKeys);
+      if (isStale()) return;
+
+      // After fetching by IDs, check if any items are still missing
+      // If so, try searching by ingredient name
+      const stillMissing = (recipe.items || [])
+        .map((row, idx) => {
+          const ingredientKey = rowInventoryKey(row);
+          if (ingredientKey && !inventoryCacheRef.current[ingredientKey] && row.ingredient?.name) {
+            return { idx, ingredientKey, ingredientName: row.ingredient.name };
           }
-          // Apply all matches in a single recipe update
-          if (allMatches.length > 0) {
-            const currentRecipe = recipeRef.current || recipe;
-            const updatedItems = [...(currentRecipe.items || [])];
-            allMatches.forEach(({ idx, match }) => {
-              if (updatedItems[idx]) {
-                updatedItems[idx] = {
-                  ...updatedItems[idx],
-                  inventoryKey: match.id,
-                  ingredient: {
-                    ...updatedItems[idx].ingredient,
-                    inventoryKey: match.id,
-                    sheetKey: match.sheetKey,
-                    rowId: match.rowId,
-                    name: match.name
-                  }
-                };
-              }
-            });
-            updateRecipe({ ...currentRecipe, items: updatedItems });
+          return null;
+        })
+        .filter(Boolean);
+
+      if (!stillMissing.length) return;
+
+      // Search for missing ingredients sequentially to avoid 429 rate limiting
+      // Collect all matches first, then do a single recipe update
+      const allMatches = [];
+      const confirmedMissing = [];
+      for (const { idx, ingredientKey, ingredientName } of stillMissing) {
+        if (isStale()) return; // Abandon the queue the moment the user navigates
+        try {
+          const response = await apiCall(`/recipes/ingredients/search?query=${encodeURIComponent(ingredientName)}&limit=5`);
+          const items = response.items || [];
+          const exactMatch = items.find(
+            (item) => item.name && item.name.toLowerCase() === ingredientName.toLowerCase()
+          );
+          const match = exactMatch || items[0];
+          if (match) {
+            upsertInventoryItems([match]);
+            allMatches.push({ idx, match });
+          } else {
+            // Both the id lookup and the name lookup came back empty: this ingredient is
+            // genuinely gone from inventory. Only now is it safe to mark the row orphaned.
+            if (ingredientKey) confirmedMissing.push(ingredientKey);
           }
+        } catch (error) {
+          // A failed request is not evidence of absence — leave the row unmarked.
+          console.error(`Failed to search for ingredient "${ingredientName}":`, error);
+        }
+      }
+
+      if (!isStale() && confirmedMissing.length) {
+        setMissingInventoryKeys((prev) => {
+          const next = new Set(prev);
+          confirmedMissing.forEach((key) => next.add(key));
+          return next;
+        });
+      }
+
+      // Apply all matches in a single recipe update
+      if (isStale() || !allMatches.length) return;
+      const currentRecipe = recipeRef.current;
+      if (!currentRecipe) return;
+      const updatedItems = [...(currentRecipe.items || [])];
+      allMatches.forEach(({ idx, match }) => {
+        if (updatedItems[idx]) {
+          updatedItems[idx] = {
+            ...updatedItems[idx],
+            inventoryKey: match.id,
+            ingredient: {
+              ...updatedItems[idx].ingredient,
+              inventoryKey: match.id,
+              sheetKey: match.sheetKey,
+              rowId: match.rowId,
+              name: match.name
+            }
+          };
         }
       });
-    }
-  }, [recipe.items, recipeKey, fetchInventoryByIds, apiCall, upsertInventoryItems, recipe, updateRecipe]);
+      // Not user-initiated: this is a link repair, and re-hydration must be free to run
+      // straight after so the repaired row actually picks up its price.
+      updateRecipe({ ...currentRecipe, items: updatedItems }, { userInitiated: false });
+    })();
+
+    return undefined;
+  }, [recipe.items, recipeKey, fetchInventoryByIds, apiCall, upsertInventoryItems, updateRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateItems = (nextItems) => {
     const totals = calculateTotals(nextItems);
@@ -2183,6 +2292,14 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                 const searchValue = ingredientSearch[rowKey] ?? row.ingredient?.name ?? '';
                 const state = searchState[rowKey] || { items: [] };
                 const options = state.items || [];
+                // Orphaned = the ingredient was looked up by id AND by name and inventory has
+                // neither. Derived from the confirmed-missing set (not merely "absent from the
+                // cache") so a row can't grey out while its lookup is still in flight.
+                const orphanKey = rowInventoryKeyOf(row);
+                const isOrphaned = Boolean(orphanKey && missingInventoryKeys.has(orphanKey));
+                // Two shades lighter than the normal near-black row text.
+                const orphanTextStyle = isOrphaned ? { color: ORPHAN_TEXT_COLOR } : undefined;
+                const isPriced = isPricedPerOz(row.pricing);
                 return (
                 <tr
                   key={rowKey}
@@ -2199,6 +2316,8 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                       <input
                         type="text"
                         className="recipe-input ingredient-input"
+                        style={orphanTextStyle}
+                        title={isOrphaned ? 'This ingredient is no longer in Inventory — its cost is frozen at the last known value.' : undefined}
                         value={searchValue}
                         placeholder="Type ingredient"
                         onChange={(e) => handleIngredientInputChange(rowKey, e.target.value)}
@@ -2273,11 +2392,13 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                       onChange={(e) => handleAmountChange(index, e.target.value)}
                       onBlur={() => handleAmountBlur(index)}
                       placeholder="0"
+                      style={orphanTextStyle}
                     />
                   </td>
                   <td>
                     <select
                       className="recipe-input"
+                      style={orphanTextStyle}
                       value={row.amount?.unit || 'oz'}
                       onChange={(e) => handleUnitChange(index, e.target.value)}
                     >
@@ -2288,21 +2409,15 @@ const RecipeBuilder = ({ recipe, onChange, type, saving, onSave, onDelete, onNew
                       ))}
                     </select>
                   </td>
-                  <td className="text-right">{formatNumber(row.conversions?.toOz, 2)}</td>
-                  <td className="text-right">
-                    {(() => {
-                      const perOz = row.pricing?.perOz;
-                      // More lenient check - allow 0 as a valid value
-                      if (perOz != null && perOz !== '' && Number.isFinite(Number(perOz))) {
-                        const numValue = Number(perOz);
-                        if (numValue >= 0) {
-                          return `$${formatNumber(numValue, 2)}`;
-                        }
-                      }
-                      return '—';
-                    })()}
+                  <td className="text-right" style={orphanTextStyle}>{formatNumber(row.conversions?.toOz, 2)}</td>
+                  <td className="text-right" style={orphanTextStyle}>
+                    {/* $/oz is stored at full precision and rounded to cents only here */}
+                    {isPriced ? `$${formatNumber(Number(row.pricing.perOz), 2)}` : '—'}
                   </td>
-                  <td className="text-right">{`$${formatNumber(row.extendedCost, 2)}`}</td>
+                  <td className="text-right" style={orphanTextStyle}>
+                    {/* An unpriced ingredient shows "—", never a fabricated $0.00 */}
+                    {isPriced ? `$${formatNumber(row.extendedCost, 2)}` : '—'}
+                  </td>
                   <td className="text-center">
                     <button
                       type="button"

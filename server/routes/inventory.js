@@ -1426,10 +1426,11 @@ router.post('/preMix/sync-from-menu', async (req, res, next) => {
             costEach = Number(costEach.toFixed(2));
           }
 
-          // Calculate ounceCost as costEach / volumeOz (cost per ounce)
+          // Calculate ounceCost as costEach / volumeOz (cost per ounce).
+          // Full precision: this rate is multiplied by fractional pours downstream.
           let ounceCost = null;
           if (volumeOz && volumeOz > 0 && costEach && costEach > 0) {
-            ounceCost = Number((costEach / volumeOz).toFixed(2));
+            ounceCost = Number((costEach / volumeOz).toFixed(6));
           }
 
           // Find all cocktails/mocktails that use this pre-mix item

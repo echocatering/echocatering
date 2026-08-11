@@ -65,6 +65,12 @@ function applyRowValues(row, values = {}, columnsByKey = {}) {
   });
 }
 
+// Formula results are money-per-unit rates that later get multiplied by fractional amounts,
+// so they are STORED at full precision and rounded only for display (column.precision).
+// Rounding to cents first destroyed cheap ingredients — a syrup at $0.0057/oz stored as
+// $0.01/oz overstates every pour using it by 75%.
+const RATE_PRECISION = 6;
+
 function applyFormulas(sheet, row) {
   if (!sheet?.columns?.length) return;
   let modified = false;
@@ -72,7 +78,7 @@ function applyFormulas(sheet, row) {
   sheet.columns.forEach((column) => {
     if (column.type !== 'formula' || !column.formula) return;
 
-    const precision = Number.isInteger(column.precision) ? column.precision : 2;
+    const precision = RATE_PRECISION;
 
     switch (column.formula.type) {
       case 'ratio': {
