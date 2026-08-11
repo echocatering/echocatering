@@ -2694,7 +2694,7 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#333',
+                color: '#777',
                 // Body copy face, shared with the About panels and the menu gallery
                 fontFamily: "'Times New Roman', Times, serif",
                 fontWeight: 400,
@@ -2707,7 +2707,7 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#333',
+                color: '#777',
                 // Body copy face, shared with the About panels and the menu gallery
                 fontFamily: "'Times New Roman', Times, serif",
                 fontWeight: 400,
@@ -3885,7 +3885,7 @@ const Home = forwardRef((props, ref) => {
                           {section.content && (
                             <p
                               style={{
-                                color: '#444',
+                                color: '#777',
                                 margin: 0,
                                 fontFamily: "'Times New Roman', Times, serif",
                                 fontWeight: 400,
@@ -4052,7 +4052,7 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#333',
+                    color: '#777',
                     // Body copy face, shared with the About panels and the menu gallery
                     fontFamily: "'Times New Roman', Times, serif",
                     fontWeight: 400,
@@ -4065,7 +4065,7 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#333',
+                    color: '#777',
                     // Body copy face, shared with the About panels and the menu gallery
                     fontFamily: "'Times New Roman', Times, serif",
                     fontWeight: 400,
