@@ -1330,6 +1330,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
           boxSizing: 'border-box'
         }}>
           <button
+            className="menu-serif-text"
             onClick={() => {
               const eventRequestSection = document.getElementById('event-request-section');
               if (eventRequestSection) {
@@ -1355,7 +1356,9 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               padding: '10px 16px',
               background: 'transparent',
               border: '2px solid #888888',
-              borderRadius: 0,
+              // Font and border shape match the Schedule an Event button in menuGallery2;
+              // the greys and hover behaviour here are this page's own.
+              borderRadius: '2.5rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               minHeight: '32px',
@@ -1363,7 +1366,7 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               opacity: 1,
               visibility: 'visible',
               color: '#888888',
-              fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontFamily: "'Trajin Pro', serif",
               fontSize: '1.1rem',
               fontWeight: 400,
               textTransform: 'uppercase',
