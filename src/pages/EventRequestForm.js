@@ -31,6 +31,7 @@ const hearAboutOptions = [
   'Venues by Tripleseat',
   'Search Engine',
   'Email',
+  'Recommendation',
   'Other',
 ];
 
