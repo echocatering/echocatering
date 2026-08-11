@@ -346,23 +346,31 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
               left: isOdd ? '5%' : '55%',
               right: 'auto',
               background: 'rgba(255,255,255,0.9)',
-              padding: '1.5rem 2rem',
-            width: '40%',
-            height: '50%',
+              // Even 2rem on all four sides, and no fixed height, so the panel hugs its
+              // text instead of centring it inside a half-height block.
+              padding: '2rem',
+              width: '40%',
+              // Without a fixed height the panel can outgrow the 19:9 image on short
+              // landscape windows; cap it there so it never spills past the artwork.
+              maxHeight: '100%',
+              overflowY: 'auto',
+              boxSizing: 'border-box',
               boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
-              borderRadius: '8px',
+              borderRadius: '16px',
               color: '#222',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
-              zIndex: 2,
-            justifyContent: 'center'
+              zIndex: 2
             }}
           >
             {section.title && (
-              <h2 style={{ 
-                color: '#222', 
+              // Mirrors the Menu Gallery's type hierarchy: Cinzel for titles (as on
+              // .cocktail-title), Helvetica Neue for body copy (as on the ingredient list).
+              <h2 style={{
+                color: '#222',
                 margin: 0,
+                fontFamily: 'Cinzel, Georgia, serif',
                 fontSize: '1.8rem',
                 fontWeight: '600',
                 lineHeight: 1.2
@@ -371,9 +379,10 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
               </h2>
             )}
             {section.content && (
-              <p style={{ 
-                color: '#444', 
-                margin: 0, 
+              <p style={{
+                color: '#444',
+                margin: 0,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 lineHeight: 1.6,
                 fontSize: '1rem'
               }}>
