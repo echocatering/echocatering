@@ -3890,7 +3890,7 @@ const Home = forwardRef((props, ref) => {
                                 fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
                                 fontWeight: 300,
                                 lineHeight: 1.6,
-                                fontSize: '1em',
+                                fontSize: '1.15em',
                                 whiteSpace: 'pre-wrap',
                                 overflow: 'hidden',
                                 wordWrap: 'break-word',

@@ -385,7 +385,7 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
                 fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
                 fontWeight: 300,
                 lineHeight: 1.6,
-                fontSize: '1rem'
+                fontSize: '1.15rem'
               }}>
                 {section.content}
               </p>
