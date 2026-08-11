@@ -1177,85 +1177,24 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '800px',
           pointerEvents: 'none'
         }}>
-        {/* Echo icon above cocktail SVG */}
+        {/* Craft Cocktails & Social Tonics lockup — replaces the former Echo icon
+            and the COCKTAILS / + / EVENT CATERING text stack */}
         <img
-          src="/assets/icons/icon.echo.png"
-          alt="Echo"
+          src="/assets/icons/CC&ST.png"
+          alt="Craft Cocktails & Social Tonics"
           style={{
-            width: '6vw',
-            minWidth: '40px',
-            maxWidth: '80px',
+            width: 'clamp(264px, 28.8vw, 456px)',
             height: 'auto',
-            filter: 'brightness(0) invert(1)',
-            backgroundColor: 'transparent',
             display: 'block',
+            backgroundColor: 'transparent',
             WebkitBackfaceVisibility: 'hidden',
             WebkitPerspective: 1000,
             WebkitTransform: 'translate3d(0, 0, 0)',
             isolation: 'isolate',
             position: 'relative',
-            zIndex: 2,
-            marginBottom: '3px'
+            zIndex: 2
           }}
         />
-        
-        {/* COCKTAILS / Plus / EVENT CATERING grouped - Mobile */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
-          position: 'relative',
-          zIndex: 2,
-          marginTop: 'calc(1vh + 4px)'
-        }}>
-          <div style={{
-            fontSize: 'clamp(2.7rem, 6.75vw, 5.25rem)',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            backgroundColor: 'transparent',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1.2'
-          }}>
-            COCKTAILS
-          </div>
-          <div style={{
-            fontSize: '3vw',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            backgroundColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1',
-            height: '5px',
-            overflow: 'visible',
-            marginTop: '-10px'
-          }}>
-            +
-          </div>
-          <div style={{
-            fontSize: '2.45vw',
-            color: '#ffffff',
-            fontWeight: 400,
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            backgroundColor: 'transparent',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            fontFamily: 'Montserrat, \"Helvetica Neue\", Helvetica, Arial, sans-serif',
-            lineHeight: '1.2'
-          }}>
-            EVENT CATERING
-          </div>
-        </div>
         
         {/* BOOK NOW Button - Desktop */}
         <div 
