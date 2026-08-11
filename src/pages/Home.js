@@ -3845,31 +3845,37 @@ const Home = forwardRef((props, ref) => {
                         left: isThird ? '55%' : (isSecond ? '55%' : (isTop ? '5%' : (isOdd ? '5%' : '55%'))),
                         right: 'auto',
                         background: 'rgba(255,255,255,0.9)',
-                        padding: '1.75rem 2.25rem',
+                        // Even 2.25rem all round, and no fixed height, so the panel hugs its
+                        // text rather than centring it inside a fixed-height block.
+                        padding: '2.25rem',
                         width: isTop ? '50%' : (isThird ? '50%' : (isSecond ? '40%' : '40%')),
-                        height: isTop ? '50%' : (isThird ? '33%' : (isSecond ? '66%' : '50%')),
+                        // Without a fixed height the panel can outgrow its image, so cap it
+                        // at the space actually available above its bottom offset.
+                        maxHeight: (isTop || isSecond || isThird) ? '92%' : '100%',
                         boxShadow: '0 16px 36px rgba(0,0,0,0.2)',
-                        borderRadius: '0px',
+                        borderRadius: '16px',
                         color: '#222',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.85rem',
                         zIndex: 3,
-                        justifyContent: 'center',
                         alignItems: 'stretch',
                         fontSize: isTop ? 'clamp(0.6rem, 1vw, 1rem)' : (isThird ? 'clamp(0.6rem, 1.25vw, 1rem)' : (isSecond ? 'clamp(0.6rem, 1vw, 1rem)' : 'clamp(0.6rem, 1vw, 1rem)')),
-                        overflow: isTop ? 'auto' : 'hidden',
-                        overflowY: isTop ? 'auto' : 'hidden',
+                        overflowY: 'auto',
                         boxSizing: 'border-box'
                       }}
                     >
                       {(section.title || section.content) && (
                         <>
                           {section.title && (
+                            // Mirrors the Menu Gallery's type hierarchy: Cinzel for titles
+                            // (as .cocktail-title uses), Helvetica Neue for body copy
+                            // (as the ingredient list uses).
                             <h2
                               style={{
                                 color: '#222',
                                 margin: 0,
+                                fontFamily: 'Cinzel, Georgia, serif',
                                 fontSize: isTop ? 'clamp(0.9rem, 2vw, 2.2rem)' : (isThird ? 'clamp(0.9rem, 2.5vw, 2.2rem)' : (isSecond ? 'clamp(0.9rem, 2vw, 2.2rem)' : 'clamp(0.9rem, 2vw, 2.2rem)')),
                                 fontWeight: 600,
                                 lineHeight: 1.2,
@@ -3887,6 +3893,7 @@ const Home = forwardRef((props, ref) => {
                               style={{
                                 color: '#444',
                                 margin: 0,
+                                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                                 lineHeight: 1.6,
                                 fontSize: '1em',
                                 whiteSpace: 'pre-wrap',
