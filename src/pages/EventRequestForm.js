@@ -188,7 +188,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -216,7 +216,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -244,7 +244,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -273,7 +273,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -301,7 +301,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -328,7 +328,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -384,7 +384,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -414,7 +414,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -445,7 +445,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -476,7 +476,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -507,7 +507,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -539,7 +539,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -578,7 +578,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>
@@ -614,7 +614,7 @@ export default function EventRequestForm() {
             display: 'block',
             fontSize: '0.9rem',
             fontWeight: 400,
-            color: '#888',
+            color: '#333',
             marginBottom: '0.5rem',
             fontFamily: "'Times New Roman', Times, serif"
           }}>

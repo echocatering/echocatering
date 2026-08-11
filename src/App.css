@@ -1865,6 +1865,8 @@ div[class*="sidebar-no-fade"] {
 .cocktail-garnish-text * {
   font-family: 'Times New Roman', Times, serif !important;
   font-weight: 400 !important;
+  /* Lighter than the #555 container they inherit from; the Cinzel labels stay at #222 */
+  color: #888 !important;
 }
 
 /* Header navigation menu font */
