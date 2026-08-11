@@ -2699,7 +2699,18 @@ const Home = forwardRef((props, ref) => {
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
-                Ready to create a memorable gathering? Share a few details about your event, and we’ll get back to you with a personalized plan.
+                Ready to create a memorable gathering?
+              </div>
+
+              <div style={{
+                fontSize: '1rem',
+                lineHeight: '1.6',
+                color: '#333',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                marginBottom: '1rem',
+                textAlign: 'left'
+              }}>
+                Share a few details about your event, and we’ll get back to you with a personalized plan!
               </div>
             </div>
             
@@ -4041,7 +4052,18 @@ const Home = forwardRef((props, ref) => {
                     textAlign: 'left'
                   }}
                 >
-                  Ready to create a memorable gathering? Share a few details about your event, and we'll get back to you with a personalized plan.
+                  Ready to create a memorable gathering?
+                </div>
+                <div
+                  style={{
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    color: '#333',
+                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    textAlign: 'left'
+                  }}
+                >
+                  Share a few details about your event, and we'll get back to you with a personalized plan!
                 </div>
               </div>
               

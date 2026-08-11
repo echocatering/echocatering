@@ -618,7 +618,7 @@ export default function EventRequestForm() {
             marginBottom: '0.5rem',
             fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
           }}>
-            Is there any additional information you would like to add?
+            Additional Information
           </label>
           <textarea
             name="additionalInfo"
