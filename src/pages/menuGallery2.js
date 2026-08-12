@@ -2983,6 +2983,29 @@ function EchoCocktailSubpage2({
         fontFamily: "'EB Garamond', Georgia, serif",
       }}
     >
+      {/* Disclaimer, bottom-right below Schedule an Event, inset by the same 14px
+          the nav sits from its edge */}
+      {viewMode === 'web' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '14px',
+            right: '14px',
+            zIndex: 20,
+            pointerEvents: 'none',
+            textAlign: 'right',
+            fontFamily: "'EB Garamond', Georgia, serif",
+            fontSize: '0.7rem',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            // Same white the Schedule an Event button uses before hover
+            color: '#fff',
+          }}
+        >
+          100% Human Generated Video
+        </div>
+      )}
+
       {/* Video background fills entire outer container/viewport */}
       {videoSrc ? (
         <VideoBackground videoSrc={videoSrc} isVertical={isVertical} viewMode={viewMode} />
