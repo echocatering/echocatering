@@ -593,6 +593,7 @@ function EchoCocktailSubpage2({
   const [titleVisible, setTitleVisible] = useState(false);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
   const [garnishVisible, setGarnishVisible] = useState(false);
+  const [baseSpiritsVisible, setBaseSpiritsVisible] = useState(false);
   const [mapVisible, setMapVisible] = useState(false);
   const [countriesVisible, setCountriesVisible] = useState([]);
   const [countriesSidebarVisible, setCountriesSidebarVisible] = useState(true);
@@ -607,6 +608,7 @@ function EchoCocktailSubpage2({
     setTitleVisible(false);
     setIngredientsVisible(false);
     setGarnishVisible(false);
+    setBaseSpiritsVisible(false);
     setMapVisible(false);
     setCountriesVisible([]);
     setCountriesSidebarVisible(false);
@@ -705,18 +707,17 @@ function EchoCocktailSubpage2({
   const videoSrc = info?.cloudinaryVideoUrl || info?.videoUrl || '';
   
 
-  // Function to scroll gallery container so BOTTOM aligns with viewport bottom (match Home MENU button behavior)
-  const scrollToBottomAlign = useCallback(() => {
+  // Scroll the gallery container so its TOP aligns with the top of the viewport
+  const scrollToTopAlign = useCallback(() => {
     if (viewMode !== 'web' || !galleryRef?.current) return;
-    
+
     const galleryElement = galleryRef.current;
     const rect = galleryElement.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const viewportHeight = window.innerHeight;
-    const sectionHeight = rect.height;
 
-    // Align bottom of section with bottom of viewport
-    const targetScroll = scrollTop + rect.top + sectionHeight - viewportHeight;
+    // rect.top is relative to the viewport, so adding the current scroll offset
+    // puts the section's top edge exactly at the top of the screen.
+    const targetScroll = scrollTop + rect.top;
 
     // Force mobile browser UI to hide: scroll slightly more first, then correct
     // This triggers the address bar to hide on mobile browsers
@@ -771,7 +772,7 @@ function EchoCocktailSubpage2({
     setShowCategories(false);
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
     // Scroll to align bottom with viewport
-    setTimeout(scrollToBottomAlign, 100);
+    setTimeout(scrollToTopAlign, 100);
   };
 
   const handleNext = (e) => {
@@ -793,7 +794,7 @@ function EchoCocktailSubpage2({
     setShowCategories(false);
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
     // Scroll to align bottom with viewport
-    setTimeout(scrollToBottomAlign, 100);
+    setTimeout(scrollToTopAlign, 100);
   };
 
   // Shared toggle handler used by the info button AND the center-screen tap zone
@@ -801,7 +802,7 @@ function EchoCocktailSubpage2({
     if (sidebarOpen) {
       setSidebarOpen?.(false);
       if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-      setTimeout(scrollToBottomAlign, 100);
+      setTimeout(scrollToTopAlign, 100);
       return;
     }
 
@@ -812,7 +813,7 @@ function EchoCocktailSubpage2({
     setShowConceptInfo(newValue);
     setShowCategories(false);
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
-    setTimeout(scrollToBottomAlign, 100);
+    setTimeout(scrollToTopAlign, 100);
 
     if (newValue) {
       const count = countryDisplayList.length;
@@ -821,6 +822,8 @@ function EchoCocktailSubpage2({
       setTitleVisible(false);
       setIngredientsVisible(false);
       setGarnishVisible(false);
+      setBaseSpiritsVisible(false);
+    setBaseSpiritsVisible(false);
       const conceptMapTimeout = setTimeout(() => {
         setConceptVisible(true);
         setMapVisible(true);
@@ -852,7 +855,11 @@ function EchoCocktailSubpage2({
               const separatorTimeout = setTimeout(async () => {
                 await adjustSeparatorsRef.current?.();
                 setIngredientsVisible(true);
-                const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                const garnishTimeout = setTimeout(() => {
+                  setGarnishVisible(true);
+                  const spiritsTimeout = setTimeout(() => setBaseSpiritsVisible(true), 300);
+                  animationTimeoutsRef.current.push(spiritsTimeout);
+                }, 300);
                 animationTimeoutsRef.current.push(garnishTimeout);
               }, 50);
               animationTimeoutsRef.current.push(separatorTimeout);
@@ -885,7 +892,7 @@ function EchoCocktailSubpage2({
     }
     if (setSidebarOpen) setSidebarOpen(false);
     // Scroll to align bottom with viewport
-    setTimeout(scrollToBottomAlign, 100);
+    setTimeout(scrollToTopAlign, 100);
   };
 
   // Checkmark management functions
@@ -1214,7 +1221,11 @@ function EchoCocktailSubpage2({
                   await adjustSeparatorsRef.current?.();
                   // 3) Fade in after all rows processed
                   setIngredientsVisible(true);
-                  const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                  const garnishTimeout = setTimeout(() => {
+                  setGarnishVisible(true);
+                  const spiritsTimeout = setTimeout(() => setBaseSpiritsVisible(true), 300);
+                  animationTimeoutsRef.current.push(spiritsTimeout);
+                }, 300);
                   animationTimeoutsRef.current.push(garnishTimeout);
                 }, 50);
                 animationTimeoutsRef.current.push(separatorTimeout);
@@ -1236,7 +1247,11 @@ function EchoCocktailSubpage2({
             setIngredientsVisible(true);
           });
         });
-        const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+        const garnishTimeout = setTimeout(() => {
+                  setGarnishVisible(true);
+                  const spiritsTimeout = setTimeout(() => setBaseSpiritsVisible(true), 300);
+                  animationTimeoutsRef.current.push(spiritsTimeout);
+                }, 300);
         animationTimeoutsRef.current.push(garnishTimeout);
       }, 400);
       animationTimeoutsRef.current.push(ingredientsTimeout);
@@ -1590,24 +1605,47 @@ function EchoCocktailSubpage2({
     );
   };
 
+  // Closes out the info panel, left-aligned. Still paced off garnishVisible: the
+  // garnish block itself is gone, but that timer is what staggers this fade.
+  const renderBaseSpirits = () => {
+    if (!Array.isArray(info?.baseSpirits) || info.baseSpirits.length === 0) return null;
+    return (
+      <div
+        className="cocktail-base-spirits"
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          // Same left padding the ingredients and garnish blocks use
+          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
+          boxSizing: 'border-box',
+          textTransform: 'uppercase',
+          fontWeight: 400,
+          fontSize: isVertical ? getFontSize(56, 0.85, 1.35) : getFontSize(43, 0.85, 1.35),
+          fontFamily: "'EB Garamond', Georgia, serif",
+          letterSpacing: '0.08em',
+          marginTop: '24px',
+          marginBottom: 0,
+          color: '#999',
+          opacity: baseSpiritsVisible ? 1 : 0,
+          transition: baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
+        }}
+      >
+        {info.baseSpirits.join(' | ')}
+      </div>
+    );
+  };
+
   const renderIngredients = () => {
     const items = normalizeIngredients(info?.ingredients);
     if (items.length === 0) return null;
-    const ingredientsPaddingTop = isVertical
-      ? '0.75rem'
-      : layout?.inner?.height
-        ? `${(layout.inner.height / 16).toFixed(1)}px`
-        : '0.75rem';
-    const ingredientsBottomPadding = isVertical
-      ? '0.75rem'
-      : layout?.inner?.height
-        ? `${(layout.inner.height / 24).toFixed(1)}px`
-        : '0.75rem';
     return (
       <div
         style={{
-          paddingTop: ingredientsPaddingTop,
-          paddingBottom: ingredientsBottomPadding,
+          // Spacing comes from a single top margin, no vertical padding. Slightly
+          // larger than the 24px used for ingredients -> garnish and garnish -> spirits.
+          marginTop: '36px',
+          paddingTop: 0,
+          paddingBottom: 0,
           paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
           paddingRight: (isVertical && isProbablyMobileDevice()) ? '16.6667vw' : (isVertical ? 0 : 0),
           opacity: ingredientsVisible ? 1 : 0,
@@ -1616,22 +1654,6 @@ function EchoCocktailSubpage2({
           lineHeight: 1.4,
         }}
       >
-        {Array.isArray(info?.baseSpirits) && info.baseSpirits.length > 0 && (
-          <div
-            className="cocktail-base-spirits"
-            style={{
-              textTransform: 'uppercase',
-              fontWeight: 400,
-              fontSize: isVertical ? getFontSize(56, 0.85, 1.35) : getFontSize(43, 0.85, 1.35),
-              fontFamily: "'EB Garamond', Georgia, serif",
-              letterSpacing: '0.08em',
-              marginBottom: '0.35rem',
-              color: '#999',
-            }}
-          >
-            {info.baseSpirits.join(' | ')}
-          </div>
-        )}
         <div
           className="cocktail-ingredients-label"
           style={{
@@ -1672,37 +1694,6 @@ function EchoCocktailSubpage2({
     );
   };
 
-  const renderGarnish = () => {
-    if (!info?.garnish) return null;
-    return (
-      <div
-        style={{
-          marginTop: 0,
-          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
-          paddingBottom: (isVertical && isProbablyMobileDevice()) ? '12px' : 0,
-          opacity: garnishVisible ? 1 : 0,
-          transition: garnishVisible ? 'opacity 1.5s ease-out' : 'none',
-          color: '#555',
-          lineHeight: 1.4,
-        }}
-      >
-        <div
-          className="cocktail-garnish-label"
-          style={{
-            textTransform: 'uppercase',
-            fontWeight: 400,
-            fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
-            fontFamily: "'Source Serif 4', Georgia, serif",
-            marginBottom: '0.4rem',
-            color: '#666',
-          }}
-        >
-          Garnish
-        </div>
-        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'EB Garamond', Georgia, serif", fontWeight: 400 }}>{info.garnish}</div>
-      </div>
-    );
-  };
 
   const renderConcept = () => {
     if (!info?.concept) return null;
@@ -2015,7 +2006,7 @@ function EchoCocktailSubpage2({
                   setSelected?.(key);
                   if (viewMode === 'web') setForceRecalc(prev => prev + 1);
                   // Scroll to align bottom with viewport
-                  setTimeout(scrollToBottomAlign, 100);
+                  setTimeout(scrollToTopAlign, 100);
                 }}
                   onMouseEnter={() => setHoveredButton(key)}
                   onMouseLeave={() => setHoveredButton(null)}
@@ -2254,7 +2245,7 @@ function EchoCocktailSubpage2({
         >
           {renderTitleBlock()}
           {renderIngredients()}
-          {renderGarnish()}
+          {renderBaseSpirits()}
         </div>
 
         {/* Right info - removed in web view */}
@@ -2585,7 +2576,7 @@ function EchoCocktailSubpage2({
           {showConceptInfo ? renderConcept() : (
             <>
               {renderIngredients()}
-              {renderGarnish()}
+                  {renderBaseSpirits()}
             </>
           )}
         </div>
@@ -2619,13 +2610,15 @@ function EchoCocktailSubpage2({
                 animationTimeoutsRef.current = [];
 
                 // Scroll to align bottom with viewport
-                setTimeout(scrollToBottomAlign, 100);
+                setTimeout(scrollToTopAlign, 100);
 
                 if (newSidebarOpen) {
                   // Fade out all elements when opening sidebar
                   setTitleVisible(false);
                   setIngredientsVisible(false);
                   setGarnishVisible(false);
+      setBaseSpiritsVisible(false);
+    setBaseSpiritsVisible(false);
                   setConceptVisible(false);
                   setMapVisible(false);
                   setCountriesSidebarVisible(false);
@@ -2670,7 +2663,11 @@ function EchoCocktailSubpage2({
                                 await adjustSeparatorsRef.current?.();
                                 // 3) Fade in after all rows processed
                                 setIngredientsVisible(true);
-                                const garnishTimeout = setTimeout(() => setGarnishVisible(true), 300);
+                                const garnishTimeout = setTimeout(() => {
+                  setGarnishVisible(true);
+                  const spiritsTimeout = setTimeout(() => setBaseSpiritsVisible(true), 300);
+                  animationTimeoutsRef.current.push(spiritsTimeout);
+                }, 300);
                                 animationTimeoutsRef.current.push(garnishTimeout);
                               }, 50);
                               animationTimeoutsRef.current.push(separatorTimeout);

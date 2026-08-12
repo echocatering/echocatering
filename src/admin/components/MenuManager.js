@@ -3536,9 +3536,31 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                     />
                   </div>
+                  <div>
+                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ display: 'block', marginBottom: '10px', fontSize: '1.5rem' }}>Ingredients</label>
+                      <textarea
+                      value={formValues.ingredients || ''}
+                      onChange={(e) => handleFieldChange('ingredients', e.target.value)}
+                      onFocus={() => setFocusedField('ingredients')}
+                      onBlur={() => setFocusedField(null)}
+                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter ingredients"
+                        rows={2}
+                        style={{ 
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '1.1rem',
+                          border: focusedField === 'ingredients' ? '1px solid #d1d5db' : 'none',
+                          outline: 'none',
+                          background: 'transparent',
+                          overflow: 'hidden',
+                          resize: 'none'
+                        }}
+                      disabled={!editingCocktail}
+                    />
+                  </div>
                   {shouldShowRecipeBuilder(selectedCategory) && normalizeCategoryKey(selectedCategory) !== 'premix' && (
                     <div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '17px', marginBottom: '24px' }}>
                         {BASE_SPIRIT_OPTIONS.map((option) => {
                           const selected = Array.isArray(formValues.baseSpirits) && formValues.baseSpirits.includes(option);
                           return (
@@ -3570,46 +3592,6 @@ const MenuManager = () => {
                       </div>
                     </div>
                   )}
-                  <div>
-                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Ingredients</label>
-                      <textarea
-                      value={formValues.ingredients || ''}
-                      onChange={(e) => handleFieldChange('ingredients', e.target.value)}
-                      onFocus={() => setFocusedField('ingredients')}
-                      onBlur={() => setFocusedField(null)}
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter ingredients"
-                        rows={2}
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          border: focusedField === 'ingredients' ? '1px solid #d1d5db' : 'none',
-                          outline: 'none',
-                          background: 'transparent',
-                          overflow: 'hidden',
-                          resize: 'none'
-                        }}
-                      disabled={!editingCocktail}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Garnish</label>
-                      <input
-                        type="text"
-                      value={formValues.garnish || ''}
-                      onChange={(e) => handleFieldChange('garnish', e.target.value)}
-                      onFocus={() => setFocusedField('garnish')}
-                      onBlur={() => setFocusedField(null)}
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter garnish"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          border: focusedField === 'garnish' ? '1px solid #d1d5db' : 'none',
-                          outline: 'none',
-                          background: 'transparent'
-                        }}
-                      disabled={!editingCocktail}
-                    />
-                  </div>
                   {showLegacyFields && (
                   <div>
                     <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Concept</label>
