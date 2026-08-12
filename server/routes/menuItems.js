@@ -306,6 +306,26 @@ const normalizeCategory = (value) => {
   return null;
 };
 
+const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM'];
+
+const parseBaseSpirits = (input) => {
+  if (!input) return [];
+  let source = input;
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input);
+      source = Array.isArray(parsed) ? parsed : input.split(',');
+    } catch (err) {
+      source = input.split(',');
+    }
+  }
+  if (!Array.isArray(source)) source = [source];
+  const seen = new Set();
+  return source
+    .map((v) => String(v || '').trim().toUpperCase())
+    .filter((v) => BASE_SPIRIT_OPTIONS.includes(v) && !seen.has(v) && seen.add(v) !== undefined);
+};
+
 const parseRegions = (input) => {
   if (!input) return [];
   let source = input;
@@ -508,6 +528,7 @@ const buildCocktailPayload = (body = {}) => {
     garnish: sanitizeText(body.garnish, 500),
     category: normalizeCategory(body.category),
     regions: parseRegions(body.regions),
+    baseSpirits: parseBaseSpirits(body.baseSpirits),
     featured: body.featured === 'true' || body.featured === true,
     mapType: body.mapType === 'us' ? 'us' : 'world'
   };
@@ -970,6 +991,11 @@ router.get('/menu-manager', [authenticateToken], async (req, res) => {
         case 'cocktails':
         case 'mocktails':
           merged.garnish = values.garnish || '';
+          // Inventory is the source of truth; fall back to the Cocktail model for
+          // items saved before the hidden column existed.
+          merged.baseSpirits = Array.isArray(values.baseSpirits)
+            ? values.baseSpirits
+            : (Array.isArray(cocktail?.baseSpirits) ? cocktail.baseSpirits : []);
           // NEW: Read regions from Inventory (as array) first, fallback to string or cocktail
           if (values.regions && Array.isArray(values.regions)) {
             merged.regions = values.regions;
@@ -1247,6 +1273,8 @@ router.get('/menu-gallery', async (req, res) => {
           name: values.name || '',
           concept: values.concept || '',
           ingredients: values.ingredients || '',
+          // Base spirits shown above the ingredient list in the menu gallery
+          baseSpirits: Array.isArray(values.baseSpirits) ? values.baseSpirits : [],
           garnish: values.garnish || '',
           countryCodes: codes,
           countries,

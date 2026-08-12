@@ -50,7 +50,8 @@ const ALWAYS_SAVE_FIELDS = new Set([
   'videoFile',
   'mapSnapshotFile',
   'page',
-  'ingredients'
+  'ingredients',
+  'baseSpirits'
 ]);
 
 function applyRowValues(row, values = {}, columnsByKey = {}) {

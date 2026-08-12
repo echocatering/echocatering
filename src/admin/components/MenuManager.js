@@ -245,6 +245,10 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
 // This avoids false positives for world cocktails that include one code that happens to overlap
 // with a US state abbreviation (e.g. CA=Canada vs California). A world cocktail will almost
 // always have at least one region code that isn't a US state (FR, GB, JP, IT, etc.).
+// Base-spirit toggles shown above Ingredients on Social Tonics and CLASSICS.
+// Stored per item as an array in the inventory row's hidden baseSpirits column.
+const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM'];
+
 const US_STATE_CODES = new Set(US_STATES.map(s => s.code.toUpperCase()));
 const inferMapType = (cocktail) => {
   const explicit = cocktail?.mapType;
@@ -295,6 +299,14 @@ const MenuManager = () => {
   const { apiCall, isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+  // Video uploads are only offered when running locally — the hosted admin has no
+  // local worker to process the file.
+  const isLocalhost = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const host = String(window.location?.hostname || '');
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host.endsWith('.localhost');
+  }, []);
+
   const isRenderSite = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const host = String(window.location?.hostname || '');
@@ -730,6 +742,18 @@ const MenuManager = () => {
     setHasUnsavedChanges(true);
   }, []);
 
+  const toggleBaseSpirit = useCallback((value) => {
+    setEditingCocktail(prev => {
+      if (!prev) return prev;
+      const current = Array.isArray(prev.baseSpirits) ? prev.baseSpirits : [];
+      const next = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, baseSpirits: next };
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
   const toggleRegion = useCallback((code) => {
     if (!code) return;
     const upper = String(code).toUpperCase();
@@ -1016,6 +1040,9 @@ const MenuManager = () => {
     // Garnish is NOT saved to cocktail model - it comes from RecipeBuilder (recipe.metadata.garnish)
     formData.append('category', normalizeCategoryKey(data.category || selectedCategory));
     formData.append('regions', JSON.stringify(data.regions || selectedRegions || []));
+    // Sent unconditionally so clearing every button persists, rather than the server
+    // keeping the previous selection because the field was absent.
+    formData.append('baseSpirits', JSON.stringify(Array.isArray(data.baseSpirits) ? data.baseSpirits : []));
     formData.append('order', typeof data.order === 'number' ? data.order : 0);
     if (typeof data.featured !== 'undefined') {
       formData.append('featured', data.featured ? 'true' : 'false');
@@ -3509,6 +3536,40 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                     />
                   </div>
+                  {shouldShowRecipeBuilder(selectedCategory) && normalizeCategoryKey(selectedCategory) !== 'premix' && (
+                    <div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
+                        {BASE_SPIRIT_OPTIONS.map((option) => {
+                          const selected = Array.isArray(formValues.baseSpirits) && formValues.baseSpirits.includes(option);
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              disabled={!editingCocktail}
+                              onClick={() => toggleBaseSpirit(option)}
+                              style={{
+                                padding: '6px 16px',
+                                borderRadius: '2.5rem',
+                                // Four shades lighter than the #666666 border grey used by the
+                                // other MenuManager fields; selected fills with it, text white.
+                                border: '2px solid #aaaaaa',
+                                background: selected ? '#aaaaaa' : 'transparent',
+                                color: selected ? '#ffffff' : '#aaaaaa',
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '0.85rem',
+                                letterSpacing: '0.08em',
+                                cursor: editingCocktail ? 'pointer' : 'not-allowed',
+                                opacity: editingCocktail ? 1 : 0.5,
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Ingredients</label>
                       <textarea
@@ -3572,57 +3633,6 @@ const MenuManager = () => {
                     />
                   </div>
                   )}
-                  <div style={{ marginTop: '-0.5rem' }}>
-                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide mb-2 block">Page</label>
-                    {editingCocktail ? (
-                      <select
-                        value={editingCocktail.page || editingCocktail.category || selectedCategory}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setEditingCocktail({
-                            ...editingCocktail,
-                            page: next
-                          });
-                        }}
-                        onFocus={() => setFocusedField('page')}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          border: focusedField === 'page' ? '1px solid #d1d5db' : 'none',
-                          outline: 'none',
-                          background: 'transparent'
-                        }}
-                      >
-                        {menuCategories.filter(cat => !cat.archived).map((category) => (
-                          <option key={category.key} value={category.key}>
-                            {category.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        onFocus={() => setFocusedField('page')}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          border: focusedField === 'page' ? '1px solid #d1d5db' : 'none',
-                          outline: 'none',
-                          background: 'transparent'
-                        }}
-                      >
-                        {menuCategories.map((category) => (
-                          <option key={category.key} value={category.key}>
-                            {category.label}
-                          </option>
-                        ))}
-                      </select>
-                )}
-              </div>
-                    <label className="text-lg font-semibold text-gray-800 uppercase tracking-wide block" style={{ marginBottom: '4px' }}>Video</label>
                     <input
                       type="file"
                       accept="video/*"
@@ -3631,6 +3641,7 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                       style={{ display: 'none' }}
                     />
+                    {isLocalhost && (
                     <button
                       type="button"
                       onClick={() => videoFileInputRef.current?.click()}
@@ -3699,6 +3710,7 @@ const MenuManager = () => {
                     >
                       Choose Video File
                     </button>
+                    )}
                   </div>
               </div>
 

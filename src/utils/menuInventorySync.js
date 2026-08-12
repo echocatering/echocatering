@@ -60,6 +60,13 @@ export const extractSharedFieldsForInventory = (cocktailData, category) => {
       if ('garnish' in cocktailData) {
         sharedFields.garnish = (cocktailData.garnish || '').trim();
       }
+      // Base spirits multi-select. Sent even when empty so clearing every button persists,
+      // unlike regions below which only writes when non-empty.
+      if ('baseSpirits' in cocktailData) {
+        sharedFields.baseSpirits = Array.isArray(cocktailData.baseSpirits)
+          ? cocktailData.baseSpirits
+          : [];
+      }
       // Store regions as array (not comma-separated string) - NEW: Inventory stores as array
       if (cocktailData.regions && Array.isArray(cocktailData.regions) && cocktailData.regions.length > 0) {
         sharedFields.regions = cocktailData.regions; // Store as array
@@ -200,6 +207,9 @@ export const mergeInventoryWithCocktail = (inventoryRow, cocktailData, category)
     case 'cocktails':
     case 'mocktails':
       if (values.garnish !== undefined && values.garnish !== null) merged.garnish = values.garnish;
+      if (Array.isArray(values.baseSpirits)) {
+        merged.baseSpirits = values.baseSpirits;
+      }
       if (values.regions && Array.isArray(values.regions)) {
         merged.regions = values.regions;
       } else if (values.region) {

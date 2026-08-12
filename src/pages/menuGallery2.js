@@ -1616,6 +1616,22 @@ function EchoCocktailSubpage2({
           lineHeight: 1.4,
         }}
       >
+        {Array.isArray(info?.baseSpirits) && info.baseSpirits.length > 0 && (
+          <div
+            className="cocktail-base-spirits"
+            style={{
+              textTransform: 'uppercase',
+              fontWeight: 400,
+              fontSize: isVertical ? getFontSize(56, 0.85, 1.35) : getFontSize(43, 0.85, 1.35),
+              fontFamily: "'EB Garamond', Georgia, serif",
+              letterSpacing: '0.08em',
+              marginBottom: '0.35rem',
+              color: '#999',
+            }}
+          >
+            {info.baseSpirits.join(' | ')}
+          </div>
+        )}
         <div
           className="cocktail-ingredients-label"
           style={{

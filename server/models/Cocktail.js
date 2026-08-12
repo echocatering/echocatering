@@ -70,6 +70,10 @@ const cocktailSchema = new mongoose.Schema({
     maxlength: 1000,
     default: ''
   },
+  baseSpirits: {
+    type: [String],
+    default: []
+  },
   regions: {
     type: [String],
     default: []
