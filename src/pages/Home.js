@@ -15,7 +15,7 @@ import { isCloudinaryUrl, getHeroOptimizedUrl, getAboutOptimizedUrl } from '../u
 
 const defaultSubpageOrder = [
   { key: 'cocktails', label: 'Social Tonics' },
-  { key: 'mocktails', label: 'ALC +' },
+  { key: 'mocktails', label: 'CLASSICS' },
   { key: 'spirits', label: 'Spirits' },
 ];
 
@@ -1716,7 +1716,7 @@ const Home = forwardRef((props, ref) => {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text'
-                  }}>ALC +</span>
+                  }}>CLASSICS</span>
                 </button>
 
                 <button
@@ -2675,10 +2675,11 @@ const Home = forwardRef((props, ref) => {
             }}>
               <h2 style={{
                 fontSize: '1.9rem',
-                fontWeight: 600,
+                fontWeight: 500,
+                fontStyle: 'italic',
                 color: '#222',
                 marginBottom: '1rem',
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: "'Source Serif 4', Georgia, serif",
                 lineHeight: '1.2'
               }}>
                 Let's get peddling!
@@ -2694,27 +2695,27 @@ const Home = forwardRef((props, ref) => {
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#777',
+                color: '#111',
                 // Body copy face, shared with the About panels and the menu gallery
-                fontFamily: "'Times New Roman', Times, serif",
+                fontFamily: "'EB Garamond', Georgia, serif",
                 fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
-                Ready to create a memorable gathering?
+                Ready to create a memorable experience?
               </div>
 
               <div style={{
                 fontSize: '1.25rem',
                 lineHeight: '1.6',
-                color: '#777',
+                color: '#111',
                 // Body copy face, shared with the About panels and the menu gallery
-                fontFamily: "'Times New Roman', Times, serif",
+                fontFamily: "'EB Garamond', Georgia, serif",
                 fontWeight: 400,
                 marginBottom: '1rem',
                 textAlign: 'left'
               }}>
-                Share a few details about your event, and we’ll get back to you with a personalized plan!
+                Share a few details about your event, and we will get back to you with a personalized plan.
               </div>
             </div>
             
@@ -3454,7 +3455,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -3678,7 +3679,7 @@ const Home = forwardRef((props, ref) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontFamily: "'Times New Roman', Times, serif",
+                    fontFamily: "'EB Garamond', Georgia, serif",
                     fontSize: '1rem',
                     fontWeight: 400,
                     textTransform: 'uppercase',
@@ -3869,9 +3870,13 @@ const Home = forwardRef((props, ref) => {
                               style={{
                                 color: '#222',
                                 margin: 0,
-                                fontFamily: 'Cinzel, Georgia, serif',
+                                // Source Serif 4 at Light 300 — a real weight in this family, not a
+                                // synthesised one. Serif, so it keeps the original Cinzel sizing;
+                                // the ~25% bump the scripts needed would overflow the panel.
+                                fontFamily: "'Source Serif 4', Georgia, serif",
                                 fontSize: isTop ? 'clamp(0.9rem, 2vw, 2.2rem)' : (isThird ? 'clamp(0.9rem, 2.5vw, 2.2rem)' : (isSecond ? 'clamp(0.9rem, 2vw, 2.2rem)' : 'clamp(0.9rem, 2vw, 2.2rem)')),
-                                fontWeight: 600,
+                                fontWeight: 400,
+                                fontStyle: 'italic',
                                 lineHeight: 1.2,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -3885,19 +3890,32 @@ const Home = forwardRef((props, ref) => {
                           {section.content && (
                             <p
                               style={{
-                                color: '#777',
+                                color: '#111',
                                 margin: 0,
-                                fontFamily: "'Times New Roman', Times, serif",
+                                fontFamily: "'EB Garamond', Georgia, serif",
                                 fontWeight: 400,
                                 lineHeight: 1.6,
                                 fontSize: '1.15em',
-                                whiteSpace: 'pre-wrap',
                                 overflow: 'hidden',
                                 wordWrap: 'break-word',
                                 maxWidth: '100%'
                               }}
                             >
-                              {section.content}
+                              {/* Split on blank lines so the gap between paragraphs is a set
+                                  margin rather than a full empty line at the body line-height.
+                                  pre-wrap stays on each block, preserving single newlines. */}
+                              {String(section.content).split(/\n\s*\n/).map((para, i) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    marginTop: i === 0 ? 0 : '0.5em'
+                                  }}
+                                >
+                                  {para}
+                                </span>
+                              ))}
                             </p>
                           )}
                         </>
@@ -3927,7 +3945,7 @@ const Home = forwardRef((props, ref) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   fontSize: '1rem',
                   fontWeight: 400,
                   textTransform: 'uppercase',
@@ -4000,10 +4018,11 @@ const Home = forwardRef((props, ref) => {
                 <h2
                   style={{
                     fontSize: '3.8rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
+                    fontStyle: 'italic',
                     color: '#222',
                     marginBottom: '0.5rem',
-                    fontFamily: 'Cinzel, Georgia, serif',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
                     lineHeight: '1.2'
                   }}
                 >
@@ -4052,27 +4071,27 @@ const Home = forwardRef((props, ref) => {
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#777',
+                    color: '#111',
                     // Body copy face, shared with the About panels and the menu gallery
-                    fontFamily: "'Times New Roman', Times, serif",
+                    fontFamily: "'EB Garamond', Georgia, serif",
                     fontWeight: 400,
                     textAlign: 'left'
                   }}
                 >
-                  Ready to create a memorable gathering?
+                  Ready to create a memorable experience?
                 </div>
                 <div
                   style={{
                     fontSize: '1.25rem',
                     lineHeight: '1.6',
-                    color: '#777',
+                    color: '#111',
                     // Body copy face, shared with the About panels and the menu gallery
-                    fontFamily: "'Times New Roman', Times, serif",
+                    fontFamily: "'EB Garamond', Georgia, serif",
                     fontWeight: 400,
                     textAlign: 'left'
                   }}
                 >
-                  Share a few details about your event, and we'll get back to you with a personalized plan!
+                  Share a few details about your event, and we will get back to you with a personalized plan.
                 </div>
               </div>
               

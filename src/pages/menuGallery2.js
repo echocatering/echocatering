@@ -1569,8 +1569,8 @@ function EchoCocktailSubpage2({
           maxHeight: baseHeight ? `${baseHeight * 2}px` : 'none',
           padding: isVertical ? '0.3rem 0.6rem' : '0.4rem 0.8rem',
           fontSize: getTitleFontSize(),
-          fontFamily: "'Cinzel', Georgia, serif",
-          fontWeight: 300,
+          fontFamily: "'Source Serif 4', Georgia, serif",
+          fontWeight: 400,
           textAlign: 'center',
           display: 'flex',
           alignItems: 'center',
@@ -1578,7 +1578,7 @@ function EchoCocktailSubpage2({
           letterSpacing: '0.12em',
           background: 'transparent',
           color: '#111',
-          border: '2px solid #666',
+          border: '3px solid #666',
           borderRadius: '2.5rem',
           opacity: titleVisible ? 1 : 0,
           transition: titleVisible ? 'opacity 0.9s ease' : 'none',
@@ -1620,11 +1620,11 @@ function EchoCocktailSubpage2({
           className="cocktail-ingredients-label"
           style={{
             textTransform: 'uppercase',
-            fontWeight: 300,
+            fontWeight: 400,
             fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
-            fontFamily: "'Cinzel', Georgia, serif",
+            fontFamily: "'Source Serif 4', Georgia, serif",
             marginBottom: '0.4rem',
-            color: '#222',
+            color: '#666',
           }}
         >
           Ingredients
@@ -1634,7 +1634,7 @@ function EchoCocktailSubpage2({
           className="cocktail-ingredients-list"
           style={{
             fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4),
-            fontFamily: "'Times New Roman', Times, serif",
+            fontFamily: "'EB Garamond', Georgia, serif",
             fontWeight: 400,
             marginBottom: 0,
             lineHeight: isVertical ? '1.2' : '1.4',
@@ -1674,16 +1674,16 @@ function EchoCocktailSubpage2({
           className="cocktail-garnish-label"
           style={{
             textTransform: 'uppercase',
-            fontWeight: 300,
+            fontWeight: 400,
             fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
-            fontFamily: "'Cinzel', Georgia, serif",
+            fontFamily: "'Source Serif 4', Georgia, serif",
             marginBottom: '0.4rem',
-            color: '#222',
+            color: '#666',
           }}
         >
           Garnish
         </div>
-        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'Times New Roman', Times, serif", fontWeight: 400 }}>{info.garnish}</div>
+        <div className="cocktail-garnish-text" style={{ fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4), fontFamily: "'EB Garamond', Georgia, serif", fontWeight: 400 }}>{info.garnish}</div>
       </div>
     );
   };
@@ -2008,7 +2008,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: color,
                   fontSize: viewMode === 'menu' ? '1.8rem' : '1.3rem',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2058,13 +2058,13 @@ function EchoCocktailSubpage2({
                   border: `2px solid ${hoveredButton === 'schedule-event' ? '#000' : '#fff'}`,
                   borderRadius: '2.5rem',
                   color: hoveredButton === 'schedule-event' ? '#000' : '#fff',
-                  padding: '10px 16px',
+                  padding: '10px 52px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
-                  fontSize: '1.1rem',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontSize: '1.3rem',
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2115,7 +2115,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2144,7 +2144,7 @@ function EchoCocktailSubpage2({
                     cursor: 'pointer',
                   transition: 'border 0.2s ease, color 0.2s ease',
                     fontSize: '1.1rem',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2196,7 +2196,7 @@ function EchoCocktailSubpage2({
                   border: 'none',
                   color: hoveredButton === 'full-menu' ? '#000' : '#fff',
                   fontSize: '1.8rem',
-                  fontFamily: "'Times New Roman', Times, serif",
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
@@ -2465,7 +2465,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: "'Times New Roman', Times, serif",
+                    fontFamily: "'EB Garamond', Georgia, serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2500,7 +2500,7 @@ function EchoCocktailSubpage2({
                     textTransform: 'uppercase',
                     cursor: 'pointer',
                     fontSize: '0.7rem',
-                    fontFamily: "'Times New Roman', Times, serif",
+                    fontFamily: "'EB Garamond', Georgia, serif",
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -2953,7 +2953,7 @@ function EchoCocktailSubpage2({
           height: outerHeightOverride ? `${outerHeightOverride}px` : '100vh',
           overflow: 'hidden',
           background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-          fontFamily: "'Times New Roman', Times, serif",
+          fontFamily: "'EB Garamond', Georgia, serif",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2978,7 +2978,7 @@ function EchoCocktailSubpage2({
         height: outerHeightOverride ? `${outerHeightOverride}px` : (viewMode === 'web' ? `${size.height}px` : '100vh'),
         overflow: 'hidden',
         background: 'linear-gradient(to top, rgba(179, 179, 179, 1) 0%, rgba(185, 185, 185, 1) 8%, rgba(210, 210, 210, 1) 25%, rgba(240, 240, 240, 1) 50%, rgba(255, 255, 255, 1) 70%)',
-        fontFamily: "'Times New Roman', Times, serif",
+        fontFamily: "'EB Garamond', Georgia, serif",
       }}
     >
       {/* Video background fills entire outer container/viewport */}
@@ -3057,7 +3057,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
 
   const subpageOrder = useMemo(() => [
     { key: 'cocktails', label: 'Social Tonics' },
-    { key: 'mocktails', label: 'ALC +' },
+    { key: 'mocktails', label: 'CLASSICS' },
     { key: 'beer', label: 'Beer' },
     { key: 'wine', label: 'Wine' },
     { key: 'spirits', label: 'Spirits' },
@@ -3290,7 +3290,7 @@ export default function MenuGallery2({ viewMode = 'web', orientationOverride, ou
             border: 'none',
             color: '#333',
             fontSize: '1.4rem',
-            fontFamily: "'Times New Roman', Times, serif",
+            fontFamily: "'EB Garamond', Georgia, serif",
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             cursor: 'pointer',

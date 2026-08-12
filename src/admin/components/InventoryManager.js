@@ -507,7 +507,7 @@ const InventoryManager = () => {
     if (!sheetPayload?.columns) return [];
     // Columns to hide/show with the "Show hidden columns" button
     const hideableColumnKeys = ['itemNumber', 'ingredients', 'concept', 'page', 'mapType'];
-    // Region is only hideable on Social Tonics / ALC + — other sheets (wine, spirits)
+    // Region is only hideable on Social Tonics / CLASSICS — other sheets (wine, spirits)
     // still surface it as a normal column.
     if (sheetPayload.sheetKey === 'cocktails' || sheetPayload.sheetKey === 'mocktails') {
       hideableColumnKeys.push('region');
@@ -1412,7 +1412,7 @@ const commitBeerNumUnitsValue = (rowId) => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl tracking-wide uppercase" style={{ fontWeight: 4 }}>
               {resolvedSheetKey === 'mocktails'
-                ? 'ALC +'
+                ? 'CLASSICS'
                 : resolvedSheetKey === 'cocktails'
                   ? 'SOCIAL TONICS'
                   : (activeSheetMeta?.name || 'Inventory').toUpperCase()}
@@ -1934,7 +1934,7 @@ const commitBeerNumUnitsValue = (rowId) => {
                                     >
                                       <option value="">--</option>
                                       <option value="cocktails">SOCIAL TONICS</option>
-                                      <option value="mocktails">ALC +</option>
+                                      <option value="mocktails">CLASSICS</option>
                                       <option value="beer">BEER</option>
                                       <option value="wine">WINE</option>
                                       <option value="spirits">SPIRITS</option>

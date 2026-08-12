@@ -961,7 +961,8 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
       return {
         menuBoxWidth: '400px',
         menuBoxHeight: '50px',
-        menuBoxFontSize: '1.1rem',
+        // 1rem to match the PHOTOS / ABOUT / INQUIRE section tabs in Home.js
+        menuBoxFontSize: '1rem',
         triangleLeft: '400px',
         triangleSize: '50px',
         wmamoRight: '8rem',
@@ -1017,7 +1018,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: "'Times New Roman', Times, serif",
+            fontFamily: "'EB Garamond', Georgia, serif",
             fontSize: dimensions.menuBoxFontSize,
             fontWeight: 400,
             textTransform: 'uppercase',
@@ -1235,7 +1236,7 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
             display: 'block',
             whiteSpace: 'nowrap',
             cursor: 'pointer',
-            fontFamily: "'Times New Roman', Times, serif",
+            fontFamily: "'EB Garamond', Georgia, serif",
             marginTop: '40px',
             margin: '40px auto',
             transition: 'all 0.2s ease',

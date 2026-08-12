@@ -7,7 +7,7 @@ import MenuGallery2 from '../../pages/menuGallery2';
 
 const CATEGORIES = [
   { id: 'cocktails', label: 'NA', fullName: 'Social Tonics' },
-  { id: 'mocktails', label: 'A+', fullName: 'ALC +' },
+  { id: 'mocktails', label: 'A+', fullName: 'CLASSICS' },
   { id: 'beer', label: 'B', fullName: 'Beer' },
   { id: 'wine', label: 'W', fullName: 'Wine' },
   { id: 'spirits', label: 'S', fullName: 'Spirits' }
@@ -6971,7 +6971,7 @@ export default function POSSalesUI({ layoutMode = 'auto', outerWidth: propOuterW
               
               {/* Beverage Inventory */}
               {renderInventorySection('Social Tonics', 'cocktails')}
-              {renderInventorySection('ALC +', 'mocktails')}
+              {renderInventorySection('CLASSICS', 'mocktails')}
               {renderInventorySection('Beer', 'beer')}
               {renderInventorySection('Wine', 'wine')}
             </div>

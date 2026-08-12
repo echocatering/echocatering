@@ -1844,17 +1844,29 @@ div[class*="sidebar-no-fade"] {
 /* Menu gallery: everything else uses the same generic serif as the header nav */
 .menu-serif-text,
 .menu-serif-text * {
-  font-family: 'Times New Roman', Times, serif !important;
+  font-family: 'EB Garamond', Georgia, serif !important;
 }
 
-/* Cocktail info panel titles use Cinzel */
+/* Cocktail names and the INGREDIENTS / GARNISH labels share a face, differing in weight */
 .cocktail-title,
 .cocktail-title *,
 .cocktail-ingredients-label,
 .cocktail-ingredients-label *,
 .cocktail-garnish-label,
 .cocktail-garnish-label * {
-  font-family: 'Cinzel', Georgia, serif !important;
+  font-family: 'Source Serif 4', Georgia, serif !important;
+}
+
+.cocktail-title,
+.cocktail-title * {
+  font-weight: 400 !important;
+}
+
+.cocktail-ingredients-label,
+.cocktail-ingredients-label *,
+.cocktail-garnish-label,
+.cocktail-garnish-label * {
+  font-weight: 400 !important;
 }
 
 /* Cocktail info panel content (actual ingredients/garnish) matches the body copy
@@ -1863,18 +1875,19 @@ div[class*="sidebar-no-fade"] {
 .cocktail-ingredients-list *,
 .cocktail-garnish-text,
 .cocktail-garnish-text * {
-  font-family: 'Times New Roman', Times, serif !important;
+  font-family: 'EB Garamond', Georgia, serif !important;
   font-weight: 400 !important;
-  /* Lighter than the #555 container they inherit from; the Cinzel labels stay at #222 */
+  /* Lighter than the #555 container they inherit from; the labels stay at #222 */
   color: #777 !important;
 }
 
-/* Header navigation menu font */
+/* Header navigation menu font — sized to match the MENU / PHOTOS / ABOUT / INQUIRE
+   section tabs further down the page, which sit at 1rem */
 .app-root .mainmenu-btn,
 .app-root .submenu-btn,
 .app-root .nav-link {
-  font-family: 'Times New Roman', Times, serif !important;
-  font-size: 1.125rem;
+  font-family: 'EB Garamond', Georgia, serif !important;
+  font-size: 1rem;
 }
 
 /* Header navigation rounded corners */

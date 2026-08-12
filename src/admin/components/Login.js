@@ -58,7 +58,7 @@ const Login = () => {
     border: '2px solid #666666',
     borderRadius: '2.5rem',
     padding: '10px 32px',
-    fontFamily: "'Times New Roman', Times, serif",
+    fontFamily: "'EB Garamond', Georgia, serif",
     fontWeight: 500,
     fontSize: '14px',
     cursor: 'pointer',

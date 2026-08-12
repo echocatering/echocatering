@@ -455,7 +455,7 @@ const labelForSheet = (sheetKey) => {
     case 'cocktails':
       return 'Social Tonics';
     case 'mocktails':
-      return 'ALC +';
+      return 'CLASSICS';
     case 'wine':
       return 'Wine';
     default:

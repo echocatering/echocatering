@@ -362,7 +362,7 @@ const MenuManager = () => {
   const [countries, setCountries] = useState([]);
   const [countryQuery, setCountryQuery] = useState('');
   const [mapType, setMapType] = useState('world'); // 'world' or 'us'
-  // View toggle: off = current view (map/countries panel hidden on Social Tonics / ALC +),
+  // View toggle: off = current view (map/countries panel hidden on Social Tonics / CLASSICS),
   // on = legacy view (panel restored). Purely a view preference, not saved to the item.
   const [legacyView, setLegacyView] = useState(false);
   const mapRef = useRef(null);
@@ -498,7 +498,7 @@ const MenuManager = () => {
   // Menu categories configuration - ordered as specified: COCKTAILS, MOCKTAILS, BEER, WINE, SPIRITS, PRE-MIX
   const menuCategories = [
     { key: 'cocktails', label: 'SOCIAL TONICS', icon: 'classics' },
-    { key: 'mocktails', label: 'ALC +', icon: 'originals' },
+    { key: 'mocktails', label: 'CLASSICS', icon: 'originals' },
     { key: 'beer', label: 'BEER', icon: 'spirits' },
     { key: 'wine', label: 'WINE', icon: 'spirits' },
     { key: 'spirits', label: 'SPIRITS', icon: 'spirits' },
@@ -1631,7 +1631,7 @@ const MenuManager = () => {
   // Use the appropriate list based on mapType
   const filteredRegionsList = mapType === 'us' ? filteredStates : filteredCountries;
 
-  // Social Tonics and ALC + hide the legacy fields (map / countries panel, Concept) by
+  // Social Tonics and CLASSICS hide the legacy fields (map / countries panel, Concept) by
   // default; ticking LEGACY brings them back. Every other category shows them as before.
   const isLegacyToggleCategory = ['cocktails', 'mocktails'].includes(selectedCategory);
   const showLegacyFields = !isLegacyToggleCategory || legacyView;

@@ -370,9 +370,10 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
               <h2 style={{
                 color: '#222',
                 margin: 0,
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: "'Source Serif 4', Georgia, serif",
                 fontSize: '1.8rem',
-                fontWeight: '600',
+                fontWeight: '400',
+                fontStyle: 'italic',
                 lineHeight: 1.2
               }}>
                 {section.title}
@@ -380,9 +381,9 @@ export default function About({ isMobile, mobileCurrentPage, setMobileCurrentPag
             )}
             {section.content && (
               <p style={{
-                color: '#777',
+                color: '#111',
                 margin: 0,
-                fontFamily: "'Times New Roman', Times, serif",
+                fontFamily: "'EB Garamond', Georgia, serif",
                 fontWeight: 400,
                 lineHeight: 1.6,
                 fontSize: '1.15rem'

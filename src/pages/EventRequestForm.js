@@ -112,14 +112,14 @@ export default function EventRequestForm() {
       <div style={{ 
         padding: '3rem', 
         textAlign: 'center',
-        fontFamily: "'Times New Roman', Times, serif"
+        fontFamily: "'EB Garamond', Georgia, serif"
       }}>
         <h2 style={{
           fontSize: '1.8rem',
           fontWeight: 600,
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: "'Times New Roman', Times, serif"
+          fontFamily: "'EB Garamond', Georgia, serif"
         }}>
           Thank you!
         </h2>
@@ -128,7 +128,7 @@ export default function EventRequestForm() {
           color: '#333',
           marginBottom: '1rem',
           lineHeight: '1.5',
-          fontFamily: "'Times New Roman', Times, serif"
+          fontFamily: "'EB Garamond', Georgia, serif"
         }}>
           Your event request has been submitted successfully.
         </p>
@@ -137,7 +137,7 @@ export default function EventRequestForm() {
           color: '#666', 
           marginTop: '1rem',
           lineHeight: '1.5',
-          fontFamily: "'Times New Roman', Times, serif"
+          fontFamily: "'EB Garamond', Georgia, serif"
         }}>
           We'll review your details and be in touch soon to discuss your event.
         </p>
@@ -155,16 +155,17 @@ export default function EventRequestForm() {
         padding: '3rem',
         paddingTop: width >= 1200 ? '64px' : '3rem',
         borderRadius: '8px',
-        fontFamily: "'Times New Roman', Times, serif"
+        fontFamily: "'EB Garamond', Georgia, serif"
       }}
     >
       <h2
         style={{
           fontSize: '1.2rem',
-          fontWeight: 600,
+          fontWeight: 400,
+          fontStyle: 'italic',
           color: '#222',
           marginBottom: '1rem',
-          fontFamily: 'Cinzel, Georgia, serif'
+          fontFamily: "'Source Serif 4', Georgia, serif"
         }}
       >
         Your Contact Information
@@ -191,7 +192,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             First Name*
           </label>
@@ -206,7 +207,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -219,7 +220,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Last Name*
           </label>
@@ -234,7 +235,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -247,7 +248,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Email Address*
           </label>
@@ -263,7 +264,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -276,7 +277,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Phone Number*
           </label>
@@ -291,7 +292,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -304,7 +305,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Ext.
           </label>
@@ -318,7 +319,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -331,7 +332,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Company
           </label>
@@ -345,7 +346,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -355,12 +356,13 @@ export default function EventRequestForm() {
       <h2
         style={{
           fontSize: '1.2rem',
-          fontWeight: 600,
+          fontWeight: 400,
+          fontStyle: 'italic',
           color: '#222',
           marginTop: '1rem',
           marginBottom: '1rem',
           paddingTop: gridColumns === 2 ? '48px' : '0',
-          fontFamily: 'Cinzel, Georgia, serif'
+          fontFamily: "'Source Serif 4', Georgia, serif"
         }}
       >
         Your Event Details
@@ -387,7 +389,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Event Date*
           </label>
@@ -403,7 +405,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -417,7 +419,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Start Time*
           </label>
@@ -434,7 +436,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -448,7 +450,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             End Time*
           </label>
@@ -465,7 +467,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -479,7 +481,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Number of Guests*
           </label>
@@ -496,7 +498,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           />
@@ -510,7 +512,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Are you serving alcohol?
           </label>
@@ -524,7 +526,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -542,7 +544,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             How did you hear about us?*
           </label>
@@ -557,7 +559,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               transition: 'border-color 0.3s ease'
             }}
           >
@@ -581,7 +583,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Nature of this Event*
           </label>
@@ -596,7 +598,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               minHeight: longTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -617,7 +619,7 @@ export default function EventRequestForm() {
             fontWeight: 400,
             color: '#777',
             marginBottom: '0.5rem',
-            fontFamily: "'Times New Roman', Times, serif"
+            fontFamily: "'EB Garamond', Georgia, serif"
           }}>
             Additional Information
           </label>
@@ -631,7 +633,7 @@ export default function EventRequestForm() {
               border: '1px solid #d1d5db',
               borderRadius: '0.375rem',
               fontSize: '0.9rem',
-              fontFamily: "'Times New Roman', Times, serif",
+              fontFamily: "'EB Garamond', Georgia, serif",
               minHeight: mediumTextMinHeight,
               resize: 'vertical',
               transition: 'border-color 0.3s ease'
@@ -645,7 +647,7 @@ export default function EventRequestForm() {
           color: '#dc2626',
           marginBottom: '1rem',
           fontSize: '0.9rem',
-          fontFamily: "'Times New Roman', Times, serif"
+          fontFamily: "'EB Garamond', Georgia, serif"
         }}>
           {error}
         </div>
@@ -658,10 +660,10 @@ export default function EventRequestForm() {
         style={{
           width: '100%',
           padding: '1rem 2rem',
-          // Cinzel to match the section titles ("Your Event Details"); border shape matches
-          // the Schedule an Event button. The gradient text fill and hover are its own.
-          fontSize: '1.1rem',
-          fontWeight: '600',
+          // Font, size and border all match the Schedule an Event buttons; the gradient
+          // text fill and the hover behaviour are this button's own.
+          fontSize: '1.3rem',
+          fontWeight: '400',
           background: 'linear-gradient(to bottom, #555, #ccc)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -670,7 +672,7 @@ export default function EventRequestForm() {
           borderRadius: '2.5rem',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          fontFamily: 'Cinzel, Georgia, serif',
+          fontFamily: "'EB Garamond', Georgia, serif",
           textTransform: 'uppercase',
           letterSpacing: '0.08em'
         }}
