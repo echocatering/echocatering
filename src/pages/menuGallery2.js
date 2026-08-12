@@ -1605,7 +1605,7 @@ function EchoCocktailSubpage2({
     );
   };
 
-  // Closes out the info panel, left-aligned. Still paced off garnishVisible: the
+  // Closes out the info panel, centred. Still paced off garnishVisible: the
   // garnish block itself is gone, but that timer is what staggers this fade.
   const renderBaseSpirits = () => {
     if (!Array.isArray(info?.baseSpirits) || info.baseSpirits.length === 0) return null;
@@ -1614,9 +1614,7 @@ function EchoCocktailSubpage2({
         className="cocktail-base-spirits"
         style={{
           width: '100%',
-          textAlign: 'left',
-          // Same left padding the ingredients and garnish blocks use
-          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
+          textAlign: 'center',
           boxSizing: 'border-box',
           textTransform: 'uppercase',
           fontWeight: 400,
@@ -1646,8 +1644,10 @@ function EchoCocktailSubpage2({
           marginTop: '36px',
           paddingTop: 0,
           paddingBottom: 0,
-          paddingLeft: isVertical ? 0 : (layout?.inner?.height ? `${(layout.inner.height / 64).toFixed(1)}px` : '0.35rem'),
-          paddingRight: (isVertical && isProbablyMobileDevice()) ? '16.6667vw' : (isVertical ? 0 : 0),
+          // No left padding — it would offset the text from true centre.
+          paddingLeft: 0,
+          paddingRight: (isVertical && isProbablyMobileDevice()) ? '16.6667vw' : 0,
+          textAlign: 'center',
           opacity: ingredientsVisible ? 1 : 0,
           transition: ingredientsVisible ? 'opacity 1.5s ease-out' : 'none',
           color: '#555',
@@ -1655,23 +1655,12 @@ function EchoCocktailSubpage2({
         }}
       >
         <div
-          className="cocktail-ingredients-label"
-          style={{
-            textTransform: 'uppercase',
-            fontWeight: 400,
-            fontSize: isVertical ? getFontSize(50, 0.95, 1.5) : getFontSize(37, 0.95, 1.5),
-            fontFamily: "'Source Serif 4', Georgia, serif",
-            marginBottom: '0.4rem',
-            color: '#666',
-          }}
-        >
-          Ingredients
-        </div>
-        <div
           ref={ingredientsContainerRef}
           className="cocktail-ingredients-list"
           style={{
-            fontSize: isVertical ? `calc(${getFontSize(52, 0.9, 1.4)} * var(--verticalInfoFontScale, 1))` : getFontSize(41, 0.9, 1.4),
+            // Divisor lowered and the max raised together — it was pinned at the old
+            // 1.4rem ceiling, so lifting the cap alone would not have changed anything.
+            fontSize: isVertical ? `calc(${getFontSize(44, 0.9, 1.7)} * var(--verticalInfoFontScale, 1))` : getFontSize(34, 0.9, 1.7),
             fontFamily: "'EB Garamond', Georgia, serif",
             fontWeight: 400,
             marginBottom: 0,
