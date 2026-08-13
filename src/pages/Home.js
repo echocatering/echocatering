@@ -888,13 +888,16 @@ const Home = forwardRef((props, ref) => {
                 ABOUT
               </div>
 
-              {/* CONTACT Button */}
+              {/* INQUIRE Button */}
               <div
                 onClick={() => {
                   setDropdownOpen(false);
                   const contactSection = document.getElementById('mobile-contact-section');
                   if (contactSection) {
-                    contactSection.scrollIntoView({ behavior: 'smooth' });
+                    // Offset by the fixed header, or it covers the section's heading
+                    const headerHeight = 80;
+                    const elementTop = contactSection.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({ top: elementTop - headerHeight, behavior: 'smooth' });
                   }
                 }}
                 style={{
@@ -1164,7 +1167,10 @@ const Home = forwardRef((props, ref) => {
               onClick={() => {
                 const contactSection = document.getElementById('mobile-contact-section');
                 if (contactSection) {
-                  contactSection.scrollIntoView({ behavior: 'smooth' });
+                  // Offset by the fixed header, or it covers the section's heading
+                  const headerHeight = 80;
+                  const elementTop = contactSection.getBoundingClientRect().top + window.pageYOffset;
+                  window.scrollTo({ top: elementTop - headerHeight, behavior: 'smooth' });
                 }
               }}
               style={{
@@ -1472,6 +1478,55 @@ const Home = forwardRef((props, ref) => {
             position: 'relative',
             zIndex: 1
           }}>
+            {/* Same heading and explanation the desktop section opens with, centred
+                for mobile — including the rule under the heading. */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '2rem'
+            }}>
+              <h2 style={{
+                fontSize: '1.9rem',
+                fontWeight: 500,
+                fontStyle: 'italic',
+                color: '#222',
+                marginTop: 0,
+                marginBottom: '1rem',
+                fontFamily: "'Source Serif 4', Georgia, serif",
+                lineHeight: '1.2'
+              }}>
+                Let's get peddling!
+              </h2>
+
+              <div style={{
+                width: '40px',
+                height: '2px',
+                backgroundColor: '#222',
+                margin: '0 auto 1.5rem'
+              }} />
+
+              <div style={{
+                fontSize: '1.25rem',
+                lineHeight: '1.6',
+                color: '#111',
+                // Body copy face, shared with the About panels and the menu gallery
+                fontFamily: "'EB Garamond', Georgia, serif",
+                fontWeight: 400,
+                marginBottom: '1rem'
+              }}>
+                Ready to create a memorable experience?
+              </div>
+
+              <div style={{
+                fontSize: '1.25rem',
+                lineHeight: '1.6',
+                color: '#111',
+                fontFamily: "'EB Garamond', Georgia, serif",
+                fontWeight: 400
+              }}>
+                Share a few details about your event, and we will get back to you with a personalized plan.
+              </div>
+            </div>
+
             <EventRequestForm />
           </div>
         </div>
