@@ -164,8 +164,8 @@ export default function Layout({
                 MENU
               </div>
               
-              {/* EVENTS */}
-              <div 
+              {/* PHOTOS */}
+              <div
                 className="dropdown-button"
                 onClick={() => {
                   setDropdownOpen(false);
@@ -176,9 +176,9 @@ export default function Layout({
                   }
                 }}
               >
-                EVENTS
+                PHOTOS
               </div>
-              
+
               {/* ABOUT */}
               <div 
                 className="dropdown-button"
@@ -194,7 +194,7 @@ export default function Layout({
                 ABOUT
               </div>
               
-              {/* CONTACT */}
+              {/* INQUIRE */}
               <div 
                 className="dropdown-button"
                 onClick={() => {
@@ -206,7 +206,7 @@ export default function Layout({
                   }
                 }}
               >
-                CONTACT
+                INQUIRE
               </div>
             </div>
           </div>

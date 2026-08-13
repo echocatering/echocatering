@@ -504,6 +504,9 @@ function EchoCocktailSubpage2({
   const [middleRgb, setMiddleRgb] = useState({ r: 235, g: 235, b: 235 });
   const [bottomRgb, setBottomRgb] = useState({ r: 210, g: 210, b: 210 });
   const isFirstCategoryRender = useRef(true);
+  // Where to land after a flow-through category change: 'last' when the reader arrived
+  // by stepping back past the first item, otherwise the first item.
+  const categoryLandingRef = useRef(null);
   const animationTimeoutsRef = useRef([]);
   const titleRef = useRef(null);
   const ingredientsContainerRef = useRef(null);
@@ -615,17 +618,23 @@ function EchoCocktailSubpage2({
     setConceptVisible(false);
   }, []);
 
-  // Reset index to 0 when category changes (skip on initial mount so initialIndex wins)
+  // Reset index when category changes (skip on initial mount so initialIndex wins).
+  // Flowing backwards out of the first item lands on the previous category's last item;
+  // every other category change starts at the top.
   useEffect(() => {
     if (isFirstCategoryRender.current) {
       isFirstCategoryRender.current = false;
       return;
     }
-    setCurrentIndex(0);
+    const landing = categoryLandingRef.current;
+    categoryLandingRef.current = null;
+    setCurrentIndex(landing === 'last' && videoFiles.length ? videoFiles.length - 1 : 0);
     resetAnimations();
     setBoxesVisible(false);
     setShowConceptInfo(false);
     setShowCategories(false);
+  // videoFiles is read for the 'last' landing only; it arrives with the new category.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, resetAnimations]);
 
   useEffect(() => {
@@ -752,6 +761,23 @@ function EchoCocktailSubpage2({
     touchEndX.current = null;
   };
 
+  // Flow-through: the arrows run the whole menu as one continuous sequence. Reaching the
+  // end of a category steps into the next one rather than wrapping back to its own start,
+  // and the category button follows along because it tracks `selected`.
+  const orderedCategories = Array.isArray(subpageOrder) ? subpageOrder : [];
+  const categoryIndex = orderedCategories.findIndex(({ key }) => key === selected);
+
+  // Returns false when there is nowhere to flow to, so the caller can wrap in place.
+  const flowToAdjacentCategory = (direction) => {
+    if (orderedCategories.length < 2 || categoryIndex < 0) return false;
+    const target = (categoryIndex + direction + orderedCategories.length) % orderedCategories.length;
+    // Stepping backwards lands on the previous category's last item, so the sequence
+    // reads the same in both directions.
+    categoryLandingRef.current = direction < 0 ? 'last' : 'first';
+    setPendingPage(orderedCategories[target].key);
+    return true;
+  };
+
   // Fade logic for prev/next
   const handlePrev = (e) => {
     e?.currentTarget?.blur?.();
@@ -763,11 +789,14 @@ function EchoCocktailSubpage2({
     // Enable fade (becomes TRUE when arrow is clicked)
     setAllowCheckmarkFade(true);
     
-    const newIndex = (currentIndex - 1 + videoFiles.length) % videoFiles.length;
     resetAnimations();
     setBoxesVisible(false);
     setFadeStage('out');
-    setPendingIndex(newIndex);
+    if (currentIndex > 0) {
+      setPendingIndex(currentIndex - 1);
+    } else if (!flowToAdjacentCategory(-1)) {
+      setPendingIndex((currentIndex - 1 + videoFiles.length) % videoFiles.length);
+    }
     setShowConceptInfo(false);
     setShowCategories(false);
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
@@ -785,11 +814,14 @@ function EchoCocktailSubpage2({
     // Enable fade (becomes TRUE when arrow is clicked)
     setAllowCheckmarkFade(true);
     
-    const newIndex = (currentIndex + 1) % videoFiles.length;
     resetAnimations();
     setBoxesVisible(false);
     setFadeStage('out');
-    setPendingIndex(newIndex);
+    if (currentIndex < videoFiles.length - 1) {
+      setPendingIndex(currentIndex + 1);
+    } else if (!flowToAdjacentCategory(1)) {
+      setPendingIndex((currentIndex + 1) % videoFiles.length);
+    }
     setShowConceptInfo(false);
     setShowCategories(false);
     if (viewMode === 'web') setForceRecalc(prev => prev + 1);
@@ -1622,7 +1654,9 @@ function EchoCocktailSubpage2({
           fontFamily: "'EB Garamond', Georgia, serif",
           letterSpacing: '0.08em',
           marginTop: '24px',
-          marginBottom: 0,
+          // Mobile closes the panel with the same 24px it opens the block with,
+          // so the spirits line is not left sitting on the arrows.
+          marginBottom: isVertical ? '24px' : 0,
           color: '#999',
           opacity: baseSpiritsVisible ? 1 : 0,
           transition: baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
@@ -1644,9 +1678,10 @@ function EchoCocktailSubpage2({
           marginTop: '36px',
           paddingTop: 0,
           paddingBottom: 0,
-          // No left padding — it would offset the text from true centre.
+          // No side padding — either side would offset the text from true centre.
+          // The right inset used to clear the info button, which mobile no longer shows.
           paddingLeft: 0,
-          paddingRight: (isVertical && isProbablyMobileDevice()) ? '16.6667vw' : 0,
+          paddingRight: 0,
           textAlign: 'center',
           opacity: ingredientsVisible ? 1 : 0,
           transition: ingredientsVisible ? 'opacity 1.5s ease-out' : 'none',
@@ -2352,9 +2387,9 @@ function EchoCocktailSubpage2({
           >
             <div className="dropdown-content" onClick={(e) => e.stopPropagation()}>
               <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#menu'); }}>MENU</div>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#events'); }}>EVENTS</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#events'); }}>PHOTOS</div>
               <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#about'); }}>ABOUT</div>
-              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#contact'); }}>CONTACT</div>
+              <div className="dropdown-button" onClick={() => { setDropdownOpen(false); navigate('/#contact'); }}>INQUIRE</div>
             </div>
           </div>
         )}
@@ -2587,7 +2622,9 @@ function EchoCocktailSubpage2({
             zIndex: 9999,
           }}
         >
-          {/* Left menu button */}
+          {/* Left menu button — POS views only. The web menu flows from one category
+              into the next off the arrows, so it needs no category picker. */}
+          {viewMode !== 'web' && (
           <div style={{ pointerEvents: 'auto', marginRight: '6.25vw' }}>
             <button
               onClick={() => {
@@ -2721,13 +2758,16 @@ function EchoCocktailSubpage2({
               />
             </button>
           </div>
+          )}
 
           {/* Arrows */}
           <div style={{ pointerEvents: 'auto' }}>
             <ArrowButtons onPrev={handlePrev} onNext={handleNext} />
           </div>
 
-          {/* Right info button */}
+          {/* Right info button — POS views only. On the web the centre tap zone
+              still opens the same concept overlay. */}
+          {viewMode !== 'web' && (
           <div style={{ pointerEvents: 'auto', marginLeft: '6.25vw' }}>
             {(info?.concept ? (
               <button
@@ -2851,6 +2891,7 @@ function EchoCocktailSubpage2({
               </button>
             ))}
           </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -2984,8 +3025,9 @@ function EchoCocktailSubpage2({
       }}
     >
       {/* Disclaimer, bottom-right below Schedule an Event, inset by the same 14px
-          the nav sits from its edge */}
-      {viewMode === 'web' && (
+          the nav sits from its edge. Desktop only — the vertical mobile stage has no
+          room for it beside the arrows. */}
+      {viewMode === 'web' && !isVertical && (
         <div
           style={{
             position: 'absolute',

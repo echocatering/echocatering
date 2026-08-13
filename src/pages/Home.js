@@ -772,7 +772,9 @@ const Home = forwardRef((props, ref) => {
                   padding: 'clamp(0.8rem, 2vw, 1.2rem) clamp(2.5rem, 7vw, 5rem)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  // Same face as the desktop header nav, which App.css overrides to
+                  // EB Garamond. Weight and letter-spacing already match it.
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   minHeight: '60px',
                   width: '200px',
                   display: 'flex',
@@ -793,7 +795,7 @@ const Home = forwardRef((props, ref) => {
                 MENU
               </div>
 
-              {/* EVENTS Button */}
+              {/* PHOTOS Button — label matches the desktop header nav */}
               <div
                 onClick={() => {
                   setDropdownOpen(false);
@@ -818,7 +820,9 @@ const Home = forwardRef((props, ref) => {
                   padding: 'clamp(0.8rem, 2vw, 1.2rem) clamp(2.5rem, 7vw, 5rem)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  // Same face as the desktop header nav, which App.css overrides to
+                  // EB Garamond. Weight and letter-spacing already match it.
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   minHeight: '60px',
                   width: '200px',
                   display: 'flex',
@@ -836,7 +840,7 @@ const Home = forwardRef((props, ref) => {
                   e.target.style.border = '1px solid transparent';
                 }}
               >
-                EVENTS
+                PHOTOS
               </div>
 
               {/* ABOUT Button */}
@@ -861,7 +865,9 @@ const Home = forwardRef((props, ref) => {
                   padding: 'clamp(0.8rem, 2vw, 1.2rem) clamp(2.5rem, 7vw, 5rem)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  // Same face as the desktop header nav, which App.css overrides to
+                  // EB Garamond. Weight and letter-spacing already match it.
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   minHeight: '60px',
                   width: '200px',
                   display: 'flex',
@@ -904,7 +910,9 @@ const Home = forwardRef((props, ref) => {
                   padding: 'clamp(0.8rem, 2vw, 1.2rem) clamp(2.5rem, 7vw, 5rem)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                  // Same face as the desktop header nav, which App.css overrides to
+                  // EB Garamond. Weight and letter-spacing already match it.
+                  fontFamily: "'EB Garamond', Georgia, serif",
                   minHeight: '60px',
                   width: '200px',
                   display: 'flex',
@@ -1102,6 +1110,115 @@ const Home = forwardRef((props, ref) => {
             pointerEvents: 'none'
           }} />
 
+          {/* Shadow behind the lockup. Desktop darkens the hero with multiply layers
+              anchored to the right, where its content sits; mobile centres its content,
+              so the same wash is centred here. Multiply keeps the photo's colour. */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '150vw',
+            height: '75vh',
+            background: 'radial-gradient(ellipse 110% 70% at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.7) 20%, rgba(0, 0, 0, 0.5) 35%, rgba(0, 0, 0, 0.3) 45%, rgba(0, 0, 0, 0.16) 55%, rgba(0, 0, 0, 0.07) 65%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0) 90%)',
+            mixBlendMode: 'multiply',
+            zIndex: 4,
+            pointerEvents: 'none'
+          }} />
+
+          {/* Hero content — the same lockup and BOOK NOW button the desktop hero uses */}
+          <div style={{
+            position: 'relative',
+            zIndex: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            pointerEvents: 'none'
+          }}>
+            {/* Craft Cocktails & Social Tonics lockup. Squashed to 85% of its natural
+                square exactly as on desktop — objectFit: fill warps rather than letterboxes. */}
+            <img
+              src="/assets/icons/CC&ST.png"
+              alt="Craft Cocktails & Social Tonics"
+              style={{
+                width: 'clamp(220px, 68vw, 360px)',
+                aspectRatio: '1 / 0.85',
+                height: 'auto',
+                objectFit: 'fill',
+                display: 'block',
+                backgroundColor: 'transparent',
+                WebkitBackfaceVisibility: 'hidden',
+                WebkitPerspective: 1000,
+                WebkitTransform: 'translate3d(0, 0, 0)',
+                isolation: 'isolate',
+                position: 'relative',
+                zIndex: 2
+              }}
+            />
+
+            {/* BOOK NOW Button — desktop's font, border and radius; mobile keeps a
+                44px touch target and inverts on touch as well as hover. */}
+            <div
+              onClick={() => {
+                const contactSection = document.getElementById('mobile-contact-section');
+                if (contactSection) {
+                  contactSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              style={{
+                border: '2px solid #ffffff',
+                borderRadius: '2.5rem',
+                width: '200px',
+                padding: '0.6rem 0',
+                fontSize: '1.1rem',
+                color: '#ffffff',
+                fontWeight: 400,
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                backgroundColor: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                fontFamily: "'EB Garamond', Georgia, serif",
+                margin: '40px auto 0',
+                minHeight: '44px',
+                boxSizing: 'border-box',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                zIndex: 10,
+                pointerEvents: 'auto',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                outline: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#000000';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#000000';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+            >
+              BOOK NOW
+            </div>
+          </div>
+
         </div>
 
         {/* SECTION 2: MENU GALLERY - Cocktail Gallery */}
@@ -1288,7 +1405,10 @@ const Home = forwardRef((props, ref) => {
                         gap: 'clamp(0.55rem, 1.5vh, 0.85rem)',
                         zIndex: 3,
                         boxSizing: 'border-box',
-                        fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+                        // Same type as the desktop About panel: EB Garamond body copy under
+                        // a Source Serif 4 italic title. Sizes stay mobile's own, since
+                        // AutoFitTextCard scales the base to fit the card.
+                        fontFamily: "'EB Garamond', Georgia, serif",
                         fontSize: 'clamp(13px, 1.6vh, 16px)',
                         WebkitOverflowScrolling: 'touch'
                       }}
@@ -1298,18 +1418,22 @@ const Home = forwardRef((props, ref) => {
                       titleStyle={{
                         color: '#222',
                         margin: 0,
+                        fontFamily: "'Source Serif 4', Georgia, serif",
                         fontSize: '1.45em',
-                        fontWeight: 600,
+                        fontWeight: 400,
+                        fontStyle: 'italic',
                         lineHeight: 1.2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         maxWidth: '100%'
                       }}
                       bodyStyle={{
-                        color: '#444',
+                        color: '#111',
                         margin: 0,
+                        fontFamily: "'EB Garamond', Georgia, serif",
+                        fontWeight: 400,
                         lineHeight: 1.6,
-                        fontSize: '1em',
+                        fontSize: '1.15em',
                         whiteSpace: 'pre-wrap',
                         overflow: 'hidden',
                         wordWrap: 'break-word',

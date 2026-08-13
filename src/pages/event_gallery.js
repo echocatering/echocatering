@@ -1350,28 +1350,24 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               e.target.style.borderColor = '#000000';
             }}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '10px 52px',
+              // Matches the Schedule an Event button in menuGallery2 property for
+              // property. Only the greys and the hover behaviour are this page's own.
               background: 'transparent',
               border: '2px solid #888888',
-              // Font and border shape match the Schedule an Event button in menuGallery2;
-              // the greys and hover behaviour here are this page's own.
               borderRadius: '2.5rem',
+              color: '#888888',
+              padding: '10px 52px',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              minHeight: '32px',
-              boxShadow: 'none',
-              opacity: 1,
-              visibility: 'visible',
-              color: '#888888',
-              fontFamily: "'EB Garamond', Georgia, serif",
               fontSize: '1.3rem',
-              fontWeight: 400,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              whiteSpace: 'nowrap'
+              fontFamily: "'EB Garamond', Georgia, serif",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              position: 'relative',
             }}
           >
             SCHEDULE AN EVENT

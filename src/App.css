@@ -1616,7 +1616,8 @@ div[class*="sidebar-no-fade"] {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  font-family: Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Same face as the header nav (.mainmenu-btn), so the mobile popup matches desktop */
+  font-family: 'EB Garamond', Georgia, serif;
   z-index: 100;
   position: relative;
   min-height: 60px;
