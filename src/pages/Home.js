@@ -1120,7 +1120,7 @@ const Home = forwardRef((props, ref) => {
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: 'translate(-50%, calc(-50% - 80px))',
+            transform: 'translate(-50%, calc(-50% - 40px))',
             width: '150vw',
             height: '75vh',
             background: 'radial-gradient(ellipse 110% 70% at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.7) 20%, rgba(0, 0, 0, 0.5) 35%, rgba(0, 0, 0, 0.3) 45%, rgba(0, 0, 0, 0.16) 55%, rgba(0, 0, 0, 0.07) 65%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0) 90%)',
@@ -1139,7 +1139,7 @@ const Home = forwardRef((props, ref) => {
             justifyContent: 'center',
             width: '100%',
             pointerEvents: 'none',
-            transform: 'translateY(-80px)'
+            transform: 'translateY(-40px)'
           }}>
             {/* Bike above the lockup, a touch under a third of its width — larger
                 than desktop's fifth, since the whole lockup is smaller here. Already
