@@ -1159,17 +1159,39 @@ const Home = forwardRef((props, ref) => {
               }}
             />
 
-            {/* Full lockup, the same art the desktop hero uses. Its own 4096x1790
-                proportions — no squash, which would distort a lockup this wide. */}
+            {/* Peddler's Mobile Bar wordmark, the same art the desktop hero uses —
+                the top 4096x1292 of the former combined lockup. */}
             <img
-              src="/assets/icons/pmb.cc&st.png"
-              alt="Peddler's Mobile Bar — Classic Cocktails & Social Tonics"
+              src="/assets/icons/pmb.png"
+              alt="Peddler's Mobile Bar"
               style={{
                 // Full width less a 24px margin each side
                 width: 'calc(100vw - 48px)',
                 height: 'auto',
                 objectFit: 'contain',
                 display: 'block',
+                backgroundColor: 'transparent',
+                WebkitBackfaceVisibility: 'hidden',
+                WebkitPerspective: 1000,
+                WebkitTransform: 'translate3d(0, 0, 0)',
+                isolation: 'isolate',
+                position: 'relative',
+                zIndex: 2
+              }}
+            />
+
+            {/* Classic Cocktails & Social Tonics line — the bottom 4096x498 of the
+                former lockup, dropped by the same 8px the bike sits above the
+                wordmark, matching desktop. */}
+            <img
+              src="/assets/icons/cc&st1.png"
+              alt="Classic Cocktails & Social Tonics"
+              style={{
+                width: 'calc(100vw - 48px)',
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+                marginTop: '8px',
                 backgroundColor: 'transparent',
                 WebkitBackfaceVisibility: 'hidden',
                 WebkitPerspective: 1000,
