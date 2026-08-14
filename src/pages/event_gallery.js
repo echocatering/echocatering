@@ -1134,7 +1134,12 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               height: isMobile ? 'auto' : 'calc(100vh * 27 / 32)', // Grid height - 27/32 browser screen height
               width: 'fit-content', // Fit content width (sequence width) so grid can extend beyond viewport
               minWidth: '100%', // At least viewport width
-              flexShrink: 0, // Don't shrink
+              // The grid and the nav row below it together claim 90.625vh of a column
+              // that is shorter than that on brief windows. Letting the grid give up the
+              // difference — it only shrinks when the column actually overflows — keeps
+              // the nav row at its full height so the button's border stays uncut.
+              flexShrink: 1,
+              minHeight: 0,
               alignSelf: 'stretch' // Ensure it stretches to full width
             }}
           >
@@ -1313,7 +1318,15 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             position: 'relative',
             width: '100%',
             height: 'calc(100vh / 16)', // 1/16 browser screen height
-            paddingTop: '14px',
+            // The row is the last child of a fixed-height column with overflow:hidden,
+            // so anything taller than its content box gets its bottom edge clipped. The
+            // 51px button plus the old 14px top padding exceeded that box and cut the
+            // button's border off. No top padding, and a floor tall enough for the
+            // button at any viewport height, keeps the whole border inside the row.
+            minHeight: '60px',
+            flexShrink: 0,
+            boxSizing: 'border-box',
+            paddingTop: '0',
             paddingBottom: '0',
             paddingLeft: '0',
             paddingRight: '0',
@@ -1321,11 +1334,14 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             zIndex: 10010
           }}>
         {/* Left side - Schedule An Event button */}
-        <div style={{ 
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          width: '244px',
+          // Sized to the button rather than a fixed 244px, which was narrower than the
+          // button's natural width and forced the label onto a second line.
+          width: 'auto',
+          flexShrink: 0,
           paddingLeft: 0,
           boxSizing: 'border-box'
         }}>
@@ -1366,6 +1382,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              // Keep the label on one line and stop the flex row from squeezing the
+              // button below its natural width.
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               zIndex: 9999,
               position: 'relative',
             }}
