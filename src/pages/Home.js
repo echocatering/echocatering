@@ -1140,16 +1140,34 @@ const Home = forwardRef((props, ref) => {
             width: '100%',
             pointerEvents: 'none'
           }}>
-            {/* Craft Cocktails & Social Tonics lockup. Squashed to 85% of its natural
-                square exactly as on desktop — objectFit: fill warps rather than letterboxes. */}
+            {/* Bike above the lockup, a touch under a third of its width — larger
+                than desktop's fifth, since the whole lockup is smaller here. Already
+                white art on transparent, so it needs no filter. */}
             <img
-              src="/assets/icons/CC&ST.png"
-              alt="Craft Cocktails & Social Tonics"
+              src="/assets/icons/bike.png"
+              alt=""
+              aria-hidden="true"
               style={{
-                width: 'clamp(220px, 68vw, 360px)',
-                aspectRatio: '1 / 0.85',
+                width: 'calc((100vw - 48px) / 3.5)',
                 height: 'auto',
-                objectFit: 'fill',
+                objectFit: 'contain',
+                display: 'block',
+                marginBottom: '8px',
+                position: 'relative',
+                zIndex: 2
+              }}
+            />
+
+            {/* Full lockup, the same art the desktop hero uses. Its own 4096x1790
+                proportions — no squash, which would distort a lockup this wide. */}
+            <img
+              src="/assets/icons/pmb.cc&st.png"
+              alt="Peddler's Mobile Bar — Classic Cocktails & Social Tonics"
+              style={{
+                // Full width less a 24px margin each side
+                width: 'calc(100vw - 48px)',
+                height: 'auto',
+                objectFit: 'contain',
                 display: 'block',
                 backgroundColor: 'transparent',
                 WebkitBackfaceVisibility: 'hidden',

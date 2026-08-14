@@ -581,6 +581,12 @@ function EchoCocktailSubpage2({
 
   const isVertical = layout.orientation === 'vertical';
   const innerLeft = (size.width - layout.inner.width) / 2;
+  // Side insets on the vertical stage. The ingredients text sits inside both, and the
+  // title pill spans that same box — so adjusting either margin keeps the two aligned
+  // instead of drifting apart.
+  const verticalInfoPadding = 24;
+  const verticalIngredientsPadding = 24;
+  const verticalTextFieldInset = verticalInfoPadding + verticalIngredientsPadding;
   // Move video up 10% screen height in vertical web mode
   // Move video up 6vh in horizontal menu view (but not title/ingredients/garnish)
   const verticalOffset = isVertical && viewMode === 'web' 
@@ -1625,7 +1631,9 @@ function EchoCocktailSubpage2({
           letterSpacing: '0.12em',
           background: 'transparent',
           color: '#111',
-          border: '3px solid #666',
+          // Lighter stroke on the vertical stage, where the pill is smaller and 3px
+          // reads heavy against the title.
+          border: isVertical ? '2px solid #666' : '3px solid #666',
           borderRadius: '2.5rem',
           opacity: titleVisible ? 1 : 0,
           transition: titleVisible ? 'opacity 0.9s ease' : 'none',
@@ -1678,10 +1686,11 @@ function EchoCocktailSubpage2({
           marginTop: '36px',
           paddingTop: 0,
           paddingBottom: 0,
-          // No side padding — either side would offset the text from true centre.
-          // The right inset used to clear the info button, which mobile no longer shows.
-          paddingLeft: 0,
-          paddingRight: 0,
+          // Even margin both sides on the vertical stage, so the list breathes at the
+          // screen edge and still sits on true centre. Desktop keeps none — its
+          // container supplies the inset.
+          paddingLeft: isVertical ? `${verticalIngredientsPadding}px` : 0,
+          paddingRight: isVertical ? `${verticalIngredientsPadding}px` : 0,
           textAlign: 'center',
           opacity: ingredientsVisible ? 1 : 0,
           transition: ingredientsVisible ? 'opacity 1.5s ease-out' : 'none',
@@ -2548,13 +2557,17 @@ function EchoCocktailSubpage2({
           </div>
         )}
 
-        {/* Title */}
+        {/* Title. Its pill spans the same box as the ingredients text below it: the
+            info container's 24px inset plus the list's own 24px, so 48px in from each
+            edge of the stage. Change either padding and this constant follows. */}
         <div
           style={{
             position: 'absolute',
-            left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + layout.inner.width / 6}px`,
+            left: showConceptInfo ? `${innerLeft}px` : `${innerLeft + verticalTextFieldInset}px`,
             top: showConceptInfo ? '80px' : '100px',
-            width: showConceptInfo ? `${layout.inner.width}px` : `${(layout.inner.width * 2) / 3}px`,
+            width: showConceptInfo
+              ? `${layout.inner.width}px`
+              : `${layout.inner.width - verticalTextFieldInset * 2}px`,
             boxSizing: 'border-box',
             zIndex: 16,
           }}
@@ -2589,8 +2602,8 @@ function EchoCocktailSubpage2({
             bottom: `${18 + bottomControlsHeight}px`,
             height: 'calc(100vh / 5)',
             width: `${layout.inner.width}px`,
-            paddingLeft: '24px',
-            paddingRight: '24px',
+            paddingLeft: `${verticalInfoPadding}px`,
+            paddingRight: `${verticalInfoPadding}px`,
             paddingBottom: 0,
             boxSizing: 'border-box',
             overflow: 'hidden',

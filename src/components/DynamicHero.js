@@ -1183,18 +1183,34 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '800px',
           pointerEvents: 'none'
         }}>
-        {/* Craft Cocktails & Social Tonics lockup — replaces the former Echo icon
-            and the COCKTAILS / + / EVENT CATERING text stack */}
+        {/* Bike above the lockup, at a fifth of its width. Already white art on
+            transparent, so like the lockup it needs no filter. */}
         <img
-          src="/assets/icons/CC&ST.png"
-          alt="Craft Cocktails & Social Tonics"
+          src="/assets/icons/bike.png"
+          alt=""
+          aria-hidden="true"
           style={{
-            width: 'clamp(264px, 28.8vw, 456px)',
-            // Squashed to 85% of its natural square. objectFit: fill lets it warp rather than
-            // letterbox — a deliberate slight distortion to reduce the lockup's height.
-            aspectRatio: '1 / 0.85',
+            width: 'clamp(79px, 8.64vw, 137px)',
             height: 'auto',
-            objectFit: 'fill',
+            objectFit: 'contain',
+            display: 'block',
+            marginBottom: '8px',
+            position: 'relative',
+            zIndex: 2
+          }}
+        />
+
+        {/* Full lockup — carries the Peddler's Mobile Bar wordmark itself, so no
+            separate logo sits above it. Already white art, so it needs no filter. */}
+        <img
+          src="/assets/icons/pmb.cc&st.png"
+          alt="Peddler's Mobile Bar — Classic Cocktails & Social Tonics"
+          style={{
+            width: 'clamp(396px, 43.2vw, 684px)',
+            // Its own 4096x1790 proportions. The previous square lockup was squashed
+            // to 85% to lose height; this one is already wide, so it runs undistorted.
+            height: 'auto',
+            objectFit: 'contain',
             display: 'block',
             backgroundColor: 'transparent',
             WebkitBackfaceVisibility: 'hidden',
