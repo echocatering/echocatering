@@ -1648,7 +1648,8 @@ function EchoCocktailSubpage2({
   // Closes out the info panel, centred. Still paced off garnishVisible: the
   // garnish block itself is gone, but that timer is what staggers this fade.
   const renderBaseSpirits = () => {
-    if (!Array.isArray(info?.baseSpirits) || info.baseSpirits.length === 0) return null;
+    const hasSpirits = Array.isArray(info?.baseSpirits) && info.baseSpirits.length > 0;
+    if (!hasSpirits && !isVertical) return null;
     return (
       <div
         className="cocktail-base-spirits"
@@ -1662,15 +1663,13 @@ function EchoCocktailSubpage2({
           fontFamily: "'EB Garamond', Georgia, serif",
           letterSpacing: '0.08em',
           marginTop: '24px',
-          // Mobile closes the panel with the same 24px it opens the block with,
-          // so the spirits line is not left sitting on the arrows.
           marginBottom: isVertical ? '24px' : 0,
           color: '#999',
-          opacity: baseSpiritsVisible ? 1 : 0,
-          transition: baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
+          opacity: hasSpirits ? (baseSpiritsVisible ? 1 : 0) : 0,
+          transition: hasSpirits && baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
         }}
       >
-        {info.baseSpirits.join(' | ')}
+        {hasSpirits ? info.baseSpirits.join(' | ') : ' '}
       </div>
     );
   };
