@@ -1669,6 +1669,19 @@ function EchoCocktailSubpage2({
           transition: hasSpirits && baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
         }}
       >
+        {/* Only rendered alongside real spirits, so the blank placeholder below
+            keeps reserving exactly one line on the vertical stage. */}
+        {hasSpirits && (
+          <div
+            style={{
+              fontSize: isVertical ? getFontSize(93, 0.6, 0.85) : getFontSize(72, 0.6, 0.85),
+              letterSpacing: '0.14em',
+              marginBottom: '6px',
+            }}
+          >
+            Best Prepared With
+          </div>
+        )}
         {hasSpirits ? info.baseSpirits.join(' | ') : ' '}
       </div>
     );
