@@ -306,7 +306,10 @@ const normalizeCategory = (value) => {
   return null;
 };
 
-const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM'];
+// Keep in sync with BASE_SPIRIT_OPTIONS in src/admin/components/MenuManager.js —
+// parseBaseSpirits drops anything not on this list, so a value missing here is
+// silently discarded on save.
+const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM', 'NA'];
 
 const parseBaseSpirits = (input) => {
   if (!input) return [];

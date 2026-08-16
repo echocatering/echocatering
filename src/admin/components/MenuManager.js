@@ -247,7 +247,7 @@ function VideoBackground({ videoSrc, videoRef, onLoadedData, onError, API_BASE_U
 // always have at least one region code that isn't a US state (FR, GB, JP, IT, etc.).
 // Base-spirit toggles shown above Ingredients on Social Tonics and CLASSICS.
 // Stored per item as an array in the inventory row's hidden baseSpirits column.
-const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM'];
+const BASE_SPIRIT_OPTIONS = ['VODKA', 'TEQUILA', 'GIN', 'BOURBON', 'SCOTCH', 'RUM', 'NA'];
 
 const US_STATE_CODES = new Set(US_STATES.map(s => s.code.toUpperCase()));
 const inferMapType = (cocktail) => {
