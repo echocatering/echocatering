@@ -1183,55 +1183,16 @@ export default function DynamicHero({ logoCanvasRef, setMobileCurrentPage }) {
           height: '800px',
           pointerEvents: 'none'
         }}>
-        {/* Bike above the lockup, at a fifth of its width. Already white art on
-            transparent, so like the lockup it needs no filter. */}
+        {/* Combined bike + wordmark + tagline lockup, replacing the former
+            three-image stack (bike.png, pmb.png, cc&st1.png) with one asset. */}
         <img
-          src="/assets/icons/bike.png"
-          alt=""
-          aria-hidden="true"
-          style={{
-            width: 'clamp(79px, 8.64vw, 137px)',
-            height: 'auto',
-            objectFit: 'contain',
-            display: 'block',
-            marginBottom: '8px',
-            position: 'relative',
-            zIndex: 2
-          }}
-        />
-
-        {/* Peddler's Mobile Bar wordmark — the top 4096x1292 of the former combined
-            lockup. Same width as that lockup, so the art scales identically. */}
-        <img
-          src="/assets/icons/pmb.png"
-          alt="Peddler's Mobile Bar"
+          src="/assets/icons/mobile_bar.hero.png"
+          alt="Peddler's Mobile Bar — Classic Cocktails & Social Tonics"
           style={{
             width: 'clamp(396px, 43.2vw, 684px)',
             height: 'auto',
             objectFit: 'contain',
             display: 'block',
-            backgroundColor: 'transparent',
-            WebkitBackfaceVisibility: 'hidden',
-            WebkitPerspective: 1000,
-            WebkitTransform: 'translate3d(0, 0, 0)',
-            isolation: 'isolate',
-            position: 'relative',
-            zIndex: 2
-          }}
-        />
-
-        {/* Classic Cocktails & Social Tonics line — the bottom 4096x498 of the former
-            lockup, dropped by the same 8px the bike sits above the wordmark, so the
-            two gaps around the wordmark match. */}
-        <img
-          src="/assets/icons/cc&st1.png"
-          alt="Classic Cocktails & Social Tonics"
-          style={{
-            width: 'clamp(396px, 43.2vw, 684px)',
-            height: 'auto',
-            objectFit: 'contain',
-            display: 'block',
-            marginTop: '8px',
             backgroundColor: 'transparent',
             WebkitBackfaceVisibility: 'hidden',
             WebkitPerspective: 1000,

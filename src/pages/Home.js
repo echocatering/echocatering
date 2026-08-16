@@ -1141,57 +1141,17 @@ const Home = forwardRef((props, ref) => {
             pointerEvents: 'none',
             transform: 'translateY(-40px)'
           }}>
-            {/* Bike above the lockup, a touch under a third of its width — larger
-                than desktop's fifth, since the whole lockup is smaller here. Already
-                white art on transparent, so it needs no filter. */}
+            {/* Combined bike + wordmark + tagline lockup, replacing the former
+                three-image stack (bike.png, pmb.png, cc&st1.png) with one asset. */}
             <img
-              src="/assets/icons/bike.png"
-              alt=""
-              aria-hidden="true"
-              style={{
-                width: 'calc((100vw - 48px) / 3.5)',
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-                marginBottom: '8px',
-                position: 'relative',
-                zIndex: 2
-              }}
-            />
-
-            {/* Peddler's Mobile Bar wordmark, the same art the desktop hero uses —
-                the top 4096x1292 of the former combined lockup. */}
-            <img
-              src="/assets/icons/pmb.png"
-              alt="Peddler's Mobile Bar"
+              src="/assets/icons/mobile_bar.hero.png"
+              alt="Peddler's Mobile Bar — Classic Cocktails & Social Tonics"
               style={{
                 // Full width less a 24px margin each side
                 width: 'calc(100vw - 48px)',
                 height: 'auto',
                 objectFit: 'contain',
                 display: 'block',
-                backgroundColor: 'transparent',
-                WebkitBackfaceVisibility: 'hidden',
-                WebkitPerspective: 1000,
-                WebkitTransform: 'translate3d(0, 0, 0)',
-                isolation: 'isolate',
-                position: 'relative',
-                zIndex: 2
-              }}
-            />
-
-            {/* Classic Cocktails & Social Tonics line — the bottom 4096x498 of the
-                former lockup, dropped by the same 8px the bike sits above the
-                wordmark, matching desktop. */}
-            <img
-              src="/assets/icons/cc&st1.png"
-              alt="Classic Cocktails & Social Tonics"
-              style={{
-                width: 'calc(100vw - 48px)',
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-                marginTop: '8px',
                 backgroundColor: 'transparent',
                 WebkitBackfaceVisibility: 'hidden',
                 WebkitPerspective: 1000,
@@ -3767,13 +3727,13 @@ const Home = forwardRef((props, ref) => {
           ref={eventsRef}
           style={{
             background: '#fff',
-            paddingTop: 'calc(100vh / 16)',
+            paddingTop: 'calc(100vh / 16 + 45px)',
             paddingLeft: 'calc(100vh / 16)',
             paddingRight: 'calc(100vh / 16)',
             paddingBottom: 'calc(100vh / 16)',
             width: '100%',
-            height: '100vh',
-            minHeight: '100vh',
+            height: 'calc(100vh + 45px)',
+            minHeight: 'calc(100vh + 45px)',
             boxSizing: 'border-box', // Ensure consistent padding calculation
             position: 'relative',
             border: 'none',
@@ -3804,16 +3764,15 @@ const Home = forwardRef((props, ref) => {
                 isSmallScreen={isSmallScreen}
                 onGalleryHoverChange={setIsEventGalleryHovered}
                 onArrowClick={() => {
-                  // Use the same navigation as the header PHOTOS button
                   if (!isMobile) {
-                    // For desktop, align the top of the event gallery outer container with the top of the viewport
+                    // For desktop, align the bottom of the event gallery outer container with the bottom of the viewport
                     setTimeout(() => {
                       if (eventsRef.current) {
                         const rect = eventsRef.current.getBoundingClientRect();
                         const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
-                        const elementTop = rect.top + currentScrollY;
-                        // Scroll so the top of the container aligns exactly with top of viewport
-                        window.scrollTo({ top: elementTop, behavior: 'smooth' });
+                        const elementBottom = rect.bottom + currentScrollY;
+                        // Scroll so the bottom of the container aligns exactly with the bottom of the viewport
+                        window.scrollTo({ top: elementBottom - window.innerHeight, behavior: 'smooth' });
                       }
                     }, 50);
                   } else {
