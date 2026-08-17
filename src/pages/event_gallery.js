@@ -1088,7 +1088,11 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             position: 'relative',
             background: 'transparent',
             pointerEvents: 'auto', // Enable pointer events for hover detection
-            height: isMobile ? 'auto' : 'calc(100vh * 29 / 32)', // Grid (27/32) + arrows (1/16 = 2/32) = 29/32 browser screen height
+            // Grid (27/32) + arrows (1/16 = 2/32) = 29/32 browser screen height, plus the
+            // 8px the nav row is offset by below. This column clips (overflow: hidden), and
+            // the row's bottom edge already sat flush against it, so without the extra 8px
+            // the offset row would have its buttons cut off.
+            height: isMobile ? 'auto' : 'calc(100vh * 29 / 32 + 8px)',
             display: 'flex',
             flexDirection: 'column', // Stack scrollContainer and arrows vertically
             alignItems: 'stretch', // Stretch to full width
@@ -1330,6 +1334,10 @@ export default function EventGallery({ embedded = false, isMobile = false, isSma
             paddingBottom: '0',
             paddingLeft: '0',
             paddingRight: '0',
+            // Drops the whole row -- Schedule an Event, the arrows, and the socials -- by
+            // 8px. Margin rather than padding: the row centres its children, so padding
+            // would only move them by half of it. The column above absorbs the 8px.
+            marginTop: '8px',
             marginBottom: '0',
             zIndex: 10010
           }}>
