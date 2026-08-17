@@ -3,13 +3,13 @@
   "name": "ECHO Catering - Rochester, NY",
   "icons": [
     {
-      "src": "assets/icons/p.logo-192.png",
+      "src": "assets/icons/favicon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icons/p.logo.png",
+      "src": "assets/icons/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
