@@ -1703,6 +1703,7 @@ router.post('/',
         mapType: payload.mapType || 'world',
         category: payload.category,
         featured: payload.featured || false,
+        display: payload.display !== undefined ? payload.display : false,
         order: nextOrder,
         status: 'active',
         isActive: true,
@@ -1837,6 +1838,11 @@ router.put('/:id',
       cocktail.mapType = payload.mapType || cocktail.mapType || 'world';
       cocktail.featured = merged.featured;
       cocktail.order = merged.order;
+      // Display flag (false = hidden on website). Only touch it when the client sent it,
+      // so callers that omit the field don't silently flip visibility.
+      if (payload.display !== undefined) {
+        cocktail.display = payload.display;
+      }
 
       // Replace video file if new one uploaded
       if (videoFile) {
