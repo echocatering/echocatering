@@ -718,6 +718,7 @@ const MenuManager = () => {
   const formValues = editingCocktail || {};
   const canArchive = Boolean(editingCocktail && !isNewDraft && editingCocktail.status !== 'archived');
   const canRestore = Boolean(editingCocktail && editingCocktail.status === 'archived');
+  const isItemArchived = editingCocktail?.status === 'archived';
 
   // The recipe in state must be proven to belong to the item on screen before it can be
   // rendered. This makes a mismatched recipe unrenderable rather than merely unlikely — the
@@ -1058,8 +1059,10 @@ const MenuManager = () => {
     if (data.mapType) {
       formData.append('mapType', data.mapType);
     }
-    // Append display flag (false = hidden on website, true = visible)
-    formData.append('display', data.display === false ? 'false' : 'true');
+    // Append display flag (false = hidden on website, true = visible).
+    // Archived items are always hidden, whatever the item carried before it was archived.
+    const archivedItem = data.status === 'archived';
+    formData.append('display', (archivedItem || data.display === false) ? 'false' : 'true');
 
     if (options.videoFile instanceof File) {
       formData.append('video', options.videoFile);
@@ -1658,9 +1661,18 @@ const MenuManager = () => {
   // Use the appropriate list based on mapType
   const filteredRegionsList = mapType === 'us' ? filteredStates : filteredCountries;
 
+  // ARCHIVED is a status, not a section: it holds items from every category. The editor
+  // there follows the item's own category, so an archived Social Tonic gets the Social
+  // Tonics editor (new view plus the LEGACY toggle) and an archived pre-mix gets the
+  // pre-mix layout. Data flow (filtering, saving, new items) still keys off selectedCategory.
+  const editorCategory = normalizeCategoryKey(
+    normalizeCategoryKey(selectedCategory) === 'archived'
+      ? (editingCocktail?.category || currentCocktail?.category || 'cocktails')
+      : selectedCategory
+  );
   // Social Tonics and CLASSICS hide the legacy fields (map / countries panel, Concept) by
   // default; ticking LEGACY brings them back. Every other category shows them as before.
-  const isLegacyToggleCategory = ['cocktails', 'mocktails'].includes(selectedCategory);
+  const isLegacyToggleCategory = ['cocktails', 'mocktails'].includes(editorCategory);
   const showLegacyFields = !isLegacyToggleCategory || legacyView;
   // True only in the new (non-legacy) view. Gate every layout tweak on this so the
   // legacy view keeps rendering exactly as it always has.
@@ -2123,7 +2135,7 @@ const MenuManager = () => {
   const handlePrev = () => { preserveRecipeViewRef.current = recipeViewActive; requestNavigateBy('prev'); };
 
   const showVideoArrows = ['cocktails', 'mocktails', 'spirits', 'wine', 'beer'].includes(
-    normalizeCategoryKey(selectedCategory)
+    editorCategory
   ) && filteredCocktails.length > 1;
 
   // Reset index when category changes
@@ -2349,6 +2361,7 @@ const MenuManager = () => {
         itemId: itemNumberToSave ? `item${itemNumberToSave}` : undefined, // Pass itemId if we have itemNumber
         order: Number.isFinite(normalizedOrder) ? normalizedOrder : 0,
         category: targetCategory,
+        status: cocktailData.status, // read only for the display flag; not sent to the API
         name: cocktailData.name, // Name is needed for the form
         regions: cocktailData.regions || selectedRegions || [], // Regions - empty array is fine for new items
         mapType: mapType // Save map type (world or us) with the cocktail
@@ -3149,7 +3162,7 @@ const MenuManager = () => {
         <header ref={headerRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: useNewLayout && headerPadding ? `${headerPadding.left}px` : '100px', paddingRight: useNewLayout && headerPadding ? `${headerPadding.right}px` : '100px', paddingTop: '120px', paddingBottom: '20px' }}>
           {/* VIEW RECIPE / VIEW ITEM toggle + DISPLAY checkbox on left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {normalizeCategoryKey(selectedCategory) !== 'premix' && shouldShowRecipeBuilder(selectedCategory) && (
+            {editorCategory !== 'premix' && shouldShowRecipeBuilder(editorCategory) && (
               <button
                 onClick={() => setRecipeViewActive(prev => !prev)}
                 className={`menu-manager-nav-button px-6 py-3 rounded-lg border transition-all text-lg font-semibold ${
@@ -3161,25 +3174,30 @@ const MenuManager = () => {
                 {recipeViewActive ? 'VIEW ITEM' : 'VIEW RECIPE'}
               </button>
             )}
-            {editingCocktail && normalizeCategoryKey(selectedCategory) !== 'archived' && (
+            {editingCocktail && (
               <label
+                title={isItemArchived ? 'Archived items are always hidden from the website. Restore the item to show it again.' : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '7px',
                   padding: '12px 24px',
-                  cursor: 'pointer',
-                  userSelect: 'none'
+                  cursor: isItemArchived ? 'not-allowed' : 'pointer',
+                  userSelect: 'none',
+                  opacity: isItemArchived ? 0.5 : 1
                 }}
               >
+                {/* Archived items are never on the site, so the box reads off and can't be
+                    ticked — the section keeps the same header as the live editor either way. */}
                 <input
                   type="checkbox"
-                  checked={editingCocktail.display !== false}
+                  checked={!isItemArchived && editingCocktail.display !== false}
+                  disabled={isItemArchived}
                   onChange={(e) => {
                     setEditingCocktail(prev => ({ ...prev, display: e.target.checked }));
                     setHasUnsavedChanges(true);
                   }}
-                  style={{ width: '13px', height: '13px', accentColor: '#4b5563', cursor: 'pointer' }}
+                  style={{ width: '13px', height: '13px', accentColor: '#4b5563', cursor: isItemArchived ? 'not-allowed' : 'pointer' }}
                 />
                 <span style={{ fontFamily: 'inherit', fontSize: '0.65rem', fontWeight: 400, color: '#4b5563', letterSpacing: '0.05em' }}>DISPLAY</span>
               </label>
@@ -3226,7 +3244,7 @@ const MenuManager = () => {
 
         {/* Content area — flex: 1 so it fills the remaining viewport height below the header;
              justifyContent: center vertically centers all content in that space */}
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: (recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') ? 'flex-start' : 'center', paddingBottom: (recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') ? 0 : '40px' }}>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: (recipeViewActive || editorCategory === 'premix') ? 'flex-start' : 'center', paddingBottom: (recipeViewActive || editorCategory === 'premix') ? 0 : '40px' }}>
 
         {/* Recipe Builder for PRE-MIX — same layout as other recipe views */}
         {editingCocktail && normalizeCategoryKey(editingCocktail.category) === 'premix' && (
@@ -3292,7 +3310,7 @@ const MenuManager = () => {
         )}
         
         {filteredCocktails.length > 0 || editingCocktail ? (
-          normalizeCategoryKey(selectedCategory) !== 'premix' && !recipeViewActive ? (
+          editorCategory !== 'premix' && !recipeViewActive ? (
             /* Viewer container wrapper with vignette */
             <div style={{ position: 'relative', width: '100%', paddingTop: '62.5%' }}>
               {/* White vignette overlay - around viewer container edges */}
@@ -3558,7 +3576,7 @@ const MenuManager = () => {
                       disabled={!editingCocktail}
                     />
                   </div>
-                  {shouldShowRecipeBuilder(selectedCategory) && normalizeCategoryKey(selectedCategory) !== 'premix' && (
+                  {shouldShowRecipeBuilder(editorCategory) && editorCategory !== 'premix' && (
                     <div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '17px', marginBottom: '24px' }}>
                         {BASE_SPIRIT_OPTIONS.map((option) => {
@@ -4469,7 +4487,7 @@ const MenuManager = () => {
         )}
 
         {/* Recipe view footer — mirrors header size/position, holds prev/next arrows */}
-        {(recipeViewActive || normalizeCategoryKey(selectedCategory) === 'premix') && filteredCocktails.length > 1 && (
+        {(recipeViewActive || editorCategory === 'premix') && filteredCocktails.length > 1 && (
           <footer style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, height: '160px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
             <button
               aria-label="Previous"

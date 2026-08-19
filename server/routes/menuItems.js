@@ -1214,10 +1214,16 @@ router.get('/menu-gallery', async (req, res) => {
       // FOOLPROOF: Query database DIRECTLY for this item's cloudinaryVideoUrl and cloudinaryMapSnapshotUrl
       // This bypasses any map/caching issues
       const cocktailFromDb = await Cocktail.findOne({ itemNumber: itemNumber })
-        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId mapType display').lean();
+        .select('cloudinaryVideoUrl cloudinaryMapSnapshotUrl videoFile mapSnapshotFile cloudinaryVideoPublicId cloudinaryIconUrl cloudinaryIconPublicId cloudinaryMapSnapshotPublicId mapType display status isActive').lean();
       
-      // Skip items where display is explicitly false (exclude from both videoFiles and cocktailInfo)
-      if (cocktailFromDb && cocktailFromDb.display === false) continue;
+      // Skip items where display is explicitly false, and archived items regardless of
+      // their display flag — the inventory row outlives the archive, so the flag alone
+      // isn't enough to keep a restored-then-archived item off the site.
+      if (cocktailFromDb && (
+        cocktailFromDb.display === false ||
+        cocktailFromDb.status === 'archived' ||
+        cocktailFromDb.isActive === false
+      )) continue;
 
         menuGalleryData[category].videoFiles.push(key);
 
@@ -1843,6 +1849,10 @@ router.put('/:id',
       if (payload.display !== undefined) {
         cocktail.display = payload.display;
       }
+      // Archived items stay hidden from the site regardless of what the client sent.
+      if (cocktail.status === 'archived') {
+        cocktail.display = false;
+      }
 
       // Replace video file if new one uploaded
       if (videoFile) {
@@ -2045,6 +2055,9 @@ router.post('/:id/archive', [authenticateToken, requireEditor], async (req, res)
     cocktail.status = 'archived';
     cocktail.isActive = false;
     cocktail.archivedAt = new Date();
+    // Archived items are never shown on the site. Restoring leaves this off, so an
+    // item comes back hidden until DISPLAY is ticked again on purpose.
+    cocktail.display = false;
     await cocktail.save();
 
     res.json(cocktail);
