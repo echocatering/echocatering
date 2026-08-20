@@ -61,13 +61,18 @@
 
       /* Load splash: a blank white screen with the P mark and a grey ring around it,
          painted from the HTML itself so it covers the gap before the bundle runs.
-         Removed on window load — see the inline script at the end of <body>. */
+         Removed from src/index.js on window load — the CSP is script-src 'self',
+         so an inline script here would never execute. */
       #app-splash {
         position: fixed;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
+        width: 100%;
+        /* Mobile browsers lay a fixed element out against the large viewport (URL bar
+           hidden) while the bar is still on screen, which drops the centre below the
+           middle of what you can actually see and snaps it back once the bar settles.
+           The dynamic units below track the visible viewport, so it starts centred. */
+        height: 100%;
         z-index: 2147483647;
         background: #fff;
         display: flex;
@@ -75,11 +80,31 @@
         justify-content: center;
         opacity: 1;
         transition: opacity 300ms ease;
+        /* Belt and braces: if the bundle never runs, don't strand anyone behind it. */
+        animation: splash-timeout 1ms linear 15s forwards;
+      }
+
+      @supports (height: 100dvh) {
+        #app-splash {
+          width: 100dvw;
+          height: 100dvh;
+        }
       }
 
       #app-splash.is-hidden {
         opacity: 0;
         pointer-events: none;
+      }
+
+      /* Fixed-size box so the ring is centred on the mark by its own geometry rather
+         than by where a browser chooses to put an abspos child of a flex container. */
+      #app-splash .splash-box {
+        position: relative;
+        width: 128px;
+        height: 128px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       #app-splash .splash-mark {
@@ -91,8 +116,11 @@
 
       #app-splash .splash-ring {
         position: absolute;
-        width: 128px;
-        height: 128px;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
         border-radius: 50%;
         border: 3px solid #e6e6e6;
         border-top-color: #9a9a9a;
@@ -101,6 +129,10 @@
 
       @keyframes splash-spin {
         to { transform: rotate(360deg); }
+      }
+
+      @keyframes splash-timeout {
+        to { opacity: 0; visibility: hidden; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -130,32 +162,11 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="app-splash">
-      <div class="splash-ring"></div>
-      <img class="splash-mark" src="%PUBLIC_URL%/assets/icons/favicon-192.png?v=4" alt="" />
+      <div class="splash-box">
+        <div class="splash-ring"></div>
+        <img class="splash-mark" src="%PUBLIC_URL%/assets/icons/favicon-192.png?v=4" alt="" />
+      </div>
     </div>
-    <script>
-      (function () {
-        var splash = document.getElementById('app-splash');
-        if (!splash) return;
-        var hidden = false;
-        function hide() {
-          if (hidden) return;
-          hidden = true;
-          splash.className += ' is-hidden';
-          window.setTimeout(function () {
-            if (splash.parentNode) splash.parentNode.removeChild(splash);
-          }, 350);
-        }
-        if (document.readyState === 'complete') {
-          hide();
-        } else {
-          window.addEventListener('load', hide);
-        }
-        // A stalled asset (a background video, a slow font) can hold the load event open
-        // for a long time. Never leave the viewer stuck behind the splash for it.
-        window.setTimeout(hide, 8000);
-      })();
-    </script>
     <div id="root"></div>
     <!--
       This HTML file is a template.
