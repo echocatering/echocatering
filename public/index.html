@@ -58,6 +58,56 @@
           transition: none;
         }
       }
+
+      /* Load splash: a blank white screen with the P mark and a grey ring around it,
+         painted from the HTML itself so it covers the gap before the bundle runs.
+         Removed on window load — see the inline script at the end of <body>. */
+      #app-splash {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2147483647;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transition: opacity 300ms ease;
+      }
+
+      #app-splash.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #app-splash .splash-mark {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        display: block;
+      }
+
+      #app-splash .splash-ring {
+        position: absolute;
+        width: 128px;
+        height: 128px;
+        border-radius: 50%;
+        border: 3px solid #e6e6e6;
+        border-top-color: #9a9a9a;
+        animation: splash-spin 900ms linear infinite;
+      }
+
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash .splash-ring {
+          animation-duration: 2.4s;
+        }
+      }
     </style>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/assets/icons/favicon-180.png?v=4" />
     <!--
@@ -79,6 +129,33 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="app-splash">
+      <div class="splash-ring"></div>
+      <img class="splash-mark" src="%PUBLIC_URL%/assets/icons/favicon-192.png?v=4" alt="" />
+    </div>
+    <script>
+      (function () {
+        var splash = document.getElementById('app-splash');
+        if (!splash) return;
+        var hidden = false;
+        function hide() {
+          if (hidden) return;
+          hidden = true;
+          splash.className += ' is-hidden';
+          window.setTimeout(function () {
+            if (splash.parentNode) splash.parentNode.removeChild(splash);
+          }, 350);
+        }
+        if (document.readyState === 'complete') {
+          hide();
+        } else {
+          window.addEventListener('load', hide);
+        }
+        // A stalled asset (a background video, a slow font) can hold the load event open
+        // for a long time. Never leave the viewer stuck behind the splash for it.
+        window.setTimeout(hide, 8000);
+      })();
+    </script>
     <div id="root"></div>
     <!--
       This HTML file is a template.
