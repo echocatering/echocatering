@@ -4,30 +4,10 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
+import dismissLoadSplashWhenReady from './loadSplash';
 
-// The load splash lives in public/index.html so it paints before this bundle arrives.
-// It has to be dismissed from here rather than from an inline script in that file: the
-// server sends script-src 'self', which blocks inline execution outright.
-const hideLoadSplash = (() => {
-  let hidden = false;
-  return () => {
-    const splash = document.getElementById('app-splash');
-    if (hidden || !splash) return;
-    hidden = true;
-    splash.classList.add('is-hidden');
-    // Outlast the 300ms fade before taking it out of the document.
-    window.setTimeout(() => splash.remove(), 350);
-  };
-})();
-
-if (document.readyState === 'complete') {
-  hideLoadSplash();
-} else {
-  window.addEventListener('load', hideLoadSplash);
-}
-// A stalled asset — a background video, a slow font — can hold the load event open for
-// a long time. Never leave the viewer stuck behind the splash waiting for one.
-window.setTimeout(hideLoadSplash, 8000);
+// Holds the splash from public/index.html until the photos and videos have loaded.
+dismissLoadSplashWhenReady();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

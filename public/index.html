@@ -80,8 +80,9 @@
         justify-content: center;
         opacity: 1;
         transition: opacity 300ms ease;
-        /* Belt and braces: if the bundle never runs, don't strand anyone behind it. */
-        animation: splash-timeout 1ms linear 15s forwards;
+        /* Belt and braces: if the bundle never runs, don't strand anyone behind it.
+           Sits past the bundle's own 20s cap so JS stays the one that clears it. */
+        animation: splash-timeout 1ms linear 25s forwards;
       }
 
       @supports (height: 100dvh) {
