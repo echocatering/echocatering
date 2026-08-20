@@ -1663,7 +1663,7 @@ function EchoCocktailSubpage2({
           fontFamily: "'EB Garamond', Georgia, serif",
           letterSpacing: '0.08em',
           marginTop: '24px',
-          marginBottom: isVertical ? '24px' : 0,
+          marginBottom: isVertical ? '32px' : 0,
           color: '#999',
           opacity: hasSpirits ? (baseSpiritsVisible ? 1 : 0) : 0,
           transition: hasSpirits && baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
@@ -3049,24 +3049,38 @@ function EchoCocktailSubpage2({
         fontFamily: "'EB Garamond', Georgia, serif",
       }}
     >
-      {/* Disclaimer, bottom-right below Schedule an Event, inset by the same 14px
-          the nav sits from its edge. Desktop only — the vertical mobile stage has no
-          room for it beside the arrows. */}
-      {viewMode === 'web' && !isVertical && (
+      {/* Disclaimer. On desktop it sits bottom-right below Schedule an Event, inset by
+          the same 14px the nav sits from its edge. The vertical mobile stage has no room
+          for it beside the arrows, so it runs across the top instead — centred just under
+          the 60px header, which clears the logo and the hamburger at any phone width. */}
+      {viewMode === 'web' && (
         <div
           style={{
             position: 'absolute',
-            bottom: '14px',
-            right: '14px',
+            ...(isVertical
+              ? {
+                  top: '66px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  // The top of the vertical stage is white, so the desktop white would be
+                  // invisible — match the grey of the header's hamburger instead.
+                  color: 'rgba(0, 0, 0, 0.6)',
+                }
+              : {
+                  bottom: '14px',
+                  right: '14px',
+                  textAlign: 'right',
+                  // Same white the Schedule an Event button uses before hover
+                  color: '#fff',
+                }),
             zIndex: 20,
             pointerEvents: 'none',
-            textAlign: 'right',
             fontFamily: "'EB Garamond', Georgia, serif",
             fontSize: '0.7rem',
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            // Same white the Schedule an Event button uses before hover
-            color: '#fff',
           }}
         >
           100% Human Generated Video
