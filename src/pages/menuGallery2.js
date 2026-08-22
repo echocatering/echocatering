@@ -586,6 +586,10 @@ function EchoCocktailSubpage2({
   // instead of drifting apart.
   const verticalInfoPadding = 24;
   const verticalIngredientsPadding = 24;
+  // The ingredient list itself sits at half that, so it runs wider than the pill it
+  // sits under. The inset below still uses the full value, which keeps the title pill
+  // and the info panel exactly where they were.
+  const verticalIngredientsTextPadding = verticalIngredientsPadding / 2;
   const verticalTextFieldInset = verticalInfoPadding + verticalIngredientsPadding;
   // Move video up 10% screen height in vertical web mode
   // Move video up 6vh in horizontal menu view (but not title/ingredients/garnish)
@@ -1701,8 +1705,8 @@ function EchoCocktailSubpage2({
           // Even margin both sides on the vertical stage, so the list breathes at the
           // screen edge and still sits on true centre. Desktop keeps none — its
           // container supplies the inset.
-          paddingLeft: isVertical ? `${verticalIngredientsPadding}px` : 0,
-          paddingRight: isVertical ? `${verticalIngredientsPadding}px` : 0,
+          paddingLeft: isVertical ? `${verticalIngredientsTextPadding}px` : 0,
+          paddingRight: isVertical ? `${verticalIngredientsTextPadding}px` : 0,
           textAlign: 'center',
           opacity: ingredientsVisible ? 1 : 0,
           transition: ingredientsVisible ? 'opacity 1.5s ease-out' : 'none',
@@ -3051,15 +3055,15 @@ function EchoCocktailSubpage2({
     >
       {/* Disclaimer. On desktop it sits bottom-right below Schedule an Event, inset by
           the same 14px the nav sits from its edge. The vertical mobile stage has no room
-          for it beside the arrows, so it runs across the top instead — centred just under
-          the 60px header, which clears the logo and the hamburger at any phone width. */}
+          for it beside the arrows, so it runs across the top of the section instead,
+          centred and inset by that same 14px. */}
       {viewMode === 'web' && (
         <div
           style={{
             position: 'absolute',
             ...(isVertical
               ? {
-                  top: '66px',
+                  top: '14px',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   textAlign: 'center',
