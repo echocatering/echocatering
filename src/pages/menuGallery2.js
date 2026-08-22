@@ -726,13 +726,28 @@ function EchoCocktailSubpage2({
   const videoSrc = info?.cloudinaryVideoUrl || info?.videoUrl || '';
   
 
-  // Scroll the gallery container so its TOP aligns with the top of the viewport
+  // Bring the gallery section back into place after the item changes: top-aligned on
+  // desktop, bottom-aligned on the vertical stage.
   const scrollToTopAlign = useCallback(() => {
     if (viewMode !== 'web' || !galleryRef?.current) return;
 
     const galleryElement = galleryRef.current;
     const rect = galleryElement.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    if (isVertical) {
+      // The prev/next arrows sit near the foot of the vertical stage, so the section's
+      // bottom edge goes on the bottom of the screen and they stay reachable. Measure
+      // against visualViewport where it exists — innerHeight counts the strip behind
+      // the address bar, which would push the arrows just off the bottom.
+      const visibleHeight = window.visualViewport?.height || window.innerHeight;
+      const targetScroll = Math.max(0, scrollTop + rect.bottom - visibleHeight);
+      // Instant, not smooth: the item change re-renders the stage straight after this
+      // and Chrome drops an in-flight smooth scroll when it does, leaving the arrows
+      // off screen — the exact thing this is here to prevent.
+      window.scrollTo({ top: targetScroll, behavior: 'auto' });
+      return;
+    }
 
     // rect.top is relative to the viewport, so adding the current scroll offset
     // puts the section's top edge exactly at the top of the screen.
@@ -744,7 +759,7 @@ function EchoCocktailSubpage2({
     setTimeout(() => {
       window.scrollTo({ top: targetScroll, behavior: 'smooth' });
     }, 10);
-  }, [viewMode, galleryRef]);
+  }, [viewMode, galleryRef, isVertical]);
 
   // Swipe gesture handlers
   const handleTouchStart = (e) => {
@@ -1668,7 +1683,7 @@ function EchoCocktailSubpage2({
           letterSpacing: '0.08em',
           marginTop: '24px',
           marginBottom: isVertical ? '32px' : 0,
-          color: '#999',
+          color: '#888',
           opacity: hasSpirits ? (baseSpiritsVisible ? 1 : 0) : 0,
           transition: hasSpirits && baseSpiritsVisible ? 'opacity 1.5s ease-out' : 'none',
         }}
@@ -3069,8 +3084,8 @@ function EchoCocktailSubpage2({
                   textAlign: 'center',
                   whiteSpace: 'nowrap',
                   // The top of the vertical stage is white, so the desktop white would be
-                  // invisible — match the grey of the header's hamburger instead.
-                  color: 'rgba(0, 0, 0, 0.6)',
+                  // invisible — a grey close to the header's hamburger, one step lighter.
+                  color: 'rgba(0, 0, 0, 0.5)',
                 }
               : {
                   bottom: '14px',
