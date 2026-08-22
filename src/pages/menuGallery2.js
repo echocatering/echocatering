@@ -586,10 +586,11 @@ function EchoCocktailSubpage2({
   // instead of drifting apart.
   const verticalInfoPadding = 24;
   const verticalIngredientsPadding = 24;
-  // The ingredient list itself sits at half that, so it runs wider than the pill it
-  // sits under. The inset below still uses the full value, which keeps the title pill
-  // and the info panel exactly where they were.
-  const verticalIngredientsTextPadding = verticalIngredientsPadding / 2;
+  // The ingredient list runs wider than the pill it sits under — it's the one block
+  // that has to stay legible at a glance, so it gets the screen edge rather than the
+  // shared inset. The inset below still uses the full value, which keeps the title
+  // pill and the info panel exactly where they were.
+  const verticalIngredientsTextPadding = 6;
   const verticalTextFieldInset = verticalInfoPadding + verticalIngredientsPadding;
   // Move video up 10% screen height in vertical web mode
   // Move video up 6vh in horizontal menu view (but not title/ingredients/garnish)
@@ -1732,7 +1733,10 @@ function EchoCocktailSubpage2({
           style={{
             // Divisor lowered and the max raised together — it was pinned at the old
             // 1.4rem ceiling, so lifting the cap alone would not have changed anything.
-            fontSize: isVertical ? `calc(${getFontSize(44, 0.9, 1.7)} * var(--verticalInfoFontScale, 1))` : getFontSize(34, 0.9, 1.7),
+            // Divisor drives the size here, not the width — 36 rather than 44 puts the
+            // vertical list around 25px on a phone instead of 20px. A list long enough
+            // to overflow still gets pulled back by --verticalInfoFontScale.
+            fontSize: isVertical ? `calc(${getFontSize(36, 0.9, 1.7)} * var(--verticalInfoFontScale, 1))` : getFontSize(34, 0.9, 1.7),
             fontFamily: "'EB Garamond', Georgia, serif",
             fontWeight: 400,
             marginBottom: 0,
