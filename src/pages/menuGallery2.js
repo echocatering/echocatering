@@ -742,10 +742,7 @@ function EchoCocktailSubpage2({
       // the address bar, which would push the arrows just off the bottom.
       const visibleHeight = window.visualViewport?.height || window.innerHeight;
       const targetScroll = Math.max(0, scrollTop + rect.bottom - visibleHeight);
-      // Instant, not smooth: the item change re-renders the stage straight after this
-      // and Chrome drops an in-flight smooth scroll when it does, leaving the arrows
-      // off screen — the exact thing this is here to prevent.
-      window.scrollTo({ top: targetScroll, behavior: 'auto' });
+      window.scrollTo({ top: targetScroll, behavior: 'smooth' });
       return;
     }
 
